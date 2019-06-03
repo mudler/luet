@@ -27,7 +27,7 @@ import (
 type Package interface {
 	Encode() (string, error)
 	SetState(state State) Package
-	BuildFormula() (bf.Formula, error)
+	BuildFormula() ([]bf.Formula, error)
 	IsFlagged(bool) Package
 	Requires([]Package) Package
 	Conflicts([]Package) Package
@@ -118,21 +118,21 @@ func DecodePackage(pa string) (Package, error) {
 	return p, nil
 }
 
-func (p *DefaultPackage) BuildFormula() (bf.Formula, error) {
+func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
 	encodedA, err := p.Encode()
 	if err != nil {
 		return nil, err
 	}
 
 	A := bf.Var(encodedA)
+	var formulas []bf.Formula
 
 	if p.IsSet {
+		formulas = append(formulas, A)
 		//f = bf.And(f, bf.Var(encodedA))
 	} else {
 		//f = bf.And(f, bf.Not(bf.Var(encodedA)))
 	}
-
-	var formulas []bf.Formula
 
 	//formulas = append(formulas, A)
 
@@ -143,7 +143,7 @@ func (p *DefaultPackage) BuildFormula() (bf.Formula, error) {
 		}
 		B := bf.Var(encodedB)
 
-		formulas = append(formulas, bf.Or(bf.Not(A), B))
+		formulas = append(formulas, bf.Or(bf.Not(A), bf.And(A, B)))
 
 	}
 
@@ -154,9 +154,9 @@ func (p *DefaultPackage) BuildFormula() (bf.Formula, error) {
 		}
 		B := bf.Var(encodedB)
 		formulas = append(formulas, bf.Or(bf.Not(A),
-			bf.Not(B)))
+			bf.And(A, bf.Not(B))))
 
 	}
 
-	return bf.And(formulas...), nil
+	return formulas, nil
 }

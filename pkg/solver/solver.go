@@ -49,7 +49,7 @@ func (s *Solver) BuildFormula() (bf.Formula, error) {
 			return nil, err
 		}
 		//f = bf.And(f, init)
-		formulas = append(formulas, init)
+		formulas = append(formulas, init...)
 	}
 
 	for _, p := range s.PackageCollection {
@@ -58,7 +58,7 @@ func (s *Solver) BuildFormula() (bf.Formula, error) {
 			return nil, err
 		}
 		//f = bf.And(f, solvable)
-		formulas = append(formulas, solvable)
+		formulas = append(formulas, solvable...)
 
 	}
 
