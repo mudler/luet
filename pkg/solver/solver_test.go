@@ -37,10 +37,27 @@ var _ = Describe("Solver", func() {
 
 			solution, err := s.Solve()
 			Expect(err).ToNot(HaveOccurred())
+			Expect(solution).To(ContainElement(A.IsFlagged(true)))
 			Expect(solution).To(ContainElement(B.IsFlagged(true)))
 			Expect(solution).To(ContainElement(C.IsFlagged(true)))
-			// Expect(solution).To(ContainElement(A.IsFlagged(true)))
 		})
+		It("Solves correctly more complex ones", func() {
+			C := pkg.NewPackage("C", "", []pkg.Package{}, []pkg.Package{})
+			D := pkg.NewPackage("D", "", []pkg.Package{}, []pkg.Package{})
+			B := pkg.NewPackage("B", "", []pkg.Package{D}, []pkg.Package{})
+			A := pkg.NewPackage("A", "", []pkg.Package{B}, []pkg.Package{})
+			C.IsFlagged(true) // installed
+
+			s := NewSolver([]pkg.Package{A.IsFlagged(true)}, []pkg.Package{C})
+
+			solution, err := s.Solve()
+			Expect(solution).To(ContainElement(C.IsFlagged(true)))
+			Expect(solution).To(ContainElement(D.IsFlagged(true)))
+			Expect(solution).To(ContainElement(B.IsFlagged(true)))
+
+			Expect(err).ToNot(HaveOccurred())
+		})
+
 	})
 
 	Context("Conflict set", func() {

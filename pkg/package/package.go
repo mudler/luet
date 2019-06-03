@@ -143,6 +143,12 @@ func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
 		}
 		B := bf.Var(encodedB)
 
+		f, err := required.BuildFormula()
+		if err != nil {
+			return nil, err
+		}
+		formulas = append(formulas, f...)
+
 		formulas = append(formulas, bf.Or(bf.Not(A), bf.And(A, B)))
 
 	}
@@ -153,10 +159,17 @@ func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
 			return nil, err
 		}
 		B := bf.Var(encodedB)
+
+		f, err := required.BuildFormula()
+		if err != nil {
+			return nil, err
+		}
+
 		formulas = append(formulas, bf.Or(bf.Not(A),
 			bf.And(A, bf.Not(B))))
+		formulas = append(formulas, f...)
 
 	}
 
-	return formulas, nil
+	return []bf.Formula{bf.Implies(A, bf.And(formulas...))}, nil
 }
