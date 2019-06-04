@@ -32,8 +32,8 @@ var _ = Describe("Solver", func() {
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{A}, []pkg.Package{C}, []pkg.Package{A, B, C}) // XXX: goes fatal with odd numbers of cnf ?
-			solution, err := s.Solve()
+			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C}) // XXX: goes fatal with odd numbers of cnf ?
+			solution, err := s.Install([]pkg.Package{A})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
 			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true), Value: true}))
@@ -47,9 +47,9 @@ var _ = Describe("Solver", func() {
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 			C.IsFlagged(true) // installed
 
-			s := NewSolver([]pkg.Package{A.IsFlagged(true)}, []pkg.Package{C}, []pkg.Package{A, B, C, D})
+			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D})
 
-			solution, err := s.Solve()
+			solution, err := s.Install([]pkg.Package{A})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
 			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true), Value: true}))
 			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true), Value: true}))
@@ -66,9 +66,9 @@ var _ = Describe("Solver", func() {
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{A}, []pkg.Package{}, []pkg.Package{A, B, C, D})
+			s := NewSolver([]pkg.Package{}, []pkg.Package{A, B, C, D})
 
-			solution, err := s.Solve()
+			solution, err := s.Install([]pkg.Package{A})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
 			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true), Value: true}))
 			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true), Value: true}))
@@ -86,9 +86,9 @@ var _ = Describe("Solver", func() {
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{C})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{A}, []pkg.Package{C}, []pkg.Package{A, B, C})
+			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C})
 
-			solution, err := s.Solve()
+			solution, err := s.Install([]pkg.Package{A})
 			Expect(len(solution)).To(Equal(0))
 			Expect(err).To(HaveOccurred())
 		})

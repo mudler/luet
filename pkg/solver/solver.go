@@ -25,10 +25,8 @@ import (
 type State interface{ Encode() string }
 
 type PackageSolver interface {
-	BuildFormula() (bf.Formula, error)
-	Solve() ([]PackageAssert, error)
-	Apply() (map[string]bool, bf.Formula, error)
 	SetWorld(p []pkg.Package)
+	Install(p []pkg.Package) ([]PackageAssert, error)
 }
 type Solver struct {
 	Wanted    []pkg.Package
@@ -36,17 +34,14 @@ type Solver struct {
 	World     []pkg.Package
 }
 
-func NewSolver(pcoll []pkg.Package, init []pkg.Package, w []pkg.Package) PackageSolver {
+func NewSolver(init []pkg.Package, w []pkg.Package) PackageSolver {
 	for _, v := range init {
 		v.IsFlagged(true)
-	}
-	for _, v := range pcoll {
-		v.IsFlagged(false)
 	}
 	for _, v := range w {
 		v.IsFlagged(true)
 	}
-	return &Solver{Wanted: pcoll, Installed: init, World: w}
+	return &Solver{Installed: init, World: w}
 }
 
 func (s *Solver) SetWorld(p []pkg.Package) {
@@ -108,19 +103,27 @@ func (s *Solver) solve(f bf.Formula) (map[string]bool, bf.Formula, error) {
 	return model, f, nil
 }
 
-func (s *Solver) Apply() (map[string]bool, bf.Formula, error) {
-	f, err := s.BuildFormula()
-	if err != nil {
-		return map[string]bool{}, nil, err
-	}
-	return s.solve(f)
-}
-
 func (s *Solver) Solve() ([]PackageAssert, error) {
-	model, _, err := s.Apply()
+
+	f, err := s.BuildFormula()
+
+	if err != nil {
+		return nil, err
+	}
+
+	model, _, err := s.solve(f)
 	if err != nil {
 		return nil, err
 	}
 
 	return DecodeModel(model)
+}
+
+func (s *Solver) Install(coll []pkg.Package) ([]PackageAssert, error) {
+	for _, v := range coll {
+		v.IsFlagged(false)
+	}
+	s.Wanted = coll
+
+	return s.Solve()
 }
