@@ -82,6 +82,10 @@ func (s *Solver) BuildFormula() (bf.Formula, error) {
 			return nil, err
 		}
 		W := bf.Var(encodedW)
+		if len(s.Installed) == 0 {
+			formulas = append(formulas, bf.And(bf.True, W))
+			continue
+		}
 		for _, installed := range s.Installed {
 			encodedI, err := installed.IsFlagged(true).Encode()
 			if err != nil {

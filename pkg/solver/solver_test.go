@@ -38,6 +38,7 @@ var _ = Describe("Solver", func() {
 			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
 			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true), Value: true}))
 			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true), Value: true}))
+			Expect(len(solution)).To(Equal(3))
 		})
 		It("Solves correctly more complex ones", func() {
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -52,6 +53,26 @@ var _ = Describe("Solver", func() {
 			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
 			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true), Value: true}))
 			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true), Value: true}))
+			Expect(len(solution)).To(Equal(4))
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Solves correctly more complex ones", func() {
+			//	E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{A}, []pkg.Package{}, []pkg.Package{A, B, C, D})
+
+			solution, err := s.Solve()
+			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true), Value: true}))
+			Expect(len(solution)).To(Equal(3))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
