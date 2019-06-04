@@ -16,24 +16,36 @@
 package solver
 
 import (
-	"fmt"
-
 	pkg "gitlab.com/mudler/luet/pkg/package"
 )
 
-func DecodeModel(model map[string]bool) []pkg.Package {
-	ass := make([]pkg.Package, 0)
+type PackageAssert struct {
+	Package pkg.Package
+	Value   bool
+}
+
+func DecodeModel(model map[string]bool) ([]PackageAssert, error) {
+	ass := make([]PackageAssert, 0)
 	for k, v := range model {
 		if a, err := pkg.DecodePackage(k); err == nil {
-			fmt.Println(a)
-			a.IsFlagged(false)
-			if v {
-				a.IsFlagged(true)
-			}
+
+			// fmt.Println("Flagged", v, a.Flagged())
+			// if v {
+			// 	fmt.Println("To flag", a)
+			// }
+			// if a.Flagged() && !v {
+			// 	a.IsFlagged(false)
+			// } else if !a.Flagged() && v {
+			// 	fmt.Println("To flag ", a)
+			// 	a.IsFlagged(true)
+			// }
+
 			//if a.State == common.STATE_CURRENT {
-			ass = append(ass, a)
+			ass = append(ass, PackageAssert{Package: a, Value: v})
 			//} // Else, there was a state transition between Initial state and current run
+		} else {
+			return nil, err
 		}
 	}
-	return ass
+	return ass, nil
 }

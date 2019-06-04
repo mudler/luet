@@ -27,32 +27,43 @@ type State interface{ Encode() string }
 
 type PackageSolver interface {
 	BuildFormula() (bf.Formula, error)
-	Solve() ([]pkg.Package, error)
+	Solve() ([]PackageAssert, error)
 	Apply() (map[string]bool, bf.Formula, error)
+	SetSteps(int)
+	SetWorld(p []pkg.Package)
 }
 type Solver struct {
-	PackageCollection []pkg.Package
-	InitialState      []pkg.Package
+	Wanted    []pkg.Package
+	Installed []pkg.Package
+	World     []pkg.Package
+	Steps     int
 }
 
-func NewSolver(pcoll []pkg.Package, init []pkg.Package) PackageSolver {
-	return &Solver{PackageCollection: pcoll, InitialState: init}
+func NewSolver(pcoll []pkg.Package, init []pkg.Package, w []pkg.Package) PackageSolver {
+	for _, v := range init {
+		v.IsFlagged(true)
+	}
+	for _, v := range pcoll {
+		v.IsFlagged(false)
+	}
+	for _, v := range w {
+		v.IsFlagged(true)
+	}
+	return &Solver{Wanted: pcoll, Installed: init, World: w}
 }
 
-func (s *Solver) BuildFormula() (bf.Formula, error) {
-	//f := bf.True
+func (s *Solver) SetSteps(st int) {
+	s.Steps = st
+}
+
+func (s *Solver) SetWorld(p []pkg.Package) {
+	s.World = p
+}
+
+func (s *Solver) BuildWorld() (bf.Formula, error) {
 	var formulas []bf.Formula
 
-	for _, a := range s.InitialState {
-		init, err := a.BuildFormula()
-		if err != nil {
-			return nil, err
-		}
-		//f = bf.And(f, init)
-		formulas = append(formulas, init...)
-	}
-
-	for _, p := range s.PackageCollection {
+	for _, p := range s.Wanted {
 		solvable, err := p.BuildFormula()
 		if err != nil {
 			return nil, err
@@ -61,7 +72,34 @@ func (s *Solver) BuildFormula() (bf.Formula, error) {
 		formulas = append(formulas, solvable...)
 
 	}
+	return bf.And(formulas...), nil
+}
 
+func (s *Solver) BuildFormula() (bf.Formula, error) {
+	//f := bf.True
+	var formulas []bf.Formula
+	r, err := s.BuildWorld()
+	if err != nil {
+		return nil, err
+	}
+	formulas = append(formulas, r)
+	for _, wanted := range s.Wanted {
+		encodedW, err := wanted.IsFlagged(true).Encode()
+		if err != nil {
+			return nil, err
+		}
+		W := bf.Var(encodedW)
+		for _, installed := range s.Installed {
+			encodedI, err := installed.IsFlagged(true).Encode()
+			if err != nil {
+				return nil, err
+			}
+			I := bf.Var(encodedI)
+			formulas = append(formulas, bf.And(W, I))
+		}
+
+	}
+	//return bf.And(r), nil
 	return bf.And(formulas...), nil
 }
 
@@ -70,23 +108,51 @@ func (s *Solver) solve(f bf.Formula) (map[string]bool, bf.Formula, error) {
 	if model == nil {
 		return model, f, errors.New("Unsolvable")
 	}
+
 	return model, f, nil
 }
 
 func (s *Solver) Apply() (map[string]bool, bf.Formula, error) {
 	f, err := s.BuildFormula()
-	fmt.Println(f)
+	fmt.Println("Steps", s.Steps, f)
 	if err != nil {
 		return map[string]bool{}, nil, err
 	}
+
+	// if s.Steps != 0 {
+	// 	for i := s.Steps; i >= 0; i-- {
+	// 		f, err = s.BuildFormula()
+	// 		if err != nil {
+	// 			return map[string]bool{}, nil, err
+	// 		}
+	// 		model, _, err := s.solve(f)
+	// 		if err != nil {
+	// 			return map[string]bool{}, nil, err
+	// 		}
+	// 		fmt.Println("Step ", i, model)
+
+	// 		ass := DecodeModel(model)
+	// 		s.Installed = append(s.Installed, ass...)
+	// 	}
+	// }
+
 	return s.solve(f)
 }
 
-func (s *Solver) Solve() ([]pkg.Package, error) {
+func (s *Solver) Solve() ([]PackageAssert, error) {
 	model, _, err := s.Apply()
 	if err != nil {
-		return []pkg.Package{}, err
+		return nil, err
 	}
-	ass := DecodeModel(model)
-	return ass, nil
+
+	// for _, wanted := range s.Wanted {
+	// 	encodedW, err := wanted.Encode()
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	model[encodedW] = true
+	// 	fmt.Println("adding wanted", model)
+
+	// }
+	return DecodeModel(model)
 }

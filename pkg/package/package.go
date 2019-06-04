@@ -1,4 +1,4 @@
-// Copyright © 2018 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,6 +18,9 @@ package pkg
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"hash/crc32"
 
 	"github.com/crillab/gophersat/bf"
 
@@ -29,8 +32,10 @@ type Package interface {
 	SetState(state State) Package
 	BuildFormula() ([]bf.Formula, error)
 	IsFlagged(bool) Package
-	Requires([]Package) Package
-	Conflicts([]Package) Package
+	Flagged() bool
+
+	Requires([]*DefaultPackage) Package
+	Conflicts([]*DefaultPackage) Package
 }
 
 type DefaultPackage struct {
@@ -38,15 +43,15 @@ type DefaultPackage struct {
 	Version          string
 	UseFlags         []string
 	State            State
-	PackageRequires  []Package
-	PackageConflicts []Package
+	PackageRequires  []*DefaultPackage
+	PackageConflicts []*DefaultPackage
 	IsSet            bool
 }
 
 type PackageUse []string
 type State string
 
-func NewPackage(name, version string, requires []Package, conflicts []Package) Package {
+func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*DefaultPackage) *DefaultPackage {
 	return &DefaultPackage{Name: name, Version: version, PackageRequires: requires, PackageConflicts: conflicts}
 }
 
@@ -75,7 +80,12 @@ func (p *DefaultPackage) Encode() (string, error) {
 		return "", err
 	}
 
-	return base64.StdEncoding.EncodeToString(res), nil
+	enc := base64.StdEncoding.EncodeToString(res)
+	crc32q := crc32.MakeTable(0xD5828281)
+	ID := fmt.Sprintf("%08x\n", crc32.Checksum([]byte(enc), crc32q))
+	Database[ID] = base64.StdEncoding.EncodeToString(res)
+	fmt.Println("Package Encoded:", p.Name+" => "+ID)
+	return ID, nil
 }
 
 func (p *DefaultPackage) WithState(state State) Package {
@@ -85,17 +95,20 @@ func (p *DefaultPackage) IsFlagged(b bool) Package {
 	p.IsSet = b
 	return p
 }
+func (p *DefaultPackage) Flagged() bool {
+	return p.IsSet
+}
 
 func (p *DefaultPackage) SetState(state State) Package {
 	p.State = state
 	return p
 }
 
-func (p *DefaultPackage) Requires(req []Package) Package {
+func (p *DefaultPackage) Requires(req []*DefaultPackage) Package {
 	p.PackageRequires = req
 	return p
 }
-func (p *DefaultPackage) Conflicts(req []Package) Package {
+func (p *DefaultPackage) Conflicts(req []*DefaultPackage) Package {
 	p.PackageConflicts = req
 	return p
 }
@@ -105,7 +118,13 @@ func (p *DefaultPackage) Clone() Package {
 	return new
 }
 
-func DecodePackage(pa string) (Package, error) {
+func DecodePackage(ID string) (Package, error) {
+
+	pa, ok := Database[ID]
+	if !ok {
+		return nil, errors.New("No package found with that id")
+	}
+
 	enc, err := base64.StdEncoding.DecodeString(pa)
 	if err != nil {
 		return nil, err
@@ -119,7 +138,7 @@ func DecodePackage(pa string) (Package, error) {
 }
 
 func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
-	encodedA, err := p.Encode()
+	encodedA, err := p.IsFlagged(true).Encode()
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +147,7 @@ func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
 	var formulas []bf.Formula
 
 	if p.IsSet {
-		formulas = append(formulas, A)
+		//formulas = append(formulas, A)
 		//f = bf.And(f, bf.Var(encodedA))
 	} else {
 		//f = bf.And(f, bf.Not(bf.Var(encodedA)))
@@ -137,39 +156,46 @@ func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
 	//formulas = append(formulas, A)
 
 	for _, required := range p.PackageRequires {
-		encodedB, err := required.Encode()
+		encodedB, err := required.IsFlagged(true).Encode()
 		if err != nil {
 			return nil, err
 		}
 		B := bf.Var(encodedB)
+		formulas = append(formulas, bf.Or(bf.Not(A), B))
 
 		f, err := required.BuildFormula()
 		if err != nil {
 			return nil, err
 		}
 		formulas = append(formulas, f...)
-
-		formulas = append(formulas, bf.Or(bf.Not(A), bf.And(A, B)))
 
 	}
 
 	for _, required := range p.PackageConflicts {
-		encodedB, err := required.Encode()
+		encodedB, err := required.IsFlagged(true).Encode()
 		if err != nil {
 			return nil, err
 		}
 		B := bf.Var(encodedB)
+		formulas = append(formulas, bf.Or(bf.Not(A),
+			bf.Not(B)))
 
 		f, err := required.BuildFormula()
 		if err != nil {
 			return nil, err
 		}
-
-		formulas = append(formulas, bf.Or(bf.Not(A),
-			bf.And(A, bf.Not(B))))
 		formulas = append(formulas, f...)
+		//if required.Flagged() {
+		// f, err := required.BuildFormula()
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// formulas = append(formulas, bf.Not(bf.And(f...)))
+		//}
 
 	}
 
-	return []bf.Formula{bf.Implies(A, bf.And(formulas...))}, nil
+	//return []bf.Formula{bf.And(formulas...)}, nil
+	return formulas, nil
+	//return []bf.Formula{bf.Implies(A, bf.And(formulas...))}, nil
 }

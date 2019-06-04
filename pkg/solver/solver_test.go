@@ -28,33 +28,31 @@ var _ = Describe("Solver", func() {
 	Context("Simple set", func() {
 
 		It("Solves correctly", func() {
-			B := pkg.NewPackage("B", "", []pkg.Package{}, []pkg.Package{})
-			A := pkg.NewPackage("A", "", []pkg.Package{B}, []pkg.Package{})
-			C := pkg.NewPackage("C", "", []pkg.Package{}, []pkg.Package{})
-			C.IsFlagged(true) // installed
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{A.IsFlagged(true)}, []pkg.Package{C}) // XXX: goes fatal with odd numbers of cnf ?
-
+			s := NewSolver([]pkg.Package{A}, []pkg.Package{C}, []pkg.Package{A, B, C}) // XXX: goes fatal with odd numbers of cnf ?
+			s.SetSteps(1)
 			solution, err := s.Solve()
 			Expect(err).ToNot(HaveOccurred())
-			Expect(solution).To(ContainElement(A.IsFlagged(true)))
-			Expect(solution).To(ContainElement(B.IsFlagged(true)))
-			Expect(solution).To(ContainElement(C.IsFlagged(true)))
+			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true), Value: true}))
 		})
 		It("Solves correctly more complex ones", func() {
-			C := pkg.NewPackage("C", "", []pkg.Package{}, []pkg.Package{})
-			D := pkg.NewPackage("D", "", []pkg.Package{}, []pkg.Package{})
-			B := pkg.NewPackage("B", "", []pkg.Package{D}, []pkg.Package{})
-			A := pkg.NewPackage("A", "", []pkg.Package{B}, []pkg.Package{})
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 			C.IsFlagged(true) // installed
 
-			s := NewSolver([]pkg.Package{A.IsFlagged(true)}, []pkg.Package{C})
+			s := NewSolver([]pkg.Package{A.IsFlagged(true)}, []pkg.Package{C}, []pkg.Package{A, B, C, D})
 
 			solution, err := s.Solve()
-			Expect(solution).To(ContainElement(C.IsFlagged(true)))
-			Expect(solution).To(ContainElement(D.IsFlagged(true)))
-			Expect(solution).To(ContainElement(B.IsFlagged(true)))
-
+			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true), Value: true}))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -62,19 +60,17 @@ var _ = Describe("Solver", func() {
 
 	Context("Conflict set", func() {
 
-		It("Solves correctly", func() {
-			C := pkg.NewPackage("C", "", []pkg.Package{}, []pkg.Package{})
+		It("is unsolvable - as we something we ask to install conflict with system stuff", func() {
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			//	D := pkg.NewPackage("D", "", []pkg.Package{}, []pkg.Package{})
-			B := pkg.NewPackage("B", "", []pkg.Package{}, []pkg.Package{C})
-			A := pkg.NewPackage("A", "", []pkg.Package{B}, []pkg.Package{})
-			C.IsFlagged(true) // installed
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{C})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{A.IsFlagged(true)}, []pkg.Package{C})
+			s := NewSolver([]pkg.Package{A}, []pkg.Package{C}, []pkg.Package{A, B, C})
 
 			solution, err := s.Solve()
-			Expect(solution).To(Equal([]pkg.Package{C}))
-
-			Expect(err).ToNot(HaveOccurred())
+			Expect(len(solution)).To(Equal(0))
+			Expect(err).To(HaveOccurred())
 		})
 
 	})
