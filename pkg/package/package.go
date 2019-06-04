@@ -84,7 +84,6 @@ func (p *DefaultPackage) Encode() (string, error) {
 	crc32q := crc32.MakeTable(0xD5828281)
 	ID := fmt.Sprintf("%08x\n", crc32.Checksum([]byte(enc), crc32q))
 	Database[ID] = base64.StdEncoding.EncodeToString(res)
-	fmt.Println("Package Encoded:", p.Name+" => "+ID)
 	return ID, nil
 }
 
@@ -144,16 +143,8 @@ func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
 	}
 
 	A := bf.Var(encodedA)
+
 	var formulas []bf.Formula
-
-	if p.IsSet {
-		//formulas = append(formulas, A)
-		//f = bf.And(f, bf.Var(encodedA))
-	} else {
-		//f = bf.And(f, bf.Not(bf.Var(encodedA)))
-	}
-
-	//formulas = append(formulas, A)
 
 	for _, required := range p.PackageRequires {
 		encodedB, err := required.IsFlagged(true).Encode()
@@ -185,17 +176,6 @@ func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
 			return nil, err
 		}
 		formulas = append(formulas, f...)
-		//if required.Flagged() {
-		// f, err := required.BuildFormula()
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// formulas = append(formulas, bf.Not(bf.And(f...)))
-		//}
-
 	}
-
-	//return []bf.Formula{bf.And(formulas...)}, nil
 	return formulas, nil
-	//return []bf.Formula{bf.Implies(A, bf.And(formulas...))}, nil
 }

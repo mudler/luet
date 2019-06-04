@@ -27,25 +27,12 @@ type PackageAssert struct {
 func DecodeModel(model map[string]bool) ([]PackageAssert, error) {
 	ass := make([]PackageAssert, 0)
 	for k, v := range model {
-		if a, err := pkg.DecodePackage(k); err == nil {
-
-			// fmt.Println("Flagged", v, a.Flagged())
-			// if v {
-			// 	fmt.Println("To flag", a)
-			// }
-			// if a.Flagged() && !v {
-			// 	a.IsFlagged(false)
-			// } else if !a.Flagged() && v {
-			// 	fmt.Println("To flag ", a)
-			// 	a.IsFlagged(true)
-			// }
-
-			//if a.State == common.STATE_CURRENT {
-			ass = append(ass, PackageAssert{Package: a, Value: v})
-			//} // Else, there was a state transition between Initial state and current run
-		} else {
+		a, err := pkg.DecodePackage(k)
+		if err != nil {
 			return nil, err
+
 		}
+		ass = append(ass, PackageAssert{Package: a, Value: v})
 	}
 	return ass, nil
 }

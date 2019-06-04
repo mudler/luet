@@ -17,7 +17,6 @@ package solver
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/crillab/gophersat/bf"
 	pkg "gitlab.com/mudler/luet/pkg/package"
@@ -29,14 +28,12 @@ type PackageSolver interface {
 	BuildFormula() (bf.Formula, error)
 	Solve() ([]PackageAssert, error)
 	Apply() (map[string]bool, bf.Formula, error)
-	SetSteps(int)
 	SetWorld(p []pkg.Package)
 }
 type Solver struct {
 	Wanted    []pkg.Package
 	Installed []pkg.Package
 	World     []pkg.Package
-	Steps     int
 }
 
 func NewSolver(pcoll []pkg.Package, init []pkg.Package, w []pkg.Package) PackageSolver {
@@ -50,10 +47,6 @@ func NewSolver(pcoll []pkg.Package, init []pkg.Package, w []pkg.Package) Package
 		v.IsFlagged(true)
 	}
 	return &Solver{Wanted: pcoll, Installed: init, World: w}
-}
-
-func (s *Solver) SetSteps(st int) {
-	s.Steps = st
 }
 
 func (s *Solver) SetWorld(p []pkg.Package) {
@@ -99,7 +92,6 @@ func (s *Solver) BuildFormula() (bf.Formula, error) {
 		}
 
 	}
-	//return bf.And(r), nil
 	return bf.And(formulas...), nil
 }
 
@@ -114,28 +106,9 @@ func (s *Solver) solve(f bf.Formula) (map[string]bool, bf.Formula, error) {
 
 func (s *Solver) Apply() (map[string]bool, bf.Formula, error) {
 	f, err := s.BuildFormula()
-	fmt.Println("Steps", s.Steps, f)
 	if err != nil {
 		return map[string]bool{}, nil, err
 	}
-
-	// if s.Steps != 0 {
-	// 	for i := s.Steps; i >= 0; i-- {
-	// 		f, err = s.BuildFormula()
-	// 		if err != nil {
-	// 			return map[string]bool{}, nil, err
-	// 		}
-	// 		model, _, err := s.solve(f)
-	// 		if err != nil {
-	// 			return map[string]bool{}, nil, err
-	// 		}
-	// 		fmt.Println("Step ", i, model)
-
-	// 		ass := DecodeModel(model)
-	// 		s.Installed = append(s.Installed, ass...)
-	// 	}
-	// }
-
 	return s.solve(f)
 }
 
@@ -145,14 +118,5 @@ func (s *Solver) Solve() ([]PackageAssert, error) {
 		return nil, err
 	}
 
-	// for _, wanted := range s.Wanted {
-	// 	encodedW, err := wanted.Encode()
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	model[encodedW] = true
-	// 	fmt.Println("adding wanted", model)
-
-	// }
 	return DecodeModel(model)
 }

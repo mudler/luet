@@ -33,7 +33,6 @@ var _ = Describe("Solver", func() {
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
 			s := NewSolver([]pkg.Package{A}, []pkg.Package{C}, []pkg.Package{A, B, C}) // XXX: goes fatal with odd numbers of cnf ?
-			s.SetSteps(1)
 			solution, err := s.Solve()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
