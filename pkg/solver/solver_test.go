@@ -26,13 +26,72 @@ import (
 var _ = Describe("Solver", func() {
 
 	Context("Simple set", func() {
+		It("Solves correctly if the selected package has no requirements or conflicts and we have nothing installed yet", func() {
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{}, []pkg.Package{A, B, C})
+			solution, err := s.Install([]pkg.Package{A})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
+			Expect(len(solution)).To(Equal(1))
+		})
+
+		It("Solves correctly if the selected package has no requirements or conflicts and we have installed one package", func() {
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C})
+			solution, err := s.Install([]pkg.Package{B})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true), Value: true}))
+			Expect(len(solution)).To(Equal(2))
+		})
+
+		It("Solves correctly if the selected package to install has no requirement or conflicts, but in the world there is one with a requirement", func() {
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{E, C}, []pkg.Package{A, B, C, D, E})
+			solution, err := s.Install([]pkg.Package{A})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: E.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true), Value: false}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true), Value: false}))
+
+			Expect(len(solution)).To(Equal(5))
+		})
+
+		It("Solves correctly if the selected package to install has requirements", func() {
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D})
+			solution, err := s.Install([]pkg.Package{A})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true), Value: true}))
+
+			Expect(len(solution)).To(Equal(3))
+		})
 
 		It("Solves correctly", func() {
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C}) // XXX: goes fatal with odd numbers of cnf ?
+			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C})
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
@@ -45,7 +104,6 @@ var _ = Describe("Solver", func() {
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
-			C.IsFlagged(true) // installed
 
 			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D})
 
@@ -59,14 +117,13 @@ var _ = Describe("Solver", func() {
 		})
 
 		It("Solves correctly more complex ones", func() {
-			//	E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-
+			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{}, []pkg.Package{A, B, C, D})
+			s := NewSolver([]pkg.Package{}, []pkg.Package{A, B, C, D, E})
 
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
@@ -74,6 +131,44 @@ var _ = Describe("Solver", func() {
 			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true), Value: true}))
 			Expect(len(solution)).To(Equal(3))
 			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Uninstalls simple package correctly", func() {
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{A, B, C, D})
+
+			solution, err := s.Uninstall(A)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(solution).To(ContainElement(A.IsFlagged(false)))
+
+			//	Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true), Value: true}))
+			Expect(len(solution)).To(Equal(1))
+		})
+
+		It("Uninstalls complex package correctly", func() {
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+			C.IsFlagged(true) // installed
+
+			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{A, B, C, D})
+
+			solution, err := s.Uninstall(A)
+			Expect(solution).To(ContainElement(A.IsFlagged(false)))
+			Expect(solution).To(ContainElement(B.IsFlagged(false)))
+			//Expect(solution).To(ContainElement(C.IsFlagged(true)))
+			Expect(solution).To(ContainElement(D.IsFlagged(false)))
+
+			//	Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true), Value: true}))
+			Expect(len(solution)).To(Equal(3))
+			Expect(err).ToNot(HaveOccurred())
+
 		})
 
 	})

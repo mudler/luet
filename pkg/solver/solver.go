@@ -27,6 +27,7 @@ type State interface{ Encode() string }
 type PackageSolver interface {
 	SetWorld(p []pkg.Package)
 	Install(p []pkg.Package) ([]PackageAssert, error)
+	Uninstall(candidate pkg.Package) ([]pkg.Package, error)
 }
 type Solver struct {
 	Wanted    []pkg.Package
@@ -48,19 +49,58 @@ func (s *Solver) SetWorld(p []pkg.Package) {
 	s.World = p
 }
 
+func (s *Solver) noRulesWorld() bool {
+	for _, p := range s.World {
+		if len(p.GetConflicts()) != 0 || len(p.GetRequires()) != 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (s *Solver) BuildWorld() (bf.Formula, error) {
 	var formulas []bf.Formula
+	// for _, p := range s.Installed {
+	// 	solvable, err := p.BuildFormula()
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	//f = bf.And(f, solvable)
+	// 	formulas = append(formulas, solvable...)
 
-	for _, p := range s.Wanted {
+	// }
+	for _, p := range s.World {
 		solvable, err := p.BuildFormula()
 		if err != nil {
 			return nil, err
 		}
-		//f = bf.And(f, solvable)
 		formulas = append(formulas, solvable...)
-
 	}
 	return bf.And(formulas...), nil
+}
+
+// world is ok with Px (installed-x-th) and removal of package (candidate?)
+// collect unsatisfieds and repeat until we get no more unsatisfieds
+func (s *Solver) Uninstall(candidate pkg.Package) ([]pkg.Package, error) {
+	var res []pkg.Package
+	saved := s.Installed
+	s.Installed = []pkg.Package{}
+
+	asserts, err := s.Install([]pkg.Package{candidate})
+	if err != nil {
+		return nil, err
+	}
+	s.Installed = saved
+
+	for _, a := range asserts {
+		if a.Value && a.Package.Flagged() {
+			res = append(res, a.Package.IsFlagged(false))
+		}
+
+	}
+
+	return res, nil
 }
 
 func (s *Solver) BuildFormula() (bf.Formula, error) {
@@ -70,17 +110,18 @@ func (s *Solver) BuildFormula() (bf.Formula, error) {
 	if err != nil {
 		return nil, err
 	}
-	formulas = append(formulas, r)
 	for _, wanted := range s.Wanted {
 		encodedW, err := wanted.IsFlagged(true).Encode()
 		if err != nil {
 			return nil, err
 		}
 		W := bf.Var(encodedW)
+
 		if len(s.Installed) == 0 {
-			formulas = append(formulas, bf.And(bf.True, W))
+			formulas = append(formulas, W) //bf.And(bf.True, W))
 			continue
 		}
+
 		for _, installed := range s.Installed {
 			encodedI, err := installed.IsFlagged(true).Encode()
 			if err != nil {
@@ -91,6 +132,8 @@ func (s *Solver) BuildFormula() (bf.Formula, error) {
 		}
 
 	}
+	formulas = append(formulas, r)
+
 	return bf.And(formulas...), nil
 }
 
@@ -124,6 +167,18 @@ func (s *Solver) Install(coll []pkg.Package) ([]PackageAssert, error) {
 		v.IsFlagged(false)
 	}
 	s.Wanted = coll
+
+	if s.noRulesWorld() {
+		var ass []PackageAssert
+		for _, p := range s.Installed {
+			ass = append(ass, PackageAssert{Package: p.IsFlagged(true), Value: true})
+
+		}
+		for _, p := range s.Wanted {
+			ass = append(ass, PackageAssert{Package: p.IsFlagged(true), Value: true})
+		}
+		return ass, nil
+	}
 
 	return s.Solve()
 }

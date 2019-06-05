@@ -33,9 +33,12 @@ type Package interface {
 	BuildFormula() ([]bf.Formula, error)
 	IsFlagged(bool) Package
 	Flagged() bool
-
+	GetFingerPrint() string
 	Requires([]*DefaultPackage) Package
 	Conflicts([]*DefaultPackage) Package
+
+	GetRequires() []*DefaultPackage
+	GetConflicts() []*DefaultPackage
 }
 
 type DefaultPackage struct {
@@ -53,6 +56,9 @@ type State string
 
 func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*DefaultPackage) *DefaultPackage {
 	return &DefaultPackage{Name: name, Version: version, PackageRequires: requires, PackageConflicts: conflicts}
+}
+func (p *DefaultPackage) GetFingerPrint() string {
+	return p.Name
 }
 
 func (p *DefaultPackage) AddUse(use string) {
@@ -102,7 +108,12 @@ func (p *DefaultPackage) SetState(state State) Package {
 	p.State = state
 	return p
 }
-
+func (p *DefaultPackage) GetRequires() []*DefaultPackage {
+	return p.PackageRequires
+}
+func (p *DefaultPackage) GetConflicts() []*DefaultPackage {
+	return p.PackageConflicts
+}
 func (p *DefaultPackage) Requires(req []*DefaultPackage) Package {
 	p.PackageRequires = req
 	return p
