@@ -1,0 +1,9 @@
+language: go
+go:
+  - "1.12"
+env:
+  - "GO15VENDOREXPERIMENT=1"
+before_install:
+  - make deps
+script:
+  - make test
