@@ -16,7 +16,7 @@
 package solver
 
 import (
-	pkg "gitlab.com/mudler/luet/pkg/package"
+	pkg "github.com/mudler/luet/pkg/package"
 )
 
 type PackageAssert struct {

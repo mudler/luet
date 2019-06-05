@@ -19,7 +19,7 @@ import (
 	"errors"
 
 	"github.com/crillab/gophersat/bf"
-	pkg "gitlab.com/mudler/luet/pkg/package"
+	pkg "github.com/mudler/luet/pkg/package"
 )
 
 type State interface{ Encode() string }

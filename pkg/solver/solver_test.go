@@ -16,11 +16,11 @@
 package solver_test
 
 import (
+	pkg "github.com/mudler/luet/pkg/package"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	pkg "gitlab.com/mudler/luet/pkg/package"
 
-	. "gitlab.com/mudler/luet/pkg/solver"
+	. "github.com/mudler/luet/pkg/solver"
 )
 
 var _ = Describe("Solver", func() {
