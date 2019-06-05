@@ -190,4 +190,30 @@ var _ = Describe("Solver", func() {
 
 	})
 
+	Context("Complex data sets", func() {
+		It("Solves them correctly", func() {
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			G := pkg.NewPackage("G", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			H := pkg.NewPackage("H", "", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D, E, F, G})
+
+			solution, err := s.Install([]pkg.Package{A})
+			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: H.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: G.IsFlagged(true), Value: true}))
+
+			Expect(len(solution)).To(Equal(6))
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
 })

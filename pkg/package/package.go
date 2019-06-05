@@ -147,18 +147,30 @@ func DecodePackage(ID string) (Package, error) {
 	return p, nil
 }
 
+func NormalizeFlagged(p Package) {
+	for _, r := range p.GetRequires() {
+		r.IsFlagged(true)
+		NormalizeFlagged(r)
+	}
+	for _, r := range p.GetConflicts() {
+		r.IsFlagged(true)
+		NormalizeFlagged(r)
+	}
+}
+
 func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
 	encodedA, err := p.IsFlagged(true).Encode()
 	if err != nil {
 		return nil, err
 	}
+	NormalizeFlagged(p)
 
 	A := bf.Var(encodedA)
 
 	var formulas []bf.Formula
 
 	for _, required := range p.PackageRequires {
-		encodedB, err := required.IsFlagged(true).Encode()
+		encodedB, err := required.Encode()
 		if err != nil {
 			return nil, err
 		}
@@ -174,7 +186,7 @@ func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
 	}
 
 	for _, required := range p.PackageConflicts {
-		encodedB, err := required.IsFlagged(true).Encode()
+		encodedB, err := required.Encode()
 		if err != nil {
 			return nil, err
 		}

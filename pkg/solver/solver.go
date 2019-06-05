@@ -37,10 +37,10 @@ type Solver struct {
 
 func NewSolver(init []pkg.Package, w []pkg.Package) PackageSolver {
 	for _, v := range init {
-		v.IsFlagged(true)
+		pkg.NormalizeFlagged(v)
 	}
 	for _, v := range w {
-		v.IsFlagged(true)
+		pkg.NormalizeFlagged(v)
 	}
 	return &Solver{Installed: init, World: w}
 }
@@ -111,7 +111,7 @@ func (s *Solver) BuildFormula() (bf.Formula, error) {
 		return nil, err
 	}
 	for _, wanted := range s.Wanted {
-		encodedW, err := wanted.IsFlagged(true).Encode()
+		encodedW, err := wanted.Encode()
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +123,7 @@ func (s *Solver) BuildFormula() (bf.Formula, error) {
 		}
 
 		for _, installed := range s.Installed {
-			encodedI, err := installed.IsFlagged(true).Encode()
+			encodedI, err := installed.Encode()
 			if err != nil {
 				return nil, err
 			}
