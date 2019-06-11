@@ -7,6 +7,6 @@ before_install:
   - make deps
 script:
   - make test
-  - go test -race -coverprofile=coverage.txt -covermode=atomic
 after_success:
+  - make coverage
   - bash <(curl -s https://codecov.io/bash)

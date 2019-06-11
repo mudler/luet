@@ -14,6 +14,10 @@ all: deps build
 test:
 	ginkgo -r ./...
 
+.PHONY: coverage
+coverage:
+	go test ./... -race -coverprofile=coverage.txt -covermode=atomic
+
 .PHONY: help
 help:
 	# make all => deps test lint build
