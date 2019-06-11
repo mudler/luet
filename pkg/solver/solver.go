@@ -157,9 +157,6 @@ func (s *Solver) ConflictsWithInstalled(p pkg.Package) (bool, error) {
 
 // Uninstall takes a candidate package and return a list of packages that would be removed
 // in order to purge the candidate. Returns error if unsat.
-// XXX: this should be turned in unsat/sat instead of computing the reverse set
-// e.g. world is ok with Px (installed-x-th) and removal of package (candidate?)
-// collect unsatisfieds and repeat until we get no more unsatisfieds
 func (s *Solver) Uninstall(candidate pkg.Package) ([]pkg.Package, error) {
 	var res []pkg.Package
 
@@ -187,17 +184,20 @@ func (s *Solver) Uninstall(candidate pkg.Package) ([]pkg.Package, error) {
 			if err != nil {
 				return nil, err
 			}
-			if !c { // If doesn't conflict with installed we just consider it for removal
+
+			// If doesn't conflict with installed we just consider it for removal and look for the next one
+			if !c {
 				res = append(res, a.Package.IsFlagged(false))
-			} else {
-				// If does conficlits, give it another chance checking conflicts if in case we didn't installed our candidate and all the requires in the system
-				c, err := s.ConflictsWith(a.Package, InstalledMinusCandidate)
-				if err != nil {
-					return nil, err
-				}
-				if !c {
-					res = append(res, a.Package.IsFlagged(false))
-				}
+				continue
+			}
+
+			// If does conflicts, give it another chance by checking conflicts if in case we didn't installed our candidate and all the required packages in the system
+			c, err = s.ConflictsWith(a.Package, InstalledMinusCandidate)
+			if err != nil {
+				return nil, err
+			}
+			if !c {
+				res = append(res, a.Package.IsFlagged(false))
 			}
 
 		}

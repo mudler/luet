@@ -154,20 +154,20 @@ func (p *DefaultPackage) Expand(world []Package) ([]Package, error) {
 
 	var versionsInWorld []Package
 	for _, w := range world {
-		if w.GetName() == p.GetName() {
+		if w.GetName() != p.GetName() {
+			continue
+		}
 
-			v, err := version.NewVersion(w.GetVersion())
-			if err != nil {
-				return nil, err
-			}
-			constraints, err := version.NewConstraint(p.GetVersion())
-			if err != nil {
-				return nil, err
-			}
-			if constraints.Check(v) {
-				versionsInWorld = append(versionsInWorld, w)
-			}
-
+		v, err := version.NewVersion(w.GetVersion())
+		if err != nil {
+			return nil, err
+		}
+		constraints, err := version.NewConstraint(p.GetVersion())
+		if err != nil {
+			return nil, err
+		}
+		if constraints.Check(v) {
+			versionsInWorld = append(versionsInWorld, w)
 		}
 	}
 
