@@ -16,6 +16,7 @@
 package pkg_test
 
 import (
+	"github.com/crillab/gophersat/bf"
 	. "github.com/mudler/luet/pkg/package"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -40,9 +41,9 @@ var _ = Describe("Package", func() {
 
 	Context("RequiresContains", func() {
 		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
-		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a1 := NewPackage("A", "1.0", []*DefaultPackage{a}, []*DefaultPackage{})
 		a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-		a01 := NewPackage("A", "0.1", []*DefaultPackage{a, a1, a11}, []*DefaultPackage{})
+		a01 := NewPackage("A", "0.1", []*DefaultPackage{a1, a11}, []*DefaultPackage{})
 		It("returns correctly", func() {
 			Expect(a01.RequiresContains(a1)).To(BeTrue())
 			Expect(a01.RequiresContains(a11)).To(BeTrue())
@@ -75,6 +76,25 @@ var _ = Describe("Package", func() {
 			Expect(a.GetConflicts()[0].GetName()).To(Equal(a11.GetName()))
 			Expect(p.GetRequires()[0].GetName()).To(Equal(a1.GetName()))
 			Expect(a.GetRequires()[0].GetName()).To(Equal(a1.GetName()))
+		})
+	})
+
+	Context("BuildFormula", func() {
+		It("builds empty constraints", func() {
+			a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+			f, err := a1.BuildFormula()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).To(Equal([]bf.Formula(nil)))
+		})
+		It("builds constraints correctly", func() {
+			a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
+			a21 := NewPackage("A", "1.2", []*DefaultPackage{}, []*DefaultPackage{})
+			a1 := NewPackage("A", "1.0", []*DefaultPackage{a11}, []*DefaultPackage{a21})
+			f, err := a1.BuildFormula()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(f)).To(Equal(2))
+			Expect(f[0].String()).To(Equal("or(not(1c6f6460), 0e78200a)"))
+			Expect(f[1].String()).To(Equal("or(not(1c6f6460), not(039f5fc3))"))
 		})
 	})
 })

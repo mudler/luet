@@ -55,7 +55,7 @@ func (db *InMemoryDatabase) Set(k, v string) error {
 func (db *InMemoryDatabase) Create(v []byte) (string, error) {
 	enc := base64.StdEncoding.EncodeToString(v)
 	crc32q := crc32.MakeTable(0xD5828281)
-	ID := fmt.Sprintf("%08x\n", crc32.Checksum([]byte(enc), crc32q))
+	ID := fmt.Sprintf("%08x", crc32.Checksum([]byte(enc), crc32q))
 
 	return ID, db.Set(ID, enc)
 }
