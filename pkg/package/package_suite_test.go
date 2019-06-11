@@ -13,30 +13,16 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package solver
+package pkg_test
 
 import (
-	pkg "github.com/mudler/luet/pkg/package"
+	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-// PackageAssert represent a package assertion.
-// It is composed of a Package and a Value which is indicating the absence or not
-// of the associated package state.
-type PackageAssert struct {
-	Package pkg.Package
-	Value   bool
-}
-
-// DecodeModel decodes a model from the SAT solver to package assertions (PackageAssert)
-func DecodeModel(model map[string]bool) ([]PackageAssert, error) {
-	ass := make([]PackageAssert, 0)
-	for k, v := range model {
-		a, err := pkg.DecodePackage(k)
-		if err != nil {
-			return nil, err
-
-		}
-		ass = append(ass, PackageAssert{Package: a, Value: v})
-	}
-	return ass, nil
+func TestSolver(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Package Suite")
 }

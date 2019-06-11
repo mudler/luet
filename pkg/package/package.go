@@ -23,10 +23,13 @@ import (
 	"hash/crc32"
 
 	"github.com/crillab/gophersat/bf"
+	version "github.com/hashicorp/go-version"
 
 	"github.com/jinzhu/copier"
 )
 
+// Package is a package interface (TBD)
+// FIXME: Currently some of the methods are returning DefaultPackages due to JSON serialization of the package
 type Package interface {
 	Encode() (string, error)
 	SetState(state State) Package
@@ -39,8 +42,14 @@ type Package interface {
 
 	GetRequires() []*DefaultPackage
 	GetConflicts() []*DefaultPackage
+	Expand([]Package) ([]Package, error)
+
+	GetName() string
+	GetVersion() string
+	RequiresContains(Package) bool
 }
 
+// DefaultPackage represent a standard package definition
 type DefaultPackage struct {
 	Name             string
 	Version          string
@@ -51,16 +60,21 @@ type DefaultPackage struct {
 	IsSet            bool
 }
 
-type PackageUse []string
+// State represent the package state
 type State string
 
+// NewPackage returns a new package
 func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*DefaultPackage) *DefaultPackage {
 	return &DefaultPackage{Name: name, Version: version, PackageRequires: requires, PackageConflicts: conflicts}
 }
+
+// GetFingerPrint returns a UUID of the package.
+// FIXME: this needs to be unique, now just name is generalized
 func (p *DefaultPackage) GetFingerPrint() string {
 	return p.Name
 }
 
+// AddUse adds a use to a package
 func (p *DefaultPackage) AddUse(use string) {
 	for _, v := range p.UseFlags {
 		if v == use {
@@ -70,6 +84,7 @@ func (p *DefaultPackage) AddUse(use string) {
 	p.UseFlags = append(p.UseFlags, use)
 }
 
+// RemoveUse removes a use to a package
 func (p *DefaultPackage) RemoveUse(use string) {
 
 	for i := len(p.UseFlags) - 1; i >= 0; i-- {
@@ -80,6 +95,8 @@ func (p *DefaultPackage) RemoveUse(use string) {
 
 }
 
+// Encode encodes the package to string.
+// It returns an ID which can be used to retrieve the package later on.
 func (p *DefaultPackage) Encode() (string, error) {
 	res, err := json.Marshal(p)
 	if err != nil {
@@ -103,7 +120,12 @@ func (p *DefaultPackage) IsFlagged(b bool) Package {
 func (p *DefaultPackage) Flagged() bool {
 	return p.IsSet
 }
-
+func (p *DefaultPackage) GetName() string {
+	return p.Name
+}
+func (p *DefaultPackage) GetVersion() string {
+	return p.Version
+}
 func (p *DefaultPackage) SetState(state State) Package {
 	p.State = state
 	return p
@@ -126,6 +148,30 @@ func (p *DefaultPackage) Clone() Package {
 	new := &DefaultPackage{}
 	copier.Copy(&new, &p)
 	return new
+}
+
+func (p *DefaultPackage) Expand(world []Package) ([]Package, error) {
+
+	var versionsInWorld []Package
+	for _, w := range world {
+		if w.GetName() == p.GetName() {
+
+			v, err := version.NewVersion(w.GetVersion())
+			if err != nil {
+				return nil, err
+			}
+			constraints, err := version.NewConstraint(p.GetVersion())
+			if err != nil {
+				return nil, err
+			}
+			if constraints.Check(v) {
+				versionsInWorld = append(versionsInWorld, w)
+			}
+
+		}
+	}
+
+	return versionsInWorld, nil
 }
 
 func DecodePackage(ID string) (Package, error) {
@@ -156,6 +202,20 @@ func NormalizeFlagged(p Package) {
 		r.IsFlagged(true)
 		NormalizeFlagged(r)
 	}
+}
+
+func (p *DefaultPackage) RequiresContains(s Package) bool {
+	for _, re := range p.GetRequires() {
+		if re.GetFingerPrint() == s.GetFingerPrint() {
+			return true
+		}
+
+		if re.RequiresContains(s) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {

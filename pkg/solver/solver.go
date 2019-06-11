@@ -22,19 +22,24 @@ import (
 	pkg "github.com/mudler/luet/pkg/package"
 )
 
-type State interface{ Encode() string }
-
+// PackageSolver is an interface to a generic package solving algorithm
 type PackageSolver interface {
 	SetWorld(p []pkg.Package)
 	Install(p []pkg.Package) ([]PackageAssert, error)
 	Uninstall(candidate pkg.Package) ([]pkg.Package, error)
+	ConflictsWithInstalled(p pkg.Package) (bool, error)
+	ConflictsWith(p pkg.Package, ls []pkg.Package) (bool, error)
 }
+
+// Solver is the default solver for luet
 type Solver struct {
 	Wanted    []pkg.Package
 	Installed []pkg.Package
 	World     []pkg.Package
 }
 
+// NewSolver accepts as argument two lists of packages, the first is the initial set,
+// the second represent all the known packages.
 func NewSolver(init []pkg.Package, w []pkg.Package) PackageSolver {
 	for _, v := range init {
 		pkg.NormalizeFlagged(v)
@@ -44,6 +49,8 @@ func NewSolver(init []pkg.Package, w []pkg.Package) PackageSolver {
 	}
 	return &Solver{Installed: init, World: w}
 }
+
+// SetWorld is a setter for the list of all known packages to the solver
 
 func (s *Solver) SetWorld(p []pkg.Package) {
 	s.World = p
@@ -59,17 +66,35 @@ func (s *Solver) noRulesWorld() bool {
 	return true
 }
 
-func (s *Solver) BuildWorld() (bf.Formula, error) {
+func (s *Solver) BuildInstalled() (bf.Formula, error) {
 	var formulas []bf.Formula
-	// for _, p := range s.Installed {
-	// 	solvable, err := p.BuildFormula()
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	//f = bf.And(f, solvable)
-	// 	formulas = append(formulas, solvable...)
+	for _, p := range s.Installed {
+		solvable, err := p.BuildFormula()
+		if err != nil {
+			return nil, err
+		}
+		//f = bf.And(f, solvable)
+		formulas = append(formulas, solvable...)
 
-	// }
+	}
+	return bf.And(formulas...), nil
+
+}
+
+// BuildWorld builds the formula which olds the requirements from the package definitions
+// which are available (global state)
+func (s *Solver) BuildWorld(includeInstalled bool) (bf.Formula, error) {
+	var formulas []bf.Formula
+	// NOTE: This block should be enabled in case of very old systems with outdated world sets
+	if includeInstalled {
+		solvable, err := s.BuildInstalled()
+		if err != nil {
+			return nil, err
+		}
+		//f = bf.And(f, solvable)
+		formulas = append(formulas, solvable)
+	}
+
 	for _, p := range s.World {
 		solvable, err := p.BuildFormula()
 		if err != nil {
@@ -80,13 +105,75 @@ func (s *Solver) BuildWorld() (bf.Formula, error) {
 	return bf.And(formulas...), nil
 }
 
-// world is ok with Px (installed-x-th) and removal of package (candidate?)
+func (s *Solver) ConflictsWith(p pkg.Package, ls []pkg.Package) (bool, error) {
+	pkg.NormalizeFlagged(p)
+	var formulas []bf.Formula
+
+	if s.noRulesWorld() {
+		return false, nil
+	}
+
+	encodedP, err := p.IsFlagged(true).Encode()
+	if err != nil {
+		return false, err
+	}
+	P := bf.Var(encodedP)
+
+	r, err := s.BuildWorld(false)
+	if err != nil {
+		return false, err
+	}
+	formulas = append(formulas, bf.And(bf.Not(P), r))
+
+	for _, i := range ls {
+		if i.GetFingerPrint() == p.GetFingerPrint() {
+			continue
+		}
+		// XXX: Skip check on any of its requires ?  ( Drop to avoid removing system packages when selecting an uninstall)
+		// if i.RequiresContains(p) {
+		// 	fmt.Println("Requires found")
+		// 	continue
+		// }
+
+		encodedI, err := i.Encode()
+		if err != nil {
+			return false, err
+		}
+		I := bf.Var(encodedI)
+		formulas = append(formulas, bf.And(I, r))
+	}
+	model := bf.Solve(bf.And(formulas...))
+	if model == nil {
+		return true, nil
+	}
+
+	return false, nil
+
+}
+
+func (s *Solver) ConflictsWithInstalled(p pkg.Package) (bool, error) {
+	return s.ConflictsWith(p, s.Installed)
+}
+
+// Uninstall takes a candidate package and return a list of packages that would be removed
+// in order to purge the candidate. Returns error if unsat.
+// XXX: this should be turned in unsat/sat instead of computing the reverse set
+// e.g. world is ok with Px (installed-x-th) and removal of package (candidate?)
 // collect unsatisfieds and repeat until we get no more unsatisfieds
 func (s *Solver) Uninstall(candidate pkg.Package) ([]pkg.Package, error) {
 	var res []pkg.Package
+
+	// Build a fake "Installed" - Candidate and its requires tree
+	var InstalledMinusCandidate []pkg.Package
+	for _, i := range s.Installed {
+		if i.GetFingerPrint() != candidate.GetFingerPrint() && !candidate.RequiresContains(i) {
+			InstalledMinusCandidate = append(InstalledMinusCandidate, i)
+		}
+	}
+
+	// Get the requirements to install the candidate
 	saved := s.Installed
 	s.Installed = []pkg.Package{}
-
 	asserts, err := s.Install([]pkg.Package{candidate})
 	if err != nil {
 		return nil, err
@@ -95,7 +182,24 @@ func (s *Solver) Uninstall(candidate pkg.Package) ([]pkg.Package, error) {
 
 	for _, a := range asserts {
 		if a.Value && a.Package.Flagged() {
-			res = append(res, a.Package.IsFlagged(false))
+
+			c, err := s.ConflictsWithInstalled(a.Package)
+			if err != nil {
+				return nil, err
+			}
+			if !c { // If doesn't conflict with installed we just consider it for removal
+				res = append(res, a.Package.IsFlagged(false))
+			} else {
+				// If does conficlits, give it another chance checking conflicts if in case we didn't installed our candidate and all the requires in the system
+				c, err := s.ConflictsWith(a.Package, InstalledMinusCandidate)
+				if err != nil {
+					return nil, err
+				}
+				if !c {
+					res = append(res, a.Package.IsFlagged(false))
+				}
+			}
+
 		}
 
 	}
@@ -103,10 +207,10 @@ func (s *Solver) Uninstall(candidate pkg.Package) ([]pkg.Package, error) {
 	return res, nil
 }
 
+// BuildFormula builds the main solving formula that is evaluated by the sat solver.
 func (s *Solver) BuildFormula() (bf.Formula, error) {
-	//f := bf.True
 	var formulas []bf.Formula
-	r, err := s.BuildWorld()
+	r, err := s.BuildWorld(false)
 	if err != nil {
 		return nil, err
 	}
@@ -146,6 +250,7 @@ func (s *Solver) solve(f bf.Formula) (map[string]bool, bf.Formula, error) {
 	return model, f, nil
 }
 
+// Solve builds the formula given the current state and returns package assertions
 func (s *Solver) Solve() ([]PackageAssert, error) {
 
 	f, err := s.BuildFormula()
@@ -162,6 +267,8 @@ func (s *Solver) Solve() ([]PackageAssert, error) {
 	return DecodeModel(model)
 }
 
+// Install given a list of packages, returns package assertions to indicate the packages that must be installed in the system in order
+// to statisfy all the constraints
 func (s *Solver) Install(coll []pkg.Package) ([]PackageAssert, error) {
 	for _, v := range coll {
 		v.IsFlagged(false)

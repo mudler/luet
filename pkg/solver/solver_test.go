@@ -150,6 +150,126 @@ var _ = Describe("Solver", func() {
 			Expect(len(solution)).To(Equal(1))
 		})
 
+		It("Find conflicts", func() {
+
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{A}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{A, B, C, D})
+			val, err := s.ConflictsWithInstalled(A)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(val).To(BeTrue())
+
+		})
+
+		It("Find nested conflicts", func() {
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{A}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{A, B, C, D})
+			val, err := s.ConflictsWithInstalled(D)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(val).To(BeTrue())
+		})
+
+		It("Doesn't find nested conflicts", func() {
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{A}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{A, B, C, D})
+			val, err := s.ConflictsWithInstalled(C)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(val).ToNot(BeTrue())
+		})
+
+		It("Doesn't find conflicts", func() {
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{A, B, C, D})
+			val, err := s.ConflictsWithInstalled(C)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(val).ToNot(BeTrue())
+		})
+		It("Uninstalls simple packages not in world correctly", func() {
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{B, C, D})
+
+			solution, err := s.Uninstall(A)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(solution).To(ContainElement(A.IsFlagged(false)))
+
+			//	Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true), Value: true}))
+			Expect(len(solution)).To(Equal(1))
+		})
+
+		It("Uninstalls complex packages not in world correctly", func() {
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{B, C, D})
+
+			solution, err := s.Uninstall(A)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(solution).To(ContainElement(A.IsFlagged(false)))
+
+			Expect(len(solution)).To(Equal(1))
+		})
+
+		It("Uninstalls complex packages correctly, even if shared deps are required by system packages", func() {
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{A, B, C, D})
+
+			solution, err := s.Uninstall(A)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(solution).To(ContainElement(A.IsFlagged(false)))
+			Expect(solution).ToNot(ContainElement(B.IsFlagged(false)))
+
+			Expect(len(solution)).To(Equal(1))
+		})
+
+		It("Uninstalls complex packages in world correctly", func() {
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{C}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{A, C, D}, []pkg.Package{A, B, C, D})
+
+			solution, err := s.Uninstall(A)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(solution).To(ContainElement(A.IsFlagged(false)))
+			Expect(solution).To(ContainElement(C.IsFlagged(false)))
+
+			Expect(len(solution)).To(Equal(2))
+		})
+
 		It("Uninstalls complex package correctly", func() {
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -162,10 +282,8 @@ var _ = Describe("Solver", func() {
 			solution, err := s.Uninstall(A)
 			Expect(solution).To(ContainElement(A.IsFlagged(false)))
 			Expect(solution).To(ContainElement(B.IsFlagged(false)))
-			//Expect(solution).To(ContainElement(C.IsFlagged(true)))
 			Expect(solution).To(ContainElement(D.IsFlagged(false)))
 
-			//	Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true), Value: true}))
 			Expect(len(solution)).To(Equal(3))
 			Expect(err).ToNot(HaveOccurred())
 

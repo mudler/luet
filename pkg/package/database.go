@@ -15,4 +15,6 @@
 
 package pkg
 
+// Database is a merely simple in-memory db.
+// FIXME: Use a proper structure or delegate to third-party
 var Database map[string]string = map[string]string{}
