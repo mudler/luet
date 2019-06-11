@@ -17,4 +17,13 @@ package pkg
 
 // Database is a merely simple in-memory db.
 // FIXME: Use a proper structure or delegate to third-party
-var Database map[string]string = map[string]string{}
+type PackageDatabase interface {
+	Get(s string) (string, error)
+	Set(k, v string) error
+
+	Create([]byte) (string, error)
+	Retrieve(ID string) ([]byte, error)
+
+	GetPackage(ID string) (Package, error)
+	CreatePackage(p Package) (string, error)
+}

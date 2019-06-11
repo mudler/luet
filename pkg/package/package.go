@@ -16,12 +16,6 @@
 package pkg
 
 import (
-	"encoding/base64"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"hash/crc32"
-
 	"github.com/crillab/gophersat/bf"
 	version "github.com/hashicorp/go-version"
 
@@ -98,16 +92,7 @@ func (p *DefaultPackage) RemoveUse(use string) {
 // Encode encodes the package to string.
 // It returns an ID which can be used to retrieve the package later on.
 func (p *DefaultPackage) Encode() (string, error) {
-	res, err := json.Marshal(p)
-	if err != nil {
-		return "", err
-	}
-
-	enc := base64.StdEncoding.EncodeToString(res)
-	crc32q := crc32.MakeTable(0xD5828281)
-	ID := fmt.Sprintf("%08x\n", crc32.Checksum([]byte(enc), crc32q))
-	Database[ID] = base64.StdEncoding.EncodeToString(res)
-	return ID, nil
+	return NewInMemoryDatabase().CreatePackage(p)
 }
 
 func (p *DefaultPackage) WithState(state State) Package {
@@ -175,22 +160,7 @@ func (p *DefaultPackage) Expand(world []Package) ([]Package, error) {
 }
 
 func DecodePackage(ID string) (Package, error) {
-
-	pa, ok := Database[ID]
-	if !ok {
-		return nil, errors.New("No package found with that id")
-	}
-
-	enc, err := base64.StdEncoding.DecodeString(pa)
-	if err != nil {
-		return nil, err
-	}
-	p := &DefaultPackage{}
-
-	if err := json.Unmarshal(enc, &p); err != nil {
-		return nil, err
-	}
-	return p, nil
+	return NewInMemoryDatabase().GetPackage(ID)
 }
 
 func NormalizeFlagged(p Package) {
