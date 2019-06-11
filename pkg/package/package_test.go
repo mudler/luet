@@ -22,6 +22,7 @@ import (
 )
 
 var _ = Describe("Package", func() {
+
 	Context("Simple package", func() {
 		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
 		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
@@ -34,6 +35,46 @@ var _ = Describe("Package", func() {
 			Expect(lst).To(ContainElement(a1))
 			Expect(lst).ToNot(ContainElement(a01))
 			Expect(len(lst)).To(Equal(2))
+		})
+	})
+
+	Context("RequiresContains", func() {
+		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
+		a01 := NewPackage("A", "0.1", []*DefaultPackage{a, a1, a11}, []*DefaultPackage{})
+		It("returns correctly", func() {
+			Expect(a01.RequiresContains(a1)).To(BeTrue())
+			Expect(a01.RequiresContains(a11)).To(BeTrue())
+			Expect(a01.RequiresContains(a)).To(BeTrue())
+			Expect(a.RequiresContains(a11)).ToNot(BeTrue())
+		})
+	})
+
+	Context("Encoding", func() {
+		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
+		a := NewPackage("A", ">=1.0", []*DefaultPackage{a1}, []*DefaultPackage{a11})
+		It("decodes and encodes correctly", func() {
+
+			ID, err := a.Encode()
+			Expect(err).ToNot(HaveOccurred())
+
+			p, err := DecodePackage(ID)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(p.GetVersion()).To(Equal(a.GetVersion()))
+			Expect(p.GetName()).To(Equal(a.GetName()))
+			Expect(p.Flagged()).To(Equal(a.Flagged()))
+			Expect(p.GetFingerPrint()).To(Equal(a.GetFingerPrint()))
+			Expect(len(p.GetConflicts())).To(Equal(len(a.GetConflicts())))
+			Expect(len(p.GetRequires())).To(Equal(len(a.GetRequires())))
+			Expect(len(p.GetRequires())).To(Equal(1))
+			Expect(len(p.GetConflicts())).To(Equal(1))
+			Expect(p.GetConflicts()[0].GetName()).To(Equal(a11.GetName()))
+			Expect(a.GetConflicts()[0].GetName()).To(Equal(a11.GetName()))
+			Expect(p.GetRequires()[0].GetName()).To(Equal(a1.GetName()))
+			Expect(a.GetRequires()[0].GetName()).To(Equal(a1.GetName()))
 		})
 	})
 })
