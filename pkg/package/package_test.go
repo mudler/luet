@@ -97,4 +97,25 @@ var _ = Describe("Package", func() {
 			Expect(f[1].String()).To(Equal("or(not(1c6f6460), not(039f5fc3))"))
 		})
 	})
+
+	Context("Clone", func() {
+		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
+		a := NewPackage("A", ">=1.0", []*DefaultPackage{a1}, []*DefaultPackage{a11})
+
+		It("Clones correctly", func() {
+			a2 := a.Clone()
+			Expect(a2.GetVersion()).To(Equal(a.GetVersion()))
+			Expect(a2.GetName()).To(Equal(a.GetName()))
+			Expect(a2.Flagged()).To(Equal(a.Flagged()))
+			Expect(a2.GetFingerPrint()).To(Equal(a.GetFingerPrint()))
+			Expect(len(a2.GetConflicts())).To(Equal(len(a.GetConflicts())))
+			Expect(len(a2.GetRequires())).To(Equal(len(a.GetRequires())))
+			Expect(len(a2.GetRequires())).To(Equal(1))
+			Expect(len(a2.GetConflicts())).To(Equal(1))
+			Expect(a2.GetConflicts()[0].GetName()).To(Equal(a11.GetName()))
+			Expect(a2.GetRequires()[0].GetName()).To(Equal(a1.GetName()))
+		})
+
+	})
 })

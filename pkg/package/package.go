@@ -26,7 +26,7 @@ import (
 // FIXME: Currently some of the methods are returning DefaultPackages due to JSON serialization of the package
 type Package interface {
 	Encode() (string, error)
-	SetState(state State) Package
+
 	BuildFormula() ([]bf.Formula, error)
 	IsFlagged(bool) Package
 	Flagged() bool
@@ -95,26 +95,23 @@ func (p *DefaultPackage) Encode() (string, error) {
 	return NewInMemoryDatabase().CreatePackage(p)
 }
 
-func (p *DefaultPackage) WithState(state State) Package {
-	return p.Clone().SetState(state)
-}
 func (p *DefaultPackage) IsFlagged(b bool) Package {
 	p.IsSet = b
 	return p
 }
+
 func (p *DefaultPackage) Flagged() bool {
 	return p.IsSet
 }
+
 func (p *DefaultPackage) GetName() string {
 	return p.Name
 }
+
 func (p *DefaultPackage) GetVersion() string {
 	return p.Version
 }
-func (p *DefaultPackage) SetState(state State) Package {
-	p.State = state
-	return p
-}
+
 func (p *DefaultPackage) GetRequires() []*DefaultPackage {
 	return p.PackageRequires
 }
