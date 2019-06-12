@@ -89,7 +89,9 @@ var _ = Describe("Package", func() {
 		It("builds constraints correctly", func() {
 			a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
 			a21 := NewPackage("A", "1.2", []*DefaultPackage{}, []*DefaultPackage{})
-			a1 := NewPackage("A", "1.0", []*DefaultPackage{a11}, []*DefaultPackage{a21})
+			a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+			a1.Requires([]*DefaultPackage{a11})
+			a1.Conflicts([]*DefaultPackage{a21})
 			f, err := a1.BuildFormula()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(f)).To(Equal(2))
@@ -117,5 +119,20 @@ var _ = Describe("Package", func() {
 			Expect(a2.GetRequires()[0].GetName()).To(Equal(a1.GetName()))
 		})
 
+	})
+
+	Context("Useflags", func() {
+		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		It("Adds correctly", func() {
+			a1.AddUse("test")
+			Expect(a1.GetUses()[0]).To(Equal("test"))
+		})
+		It("Removes correctly", func() {
+			Expect(len(a1.GetUses())).To(Equal(1))
+			a1.RemoveUse("foo")
+			Expect(len(a1.GetUses())).To(Equal(1))
+			a1.RemoveUse("test")
+			Expect(len(a1.GetUses())).To(Equal(0))
+		})
 	})
 })

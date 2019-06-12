@@ -41,6 +41,10 @@ type Package interface {
 	GetName() string
 	GetVersion() string
 	RequiresContains(Package) bool
+
+	AddUse(use string)
+	RemoveUse(use string)
+	GetUses() []string
 }
 
 // DefaultPackage represent a standard package definition
@@ -110,6 +114,10 @@ func (p *DefaultPackage) GetName() string {
 
 func (p *DefaultPackage) GetVersion() string {
 	return p.Version
+}
+
+func (p *DefaultPackage) GetUses() []string {
+	return p.UseFlags
 }
 
 func (p *DefaultPackage) GetRequires() []*DefaultPackage {
