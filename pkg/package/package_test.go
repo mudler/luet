@@ -95,8 +95,8 @@ var _ = Describe("Package", func() {
 			f, err := a1.BuildFormula()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(f)).To(Equal(2))
-			Expect(f[0].String()).To(Equal("or(not(1c6f6460), 0e78200a)"))
-			Expect(f[1].String()).To(Equal("or(not(1c6f6460), not(039f5fc3))"))
+			Expect(f[0].String()).To(Equal("or(not(d698a46c), 0dc06f33)"))
+			Expect(f[1].String()).To(Equal("or(not(d698a46c), not(2e57efc4))"))
 		})
 	})
 

@@ -16,6 +16,8 @@
 package pkg
 
 import (
+	"fmt"
+
 	"github.com/crillab/gophersat/bf"
 	version "github.com/hashicorp/go-version"
 
@@ -37,8 +39,11 @@ type Package interface {
 	GetRequires() []*DefaultPackage
 	GetConflicts() []*DefaultPackage
 	Expand([]Package) ([]Package, error)
+	SetCategory(string)
 
 	GetName() string
+	GetCategory() string
+
 	GetVersion() string
 	RequiresContains(Package) bool
 
@@ -51,6 +56,7 @@ type Package interface {
 type DefaultPackage struct {
 	Name             string
 	Version          string
+	Category         string
 	UseFlags         []string
 	State            State
 	PackageRequires  []*DefaultPackage
@@ -69,7 +75,7 @@ func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*D
 // GetFingerPrint returns a UUID of the package.
 // FIXME: this needs to be unique, now just name is generalized
 func (p *DefaultPackage) GetFingerPrint() string {
-	return p.Name
+	return fmt.Sprintf("%s-%s-%s", p.Name, p.Category, p.Version)
 }
 
 // AddUse adds a use to a package
@@ -116,6 +122,13 @@ func (p *DefaultPackage) GetVersion() string {
 	return p.Version
 }
 
+func (p *DefaultPackage) GetCategory() string {
+	return p.Category
+}
+
+func (p *DefaultPackage) SetCategory(s string) {
+	p.Category = s
+}
 func (p *DefaultPackage) GetUses() []string {
 	return p.UseFlags
 }
