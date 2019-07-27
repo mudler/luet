@@ -16,7 +16,6 @@
 package pkg_test
 
 import (
-	"github.com/crillab/gophersat/bf"
 	. "github.com/mudler/luet/pkg/package"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -84,7 +83,7 @@ var _ = Describe("Package", func() {
 			a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
 			f, err := a1.BuildFormula()
 			Expect(err).ToNot(HaveOccurred())
-			Expect(f).To(Equal([]bf.Formula(nil)))
+			Expect(f).To(BeNil())
 		})
 		It("builds constraints correctly", func() {
 			a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})

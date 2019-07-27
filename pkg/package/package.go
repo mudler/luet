@@ -52,6 +52,29 @@ type Package interface {
 	GetUses() []string
 }
 
+type PackageSet interface {
+	GetPackages() []Package
+	AddPackages(pkgs []Package)
+}
+
+type DefaultPackages struct {
+	Packages []Package
+}
+
+type Tree interface {
+	GetPackageSet() PackageSet
+}
+
+func (pkgs *DefaultPackages) GetPackages() []Package {
+	return pkgs.Packages
+}
+
+func (p *DefaultPackages) AddPackages(pkgs []Package) {
+	p.Packages = append(p.Packages, pkgs...)
+}
+
+func NewPackages(p []Package) PackageSet { return &DefaultPackages{Packages: p} }
+
 // DefaultPackage represent a standard package definition
 type DefaultPackage struct {
 	Name             string
