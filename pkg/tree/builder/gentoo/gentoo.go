@@ -19,6 +19,7 @@ package gentoo
 // https://gist.github.com/adnaan/6ca68c7985c6f851def3
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,7 +35,10 @@ func NewGentooBuilder(e EbuildParser) tree.Parser {
 
 type GentooBuilder struct{ EbuildParser EbuildParser }
 
-type GentooTree struct{ Packages pkg.PackageSet }
+type GentooTree struct {
+	Packages pkg.PackageSet
+	DBPath   string
+}
 
 type EbuildParser interface {
 	ScanEbuild(path string) ([]pkg.Package, error)
@@ -44,10 +48,21 @@ func (gt *GentooTree) GetPackageSet() pkg.PackageSet {
 	return gt.Packages
 }
 
-func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
-	tree := &GentooTree{Packages: pkg.NewPackages([]pkg.Package{})}
+func (gt *GentooTree) Prelude() string {
+	return "/usr/portage/"
+}
 
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
+	tmpfile, err := ioutil.TempFile("", "boltdb")
+	if err != nil {
+		return nil, err
+	}
+
+	//defer os.Remove(tmpfile.Name()) // clean up
+
+	tree := &GentooTree{Packages: pkg.NewBoltDatabase(tmpfile.Name()), DBPath: tmpfile.Name()}
+
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -59,8 +74,12 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 			if err != nil {
 				return err
 			}
-			tree.Packages.AddPackages(pkgs)
-
+			for _, p := range pkgs {
+				_, err := tree.GetPackageSet().CreatePackage(p)
+				if err != nil {
+					return err
+				}
+			}
 		}
 		return nil
 	})

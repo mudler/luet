@@ -6,12 +6,15 @@ VERSION := $(shell git describe --tags || echo dev)
 VERSION := $(shell echo $(VERSION) | sed -e 's/^v//g')
 ITTERATION := $(shell date +%s)
 BUILD_PLATFORMS ?= -osarch="linux/amd64" -osarch="linux/386" -osarch="linux/arm"
+ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 .PHONY: all
 all: deps build
 
 .PHONY: test
 test:
+	go get github.com/onsi/ginkgo/ginkgo
+	go get github.com/onsi/gomega/...
 	ginkgo -r ./...
 
 .PHONY: coverage
@@ -54,3 +57,8 @@ lint:
 	# Checking project code style...
 	golint ./... | grep -v "be unexported"
 
+.PHONY: test-docker
+test-docker:
+	docker run -v $(ROOT_DIR):/go/src/github.com/mudler/luet \
+				--workdir /go/src/github.com/mudler/luet -ti golang:latest \
+				bash -c "make test"

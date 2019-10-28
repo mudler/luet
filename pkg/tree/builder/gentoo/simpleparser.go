@@ -19,16 +19,36 @@ package gentoo
 // https://gist.github.com/adnaan/6ca68c7985c6f851def3
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	pkg "github.com/mudler/luet/pkg/package"
+	"mvdan.cc/sh/expand"
+	"mvdan.cc/sh/shell"
+	"mvdan.cc/sh/syntax"
 )
 
 // SimpleEbuildParser ignores USE flags and generates just 1-1 package
 type SimpleEbuildParser struct {
+	World pkg.PackageDatabase
+}
+
+func SourceFile(ctx context.Context, path string) (map[string]expand.Variable, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("could not open: %v", err)
+	}
+	defer f.Close()
+	file, err := syntax.NewParser(syntax.StopAt("src")).Parse(f, path)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse: %v", err)
+	}
+	return shell.SourceNode(ctx, file)
 }
 
 // ScanEbuild returns a list of packages (always one with SimpleEbuildParser) decoded from an ebuild.
@@ -46,6 +66,27 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string) ([]pkg.Package, error) {
 	if len(packageInfo) != 1 || len(packageInfo[0]) != 12 {
 		return []pkg.Package{}, errors.New("Failed decoding ebuild: " + path)
 	}
+
+	vars, err := SourceFile(context.TODO(), path)
+	if err != nil {
+		//	return []pkg.Package{}, err
+	}
+	//fmt.Println("Scanning", path)
+	//fmt.Println(vars)
+	pack := &pkg.DefaultPackage{Name: packageInfo[0][2], Version: packageInfo[0][7]}
+	rdepend, ok := vars["RDEPEND"]
+	if ok {
+		rdepends := strings.Split(rdepend.String(), "\n")
+
+		pack.PackageRequires = []*pkg.DefaultPackage{}
+		for _, rr := range rdepends {
+
+			//TODO: Resolve to db or create a new one.
+			pack.PackageRequires = append(pack.PackageRequires, &pkg.DefaultPackage{Name: rr})
+		}
+
+	}
+
 	//TODO: Deps and conflicts
-	return []pkg.Package{&pkg.DefaultPackage{Name: packageInfo[0][2], Version: packageInfo[0][7]}}, nil
+	return []pkg.Package{pack}, nil
 }

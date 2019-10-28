@@ -21,8 +21,7 @@ import (
 
 // reads a luet tree and generates the package lists
 type Builder interface {
-	Scan(string) error // compiles a tree
-	Load(string) error // pre-scanned tree
-
-	Generate() (pkg.PackageSet, error) // generates world
+	Save(string) error // A tree might be saved to a folder structure (human editable)
+	Load(string) error // A tree might be loaded from a db (e.g. bolt) and written to folder
+	Tree() pkg.Tree    // generates world
 }

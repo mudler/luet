@@ -53,30 +53,19 @@ type Package interface {
 }
 
 type PackageSet interface {
-	GetPackages() []Package
-	AddPackages(pkgs []Package)
-}
-
-type DefaultPackages struct {
-	Packages []Package
+	GetPackages() []string //Ids
+	CreatePackage(pkg Package) (string, error)
+	GetPackage(ID string) (Package, error)
 }
 
 type Tree interface {
 	GetPackageSet() PackageSet
+	Prelude() string // A tree might have a prelude to be able to consume a tree
 }
-
-func (pkgs *DefaultPackages) GetPackages() []Package {
-	return pkgs.Packages
-}
-
-func (p *DefaultPackages) AddPackages(pkgs []Package) {
-	p.Packages = append(p.Packages, pkgs...)
-}
-
-func NewPackages(p []Package) PackageSet { return &DefaultPackages{Packages: p} }
 
 // DefaultPackage represent a standard package definition
 type DefaultPackage struct {
+	ID               int `storm:"id,increment"` // primary key with auto increment
 	Name             string
 	Version          string
 	Category         string
