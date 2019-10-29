@@ -2,48 +2,93 @@
 
 
 [[projects]]
-  digest = "1:4ca90d338f8308896cc66929935175fa18a34ecda213d7b836a484961da885de"
+  name = "github.com/asdine/storm"
+  packages = [
+    ".",
+    "codec",
+    "codec/json",
+    "index",
+    "internal",
+    "q"
+  ]
+  revision = "e0f77eada154c7c2670527a8566d3c045880224f"
+  version = "v2.2.1"
+
+[[projects]]
   name = "github.com/crillab/gophersat"
   packages = [
     "bf",
-    "solver",
+    "solver"
   ]
-  pruneopts = "UT"
   revision = "29177c297796f794c4a8c1b7dadfeaabc19de141"
   version = "v1.1.7"
 
 [[projects]]
-  digest = "1:88e0b0baeb9072f0a4afbcf12dda615fc8be001d1802357538591155998da21b"
+  name = "github.com/fsnotify/fsnotify"
+  packages = ["."]
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  version = "v1.4.7"
+
+[[projects]]
   name = "github.com/hashicorp/go-version"
   packages = ["."]
-  pruneopts = "UT"
   revision = "ac23dc3fea5d1a983c43f6a0f6e2c13f0195d8bd"
   version = "v1.2.0"
 
 [[projects]]
+  name = "github.com/hashicorp/hcl"
+  packages = [
+    ".",
+    "hcl/ast",
+    "hcl/parser",
+    "hcl/printer",
+    "hcl/scanner",
+    "hcl/strconv",
+    "hcl/token",
+    "json/parser",
+    "json/scanner",
+    "json/token"
+  ]
+  revision = "8cb6e5b959231cc1119e43259c4a608f9c51a241"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
-  digest = "1:59392ed8afb901aab4287d4894df8191722e34f3957716f4350c8c133ce99046"
   name = "github.com/hpcloud/tail"
   packages = [
     ".",
     "ratelimiter",
     "util",
     "watch",
-    "winfile",
+    "winfile"
   ]
-  pruneopts = "UT"
   revision = "a1dbeea552b7c8df4b542c66073e393de198a800"
 
 [[projects]]
+  name = "github.com/inconshreveable/mousetrap"
+  packages = ["."]
+  revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
+  version = "v1.0"
+
+[[projects]]
   branch = "master"
-  digest = "1:5c3444689562053b027ef3b96372e306adbe0d7d109b6cdd48d01eb80f8bab14"
   name = "github.com/jinzhu/copier"
   packages = ["."]
-  pruneopts = "UT"
   revision = "7e38e58719c33e0d44d585c4ab477a30f8cb82dd"
 
 [[projects]]
-  digest = "1:e9c3bb68a6c9470302b8046d4647e0612a2ea6037b9c6a47de60c0a90db504f8"
+  name = "github.com/magiconair/properties"
+  packages = ["."]
+  revision = "de8848e004dd33dc07a2947b3d76f618a7fc7ef1"
+  version = "v1.8.1"
+
+[[projects]]
+  name = "github.com/mitchellh/mapstructure"
+  packages = ["."]
+  revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
+  version = "v1.1.2"
+
+[[projects]]
   name = "github.com/onsi/ginkgo"
   packages = [
     ".",
@@ -63,14 +108,12 @@
     "reporters/stenographer",
     "reporters/stenographer/support/go-colorable",
     "reporters/stenographer/support/go-isatty",
-    "types",
+    "types"
   ]
-  pruneopts = "UT"
   revision = "eea6ad008b96acdaa524f5b409513bf062b500ad"
   version = "v1.8.0"
 
 [[projects]]
-  digest = "1:fe167e8f858cbfc10c721f2000f2446140800bb53fa83c088e03d191275611a4"
   name = "github.com/onsi/gomega"
   packages = [
     ".",
@@ -84,34 +127,94 @@
     "matchers/support/goraph/edge",
     "matchers/support/goraph/node",
     "matchers/support/goraph/util",
-    "types",
+    "types"
   ]
-  pruneopts = "UT"
   revision = "90e289841c1ed79b7a598a7cd9959750cb5e89e2"
   version = "v1.5.0"
 
 [[projects]]
+  name = "github.com/pelletier/go-toml"
+  packages = ["."]
+  revision = "903d9455db9ff1d7ac1ab199062eca7266dd11a3"
+  version = "v1.6.0"
+
+[[projects]]
+  name = "github.com/spf13/afero"
+  packages = [
+    ".",
+    "mem"
+  ]
+  revision = "588a75ec4f32903aa5e39a2619ba6a4631e28424"
+  version = "v1.2.2"
+
+[[projects]]
+  name = "github.com/spf13/cast"
+  packages = ["."]
+  revision = "8c9545af88b134710ab1cd196795e7f2388358d7"
+  version = "v1.3.0"
+
+[[projects]]
+  name = "github.com/spf13/cobra"
+  packages = ["."]
+  revision = "f2b07da1e2c38d5f12845a4f607e2e1018cbb1f5"
+  version = "v0.0.5"
+
+[[projects]]
+  name = "github.com/spf13/jwalterweatherman"
+  packages = ["."]
+  revision = "94f6ae3ed3bceceafa716478c5fbf8d29ca601a1"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "github.com/spf13/pflag"
+  packages = ["."]
+  revision = "2e9d26c8c37aae03e3f9d4e90b7116f5accb7cab"
+  version = "v1.0.5"
+
+[[projects]]
+  name = "github.com/spf13/viper"
+  packages = ["."]
+  revision = "b5bf975e5823809fb22c7644d008757f78a4259e"
+  version = "v1.4.0"
+
+[[projects]]
+  name = "go.etcd.io/bbolt"
+  packages = ["."]
+  revision = "a0458a2b35708eef59eb5f620ceb3cd1c01a824d"
+  version = "v1.3.3"
+
+[[projects]]
   branch = "master"
-  digest = "1:a167b5c532f3245f5a147ade26185f16d6ee8f8d3f6c9846f447e9d8b9705505"
+  name = "golang.org/x/crypto"
+  packages = ["ssh/terminal"]
+  revision = "f83a4685e1528a5ebee78469d2a3262e2d505b0b"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/net"
   packages = [
     "html",
     "html/atom",
-    "html/charset",
+    "html/charset"
   ]
-  pruneopts = "UT"
   revision = "60506f45cf65977eb3a9c6e30f995f54a721c271"
 
 [[projects]]
   branch = "master"
-  digest = "1:8f5108406bc43c7669b0d67d282e40d05c9f268615fcaf8c1f0f76965aa3f09f"
+  name = "golang.org/x/sync"
+  packages = ["errgroup"]
+  revision = "cd5d95a43a6e21273425c7ae415d3df9ea832eeb"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
-  pruneopts = "UT"
+  packages = [
+    "unix",
+    "windows"
+  ]
   revision = "4c4f7f33c9ed00de01c4c741d2177abfcfe19307"
 
 [[projects]]
-  digest = "1:8a0baffd5559acaa560f854d7d525c02f4fec2d4f8a214398556fb661a10f6e0"
   name = "golang.org/x/text"
   packages = [
     "encoding",
@@ -128,48 +231,49 @@
     "internal/language",
     "internal/language/compact",
     "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
     "internal/utf8internal",
     "language",
     "runes",
     "transform",
     "unicode/cldr",
+    "unicode/norm"
   ]
-  pruneopts = "UT"
   revision = "342b2e1fbaa52c93f31447ad2c6abc048c63e475"
   version = "v0.3.2"
 
 [[projects]]
-  digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
   name = "gopkg.in/fsnotify/fsnotify.v1"
   packages = ["."]
-  pruneopts = "UT"
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
   version = "v1.4.7"
 
 [[projects]]
-  digest = "1:3c839a777de0e6da035c9de900b60cbec463b0a89351192c1ea083eaf9e0fce0"
   name = "gopkg.in/tomb.v1"
   packages = ["."]
-  pruneopts = "UT"
   revision = "c131134a1947e9afd9cecfe11f4c6dff0732ae58"
 
 [[projects]]
-  digest = "1:4d2e5a73dc1500038e504a8d78b986630e3626dc027bc030ba5c75da257cdb96"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  pruneopts = "UT"
   revision = "51d6538a90f86fe93ac480b35f37b2be17fef232"
   version = "v2.2.2"
+
+[[projects]]
+  name = "mvdan.cc/sh"
+  packages = [
+    "expand",
+    "interp",
+    "shell",
+    "syntax"
+  ]
+  revision = "6ae84988520ab9ea8ad7b2cc327f2261a30e7abf"
+  version = "v2.6.4"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = [
-    "github.com/crillab/gophersat/bf",
-    "github.com/hashicorp/go-version",
-    "github.com/jinzhu/copier",
-    "github.com/onsi/ginkgo",
-    "github.com/onsi/gomega",
-  ]
+  inputs-digest = "5a82d2b92e2d2741d3a6984d87d13415a03b54011011d0db9a6322c890062d81"
   solver-name = "gps-cdcl"
   solver-version = 1
