@@ -30,6 +30,12 @@
   version = "v1.4.7"
 
 [[projects]]
+  name = "github.com/ghodss/yaml"
+  packages = ["."]
+  revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/hashicorp/go-version"
   packages = ["."]
   revision = "ac23dc3fea5d1a983c43f6a0f6e2c13f0195d8bd"
@@ -274,6 +280,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5a82d2b92e2d2741d3a6984d87d13415a03b54011011d0db9a6322c890062d81"
+  inputs-digest = "32dc45eca2838ffaa4644280cac5da278fce8612dfafc9b7d28346e213135e7f"
   solver-name = "gps-cdcl"
   solver-version = 1
