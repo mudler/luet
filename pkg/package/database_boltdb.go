@@ -17,6 +17,7 @@ package pkg
 
 import (
 	"errors"
+	"os"
 	"strconv"
 
 	storm "github.com/asdine/storm"
@@ -54,7 +55,7 @@ func (db *BoltDatabase) Retrieve(ID string) ([]byte, error) {
 	return []byte{}, errors.New("Not implemented")
 }
 
-func (db *BoltDatabase) FindPackage(name, version string) (Package, error) {
+func (db *BoltDatabase) FindPackage(tofind Package) (Package, error) {
 	p := &DefaultPackage{}
 	bolt, err := storm.Open(db.Path)
 	if err != nil {
@@ -62,7 +63,7 @@ func (db *BoltDatabase) FindPackage(name, version string) (Package, error) {
 	}
 	defer bolt.Close()
 
-	err = bolt.Select(q.Eq("Name", name), q.Eq("Version", version)).Limit(1).First(p)
+	err = bolt.Select(q.Eq("Name", tofind.GetName()), q.Eq("Category", tofind.GetCategory()), q.Eq("Version", tofind.GetVersion())).Limit(1).First(p)
 	if err != nil {
 		return nil, err
 	}
@@ -141,4 +142,8 @@ func (db *BoltDatabase) CreatePackage(p Package) (string, error) {
 	}
 
 	return strconv.Itoa(dp.ID), err
+}
+
+func (db *BoltDatabase) Clean() error {
+	return os.RemoveAll(db.Path)
 }

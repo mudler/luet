@@ -36,16 +36,11 @@ func NewGentooBuilder(e EbuildParser) tree.Parser {
 type GentooBuilder struct{ EbuildParser EbuildParser }
 
 type GentooTree struct {
-	Packages pkg.PackageSet
-	DBPath   string
+	*tree.DefaultTree
 }
 
 type EbuildParser interface {
-	ScanEbuild(path string) ([]pkg.Package, error)
-}
-
-func (gt *GentooTree) GetPackageSet() pkg.PackageSet {
-	return gt.Packages
+	ScanEbuild(string, pkg.Tree) ([]pkg.Package, error)
 }
 
 func (gt *GentooTree) Prelude() string {
@@ -58,9 +53,8 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 		return nil, err
 	}
 
-	//defer os.Remove(tmpfile.Name()) // clean up
-
-	tree := &GentooTree{Packages: pkg.NewBoltDatabase(tmpfile.Name()), DBPath: tmpfile.Name()}
+	tree := &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewBoltDatabase(tmpfile.Name())}}
+	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
 
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -70,7 +64,7 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 			return nil
 		}
 		if strings.Contains(info.Name(), "ebuild") {
-			pkgs, err := gb.EbuildParser.ScanEbuild(path)
+			pkgs, err := gb.EbuildParser.ScanEbuild(path, tree)
 			if err != nil {
 				return err
 			}

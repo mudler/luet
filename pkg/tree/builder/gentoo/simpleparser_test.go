@@ -29,6 +29,10 @@ var _ = Describe("GentooBuilder", func() {
 			gb := NewGentooBuilder(&SimpleEbuildParser{})
 			tree, err := gb.Generate("../../../../tests/fixtures/overlay")
 			Expect(err).ToNot(HaveOccurred())
+			defer func() {
+				Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
+			}()
+
 			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
 
 			for _, pid := range tree.GetPackageSet().GetPackages() {

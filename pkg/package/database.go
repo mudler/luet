@@ -26,6 +26,5 @@ type PackageDatabase interface {
 	Create([]byte) (string, error)
 	Retrieve(ID string) ([]byte, error)
 
-	FindPackage(name, version string) (Package, error)
 	UpdatePackage(p Package) error
 }

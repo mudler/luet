@@ -109,7 +109,7 @@ func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {
 	return ID, nil
 }
 
-func (db *InMemoryDatabase) FindPackage(name, version string) (Package, error) {
+func (db *InMemoryDatabase) FindPackage(p Package) (Package, error) {
 	return nil, errors.New("Not implemented")
 }
 
@@ -119,4 +119,9 @@ func (db *InMemoryDatabase) UpdatePackage(p Package) error {
 
 func (db *InMemoryDatabase) GetPackages() []string {
 	return []string{}
+}
+
+func (db *InMemoryDatabase) Clean() error {
+	db.Database = map[string]string{}
+	return nil
 }

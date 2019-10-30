@@ -22,7 +22,6 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -60,7 +59,7 @@ func initConfig() {
 	}
 
 	viper.SetConfigName(".luet") // name of config file (without extension)
-	if cfgFile != "" {             // enable ability to specify config file via flag
+	if cfgFile != "" {           // enable ability to specify config file via flag
 		fmt.Println(">>> cfgFile: ", cfgFile)
 		viper.SetConfigFile(cfgFile)
 		configDir := path.Dir(cfgFile)
@@ -80,8 +79,5 @@ func initConfig() {
 	} else {
 		fmt.Println(err)
 	}
-	viper.WatchConfig()
-	viper.OnConfigChange(func(e fsnotify.Event) {
-		fmt.Println("Config file changed:", e.Name)
-	})
+
 }

@@ -24,4 +24,5 @@ type Builder interface {
 	Save(string) error // A tree might be saved to a folder structure (human editable)
 	Load(string) error // A tree might be loaded from a db (e.g. bolt) and written to folder
 	Tree() pkg.Tree    // generates world
+	WithTree(pkg.Tree)
 }

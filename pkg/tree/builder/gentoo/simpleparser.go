@@ -52,16 +52,17 @@ func SourceFile(ctx context.Context, path string) (map[string]expand.Variable, e
 }
 
 // ScanEbuild returns a list of packages (always one with SimpleEbuildParser) decoded from an ebuild.
-func (ep *SimpleEbuildParser) ScanEbuild(path string) ([]pkg.Package, error) {
+func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Package, error) {
 
 	file := filepath.Base(path)
 	file = strings.Replace(file, ".ebuild", "", -1)
 
-	decodepackage, err := regexp.Compile(`^([<>]?=?)((([^\/]+)\/)?(?U)(\S+))(-(\d+(\.\d+)*[a-z]?(_(alpha|beta|pre|rc|p)\d*)*(-r\d+)?))?$`)
+	decodepackage, err := regexp.Compile(`^([<>]?\~?=?)((([^\/]+)\/)?(?U)(\S+))(-(\d+(\.\d+)*[a-z]?(_(alpha|beta|pre|rc|p)\d*)*(-r\d+)?))?$`)
 	if err != nil {
 		return []pkg.Package{}, errors.New("Invalid regex")
 
 	}
+
 	packageInfo := decodepackage.FindAllStringSubmatch(file, -1)
 	if len(packageInfo) != 1 || len(packageInfo[0]) != 12 {
 		return []pkg.Package{}, errors.New("Failed decoding ebuild: " + path)
@@ -71,18 +72,55 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string) ([]pkg.Package, error) {
 	if err != nil {
 		//	return []pkg.Package{}, err
 	}
-	//fmt.Println("Scanning", path)
+	fmt.Println("Scanning", path)
+	// TODO: Handle this a bit better
 	//fmt.Println(vars)
 	pack := &pkg.DefaultPackage{Name: packageInfo[0][2], Version: packageInfo[0][7]}
 	rdepend, ok := vars["RDEPEND"]
 	if ok {
 		rdepends := strings.Split(rdepend.String(), "\n")
-
+		pack.PackageConflicts = []*pkg.DefaultPackage{}
 		pack.PackageRequires = []*pkg.DefaultPackage{}
 		for _, rr := range rdepends {
 
+			rr = strings.TrimSpace(rr)
+			conflicts := false
+			if strings.HasPrefix(rr, "~") {
+				rr = rr[1:]
+			}
+			if strings.HasPrefix(rr, "!") {
+				rr = rr[1:]
+				conflicts = true
+			}
+			if strings.HasSuffix(rr, "-") {
+				rr = rr[0 : len(rr)-1]
+			}
+
+			deppackageInfo := decodepackage.FindAllStringSubmatch(rr, -1)
+			if len(deppackageInfo) != 1 || len(deppackageInfo[0]) != 12 {
+				continue
+			}
+
 			//TODO: Resolve to db or create a new one.
-			pack.PackageRequires = append(pack.PackageRequires, &pkg.DefaultPackage{Name: rr})
+			dep := &pkg.DefaultPackage{Name: deppackageInfo[0][2], Version: deppackageInfo[0][7]}
+			foundPackage, err := tree.GetPackageSet().FindPackage(dep)
+			if err != nil {
+				_, err := tree.GetPackageSet().CreatePackage(dep)
+				if err != nil {
+					panic(err)
+				}
+				foundPackage = dep
+			}
+			found, ok := foundPackage.(*pkg.DefaultPackage)
+			if !ok {
+				panic("Simpleparser should deal only with DefaultPackages")
+			}
+
+			if conflicts {
+				pack.PackageConflicts = append(pack.PackageConflicts, found)
+			} else {
+				pack.PackageRequires = append(pack.PackageRequires, found)
+			}
 		}
 
 	}

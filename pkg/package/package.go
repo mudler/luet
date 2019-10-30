@@ -20,8 +20,9 @@ import (
 
 	"github.com/crillab/gophersat/bf"
 	version "github.com/hashicorp/go-version"
-
 	"github.com/jinzhu/copier"
+
+	"github.com/ghodss/yaml"
 )
 
 // Package is a package interface (TBD)
@@ -50,30 +51,48 @@ type Package interface {
 	AddUse(use string)
 	RemoveUse(use string)
 	GetUses() []string
+
+	Yaml() ([]byte, error)
 }
 
 type PackageSet interface {
 	GetPackages() []string //Ids
 	CreatePackage(pkg Package) (string, error)
 	GetPackage(ID string) (Package, error)
+	Clean() error
+	FindPackage(Package) (Package, error)
 }
 
 type Tree interface {
 	GetPackageSet() PackageSet
 	Prelude() string // A tree might have a prelude to be able to consume a tree
+	SetPackageSet(s PackageSet)
+	World() ([]Package, error)
+	FindPackage(Package) (Package, error)
+}
+
+// >> Unmarshallers
+// DefaultPackageFromYaml decodes a package from yaml bytes
+func DefaultPackageFromYaml(source []byte) (DefaultPackage, error) {
+	var pkg DefaultPackage
+	err := yaml.Unmarshal(source, &pkg)
+	if err != nil {
+		return pkg, err
+	}
+	return pkg, nil
 }
 
 // DefaultPackage represent a standard package definition
 type DefaultPackage struct {
-	ID               int `storm:"id,increment"` // primary key with auto increment
-	Name             string
-	Version          string
-	Category         string
-	UseFlags         []string
+	ID               int      `storm:"id,increment"` // primary key with auto increment
+	Name             string   `json:"name"`          // Affects YAML field names too.
+	Version          string   `json:"version"`       // Affects YAML field names too.
+	Category         string   `json:"category"`      // Affects YAML field names too.
+	UseFlags         []string `json:"use_flags"`     // Affects YAML field names too.
 	State            State
-	PackageRequires  []*DefaultPackage
-	PackageConflicts []*DefaultPackage
-	IsSet            bool
+	PackageRequires  []*DefaultPackage `json:"requires"`  // Affects YAML field names too.
+	PackageConflicts []*DefaultPackage `json:"conflicts"` // Affects YAML field names too.
+	IsSet            bool              `json:"set"`       // Affects YAML field names too.
 }
 
 // State represent the package state
@@ -115,6 +134,15 @@ func (p *DefaultPackage) RemoveUse(use string) {
 // It returns an ID which can be used to retrieve the package later on.
 func (p *DefaultPackage) Encode() (string, error) {
 	return NewInMemoryDatabase().CreatePackage(p)
+}
+
+func (p *DefaultPackage) Yaml() ([]byte, error) {
+	y, err := yaml.Marshal(p)
+	if err != nil {
+
+		return []byte{}, err
+	}
+	return y, nil
 }
 
 func (p *DefaultPackage) IsFlagged(b bool) Package {
