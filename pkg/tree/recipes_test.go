@@ -36,7 +36,7 @@ var _ = Describe("Recipe", func() {
 				Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
 			}()
 
-			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
+			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(11))
 
 			generalRecipe := NewGeneralRecipe()
 			generalRecipe.WithTree(tree)
@@ -58,7 +58,7 @@ var _ = Describe("Recipe", func() {
 				Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
 			}()
 
-			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
+			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(11))
 
 			generalRecipe := NewGeneralRecipe()
 			generalRecipe.WithTree(tree)
@@ -72,13 +72,12 @@ var _ = Describe("Recipe", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(10))
+			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(11))
 
 			for _, pid := range tree.GetPackageSet().GetPackages() {
 				p, err := tree.GetPackageSet().GetPackage(pid)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(p.GetName()).To(ContainSubstring("pinentry"))
-				Expect(p.GetVersion()).To(ContainSubstring("1."))
 			}
 		})
 	})
@@ -96,9 +95,9 @@ var _ = Describe("Recipe", func() {
 				Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
 			}()
 
-			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
+			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(11))
 
-			pack, err := tree.FindPackage(&pkg.DefaultPackage{Name: "pinentry", Version: "1.0.0-r2"})
+			pack, err := tree.FindPackage(&pkg.DefaultPackage{Name: "pinentry", Version: "1.0.0-r2", Category: "app-crypt"}) // Note: the definition depends on pinentry-base without an explicit version
 			Expect(err).ToNot(HaveOccurred())
 			world, err := tree.World()
 			Expect(err).ToNot(HaveOccurred())
@@ -108,18 +107,13 @@ var _ = Describe("Recipe", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(solution)).To(Equal(3))
 
-			// for _, assertion := range solution {
-			// 	fmt.Println(assertion.Package, assertion.Value)
-
-			// 	for _, req := range assertion.Package.GetRequires() {
-			// 		fmt.Println("\t-> ", req)
-			// 	}
-
-			// 	for _, con := range assertion.Package.GetConflicts() {
-			// 		fmt.Println("\t!! ", con)
-			// 	}
-			// }
-
+			var allSol string
+			for _, sol := range solution {
+				allSol = allSol + "\n" + sol.ToString()
+			}
+			Expect(allSol).To(ContainSubstring("app-crypt/pinentry-base  installed: true"))
+			Expect(allSol).To(ContainSubstring("app-crypt/pinentry 1.1.0-r2 installed: false"))
+			Expect(allSol).To(ContainSubstring("app-crypt/pinentry 1.0.0-r2 installed: true"))
 		})
 	})
 })
