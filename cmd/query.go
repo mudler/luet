@@ -71,7 +71,7 @@ var queryCmd = &cobra.Command{
 			}
 			fmt.Println(">>> World")
 			for _, packss := range world {
-				fmt.Println(packss)
+				packss.Explain()
 			}
 			s := solver.NewSolver([]pkg.Package{}, world)
 			solution, err := s.Install([]pkg.Package{pack})
@@ -82,15 +82,7 @@ var queryCmd = &cobra.Command{
 			fmt.Println(">>> Solution")
 
 			for _, assertion := range solution {
-				fmt.Println(assertion.Package, assertion.Value)
-
-				for _, req := range assertion.Package.GetRequires() {
-					fmt.Println("\t-> ", req)
-				}
-
-				for _, con := range assertion.Package.GetConflicts() {
-					fmt.Println("\t!! ", con)
-				}
+				assertion.Explain()
 			}
 		}
 
