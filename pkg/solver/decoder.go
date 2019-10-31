@@ -16,6 +16,8 @@
 package solver
 
 import (
+	"fmt"
+
 	pkg "github.com/mudler/luet/pkg/package"
 )
 
@@ -39,4 +41,19 @@ func DecodeModel(model map[string]bool) ([]PackageAssert, error) {
 		ass = append(ass, PackageAssert{Package: a, Value: v})
 	}
 	return ass, nil
+}
+
+func (a *PackageAssert) Explain() {
+	fmt.Println(a.ToString())
+	a.Package.Explain()
+}
+
+func (a *PackageAssert) ToString() string {
+	var msg string
+	if a.Package.Flagged() {
+		msg = "installed"
+	} else {
+		msg = "not installed"
+	}
+	return fmt.Sprintf("%s/%s %s %s: %t", a.Package.GetCategory(), a.Package.GetName(), a.Package.GetVersion(), msg, a.Value)
 }

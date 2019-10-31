@@ -53,6 +53,7 @@ type Package interface {
 	GetUses() []string
 
 	Yaml() ([]byte, error)
+	Explain()
 }
 
 type PackageSet interface {
@@ -289,4 +290,24 @@ func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
 		formulas = append(formulas, f...)
 	}
 	return formulas, nil
+}
+
+func (p *DefaultPackage) Explain() {
+
+	fmt.Println("====================")
+	fmt.Println("Name: ", p.GetName())
+	fmt.Println("Category: ", p.GetCategory())
+	fmt.Println("Version: ", p.GetVersion())
+	fmt.Println("Installed: ", p.IsSet)
+
+	for _, req := range p.GetRequires() {
+		fmt.Println("\t-> ", req)
+	}
+
+	for _, con := range p.GetConflicts() {
+		fmt.Println("\t!! ", con)
+	}
+
+	fmt.Println("====================")
+
 }
