@@ -69,10 +69,14 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 				return err
 			}
 			for _, p := range pkgs {
-				_, err := tree.GetPackageSet().CreatePackage(p)
+				_, err := tree.GetPackageSet().FindPackage(p)
 				if err != nil {
-					return err
+					_, err := tree.GetPackageSet().CreatePackage(p)
+					if err != nil {
+						panic(err)
+					}
 				}
+
 			}
 		}
 		return nil
