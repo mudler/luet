@@ -63,7 +63,13 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Pack
 
 	}
 
-	packageInfo := decodepackage.FindAllStringSubmatch(file, -1)
+	v := strings.Replace(path, filepath.Base(file)+".ebuild", "", -1)
+
+	pName := filepath.Base(v)
+
+	cat := filepath.Base(strings.Replace(v, pName, "", -1))
+
+	packageInfo := decodepackage.FindAllStringSubmatch(filepath.Join(cat, file), -1)
 	if len(packageInfo) != 1 || len(packageInfo[0]) != 12 {
 		return []pkg.Package{}, errors.New("Failed decoding ebuild: " + path)
 	}
@@ -72,10 +78,10 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Pack
 	if err != nil {
 		//	return []pkg.Package{}, err
 	}
-	fmt.Println("Scanning", path)
+
 	// TODO: Handle this a bit better
-	//fmt.Println(vars)
-	pack := &pkg.DefaultPackage{Name: packageInfo[0][2], Version: packageInfo[0][7]}
+
+	pack := &pkg.DefaultPackage{Name: packageInfo[0][5], Version: packageInfo[0][7], Category: cat}
 	rdepend, ok := vars["RDEPEND"]
 	if ok {
 		rdepends := strings.Split(rdepend.String(), "\n")
@@ -102,7 +108,7 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Pack
 			}
 
 			//TODO: Resolve to db or create a new one.
-			dep := &pkg.DefaultPackage{Name: deppackageInfo[0][2], Version: deppackageInfo[0][7]}
+			dep := &pkg.DefaultPackage{Name: deppackageInfo[0][5], Version: deppackageInfo[0][7], Category: deppackageInfo[0][4]}
 			foundPackage, err := tree.GetPackageSet().FindPackage(dep)
 			if err != nil {
 				_, err := tree.GetPackageSet().CreatePackage(dep)
