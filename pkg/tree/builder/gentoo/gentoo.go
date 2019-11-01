@@ -19,10 +19,12 @@ package gentoo
 // https://gist.github.com/adnaan/6ca68c7985c6f851def3
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	tree "github.com/mudler/luet/pkg/tree"
 
@@ -47,15 +49,56 @@ func (gt *GentooTree) Prelude() string {
 	return "/usr/portage/"
 }
 
+func (gb *GentooBuilder) scanEbuild(path string, t pkg.Tree) error {
+
+	fmt.Println("Scanning ", path)
+	pkgs, err := gb.EbuildParser.ScanEbuild(path, t)
+	if err != nil {
+		return err
+	}
+	for _, p := range pkgs {
+		_, err := t.GetPackageSet().FindPackage(p)
+		if err != nil {
+			_, err := t.GetPackageSet().CreatePackage(p)
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+	return nil
+}
+
+func (gb *GentooBuilder) worker(i int, wg *sync.WaitGroup, s chan string, t pkg.Tree) error {
+	defer wg.Done()
+
+	for path := range s {
+		err := gb.scanEbuild(path, t)
+		if err != nil {
+			fmt.Println("Error scanning ebuild: " + path)
+		}
+	}
+
+	return nil
+}
+
 func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 	tmpfile, err := ioutil.TempFile("", "boltdb")
 	if err != nil {
 		return nil, err
 	}
-
+	var numWorkers = 10
+	var toScan = make(chan string)
 	tree := &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewBoltDatabase(tmpfile.Name())}}
-	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
 
+	// the waitgroup will allow us to wait for all the goroutines to finish at the end
+	var wg = new(sync.WaitGroup)
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go gb.worker(i, wg, toScan, tree)
+	}
+
+	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -64,26 +107,16 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 			return nil
 		}
 		if strings.Contains(info.Name(), "ebuild") {
-			pkgs, err := gb.EbuildParser.ScanEbuild(path, tree)
-			if err != nil {
-				return err
-			}
-			for _, p := range pkgs {
-				_, err := tree.GetPackageSet().FindPackage(p)
-				if err != nil {
-					_, err := tree.GetPackageSet().CreatePackage(p)
-					if err != nil {
-						panic(err)
-					}
-				}
-
-			}
+			toScan <- path
 		}
 		return nil
 	})
 	if err != nil {
 		return tree, err
 	}
+
+	close(toScan)
+	wg.Wait()
 
 	return tree, tree.ResolveDeps()
 }
