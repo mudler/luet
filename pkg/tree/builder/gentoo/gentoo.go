@@ -123,5 +123,5 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 	close(toScan)
 	wg.Wait()
 	Info("Resolving deps")
-	return tree, tree.ResolveDeps(10)
+	return tree, tree.ResolveDeps(gb.Concurrency)
 }
