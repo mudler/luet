@@ -53,7 +53,11 @@ func SourceFile(ctx context.Context, path string) (map[string]expand.Variable, e
 
 // ScanEbuild returns a list of packages (always one with SimpleEbuildParser) decoded from an ebuild.
 func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Package, error) {
-
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in scanebuild", r)
+		}
+	}()
 	file := filepath.Base(path)
 	file = strings.Replace(file, ".ebuild", "", -1)
 
@@ -73,15 +77,16 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Pack
 	if len(packageInfo) != 1 || len(packageInfo[0]) != 12 {
 		return []pkg.Package{}, errors.New("Failed decoding ebuild: " + path)
 	}
+	pack := &pkg.DefaultPackage{Name: packageInfo[0][5], Version: packageInfo[0][7], Category: cat}
 
 	vars, err := SourceFile(context.TODO(), path)
 	if err != nil {
+		return []pkg.Package{pack}, nil
 		//	return []pkg.Package{}, err
 	}
 
 	// TODO: Handle this a bit better
 
-	pack := &pkg.DefaultPackage{Name: packageInfo[0][5], Version: packageInfo[0][7], Category: cat}
 	rdepend, ok := vars["RDEPEND"]
 	if ok {
 		rdepends := strings.Split(rdepend.String(), "\n")
