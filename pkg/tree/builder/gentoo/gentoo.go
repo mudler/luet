@@ -84,5 +84,6 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 	if err != nil {
 		return tree, err
 	}
-	return tree, nil
+
+	return tree, tree.ResolveDeps()
 }

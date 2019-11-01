@@ -109,23 +109,10 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Pack
 
 			//TODO: Resolve to db or create a new one.
 			dep := &pkg.DefaultPackage{Name: deppackageInfo[0][5], Version: deppackageInfo[0][7], Category: deppackageInfo[0][4]}
-			foundPackage, err := tree.GetPackageSet().FindPackage(dep)
-			if err != nil {
-				_, err := tree.GetPackageSet().CreatePackage(dep)
-				if err != nil {
-					panic(err)
-				}
-				foundPackage = dep
-			}
-			found, ok := foundPackage.(*pkg.DefaultPackage)
-			if !ok {
-				panic("Simpleparser should deal only with DefaultPackages")
-			}
-
 			if conflicts {
-				pack.PackageConflicts = append(pack.PackageConflicts, found)
+				pack.PackageConflicts = append(pack.PackageConflicts, dep)
 			} else {
-				pack.PackageRequires = append(pack.PackageRequires, found)
+				pack.PackageRequires = append(pack.PackageRequires, dep)
 			}
 		}
 

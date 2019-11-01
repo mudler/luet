@@ -7,6 +7,7 @@ package tree
 
 import (
 	"errors"
+	"fmt"
 
 	pkg "github.com/mudler/luet/pkg/package"
 )
@@ -59,4 +60,50 @@ func (gt *DefaultTree) FindPackage(pack pkg.Package) (pkg.Package, error) {
 		}
 	}
 	return nil, errors.New("No package found")
+}
+
+// Search for deps/conflicts in db and replaces it with packages in the db
+func (t *DefaultTree) ResolveDeps() error {
+	for _, pid := range t.GetPackageSet().GetPackages() {
+
+		p, err := t.GetPackageSet().GetPackage(pid)
+		if err != nil {
+			return err
+		}
+
+		for _, r := range p.GetRequires() {
+
+			foundPackage, err := t.GetPackageSet().FindPackage(r)
+			if err != nil {
+				fmt.Println("Warning: Unmatched dependency - no package found in the database for this requirement clause")
+				continue
+				//return err
+			}
+			found, ok := foundPackage.(*pkg.DefaultPackage)
+			if !ok {
+				panic("Simpleparser should deal only with DefaultPackages")
+			}
+			r = found
+		}
+
+		for _, r := range p.GetConflicts() {
+
+			foundPackage, err := t.GetPackageSet().FindPackage(r)
+			if err != nil {
+				continue
+				//return err
+			}
+			found, ok := foundPackage.(*pkg.DefaultPackage)
+			if !ok {
+				panic("Simpleparser should deal only with DefaultPackages")
+			}
+			r = found
+		}
+
+		if err = t.GetPackageSet().UpdatePackage(p); err != nil {
+			return err
+		}
+
+	}
+	return nil
 }

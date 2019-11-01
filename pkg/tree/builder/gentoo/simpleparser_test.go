@@ -33,7 +33,7 @@ var _ = Describe("GentooBuilder", func() {
 				Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
 			}()
 
-			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(11))
+			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
 
 			for _, pid := range tree.GetPackageSet().GetPackages() {
 				p, err := tree.GetPackageSet().GetPackage(pid)

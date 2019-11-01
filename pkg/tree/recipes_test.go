@@ -36,7 +36,7 @@ var _ = Describe("Recipe", func() {
 				Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
 			}()
 
-			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(11))
+			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
 
 			generalRecipe := NewGeneralRecipe()
 			generalRecipe.WithTree(tree)
@@ -58,7 +58,7 @@ var _ = Describe("Recipe", func() {
 				Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
 			}()
 
-			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(11))
+			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
 
 			generalRecipe := NewGeneralRecipe()
 			generalRecipe.WithTree(tree)
@@ -72,7 +72,7 @@ var _ = Describe("Recipe", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(11))
+			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(10))
 
 			for _, pid := range tree.GetPackageSet().GetPackages() {
 				p, err := tree.GetPackageSet().GetPackage(pid)
@@ -95,7 +95,7 @@ var _ = Describe("Recipe", func() {
 				Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
 			}()
 
-			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(11))
+			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
 
 			pack, err := tree.FindPackage(&pkg.DefaultPackage{Name: "pinentry", Version: "1.0.0-r2", Category: "app-crypt"}) // Note: the definition depends on pinentry-base without an explicit version
 			Expect(err).ToNot(HaveOccurred())
@@ -111,6 +111,7 @@ var _ = Describe("Recipe", func() {
 			for _, sol := range solution {
 				allSol = allSol + "\n" + sol.ToString()
 			}
+
 			Expect(allSol).To(ContainSubstring("app-crypt/pinentry-base  installed: true"))
 			Expect(allSol).To(ContainSubstring("app-crypt/pinentry 1.1.0-r2 installed: false"))
 			Expect(allSol).To(ContainSubstring("app-crypt/pinentry 1.0.0-r2 installed: true"))

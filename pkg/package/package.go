@@ -62,6 +62,7 @@ type PackageSet interface {
 	GetPackage(ID string) (Package, error)
 	Clean() error
 	FindPackage(Package) (Package, error)
+	UpdatePackage(p Package) error
 }
 
 type Tree interface {
