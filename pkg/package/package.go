@@ -63,6 +63,7 @@ type PackageSet interface {
 	Clean() error
 	FindPackage(Package) (Package, error)
 	UpdatePackage(p Package) error
+	GetAllPackages(packages chan Package) error
 }
 
 type Tree interface {

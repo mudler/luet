@@ -123,6 +123,22 @@ func (db *BoltDatabase) GetPackages() []string {
 	return ids
 }
 
+func (db *BoltDatabase) GetAllPackages(packages chan Package) error {
+	bolt, err := storm.Open(db.Path)
+	if err != nil {
+		return err
+	}
+	defer bolt.Close()
+	// Fetching records one by one (useful when the bucket contains a lot of records)
+	query := bolt.Select()
+
+	return query.Each(new(DefaultPackage), func(record interface{}) error {
+		u := record.(*DefaultPackage)
+		packages <- u
+		return err
+	})
+}
+
 // Encode encodes the package to string.
 // It returns an ID which can be used to retrieve the package later on.
 func (db *BoltDatabase) CreatePackage(p Package) (string, error) {

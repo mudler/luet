@@ -88,6 +88,11 @@ func (db *InMemoryDatabase) GetPackage(ID string) (Package, error) {
 	return p, nil
 }
 
+// Not implemented
+func (db *InMemoryDatabase) GetAllPackages(packages chan Package) error {
+	return errors.New("Not implemented")
+}
+
 // Encode encodes the package to string.
 // It returns an ID which can be used to retrieve the package later on.
 func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {

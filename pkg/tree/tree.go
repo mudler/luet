@@ -7,7 +7,9 @@ package tree
 
 import (
 	"errors"
-	"fmt"
+	"sync"
+
+	. "github.com/mudler/luet/pkg/logger"
 
 	pkg "github.com/mudler/luet/pkg/package"
 )
@@ -62,20 +64,16 @@ func (gt *DefaultTree) FindPackage(pack pkg.Package) (pkg.Package, error) {
 	return nil, errors.New("No package found")
 }
 
-// Search for deps/conflicts in db and replaces it with packages in the db
-func (t *DefaultTree) ResolveDeps() error {
-	for _, pid := range t.GetPackageSet().GetPackages() {
+func (gb *DefaultTree) depsWorker(i int, wg *sync.WaitGroup, c chan pkg.Package) error {
+	defer wg.Done()
 
-		p, err := t.GetPackageSet().GetPackage(pid)
-		if err != nil {
-			return err
-		}
-
+	for p := range c {
+		SpinnerText(" "+p.GetName(), "Deps ")
 		for _, r := range p.GetRequires() {
 
-			foundPackage, err := t.GetPackageSet().FindPackage(r)
+			foundPackage, err := gb.GetPackageSet().FindPackage(r)
 			if err != nil {
-				fmt.Println("Warning: Unmatched dependency - no package found in the database for this requirement clause")
+				Warning("Unmatched dependency - no package found in the database for this requirement clause")
 				continue
 				//return err
 			}
@@ -88,7 +86,7 @@ func (t *DefaultTree) ResolveDeps() error {
 
 		for _, r := range p.GetConflicts() {
 
-			foundPackage, err := t.GetPackageSet().FindPackage(r)
+			foundPackage, err := gb.GetPackageSet().FindPackage(r)
 			if err != nil {
 				continue
 				//return err
@@ -100,10 +98,29 @@ func (t *DefaultTree) ResolveDeps() error {
 			r = found
 		}
 
-		if err = t.GetPackageSet().UpdatePackage(p); err != nil {
+		if err := gb.GetPackageSet().UpdatePackage(p); err != nil {
 			return err
 		}
-
 	}
+
+	return nil
+}
+
+// Search for deps/conflicts in db and replaces it with packages in the db
+func (t *DefaultTree) ResolveDeps(concurrency int) error {
+	all := make(chan pkg.Package)
+
+	var wg = new(sync.WaitGroup)
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go t.depsWorker(i, wg, all)
+	}
+
+	if err := t.GetPackageSet().GetAllPackages(all); err != nil {
+		return err
+	}
+
+	close(all)
+	wg.Wait()
 	return nil
 }

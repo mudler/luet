@@ -19,16 +19,13 @@ package gentoo
 // https://gist.github.com/adnaan/6ca68c7985c6f851def3
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/briandowns/spinner"
-
+	. "github.com/mudler/luet/pkg/logger"
 	tree "github.com/mudler/luet/pkg/tree"
 
 	pkg "github.com/mudler/luet/pkg/package"
@@ -78,9 +75,10 @@ func (gb *GentooBuilder) worker(i int, wg *sync.WaitGroup, s chan string, t pkg.
 	defer wg.Done()
 
 	for path := range s {
+		SpinnerText(" "+path, "Scanning ")
 		err := gb.scanEbuild(path, t)
 		if err != nil {
-			fmt.Println("Error scanning ebuild: " + path)
+			Error("scanning ebuild: " + path)
 		}
 	}
 
@@ -93,9 +91,8 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 		return nil, err
 	}
 	var toScan = make(chan string)
-	s := spinner.New(spinner.CharSets[11], 100*time.Millisecond) // Build our new spinner
-	s.Start()                                                    // Start the spinner
-	defer s.Stop()
+	Spinner(27)
+	defer SpinnerStop()
 
 	tree := &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewBoltDatabase(tmpfile.Name())}}
 
@@ -125,5 +122,6 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 
 	close(toScan)
 	wg.Wait()
-	return tree, tree.ResolveDeps()
+	Info("Resolving deps")
+	return tree, tree.ResolveDeps(10)
 }
