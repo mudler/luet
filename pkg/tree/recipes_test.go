@@ -29,7 +29,7 @@ var _ = Describe("Recipe", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
-			gb := gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{})
+			gb := gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, 20)
 			tree, err := gb.Generate("../../tests/fixtures/overlay")
 			Expect(err).ToNot(HaveOccurred())
 			defer func() {
@@ -51,7 +51,7 @@ var _ = Describe("Recipe", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
-			gb := gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{})
+			gb := gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, 20)
 			tree, err := gb.Generate("../../tests/fixtures/overlay")
 			Expect(err).ToNot(HaveOccurred())
 			defer func() {
@@ -88,7 +88,7 @@ var _ = Describe("Recipe", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
-			gb := gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{})
+			gb := gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, 20)
 			tree, err := gb.Generate("../../tests/fixtures/overlay")
 			Expect(err).ToNot(HaveOccurred())
 			defer func() {

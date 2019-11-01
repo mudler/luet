@@ -34,7 +34,7 @@ var _ = Describe("GentooBuilder", func() {
 
 	Context("Simple test", func() {
 		It("parses correctly deps", func() {
-			gb := NewGentooBuilder(&FakeParser{})
+			gb := NewGentooBuilder(&FakeParser{}, 20)
 			tree, err := gb.Generate("../../../../tests/fixtures/overlay")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))

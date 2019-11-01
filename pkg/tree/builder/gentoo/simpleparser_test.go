@@ -26,7 +26,7 @@ var _ = Describe("GentooBuilder", func() {
 
 	Context("Simple test", func() {
 		It("parses correctly deps", func() {
-			gb := NewGentooBuilder(&SimpleEbuildParser{})
+			gb := NewGentooBuilder(&SimpleEbuildParser{}, 20)
 			tree, err := gb.Generate("../../../../tests/fixtures/overlay")
 			Expect(err).ToNot(HaveOccurred())
 			defer func() {

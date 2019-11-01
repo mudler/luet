@@ -33,6 +33,7 @@ var convertCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		t := viper.GetString("type")
+		c := viper.GetInt("concurrency")
 
 		if len(args) != 2 {
 			log.Fatalln("Incorrect number of arguments")
@@ -45,9 +46,9 @@ var convertCmd = &cobra.Command{
 		var builder tree.Parser
 		switch t {
 		case "gentoo":
-			builder = gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{})
+			builder = gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, c)
 		default: // dup
-			builder = gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{})
+			builder = gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, c)
 		}
 
 		packageTree, err := builder.Generate(input)
@@ -74,6 +75,7 @@ var convertCmd = &cobra.Command{
 func init() {
 	convertCmd.Flags().String("type", "gentoo", "source type")
 	viper.BindPFlag("type", convertCmd.Flags().Lookup("type"))
-
+	convertCmd.Flags().Int("concurrency", 30, "Concurrenct")
+	viper.BindPFlag("concurrency", convertCmd.Flags().Lookup("concurrency"))
 	RootCmd.AddCommand(convertCmd)
 }

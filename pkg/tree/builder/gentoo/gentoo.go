@@ -31,11 +31,14 @@ import (
 	pkg "github.com/mudler/luet/pkg/package"
 )
 
-func NewGentooBuilder(e EbuildParser) tree.Parser {
-	return &GentooBuilder{EbuildParser: e}
+func NewGentooBuilder(e EbuildParser, concurrency int) tree.Parser {
+	return &GentooBuilder{EbuildParser: e, Concurrency: concurrency}
 }
 
-type GentooBuilder struct{ EbuildParser EbuildParser }
+type GentooBuilder struct {
+	EbuildParser EbuildParser
+	Concurrency  int
+}
 
 type GentooTree struct {
 	*tree.DefaultTree
@@ -87,13 +90,12 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 	if err != nil {
 		return nil, err
 	}
-	var numWorkers = 10
 	var toScan = make(chan string)
 	tree := &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewBoltDatabase(tmpfile.Name())}}
 
 	// the waitgroup will allow us to wait for all the goroutines to finish at the end
 	var wg = new(sync.WaitGroup)
-	for i := 0; i < numWorkers; i++ {
+	for i := 0; i < gb.Concurrency; i++ {
 		wg.Add(1)
 		go gb.worker(i, wg, toScan, tree)
 	}
