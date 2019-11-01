@@ -25,6 +25,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/briandowns/spinner"
 
 	tree "github.com/mudler/luet/pkg/tree"
 
@@ -54,7 +57,6 @@ func (gt *GentooTree) Prelude() string {
 
 func (gb *GentooBuilder) scanEbuild(path string, t pkg.Tree) error {
 
-	fmt.Println("Scanning ", path)
 	pkgs, err := gb.EbuildParser.ScanEbuild(path, t)
 	if err != nil {
 		return err
@@ -91,6 +93,10 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 		return nil, err
 	}
 	var toScan = make(chan string)
+	s := spinner.New(spinner.CharSets[11], 100*time.Millisecond) // Build our new spinner
+	s.Start()                                                    // Start the spinner
+	defer s.Stop()
+
 	tree := &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewBoltDatabase(tmpfile.Name())}}
 
 	// the waitgroup will allow us to wait for all the goroutines to finish at the end
@@ -119,6 +125,5 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 
 	close(toScan)
 	wg.Wait()
-
 	return tree, tree.ResolveDeps()
 }
