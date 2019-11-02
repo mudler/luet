@@ -41,7 +41,7 @@ var convertCmd = &cobra.Command{
 
 		input := args[0]
 		output := args[1]
-		Info("Converting trees from" + input + " [" + t + "]")
+		Info("Converting trees from " + input + " [" + t + "]")
 
 		var builder tree.Parser
 		switch t {

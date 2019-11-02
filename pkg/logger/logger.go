@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	. "github.com/logrusorgru/aurora"
@@ -10,6 +11,7 @@ import (
 )
 
 var s *spinner.Spinner
+var m = &sync.Mutex{}
 
 func Spinner(i int) {
 	if i > 43 {
@@ -21,6 +23,8 @@ func Spinner(i int) {
 }
 
 func SpinnerText(suffix, prefix string) {
+	m.Lock()
+	defer m.Unlock()
 	s.Suffix = Bold(Magenta(suffix)).BgBlack().String()
 	s.Prefix = Bold(Cyan(prefix)).String()
 }
@@ -33,7 +37,7 @@ func SpinnerStop() {
 func Warning(msg ...interface{}) {
 	if s != nil {
 		SpinnerText(Sprintf(msg), Bold(Yellow("Warn")).BgBlack().String())
-		//	return
+		return
 	}
 	cmd := []interface{}{Bold(Yellow("Warn")).BgBlack().String()}
 	for _, f := range msg {
@@ -44,7 +48,7 @@ func Warning(msg ...interface{}) {
 func Debug(msg ...interface{}) {
 	if s != nil {
 		SpinnerText(Sprintf(msg), Bold(White("Debug")).BgBlack().String())
-		//	return
+		return
 	}
 	cmd := []interface{}{Bold(White("Debug")).String()}
 	for _, f := range msg {
@@ -56,7 +60,7 @@ func Debug(msg ...interface{}) {
 func Info(msg ...interface{}) {
 	if s != nil {
 		SpinnerText(Sprintf(msg), Bold(Blue("Info")).BgBlack().String())
-		//	return
+		return
 	}
 	cmd := []interface{}{Bold(Green("Info")).String()}
 	for _, f := range msg {
@@ -68,7 +72,7 @@ func Info(msg ...interface{}) {
 func Error(msg ...interface{}) {
 	if s != nil {
 		SpinnerText(Sprintf(msg), Bold(Red("Error")).BgBlack().String())
-		//	return
+		return
 	}
 	cmd := []interface{}{Bold(Red("Error")).String()}
 	for _, f := range msg {
