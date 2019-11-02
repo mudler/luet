@@ -64,7 +64,7 @@ func (gt *DefaultTree) FindPackage(pack pkg.Package) (pkg.Package, error) {
 	return nil, errors.New("No package found")
 }
 
-func (gb *DefaultTree) depsWorker(i int, wg *sync.WaitGroup, c chan pkg.Package) error {
+func (gb *DefaultTree) depsWorker(i int, wg *sync.WaitGroup, c <-chan pkg.Package) error {
 	defer wg.Done()
 
 	for p := range c {
@@ -72,35 +72,42 @@ func (gb *DefaultTree) depsWorker(i int, wg *sync.WaitGroup, c chan pkg.Package)
 		for _, r := range p.GetRequires() {
 
 			foundPackage, err := gb.GetPackageSet().FindPackage(r)
-			if err != nil {
-				Warning("Unmatched dependency - no package found in the database for this requirement clause")
-				continue
-				//return err
+			if err == nil {
+
+				found, ok := foundPackage.(*pkg.DefaultPackage)
+				if !ok {
+					panic("Simpleparser should deal only with DefaultPackages")
+				}
+				r = found
+			} else {
+				Warning("Unmatched require for", r.GetName())
 			}
-			found, ok := foundPackage.(*pkg.DefaultPackage)
-			if !ok {
-				panic("Simpleparser should deal only with DefaultPackages")
-			}
-			r = found
 		}
 
+		Debug("Walking conflicts for", p.GetName())
 		for _, r := range p.GetConflicts() {
+			Debug("conflict", r.GetName())
 
 			foundPackage, err := gb.GetPackageSet().FindPackage(r)
-			if err != nil {
-				continue
-				//return err
+			if err == nil {
+
+				found, ok := foundPackage.(*pkg.DefaultPackage)
+				if !ok {
+					panic("Simpleparser should deal only with DefaultPackages")
+				}
+				r = found
+			} else {
+				Warning("Unmatched conflict for", r.GetName())
+
 			}
-			found, ok := foundPackage.(*pkg.DefaultPackage)
-			if !ok {
-				panic("Simpleparser should deal only with DefaultPackages")
-			}
-			r = found
 		}
+		Debug("Finished processing", p.GetName())
 
 		if err := gb.GetPackageSet().UpdatePackage(p); err != nil {
 			return err
 		}
+		Debug("Update done", p.GetName())
+
 	}
 
 	return nil
@@ -116,11 +123,8 @@ func (t *DefaultTree) ResolveDeps(concurrency int) error {
 		go t.depsWorker(i, wg, all)
 	}
 
-	if err := t.GetPackageSet().GetAllPackages(all); err != nil {
-		return err
-	}
-
+	err := t.GetPackageSet().GetAllPackages(all)
 	close(all)
 	wg.Wait()
-	return nil
+	return err
 }

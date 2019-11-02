@@ -51,7 +51,7 @@ func (r *Recipe) Load(path string) error {
 		r.PackageTree = NewDefaultTree()
 	}
 
-	tmpfile, err := ioutil.TempFile("", "boltdb")
+	tmpfile, err := ioutil.TempFile("", "luet")
 	if err != nil {
 		return err
 	}

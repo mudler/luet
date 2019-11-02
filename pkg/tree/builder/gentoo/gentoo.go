@@ -19,9 +19,9 @@ package gentoo
 // https://gist.github.com/adnaan/6ca68c7985c6f851def3
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -53,7 +53,11 @@ func (gt *GentooTree) Prelude() string {
 }
 
 func (gb *GentooBuilder) scanEbuild(path string, t pkg.Tree) error {
-
+	defer func() {
+		if r := recover(); r != nil {
+			Error(r)
+		}
+	}()
 	pkgs, err := gb.EbuildParser.ScanEbuild(path, t)
 	if err != nil {
 		return err
@@ -70,31 +74,31 @@ func (gb *GentooBuilder) scanEbuild(path string, t pkg.Tree) error {
 	return nil
 }
 
-func (gb *GentooBuilder) worker(i int, wg *sync.WaitGroup, s chan string, t pkg.Tree) error {
+func (gb *GentooBuilder) worker(i int, wg *sync.WaitGroup, s <-chan string, t pkg.Tree) {
 	defer wg.Done()
 
 	for path := range s {
-		Info("Scanning", path)
+		Info("#"+strconv.Itoa(i), "parsing", path)
 		err := gb.scanEbuild(path, t)
 		if err != nil {
-			Error("scanning ebuild: " + path)
+			Error(path, ":", err.Error())
 		}
 	}
 
-	return nil
 }
 
 func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
-	tmpfile, err := ioutil.TempFile("", "boltdb")
-	if err != nil {
-		return nil, err
-	}
+	// tmpfile, err := ioutil.TempFile("", "boltdb")
+	// if err != nil {
+	// 	return nil, err
+	// }
 	var toScan = make(chan string)
 	Spinner(27)
 	defer SpinnerStop()
+	tree := &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewInMemoryDatabase(false)}}
 
-	tree := &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewBoltDatabase(tmpfile.Name())}}
-
+	//tree := &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewBoltDatabase(tmpfile.Name())}}
+	Debug("Concurrency", gb.Concurrency)
 	// the waitgroup will allow us to wait for all the goroutines to finish at the end
 	var wg = new(sync.WaitGroup)
 	for i := 0; i < gb.Concurrency; i++ {
@@ -103,7 +107,7 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 	}
 
 	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
-	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -111,17 +115,18 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 			return nil
 		}
 		if strings.Contains(info.Name(), "ebuild") {
+			Debug("Enqueueing", path)
 			toScan <- path
 		}
 		return nil
 	})
-	if err != nil {
-		return tree, err
-	}
 
 	close(toScan)
 	Debug("Waiting for goroutines to finish")
-	wg.Wait()
+	wg.Wait() // FIXME: With BoltDB as backend goroutines timeouts and deadlocks
+	if err != nil {
+		return tree, err
+	}
 	Info("Scan finished")
 	Info("Resolving deps")
 	return tree, tree.ResolveDeps(gb.Concurrency)

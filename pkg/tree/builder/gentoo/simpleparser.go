@@ -55,11 +55,8 @@ func SourceFile(ctx context.Context, path string) (map[string]expand.Variable, e
 
 // ScanEbuild returns a list of packages (always one with SimpleEbuildParser) decoded from an ebuild.
 func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Package, error) {
-	defer func() {
-		if r := recover(); r != nil {
-			Error(r)
-		}
-	}()
+	Debug("Starting parsing of ebuild", path)
+
 	file := filepath.Base(path)
 	file = strings.Replace(file, ".ebuild", "", -1)
 
@@ -124,6 +121,7 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Pack
 		}
 
 	}
+	Debug("Finished processing ebuild", path)
 
 	//TODO: Deps and conflicts
 	return []pkg.Package{pack}, nil
