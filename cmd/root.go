@@ -16,11 +16,11 @@
 package cmd
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
+
+	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -40,7 +40,7 @@ var RootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		Error(err)
 		os.Exit(-1)
 	}
 }
@@ -55,12 +55,13 @@ func init() {
 func initConfig() {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
-		log.Fatal(err)
+		Error(err)
+		os.Exit(1)
 	}
 
 	viper.SetConfigName(".luet") // name of config file (without extension)
 	if cfgFile != "" {           // enable ability to specify config file via flag
-		fmt.Println(">>> cfgFile: ", cfgFile)
+		Info(">>> cfgFile: ", cfgFile)
 		viper.SetConfigFile(cfgFile)
 		configDir := path.Dir(cfgFile)
 		if configDir != "." && configDir != dir {
@@ -75,9 +76,9 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		Info("Using config file:", viper.ConfigFileUsed())
 	} else {
-		fmt.Println(err)
+		Error(err)
 	}
 
 }

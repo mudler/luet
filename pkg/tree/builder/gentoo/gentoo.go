@@ -66,7 +66,6 @@ func (gb *GentooBuilder) scanEbuild(path string, t pkg.Tree) error {
 				return err
 			}
 		}
-
 	}
 	return nil
 }
@@ -75,7 +74,7 @@ func (gb *GentooBuilder) worker(i int, wg *sync.WaitGroup, s chan string, t pkg.
 	defer wg.Done()
 
 	for path := range s {
-		SpinnerText(" "+path, "Scanning ")
+		Info("Scanning", path)
 		err := gb.scanEbuild(path, t)
 		if err != nil {
 			Error("scanning ebuild: " + path)
@@ -121,7 +120,9 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 	}
 
 	close(toScan)
+	Debug("Waiting for goroutines to finish")
 	wg.Wait()
+	Info("Scan finished")
 	Info("Resolving deps")
 	return tree, tree.ResolveDeps(gb.Concurrency)
 }

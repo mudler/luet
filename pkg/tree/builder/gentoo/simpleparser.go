@@ -27,6 +27,8 @@ import (
 	"regexp"
 	"strings"
 
+	. "github.com/mudler/luet/pkg/logger"
+
 	pkg "github.com/mudler/luet/pkg/package"
 	"mvdan.cc/sh/expand"
 	"mvdan.cc/sh/shell"
@@ -55,7 +57,7 @@ func SourceFile(ctx context.Context, path string) (map[string]expand.Variable, e
 func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Package, error) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Recovered in scanebuild", r)
+			Error(r)
 		}
 	}()
 	file := filepath.Base(path)

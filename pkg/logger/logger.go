@@ -12,7 +12,6 @@ import (
 var s *spinner.Spinner
 
 func Spinner(i int) {
-
 	if i > 43 {
 		i = 43
 	}
@@ -34,46 +33,46 @@ func SpinnerStop() {
 func Warning(msg ...interface{}) {
 	if s != nil {
 		SpinnerText(Sprintf(msg), Bold(Yellow("Warn")).BgBlack().String())
-		return
+		//	return
 	}
 	cmd := []interface{}{Bold(Yellow("Warn")).BgBlack().String()}
 	for _, f := range msg {
 		cmd = append(cmd, f)
 	}
-	fmt.Println(cmd)
+	fmt.Println(cmd...)
 }
 func Debug(msg ...interface{}) {
 	if s != nil {
 		SpinnerText(Sprintf(msg), Bold(White("Debug")).BgBlack().String())
-		return
+		//	return
 	}
 	cmd := []interface{}{Bold(White("Debug")).String()}
 	for _, f := range msg {
 		cmd = append(cmd, f)
 	}
-	fmt.Println(cmd)
+	fmt.Println(cmd...)
 }
 
 func Info(msg ...interface{}) {
 	if s != nil {
 		SpinnerText(Sprintf(msg), Bold(Blue("Info")).BgBlack().String())
-		return
+		//	return
 	}
 	cmd := []interface{}{Bold(Green("Info")).String()}
 	for _, f := range msg {
 		cmd = append(cmd, f)
 	}
-	fmt.Println(cmd)
+	fmt.Println(cmd...)
 }
 
 func Error(msg ...interface{}) {
 	if s != nil {
 		SpinnerText(Sprintf(msg), Bold(Red("Error")).BgBlack().String())
-		return
+		//	return
 	}
 	cmd := []interface{}{Bold(Red("Error")).String()}
 	for _, f := range msg {
 		cmd = append(cmd, f)
 	}
-	fmt.Println(cmd)
+	fmt.Println(cmd...)
 }

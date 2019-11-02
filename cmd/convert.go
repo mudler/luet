@@ -15,10 +15,9 @@
 package cmd
 
 import (
-	"fmt"
-	"log"
 	"os"
 
+	. "github.com/mudler/luet/pkg/logger"
 	tree "github.com/mudler/luet/pkg/tree"
 
 	"github.com/mudler/luet/pkg/tree/builder/gentoo"
@@ -36,12 +35,13 @@ var convertCmd = &cobra.Command{
 		c := viper.GetInt("concurrency")
 
 		if len(args) != 2 {
-			log.Fatalln("Incorrect number of arguments")
+			Error("Incorrect number of arguments")
+			os.Exit(1)
 		}
 
 		input := args[0]
 		output := args[1]
-		fmt.Println("Converting trees from" + input + " [" + t + "]")
+		Info("Converting trees from" + input + " [" + t + "]")
 
 		var builder tree.Parser
 		switch t {
@@ -53,20 +53,20 @@ var convertCmd = &cobra.Command{
 
 		packageTree, err := builder.Generate(input)
 		if err != nil {
-			fmt.Println("Error: " + err.Error())
+			Error("Error: " + err.Error())
 			os.Exit(1)
 		}
 
 		defer packageTree.GetPackageSet().Clean()
-		fmt.Println("Tree generated")
+		Info("Tree generated")
 
 		generalRecipe := tree.NewGeneralRecipe()
-		fmt.Println("Saving generated tree to " + output)
+		Info("Saving generated tree to " + output)
 
 		generalRecipe.WithTree(packageTree)
 		err = generalRecipe.Save(output)
 		if err != nil {
-			fmt.Println("Error: " + err.Error())
+			Error("Error: " + err.Error())
 			os.Exit(1)
 		}
 	},
