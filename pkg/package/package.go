@@ -136,7 +136,7 @@ func (p *DefaultPackage) RemoveUse(use string) {
 // Encode encodes the package to string.
 // It returns an ID which can be used to retrieve the package later on.
 func (p *DefaultPackage) Encode() (string, error) {
-	return NewInMemoryDatabase().CreatePackage(p)
+	return NewInMemoryDatabase(true).CreatePackage(p)
 }
 
 func (p *DefaultPackage) Yaml() ([]byte, error) {
@@ -221,7 +221,7 @@ func (p *DefaultPackage) Expand(world []Package) ([]Package, error) {
 }
 
 func DecodePackage(ID string) (Package, error) {
-	return NewInMemoryDatabase().GetPackage(ID)
+	return NewInMemoryDatabase(true).GetPackage(ID)
 }
 
 func NormalizeFlagged(p Package) {
