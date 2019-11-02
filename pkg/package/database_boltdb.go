@@ -19,14 +19,18 @@ import (
 	"errors"
 	"os"
 	"strconv"
+	"sync"
+	"time"
 
 	storm "github.com/asdine/storm"
 	"github.com/asdine/storm/q"
+	"go.etcd.io/bbolt"
 )
 
 //var BoltInstance PackageDatabase
 
 type BoltDatabase struct {
+	sync.Mutex
 	Path string
 }
 
@@ -57,7 +61,7 @@ func (db *BoltDatabase) Retrieve(ID string) ([]byte, error) {
 
 func (db *BoltDatabase) FindPackage(tofind Package) (Package, error) {
 	p := &DefaultPackage{}
-	bolt, err := storm.Open(db.Path)
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +76,7 @@ func (db *BoltDatabase) FindPackage(tofind Package) (Package, error) {
 
 func (db *BoltDatabase) UpdatePackage(p Package) error {
 
-	bolt, err := storm.Open(db.Path)
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return err
 	}
@@ -87,12 +91,12 @@ func (db *BoltDatabase) UpdatePackage(p Package) error {
 		return err
 	}
 
-	return err
+	return nil
 }
 
 func (db *BoltDatabase) GetPackage(ID string) (Package, error) {
 	p := &DefaultPackage{}
-	bolt, err := storm.Open(db.Path)
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +111,7 @@ func (db *BoltDatabase) GetPackage(ID string) (Package, error) {
 
 func (db *BoltDatabase) GetPackages() []string {
 	ids := []string{}
-	bolt, err := storm.Open(db.Path)
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return []string{}
 	}
@@ -124,25 +128,37 @@ func (db *BoltDatabase) GetPackages() []string {
 }
 
 func (db *BoltDatabase) GetAllPackages(packages chan Package) error {
-	bolt, err := storm.Open(db.Path)
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return err
 	}
 	defer bolt.Close()
 	// Fetching records one by one (useful when the bucket contains a lot of records)
-	query := bolt.Select()
+	//query := bolt.Select()
 
-	return query.Each(new(DefaultPackage), func(record interface{}) error {
-		u := record.(*DefaultPackage)
-		packages <- u
+	var packs []Package
+	err = bolt.All(&packs)
+	if err != nil {
 		return err
-	})
+	}
+
+	for _, r := range packs {
+		packages <- r
+	}
+
+	return nil
+
+	// return query.Each(new(DefaultPackage), func(record interface{}) error {
+	// 	u := record.(*DefaultPackage)
+	// 	packages <- u
+	// 	return err
+	// })
 }
 
 // Encode encodes the package to string.
 // It returns an ID which can be used to retrieve the package later on.
 func (db *BoltDatabase) CreatePackage(p Package) (string, error) {
-	bolt, err := storm.Open(db.Path)
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return "", err
 	}
@@ -161,5 +177,7 @@ func (db *BoltDatabase) CreatePackage(p Package) (string, error) {
 }
 
 func (db *BoltDatabase) Clean() error {
+	db.Lock()
+	defer db.Unlock()
 	return os.RemoveAll(db.Path)
 }

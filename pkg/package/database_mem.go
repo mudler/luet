@@ -21,24 +21,36 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
+	"sync"
 )
 
 var DBInMemoryInstance PackageDatabase
 
 type InMemoryDatabase struct {
+	*sync.Mutex
 	Database map[string]string
 }
 
-func NewInMemoryDatabase() PackageDatabase {
+func NewInMemoryDatabase(singleton bool) PackageDatabase {
 	// In memoryDB is a singleton
-	if DBInMemoryInstance == nil {
-		DBInMemoryInstance = &InMemoryDatabase{Database: map[string]string{}}
+	if singleton && DBInMemoryInstance == nil {
+		DBInMemoryInstance = &InMemoryDatabase{
+			Mutex: &sync.Mutex{},
+
+			Database: map[string]string{}}
+	}
+	if !singleton {
+		return &InMemoryDatabase{
+			Mutex: &sync.Mutex{},
+
+			Database: map[string]string{}}
 	}
 	return DBInMemoryInstance
 }
 
 func (db *InMemoryDatabase) Get(s string) (string, error) {
-
+	db.Lock()
+	defer db.Unlock()
 	pa, ok := db.Database[s]
 	if !ok {
 		return "", errors.New("No key found with that id")
@@ -47,6 +59,8 @@ func (db *InMemoryDatabase) Get(s string) (string, error) {
 }
 
 func (db *InMemoryDatabase) Set(k, v string) error {
+	db.Lock()
+	defer db.Unlock()
 	db.Database[k] = v
 
 	return nil
@@ -55,7 +69,7 @@ func (db *InMemoryDatabase) Set(k, v string) error {
 func (db *InMemoryDatabase) Create(v []byte) (string, error) {
 	enc := base64.StdEncoding.EncodeToString(v)
 	crc32q := crc32.MakeTable(0xD5828281)
-	ID := fmt.Sprintf("%08x", crc32.Checksum([]byte(enc), crc32q))
+	ID := fmt.Sprintf("%08x", crc32.Checksum([]byte(enc), crc32q)) // TODO: Replace with package fingerprint?
 
 	return ID, db.Set(ID, enc)
 }
@@ -88,15 +102,21 @@ func (db *InMemoryDatabase) GetPackage(ID string) (Package, error) {
 	return p, nil
 }
 
-// Not implemented
 func (db *InMemoryDatabase) GetAllPackages(packages chan Package) error {
-	return errors.New("Not implemented")
+	packs := db.GetPackages()
+	for _, p := range packs {
+		pack, err := db.GetPackage(p)
+		if err != nil {
+			return err
+		}
+		packages <- pack
+	}
+	return nil
 }
 
 // Encode encodes the package to string.
 // It returns an ID which can be used to retrieve the package later on.
 func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {
-
 	pd, ok := p.(*DefaultPackage)
 	if !ok {
 		return "", errors.New("InMemoryDatabase suports only DefaultPackage")
@@ -114,16 +134,73 @@ func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {
 	return ID, nil
 }
 
+func (db *InMemoryDatabase) encodePackage(p Package) (string, string, error) {
+	pd, ok := p.(*DefaultPackage)
+	if !ok {
+		return "", "", errors.New("InMemoryDatabase suports only DefaultPackage")
+	}
+
+	res, err := json.Marshal(pd)
+	if err != nil {
+		return "", "", err
+	}
+	enc := base64.StdEncoding.EncodeToString(res)
+	crc32q := crc32.MakeTable(0xD5828281)
+	ID := fmt.Sprintf("%08x", crc32.Checksum([]byte(enc), crc32q)) // TODO: Replace with package fingerprint?
+
+	return ID, enc, nil
+}
+
 func (db *InMemoryDatabase) FindPackage(p Package) (Package, error) {
-	return nil, errors.New("Not implemented")
+
+	// TODO: Replace this piece, when IDs are fingerprint, findpackage becames O(1)
+
+	for _, k := range db.GetPackages() {
+		pack, err := db.GetPackage(k)
+		if err != nil {
+			return nil, err
+		}
+		if pack.GetFingerPrint() == p.GetFingerPrint() {
+			return pack, nil
+		}
+	}
+	return nil, errors.New("Package not found")
 }
 
 func (db *InMemoryDatabase) UpdatePackage(p Package) error {
-	return errors.New("Not implemented")
+	var id string
+	found := false
+	for _, k := range db.GetPackages() {
+		pack, err := db.GetPackage(k)
+		if err != nil {
+			return err
+		}
+		if pack.GetFingerPrint() == p.GetFingerPrint() {
+			id = k
+			found = true
+			break
+		}
+	}
+	if found {
+
+		_, enc, err := db.encodePackage(p)
+		if err != nil {
+			return err
+		}
+
+		return db.Set(id, enc)
+	}
+	return errors.New("Package not found")
 }
 
 func (db *InMemoryDatabase) GetPackages() []string {
-	return []string{}
+	keys := []string{}
+	db.Lock()
+	defer db.Unlock()
+	for k, _ := range db.Database {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func (db *InMemoryDatabase) Clean() error {
