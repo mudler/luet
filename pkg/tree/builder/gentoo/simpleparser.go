@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	. "github.com/mudler/luet/pkg/logger"
 
@@ -78,7 +79,10 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Pack
 	}
 	pack := &pkg.DefaultPackage{Name: packageInfo[0][5], Version: packageInfo[0][7], Category: cat}
 
-	vars, err := SourceFile(context.TODO(), path)
+	// Adding a timeout of 60secs, as with some bash files it can hang indefinetly
+	timeout, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	vars, err := SourceFile(timeout, path)
 	if err != nil {
 		return []pkg.Package{pack}, nil
 		//	return []pkg.Package{}, err
