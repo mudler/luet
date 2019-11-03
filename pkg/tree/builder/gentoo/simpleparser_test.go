@@ -25,24 +25,26 @@ import (
 var _ = Describe("GentooBuilder", func() {
 
 	Context("Simple test", func() {
-		It("parses correctly deps", func() {
-			gb := NewGentooBuilder(&SimpleEbuildParser{}, 20, InMemory)
-			tree, err := gb.Generate("../../../../tests/fixtures/overlay")
-			Expect(err).ToNot(HaveOccurred())
-			defer func() {
-				Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
-			}()
-
-			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
-
-			for _, pid := range tree.GetPackageSet().GetPackages() {
-				p, err := tree.GetPackageSet().GetPackage(pid)
+		for _, dbType := range []MemoryDB{InMemory, BoltDB} {
+			It("parses correctly deps", func() {
+				gb := NewGentooBuilder(&SimpleEbuildParser{}, 20, dbType)
+				tree, err := gb.Generate("../../../../tests/fixtures/overlay")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(p.GetName()).To(ContainSubstring("pinentry"))
-				//	Expect(p.GetVersion()).To(ContainSubstring("1."))
-			}
+				defer func() {
+					Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
+				}()
 
-		})
+				Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
+
+				for _, pid := range tree.GetPackageSet().GetPackages() {
+					p, err := tree.GetPackageSet().GetPackage(pid)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(p.GetName()).To(ContainSubstring("pinentry"))
+					//	Expect(p.GetVersion()).To(ContainSubstring("1."))
+				}
+
+			})
+		}
 	})
 
 })

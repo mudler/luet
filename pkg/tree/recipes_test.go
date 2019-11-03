@@ -22,99 +22,100 @@ type FakeParser struct {
 }
 
 var _ = Describe("Recipe", func() {
-
-	Context("Tree generation and storing", func() {
-		It("parses and writes a tree", func() {
-			tmpdir, err := ioutil.TempDir("", "tree")
-			Expect(err).ToNot(HaveOccurred())
-			defer os.RemoveAll(tmpdir) // clean up
-
-			gb := gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, 20, gentoo.InMemory)
-			tree, err := gb.Generate("../../tests/fixtures/overlay")
-			Expect(err).ToNot(HaveOccurred())
-			defer func() {
-				Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
-			}()
-
-			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
-
-			generalRecipe := NewGeneralRecipe()
-			generalRecipe.WithTree(tree)
-			err = generalRecipe.Save(tmpdir)
-			Expect(err).ToNot(HaveOccurred())
-		})
-	})
-
-	Context("Reloading trees", func() {
-		It("writes and reads back the same tree", func() {
-			tmpdir, err := ioutil.TempDir("", "tree")
-			Expect(err).ToNot(HaveOccurred())
-			defer os.RemoveAll(tmpdir) // clean up
-
-			gb := gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, 20, gentoo.InMemory)
-			tree, err := gb.Generate("../../tests/fixtures/overlay")
-			Expect(err).ToNot(HaveOccurred())
-			defer func() {
-				Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
-			}()
-
-			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
-
-			generalRecipe := NewGeneralRecipe()
-			generalRecipe.WithTree(tree)
-			err = generalRecipe.Save(tmpdir)
-			Expect(err).ToNot(HaveOccurred())
-
-			generalRecipe.WithTree(nil)
-			Expect(generalRecipe.Tree()).To(BeNil())
-
-			err = generalRecipe.Load(tmpdir)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
-
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(10))
-
-			for _, pid := range tree.GetPackageSet().GetPackages() {
-				p, err := tree.GetPackageSet().GetPackage(pid)
+	for _, dbType := range []gentoo.MemoryDB{gentoo.InMemory, gentoo.BoltDB} {
+		Context("Tree generation and storing", func() {
+			It("parses and writes a tree", func() {
+				tmpdir, err := ioutil.TempDir("", "tree")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(p.GetName()).To(ContainSubstring("pinentry"))
-			}
+				defer os.RemoveAll(tmpdir) // clean up
+
+				gb := gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, 20, dbType)
+				tree, err := gb.Generate("../../tests/fixtures/overlay")
+				Expect(err).ToNot(HaveOccurred())
+				defer func() {
+					Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
+				}()
+
+				Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
+
+				generalRecipe := NewGeneralRecipe()
+				generalRecipe.WithTree(tree)
+				err = generalRecipe.Save(tmpdir)
+				Expect(err).ToNot(HaveOccurred())
+			})
 		})
-	})
 
-	Context("Simple solving with the fixture tree", func() {
-		It("writes and reads back the same tree", func() {
-			tmpdir, err := ioutil.TempDir("", "tree")
-			Expect(err).ToNot(HaveOccurred())
-			defer os.RemoveAll(tmpdir) // clean up
+		Context("Reloading trees", func() {
+			It("writes and reads back the same tree", func() {
+				tmpdir, err := ioutil.TempDir("", "tree")
+				Expect(err).ToNot(HaveOccurred())
+				defer os.RemoveAll(tmpdir) // clean up
 
-			gb := gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, 20, gentoo.InMemory)
-			tree, err := gb.Generate("../../tests/fixtures/overlay")
-			Expect(err).ToNot(HaveOccurred())
-			defer func() {
-				Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
-			}()
+				gb := gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, 20, dbType)
+				tree, err := gb.Generate("../../tests/fixtures/overlay")
+				Expect(err).ToNot(HaveOccurred())
+				defer func() {
+					Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
+				}()
 
-			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
+				Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
 
-			pack, err := tree.FindPackage(&pkg.DefaultPackage{Name: "pinentry", Version: "1.0.0-r2", Category: "app-crypt"}) // Note: the definition depends on pinentry-base without an explicit version
-			Expect(err).ToNot(HaveOccurred())
-			world, err := tree.World()
-			Expect(err).ToNot(HaveOccurred())
+				generalRecipe := NewGeneralRecipe()
+				generalRecipe.WithTree(tree)
+				err = generalRecipe.Save(tmpdir)
+				Expect(err).ToNot(HaveOccurred())
 
-			s := solver.NewSolver([]pkg.Package{}, world)
-			solution, err := s.Install([]pkg.Package{pack})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(solution)).To(Equal(3))
+				generalRecipe.WithTree(nil)
+				Expect(generalRecipe.Tree()).To(BeNil())
 
-			var allSol string
-			for _, sol := range solution {
-				allSol = allSol + "\n" + sol.ToString()
-			}
+				err = generalRecipe.Load(tmpdir)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(allSol).To(ContainSubstring("app-crypt/pinentry-base  installed: true"))
-			Expect(allSol).To(ContainSubstring("app-crypt/pinentry 1.1.0-r2 installed: false"))
-			Expect(allSol).To(ContainSubstring("app-crypt/pinentry 1.0.0-r2 installed: true"))
+				Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(10))
+
+				for _, pid := range tree.GetPackageSet().GetPackages() {
+					p, err := tree.GetPackageSet().GetPackage(pid)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(p.GetName()).To(ContainSubstring("pinentry"))
+				}
+			})
 		})
-	})
+
+		Context("Simple solving with the fixture tree", func() {
+			It("writes and reads back the same tree", func() {
+				tmpdir, err := ioutil.TempDir("", "tree")
+				Expect(err).ToNot(HaveOccurred())
+				defer os.RemoveAll(tmpdir) // clean up
+
+				gb := gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, 20, dbType)
+				tree, err := gb.Generate("../../tests/fixtures/overlay")
+				Expect(err).ToNot(HaveOccurred())
+				defer func() {
+					Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
+				}()
+
+				Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
+
+				pack, err := tree.FindPackage(&pkg.DefaultPackage{Name: "pinentry", Version: "1.0.0-r2", Category: "app-crypt"}) // Note: the definition depends on pinentry-base without an explicit version
+				Expect(err).ToNot(HaveOccurred())
+				world, err := tree.World()
+				Expect(err).ToNot(HaveOccurred())
+
+				s := solver.NewSolver([]pkg.Package{}, world)
+				solution, err := s.Install([]pkg.Package{pack})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(solution)).To(Equal(3))
+
+				var allSol string
+				for _, sol := range solution {
+					allSol = allSol + "\n" + sol.ToString()
+				}
+
+				Expect(allSol).To(ContainSubstring("app-crypt/pinentry-base  installed: true"))
+				Expect(allSol).To(ContainSubstring("app-crypt/pinentry 1.1.0-r2 installed: false"))
+				Expect(allSol).To(ContainSubstring("app-crypt/pinentry 1.0.0-r2 installed: true"))
+			})
+		})
+	}
 })

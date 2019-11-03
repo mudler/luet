@@ -33,12 +33,17 @@ func (f *FakeParser) ScanEbuild(path string, t pkg.Tree) ([]pkg.Package, error) 
 var _ = Describe("GentooBuilder", func() {
 
 	Context("Simple test", func() {
-		It("parses correctly deps", func() {
-			gb := NewGentooBuilder(&FakeParser{}, 20, InMemory)
-			tree, err := gb.Generate("../../../../tests/fixtures/overlay")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
-		})
+		for _, dbType := range []MemoryDB{InMemory, BoltDB} {
+			It("parses correctly deps", func() {
+				gb := NewGentooBuilder(&FakeParser{}, 20, dbType)
+				tree, err := gb.Generate("../../../../tests/fixtures/overlay")
+				defer func() {
+					Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
+				}()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
+			})
+		}
 	})
 
 })
