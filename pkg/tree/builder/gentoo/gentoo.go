@@ -19,6 +19,7 @@ package gentoo
 // https://gist.github.com/adnaan/6ca68c7985c6f851def3
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -31,13 +32,21 @@ import (
 	pkg "github.com/mudler/luet/pkg/package"
 )
 
-func NewGentooBuilder(e EbuildParser, concurrency int) tree.Parser {
+type MemoryDB int
+
+const (
+	InMemory MemoryDB = iota
+	BoltDB   MemoryDB = iota
+)
+
+func NewGentooBuilder(e EbuildParser, concurrency int, db MemoryDB) tree.Parser {
 	return &GentooBuilder{EbuildParser: e, Concurrency: concurrency}
 }
 
 type GentooBuilder struct {
 	EbuildParser EbuildParser
 	Concurrency  int
+	DBType       MemoryDB
 }
 
 type GentooTree struct {
@@ -88,22 +97,32 @@ func (gb *GentooBuilder) worker(i int, wg *sync.WaitGroup, s <-chan string, t pk
 }
 
 func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
-	// tmpfile, err := ioutil.TempFile("", "boltdb")
-	// if err != nil {
-	// 	return nil, err
-	// }
+
 	var toScan = make(chan string)
 	Spinner(27)
 	defer SpinnerStop()
-	tree := &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewInMemoryDatabase(false)}}
+	var gtree *GentooTree
 
-	//tree := &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewBoltDatabase(tmpfile.Name())}}
+	// Support for
+	switch gb.DBType {
+	case InMemory:
+		gtree = &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewInMemoryDatabase(false)}}
+	case BoltDB:
+		tmpfile, err := ioutil.TempFile("", "boltdb")
+		if err != nil {
+			return nil, err
+		}
+		gtree = &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewBoltDatabase(tmpfile.Name())}}
+	default:
+		gtree = &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewInMemoryDatabase(false)}}
+	}
+
 	Debug("Concurrency", gb.Concurrency)
 	// the waitgroup will allow us to wait for all the goroutines to finish at the end
 	var wg = new(sync.WaitGroup)
 	for i := 0; i < gb.Concurrency; i++ {
 		wg.Add(1)
-		go gb.worker(i, wg, toScan, tree)
+		go gb.worker(i, wg, toScan, gtree)
 	}
 
 	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
@@ -115,19 +134,17 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 			return nil
 		}
 		if strings.Contains(info.Name(), "ebuild") {
-			Debug("Enqueueing", path)
 			toScan <- path
 		}
 		return nil
 	})
 
 	close(toScan)
-	Debug("Waiting for goroutines to finish")
-	wg.Wait() // FIXME: With BoltDB as backend goroutines timeouts and deadlocks
+	wg.Wait()
 	if err != nil {
-		return tree, err
+		return gtree, err
 	}
-	Info("Scan finished")
+
 	Info("Resolving deps")
-	return tree, tree.ResolveDeps(gb.Concurrency)
+	return gtree, gtree.ResolveDeps(gb.Concurrency)
 }

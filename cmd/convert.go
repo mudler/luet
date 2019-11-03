@@ -47,9 +47,9 @@ var convertCmd = &cobra.Command{
 		var builder tree.Parser
 		switch t {
 		case "gentoo":
-			builder = gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, c)
+			builder = gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, c, gentoo.InMemory)
 		default: // dup
-			builder = gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, c)
+			builder = gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, c, gentoo.InMemory)
 		}
 
 		packageTree, err := builder.Generate(input)
