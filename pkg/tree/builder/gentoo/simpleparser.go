@@ -24,12 +24,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
 	. "github.com/mudler/luet/pkg/logger"
 
+	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	pkg "github.com/mudler/luet/pkg/package"
 	"mvdan.cc/sh/expand"
 	"mvdan.cc/sh/shell"
@@ -39,6 +39,127 @@ import (
 // SimpleEbuildParser ignores USE flags and generates just 1-1 package
 type SimpleEbuildParser struct {
 	World pkg.PackageDatabase
+}
+
+type GentooDependency struct {
+	Use          string
+	UseCondition _gentoo.PackageCond
+	SubDeps      []*_gentoo.GentooPackage
+	Dep          *_gentoo.GentooPackage
+}
+
+type GentooRDEPEND struct {
+	Dependencies []*GentooDependency
+}
+
+func NewGentooDependency(pkg, use string) (*GentooDependency, error) {
+	var err error
+	ans := &GentooDependency{
+		Use:     use,
+		SubDeps: make([]*_gentoo.GentooPackage, 0),
+	}
+
+	if strings.HasPrefix(use, "!") {
+		ans.Use = ans.Use[1:]
+		ans.UseCondition = _gentoo.PkgCondNot
+	}
+
+	if pkg != "" {
+		ans.Dep, err = _gentoo.ParsePackageStr(pkg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ans, nil
+}
+
+func (d *GentooDependency) AddSubDependency(pkg string) (*_gentoo.GentooPackage, error) {
+	ans, err := _gentoo.ParsePackageStr(pkg)
+	if err != nil {
+		return nil, err
+	}
+
+	d.SubDeps = append(d.SubDeps, ans)
+
+	return ans, nil
+}
+
+func ParseRDEPEND(rdepend string) (*GentooRDEPEND, error) {
+	var lastdep *GentooDependency
+	var pendingDep = false
+	var err error
+
+	ans := &GentooRDEPEND{
+		Dependencies: make([]*GentooDependency, 0),
+	}
+
+	if rdepend != "" {
+		rdepends := strings.Split(rdepend, "\n")
+		for _, rr := range rdepends {
+			rr = strings.TrimSpace(rr)
+			if rr == "" {
+				continue
+			}
+
+			if strings.Index(rr, "?") > 0 {
+				// use flag present
+
+				dep, err := NewGentooDependency("", rr[:strings.Index(rr, "?")])
+				if err != nil {
+					return nil, err
+				}
+				if strings.Index(rr, ")") < 0 {
+					pendingDep = true
+					lastdep = dep
+				}
+
+				ans.Dependencies = append(ans.Dependencies, dep)
+
+				fields := strings.Split(rr[strings.Index(rr, "?")+1:], " ")
+				for _, f := range fields {
+					f = strings.TrimSpace(f)
+					if f == ")" || f == "(" || f == "" {
+						continue
+					}
+
+					_, err = dep.AddSubDependency(f)
+					if err != nil {
+						return nil, err
+					}
+				}
+
+			} else if pendingDep {
+				fields := strings.Split(rr, " ")
+				for _, f := range fields {
+					f = strings.TrimSpace(f)
+					if f == ")" || f == "(" || f == "" {
+						continue
+					}
+					_, err = lastdep.AddSubDependency(f)
+					if err != nil {
+						return nil, err
+					}
+				}
+
+				if strings.Index(rr, ")") >= 0 {
+					pendingDep = false
+					lastdep = nil
+				}
+
+			} else {
+				dep, err := NewGentooDependency(rr, "")
+				if err != nil {
+					return nil, err
+				}
+				ans.Dependencies = append(ans.Dependencies, dep)
+			}
+
+		}
+
+	}
+
+	return ans, nil
 }
 
 func SourceFile(ctx context.Context, path string) (map[string]expand.Variable, error) {
@@ -58,26 +179,20 @@ func SourceFile(ctx context.Context, path string) (map[string]expand.Variable, e
 func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Package, error) {
 	Debug("Starting parsing of ebuild", path)
 
-	file := filepath.Base(path)
-	file = strings.Replace(file, ".ebuild", "", -1)
+	pkgstr := filepath.Base(path)
+	pkgstr = filepath.Base(filepath.Dir(path)) + "/" + strings.Replace(pkgstr, ".ebuild", "", -1)
 
-	decodepackage, err := regexp.Compile(`^([<>]?\~?=?)((([^\/]+)\/)?(?U)(\S+))(-(\d+(\.\d+)*[a-z]?(_(alpha|beta|pre|rc|p)\d*)*(-r\d+)?))?$`)
+	gp, err := _gentoo.ParsePackageStr(pkgstr)
 	if err != nil {
-		return []pkg.Package{}, errors.New("Invalid regex")
+		return []pkg.Package{}, errors.New("Error on parsing package string")
 
 	}
 
-	v := strings.Replace(path, filepath.Base(file)+".ebuild", "", -1)
-
-	pName := filepath.Base(v)
-
-	cat := filepath.Base(strings.Replace(v, pName, "", -1))
-
-	packageInfo := decodepackage.FindAllStringSubmatch(filepath.Join(cat, file), -1)
-	if len(packageInfo) != 1 || len(packageInfo[0]) != 12 {
-		return []pkg.Package{}, errors.New("Failed decoding ebuild: " + path)
+	pack := &pkg.DefaultPackage{
+		Name:     gp.Name,
+		Version:  fmt.Sprintf("%s%s", gp.Version, gp.VersionSuffix),
+		Category: gp.Category,
 	}
-	pack := &pkg.DefaultPackage{Name: packageInfo[0][5], Version: packageInfo[0][7], Category: cat}
 
 	// Adding a timeout of 60secs, as with some bash files it can hang indefinetly
 	timeout, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -92,35 +207,45 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Pack
 
 	rdepend, ok := vars["RDEPEND"]
 	if ok {
-		rdepends := strings.Split(rdepend.String(), "\n")
+		gRDEPEND, err := ParseRDEPEND(rdepend.String())
+		if err != nil {
+			return []pkg.Package{pack}, nil
+			//	return []pkg.Package{}, err
+		}
+
 		pack.PackageConflicts = []*pkg.DefaultPackage{}
 		pack.PackageRequires = []*pkg.DefaultPackage{}
-		for _, rr := range rdepends {
+		for _, d := range gRDEPEND.Dependencies {
 
-			rr = strings.TrimSpace(rr)
-			conflicts := false
-			if strings.HasPrefix(rr, "~") {
-				rr = rr[1:]
-			}
-			if strings.HasPrefix(rr, "!") {
-				rr = rr[1:]
-				conflicts = true
-			}
-			if strings.HasSuffix(rr, "-") {
-				rr = rr[0 : len(rr)-1]
-			}
+			// TODO: See how handle use flags enabled.
+			if d.Use != "" {
+				for _, d2 := range d.SubDeps {
 
-			deppackageInfo := decodepackage.FindAllStringSubmatch(rr, -1)
-			if len(deppackageInfo) != 1 || len(deppackageInfo[0]) != 12 {
-				continue
-			}
-
-			//TODO: Resolve to db or create a new one.
-			dep := &pkg.DefaultPackage{Name: deppackageInfo[0][5], Version: deppackageInfo[0][7], Category: deppackageInfo[0][4]}
-			if conflicts {
-				pack.PackageConflicts = append(pack.PackageConflicts, dep)
+					//TODO: Resolve to db or create a new one.
+					dep := &pkg.DefaultPackage{
+						Name:     d2.Name,
+						Version:  d2.Version + d2.VersionSuffix,
+						Category: d2.Category,
+					}
+					if d2.Condition == _gentoo.PkgCondNot {
+						pack.PackageConflicts = append(pack.PackageConflicts, dep)
+					} else {
+						pack.PackageRequires = append(pack.PackageRequires, dep)
+					}
+				}
 			} else {
-				pack.PackageRequires = append(pack.PackageRequires, dep)
+
+				//TODO: Resolve to db or create a new one.
+				dep := &pkg.DefaultPackage{
+					Name:     d.Dep.Name,
+					Version:  d.Dep.Version + d.Dep.VersionSuffix,
+					Category: d.Dep.Category,
+				}
+				if d.Dep.Condition == _gentoo.PkgCondNot {
+					pack.PackageConflicts = append(pack.PackageConflicts, dep)
+				} else {
+					pack.PackageRequires = append(pack.PackageRequires, dep)
+				}
 			}
 		}
 
