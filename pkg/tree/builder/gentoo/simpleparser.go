@@ -180,12 +180,12 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Pack
 	Debug("Starting parsing of ebuild", path)
 
 	pkgstr := filepath.Base(path)
-	pkgstr = filepath.Base(filepath.Dir(path)) + "/" + strings.Replace(pkgstr, ".ebuild", "", -1)
+	paths := strings.Split(filepath.Dir(path), "/")
+	pkgstr = paths[len(paths)-2] + "/" + strings.Replace(pkgstr, ".ebuild", "", -1)
 
 	gp, err := _gentoo.ParsePackageStr(pkgstr)
 	if err != nil {
 		return []pkg.Package{}, errors.New("Error on parsing package string")
-
 	}
 
 	pack := &pkg.DefaultPackage{
