@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -34,49 +35,49 @@ func SpinnerStop() {
 	s = nil
 }
 
-func Warning(msg ...interface{}) {
-	if s != nil {
-		SpinnerText(Sprintf(msg), Bold(Yellow("Warn")).BgBlack().String())
-		return
+func msg(level string, msg ...interface{}) {
+	var levelMsg string
+	switch level {
+	case "warning":
+		levelMsg = Bold(Yellow("Warn")).BgBlack().String()
+	case "debug":
+		levelMsg = Bold(White("Debug")).BgBlack().String()
+	case "info":
+		levelMsg = Bold(Blue("Info")).BgBlack().String()
+	case "error":
+		levelMsg = Bold(Red("Error")).BgBlack().String()
 	}
-	cmd := []interface{}{Bold(Yellow("Warn")).BgBlack().String()}
+
+	if s != nil {
+		SpinnerText(Sprintf(msg), levelMsg)
+		//	return
+	}
+
+	cmd := []interface{}{levelMsg}
 	for _, f := range msg {
 		cmd = append(cmd, f)
 	}
-	fmt.Println(cmd...)
-}
-func Debug(msg ...interface{}) {
-	if s != nil {
-		SpinnerText(Sprintf(msg), Bold(White("Debug")).BgBlack().String())
-		return
-	}
-	cmd := []interface{}{Bold(White("Debug")).String()}
-	for _, f := range msg {
-		cmd = append(cmd, f)
-	}
+
 	fmt.Println(cmd...)
 }
 
-func Info(msg ...interface{}) {
-	if s != nil {
-		SpinnerText(Sprintf(msg), Bold(Blue("Info")).BgBlack().String())
-		return
-	}
-	cmd := []interface{}{Bold(Green("Info")).String()}
-	for _, f := range msg {
-		cmd = append(cmd, f)
-	}
-	fmt.Println(cmd...)
+func Warning(mess ...interface{}) {
+	msg("warning", mess)
 }
 
-func Error(msg ...interface{}) {
-	if s != nil {
-		SpinnerText(Sprintf(msg), Bold(Red("Error")).BgBlack().String())
-		return
-	}
-	cmd := []interface{}{Bold(Red("Error")).String()}
-	for _, f := range msg {
-		cmd = append(cmd, f)
-	}
-	fmt.Println(cmd...)
+func Debug(mess ...interface{}) {
+	msg("debug", mess)
+}
+
+func Info(mess ...interface{}) {
+	msg("info", mess)
+}
+
+func Error(mess ...interface{}) {
+	msg("error", mess)
+}
+
+func Fatal(mess ...interface{}) {
+	Error(mess)
+	os.Exit(1)
 }
