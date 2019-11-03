@@ -30,7 +30,7 @@ func (r *Recipe) Save(path string) error {
 		if err != nil {
 			return err
 		}
-		dir := filepath.Join(path, p.GetName(), p.GetVersion())
+		dir := filepath.Join(path, p.GetCategory(), p.GetName(), p.GetVersion())
 		os.MkdirAll(dir, os.ModePerm)
 		data, err := p.Yaml()
 		if err != nil {
