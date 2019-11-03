@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"os"
+	"runtime"
 
 	. "github.com/mudler/luet/pkg/logger"
 	tree "github.com/mudler/luet/pkg/tree"
@@ -75,7 +76,7 @@ var convertCmd = &cobra.Command{
 func init() {
 	convertCmd.Flags().String("type", "gentoo", "source type")
 	viper.BindPFlag("type", convertCmd.Flags().Lookup("type"))
-	convertCmd.Flags().Int("concurrency", 30, "Concurrenct")
+	convertCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
 	viper.BindPFlag("concurrency", convertCmd.Flags().Lookup("concurrency"))
 	RootCmd.AddCommand(convertCmd)
 }
