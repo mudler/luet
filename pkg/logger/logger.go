@@ -50,7 +50,7 @@ func msg(level string, msg ...interface{}) {
 
 	if s != nil {
 		SpinnerText(Sprintf(msg), levelMsg)
-		//	return
+		return
 	}
 
 	cmd := []interface{}{levelMsg}
