@@ -35,7 +35,7 @@ var queryCmd = &cobra.Command{
 
 		input := viper.GetString("input")
 
-		if len(args) != 3 {
+		if len(args) != 4 {
 			log.Fatalln("Incorrect number of arguments")
 		}
 
@@ -53,11 +53,12 @@ var queryCmd = &cobra.Command{
 		t := args[0]
 		v := args[1]
 		version := args[2]
+		cat := args[3]
 		switch t {
 		case "install":
 			// XXX: pack needs to be the same which is present in world.
 			// Tree caches generated world when using FindPackage
-			pack, err := generalRecipe.Tree().FindPackage(&pkg.DefaultPackage{Name: v, Version: version})
+			pack, err := generalRecipe.Tree().FindPackage(&pkg.DefaultPackage{Category: cat, Name: v, Version: version})
 			if err != nil {
 				fmt.Println("Error: " + err.Error())
 				os.Exit(1)
