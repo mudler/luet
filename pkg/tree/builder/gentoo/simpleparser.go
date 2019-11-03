@@ -204,6 +204,13 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Pack
 	}
 
 	// TODO: Handle this a bit better
+	iuse, ok := vars["IUSE"]
+	if ok {
+		uses := strings.Split(strings.TrimSpace(iuse.String()), " ")
+		for _, u := range uses {
+			pack.AddUse(u)
+		}
+	}
 
 	rdepend, ok := vars["RDEPEND"]
 	if ok {
