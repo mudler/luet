@@ -19,13 +19,11 @@ package gentoo
 // https://gist.github.com/adnaan/6ca68c7985c6f851def3
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	. "github.com/mudler/luet/pkg/logger"
 	tree "github.com/mudler/luet/pkg/tree"
@@ -76,25 +74,17 @@ func (gb *GentooBuilder) scanEbuild(path string, t pkg.Tree) error {
 	return nil
 }
 
-func (gb *GentooBuilder) worker(ctx context.Context, i int, wg *sync.WaitGroup, s <-chan string, t pkg.Tree) {
+func (gb *GentooBuilder) worker(i int, wg *sync.WaitGroup, s <-chan string, t pkg.Tree) {
 	defer wg.Done()
-	for {
-		select {
-		case <-ctx.Done():
-			Info("Worker is done!")
-			return
-		case path, ok := <-s:
-			if !ok {
-				// Channel closed
-				return
-			}
-			Info("#"+strconv.Itoa(i), "parsing", path)
-			err := gb.scanEbuild(path, t)
-			if err != nil {
-				Error(path, ":", err.Error())
-			}
+
+	for path := range s {
+		Info("#"+strconv.Itoa(i), "parsing", path)
+		err := gb.scanEbuild(path, t)
+		if err != nil {
+			Error(path, ":", err.Error())
 		}
 	}
+
 }
 
 func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
@@ -106,8 +96,6 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 	Spinner(27)
 	defer SpinnerStop()
 	tree := &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewInMemoryDatabase(false)}}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
 
 	//tree := &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewBoltDatabase(tmpfile.Name())}}
 	Debug("Concurrency", gb.Concurrency)
@@ -115,7 +103,7 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 	var wg = new(sync.WaitGroup)
 	for i := 0; i < gb.Concurrency; i++ {
 		wg.Add(1)
-		go gb.worker(ctx, i, wg, toScan, tree)
+		go gb.worker(i, wg, toScan, tree)
 	}
 
 	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
@@ -133,11 +121,9 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 		return nil
 	})
 
-	Debug("Waiting for goroutines to finish")
 	close(toScan)
-
+	Debug("Waiting for goroutines to finish")
 	wg.Wait() // FIXME: With BoltDB as backend goroutines timeouts and deadlocks
-
 	if err != nil {
 		return tree, err
 	}
