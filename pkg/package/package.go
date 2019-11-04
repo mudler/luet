@@ -102,7 +102,10 @@ type DefaultPackage struct {
 	PackageConflicts []*DefaultPackage `json:"conflicts"` // Affects YAML field names too.
 	IsSet            bool              `json:"set"`       // Affects YAML field names too.
 
-	Path string `json:"-"` // primary key with auto increment
+	// TODO: Annotations?
+
+	// Path is set only internally when tree is loaded from disk
+	Path string `json:"path,omitempty"` // primary key with auto increment
 }
 
 // State represent the package state

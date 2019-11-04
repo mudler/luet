@@ -86,22 +86,18 @@ func (r *Recipe) Load(path string) error {
 
 		dat, err := ioutil.ReadFile(currentpath)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "Error reading file "+currentpath)
 		}
 		pack, err := pkg.DefaultPackageFromYaml(dat)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "Error reading yaml "+currentpath)
 		}
 
-		pack.SetPath(filepath.Dir(path))
-
+		// Path is set only internally when tree is loaded from disk
+		pack.SetPath(filepath.Dir(currentpath))
 		_, err = r.Tree().GetPackageSet().CreatePackage(&pack)
 		if err != nil {
-			return err
-		}
-		// first thing to do, check error. and decide what to do about it
-		if err != nil {
-			return err
+			return errors.Wrap(err, "Error creating package "+pack.GetName())
 		}
 
 		return nil
