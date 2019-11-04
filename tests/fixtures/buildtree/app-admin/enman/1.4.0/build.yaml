@@ -1,0 +1,4 @@
+image: "luet/base"
+steps:
+  - echo foo
+  - bar
