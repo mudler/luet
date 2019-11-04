@@ -213,6 +213,14 @@
   version = "v1.6.0"
 
 [[projects]]
+  digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
+  version = "v0.8.1"
+
+[[projects]]
   digest = "1:bb495ec276ab82d3dd08504bbc0594a65de8c3b22c6f2aaa92d05b73fbf3a82e"
   name = "github.com/spf13/afero"
   packages = [
@@ -391,8 +399,11 @@
     "github.com/logrusorgru/aurora",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
+    "github.com/pkg/errors",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
+    "go.etcd.io/bbolt",
+    "gopkg.in/yaml.v2",
     "mvdan.cc/sh/expand",
     "mvdan.cc/sh/shell",
     "mvdan.cc/sh/syntax",
