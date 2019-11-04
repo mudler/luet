@@ -51,7 +51,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:     "sbsigntools",
 						Category: "app-crypt",
@@ -66,7 +66,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:     "sabayon-artwork-grub",
 						Category: "x11-themes",
@@ -81,7 +81,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:          "ncurses",
 						Category:      "sys-libs",
@@ -123,7 +123,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:     "sbsigntools",
 						Category: "app-crypt",
@@ -138,7 +138,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:     "sabayon-artwork-grub",
 						Category: "x11-themes",
@@ -153,7 +153,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:          "ncurses",
 						Category:      "sys-libs",
@@ -171,11 +171,18 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "mount",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps: []*_gentoo.GentooPackage{&_gentoo.GentooPackage{
-						Name:     "fuse",
-						Category: "sys-fs",
-						Slot:     "0",
-					}},
+					SubDeps: []*GentooDependency{
+						&GentooDependency{
+							Use:          "",
+							UseCondition: _gentoo.PkgCondInvalid,
+							SubDeps:      make([]*GentooDependency, 0),
+							Dep: &_gentoo.GentooPackage{
+								Name:     "fuse",
+								Category: "sys-fs",
+								Slot:     "0",
+							},
+						},
+					},
 					Dep: nil,
 				},
 			))
@@ -210,7 +217,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:     "sbsigntools",
 						Category: "app-crypt",
@@ -225,7 +232,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:     "sabayon-artwork-grub",
 						Category: "x11-themes",
@@ -240,7 +247,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:          "ncurses",
 						Category:      "sys-libs",
@@ -258,19 +265,29 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "mount",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps: []*_gentoo.GentooPackage{
-						&_gentoo.GentooPackage{
-							Name:     "fuse",
-							Category: "sys-fs",
-							Slot:     "0",
+					SubDeps: []*GentooDependency{
+						&GentooDependency{
+							Use:          "",
+							UseCondition: _gentoo.PkgCondInvalid,
+							SubDeps:      make([]*GentooDependency, 0),
+							Dep: &_gentoo.GentooPackage{
+								Name:     "fuse",
+								Category: "sys-fs",
+								Slot:     "0",
+							},
 						},
-						&_gentoo.GentooPackage{
-							Name:          "pmount",
-							Category:      "sys-apps",
-							Condition:     _gentoo.PkgCondEqual,
-							Version:       "0.9.99",
-							VersionSuffix: "_alpha-r5",
-							Slot:          "=",
+						&GentooDependency{
+							Use:          "",
+							UseCondition: _gentoo.PkgCondInvalid,
+							SubDeps:      make([]*GentooDependency, 0),
+							Dep: &_gentoo.GentooPackage{
+								Name:          "pmount",
+								Category:      "sys-apps",
+								Condition:     _gentoo.PkgCondEqual,
+								Version:       "0.9.99",
+								VersionSuffix: "_alpha-r5",
+								Slot:          "=",
+							},
 						},
 					},
 					Dep: nil,
@@ -307,7 +324,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:     "sbsigntools",
 						Category: "app-crypt",
@@ -322,7 +339,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:     "sabayon-artwork-grub",
 						Category: "x11-themes",
@@ -337,7 +354,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:          "ncurses",
 						Category:      "sys-libs",
@@ -355,19 +372,29 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "mount",
 					UseCondition: _gentoo.PkgCondNot,
-					SubDeps: []*_gentoo.GentooPackage{
-						&_gentoo.GentooPackage{
-							Name:     "fuse",
-							Category: "sys-fs",
-							Slot:     "0",
+					SubDeps: []*GentooDependency{
+						&GentooDependency{
+							Use:          "",
+							UseCondition: _gentoo.PkgCondInvalid,
+							SubDeps:      make([]*GentooDependency, 0),
+							Dep: &_gentoo.GentooPackage{
+								Name:     "fuse",
+								Category: "sys-fs",
+								Slot:     "0",
+							},
 						},
-						&_gentoo.GentooPackage{
-							Name:          "pmount",
-							Category:      "sys-apps",
-							Condition:     _gentoo.PkgCondEqual,
-							Version:       "0.9.99",
-							VersionSuffix: "_alpha-r5",
-							Slot:          "=",
+						&GentooDependency{
+							Use:          "",
+							UseCondition: _gentoo.PkgCondInvalid,
+							SubDeps:      make([]*GentooDependency, 0),
+							Dep: &_gentoo.GentooPackage{
+								Name:          "pmount",
+								Category:      "sys-apps",
+								Condition:     _gentoo.PkgCondEqual,
+								Version:       "0.9.99",
+								VersionSuffix: "_alpha-r5",
+								Slot:          "=",
+							},
 						},
 					},
 					Dep: nil,
@@ -404,7 +431,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:     "sbsigntools",
 						Category: "app-crypt",
@@ -419,7 +446,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:          "ncurses",
 						Category:      "sys-libs",
@@ -437,19 +464,29 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "mount",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps: []*_gentoo.GentooPackage{
-						&_gentoo.GentooPackage{
-							Name:     "fuse",
-							Category: "sys-fs",
-							Slot:     "0",
+					SubDeps: []*GentooDependency{
+						&GentooDependency{
+							Use:          "",
+							UseCondition: _gentoo.PkgCondInvalid,
+							SubDeps:      make([]*GentooDependency, 0),
+							Dep: &_gentoo.GentooPackage{
+								Name:     "fuse",
+								Category: "sys-fs",
+								Slot:     "0",
+							},
 						},
-						&_gentoo.GentooPackage{
-							Name:          "pmount",
-							Category:      "sys-apps",
-							Condition:     _gentoo.PkgCondEqual,
-							Version:       "0.9.99",
-							VersionSuffix: "_alpha-r5",
-							Slot:          "=",
+						&GentooDependency{
+							Use:          "",
+							UseCondition: _gentoo.PkgCondInvalid,
+							SubDeps:      make([]*GentooDependency, 0),
+							Dep: &_gentoo.GentooPackage{
+								Name:          "pmount",
+								Category:      "sys-apps",
+								Condition:     _gentoo.PkgCondEqual,
+								Version:       "0.9.99",
+								VersionSuffix: "_alpha-r5",
+								Slot:          "=",
+							},
 						},
 					},
 					Dep: nil,
@@ -485,7 +522,48 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
+					Dep: &_gentoo.GentooPackage{
+						Name:     "sbsigntools",
+						Category: "app-crypt",
+						Slot:     "0",
+					},
+				},
+			))
+		})
+	})
+
+	Context("Parse RDEPEND7", func() {
+
+		rdepend := `
+	app-crypt/sbsigntools
+	>=sys-libs/ncurses-5.2-r5:0=
+	mount? (
+		sys-fs/fuse
+		=sys-apps/pmount-0.9.99_alpha-r5:=
+		ext2? (
+			sys-fs/genext2fs
+		)
+	)
+`
+		gr, err := ParseRDEPEND(rdepend)
+		It("Check error", func() {
+			Expect(err).Should(BeNil())
+		})
+		It("Check gr", func() {
+			Expect(gr).ShouldNot(BeNil())
+		})
+
+		It("Check deps #", func() {
+			Expect(len(gr.Dependencies)).Should(Equal(3))
+		})
+
+		It("Check dep1", func() {
+			Expect(*gr.Dependencies[0]).Should(Equal(
+				GentooDependency{
+					Use:          "",
+					UseCondition: _gentoo.PkgCondInvalid,
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:     "sbsigntools",
 						Category: "app-crypt",
@@ -500,7 +578,7 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps:      make([]*_gentoo.GentooPackage, 0),
+					SubDeps:      make([]*GentooDependency, 0),
 					Dep: &_gentoo.GentooPackage{
 						Name:          "ncurses",
 						Category:      "sys-libs",
@@ -518,22 +596,48 @@ var _ = Describe("GentooBuilder", func() {
 				GentooDependency{
 					Use:          "mount",
 					UseCondition: _gentoo.PkgCondInvalid,
-					SubDeps: []*_gentoo.GentooPackage{
-						&_gentoo.GentooPackage{
-							Name:     "fuse",
-							Category: "sys-fs",
-							Slot:     "0",
+					SubDeps: []*GentooDependency{
+						&GentooDependency{
+							Use:          "",
+							UseCondition: _gentoo.PkgCondInvalid,
+							SubDeps:      make([]*GentooDependency, 0),
+							Dep: &_gentoo.GentooPackage{
+								Name:     "fuse",
+								Category: "sys-fs",
+								Slot:     "0",
+							},
 						},
-						&_gentoo.GentooPackage{
-							Name:          "pmount",
-							Category:      "sys-apps",
-							Condition:     _gentoo.PkgCondEqual,
-							Version:       "0.9.99",
-							VersionSuffix: "_alpha-r5",
-							Slot:          "=",
+						&GentooDependency{
+							Use:          "",
+							UseCondition: _gentoo.PkgCondInvalid,
+							SubDeps:      make([]*GentooDependency, 0),
+							Dep: &_gentoo.GentooPackage{
+								Name:          "pmount",
+								Category:      "sys-apps",
+								Condition:     _gentoo.PkgCondEqual,
+								Version:       "0.9.99",
+								VersionSuffix: "_alpha-r5",
+								Slot:          "=",
+							},
+						},
+						&GentooDependency{
+							Use:          "ext2",
+							UseCondition: _gentoo.PkgCondInvalid,
+							SubDeps: []*GentooDependency{
+								&GentooDependency{
+									Use:          "",
+									UseCondition: _gentoo.PkgCondInvalid,
+									SubDeps:      make([]*GentooDependency, 0),
+									Dep: &_gentoo.GentooPackage{
+										Name:     "genext2fs",
+										Category: "sys-fs",
+										Slot:     "0",
+									},
+								},
+							},
+							Dep: nil,
 						},
 					},
-					Dep: nil,
 				},
 			))
 		})

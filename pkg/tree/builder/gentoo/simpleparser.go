@@ -44,7 +44,7 @@ type SimpleEbuildParser struct {
 type GentooDependency struct {
 	Use          string
 	UseCondition _gentoo.PackageCond
-	SubDeps      []*_gentoo.GentooPackage
+	SubDeps      []*GentooDependency
 	Dep          *_gentoo.GentooPackage
 }
 
@@ -56,7 +56,7 @@ func NewGentooDependency(pkg, use string) (*GentooDependency, error) {
 	var err error
 	ans := &GentooDependency{
 		Use:     use,
-		SubDeps: make([]*_gentoo.GentooPackage, 0),
+		SubDeps: make([]*GentooDependency, 0),
 	}
 
 	if strings.HasPrefix(use, "!") {
@@ -66,6 +66,12 @@ func NewGentooDependency(pkg, use string) (*GentooDependency, error) {
 
 	if pkg != "" {
 		ans.Dep, err = _gentoo.ParsePackageStr(pkg)
+
+		// TODO: Fix this on parsing phase for handle correctly ${PV}
+		if strings.HasSuffix(ans.Dep.Name, "-") {
+			ans.Dep.Name = ans.Dep.Name[:len(ans.Dep.Name)-1]
+		}
+
 		if err != nil {
 			return nil, err
 		}
@@ -74,8 +80,25 @@ func NewGentooDependency(pkg, use string) (*GentooDependency, error) {
 	return ans, nil
 }
 
-func (d *GentooDependency) AddSubDependency(pkg string) (*_gentoo.GentooPackage, error) {
-	ans, err := _gentoo.ParsePackageStr(pkg)
+func (d *GentooDependency) GetDepsList() []*GentooDependency {
+	ans := make([]*GentooDependency, 0)
+
+	if len(d.SubDeps) > 0 {
+		for _, d2 := range d.SubDeps {
+			list := d2.GetDepsList()
+			ans = append(ans, list...)
+		}
+	}
+
+	if d.Dep != nil {
+		ans = append(ans, d)
+	}
+
+	return ans
+}
+
+func (d *GentooDependency) AddSubDependency(pkg, use string) (*GentooDependency, error) {
+	ans, err := NewGentooDependency(pkg, use)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +109,9 @@ func (d *GentooDependency) AddSubDependency(pkg string) (*_gentoo.GentooPackage,
 }
 
 func ParseRDEPEND(rdepend string) (*GentooRDEPEND, error) {
-	var lastdep *GentooDependency
+	var lastdep []*GentooDependency = make([]*GentooDependency, 0)
 	var pendingDep = false
+	var dep *GentooDependency
 	var err error
 
 	ans := &GentooRDEPEND{
@@ -105,16 +129,23 @@ func ParseRDEPEND(rdepend string) (*GentooRDEPEND, error) {
 			if strings.Index(rr, "?") > 0 {
 				// use flag present
 
-				dep, err := NewGentooDependency("", rr[:strings.Index(rr, "?")])
-				if err != nil {
-					return nil, err
-				}
-				if strings.Index(rr, ")") < 0 {
-					pendingDep = true
-					lastdep = dep
+				if pendingDep {
+					dep, err = lastdep[len(lastdep)-1].AddSubDependency("", rr[:strings.Index(rr, "?")])
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					dep, err = NewGentooDependency("", rr[:strings.Index(rr, "?")])
+					if err != nil {
+						return nil, err
+					}
+					ans.Dependencies = append(ans.Dependencies, dep)
 				}
 
-				ans.Dependencies = append(ans.Dependencies, dep)
+				if strings.Index(rr, ")") < 0 {
+					pendingDep = true
+					lastdep = append(lastdep, dep)
+				}
 
 				fields := strings.Split(rr[strings.Index(rr, "?")+1:], " ")
 				for _, f := range fields {
@@ -123,7 +154,7 @@ func ParseRDEPEND(rdepend string) (*GentooRDEPEND, error) {
 						continue
 					}
 
-					_, err = dep.AddSubDependency(f)
+					_, err = dep.AddSubDependency(f, "")
 					if err != nil {
 						return nil, err
 					}
@@ -136,15 +167,17 @@ func ParseRDEPEND(rdepend string) (*GentooRDEPEND, error) {
 					if f == ")" || f == "(" || f == "" {
 						continue
 					}
-					_, err = lastdep.AddSubDependency(f)
+					_, err = lastdep[len(lastdep)-1].AddSubDependency(f, "")
 					if err != nil {
 						return nil, err
 					}
 				}
 
 				if strings.Index(rr, ")") >= 0 {
-					pendingDep = false
-					lastdep = nil
+					lastdep = lastdep[:len(lastdep)-1]
+					if len(lastdep) == 0 {
+						pendingDep = false
+					}
 				}
 
 			} else {
@@ -224,36 +257,24 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Pack
 		pack.PackageRequires = []*pkg.DefaultPackage{}
 		for _, d := range gRDEPEND.Dependencies {
 
+			deps := d.GetDepsList()
+
 			// TODO: See how handle use flags enabled.
-			if d.Use != "" {
-				for _, d2 := range d.SubDeps {
-
-					//TODO: Resolve to db or create a new one.
-					dep := &pkg.DefaultPackage{
-						Name:     d2.Name,
-						Version:  d2.Version + d2.VersionSuffix,
-						Category: d2.Category,
-					}
-					if d2.Condition == _gentoo.PkgCondNot {
-						pack.PackageConflicts = append(pack.PackageConflicts, dep)
-					} else {
-						pack.PackageRequires = append(pack.PackageRequires, dep)
-					}
-				}
-			} else {
-
+			// and if it's correct get list of deps directly.
+			for _, d2 := range deps {
 				//TODO: Resolve to db or create a new one.
 				dep := &pkg.DefaultPackage{
-					Name:     d.Dep.Name,
-					Version:  d.Dep.Version + d.Dep.VersionSuffix,
-					Category: d.Dep.Category,
+					Name:     d2.Dep.Name,
+					Version:  d2.Dep.Version + d2.Dep.VersionSuffix,
+					Category: d2.Dep.Category,
 				}
-				if d.Dep.Condition == _gentoo.PkgCondNot {
+				if d2.Dep.Condition == _gentoo.PkgCondNot {
 					pack.PackageConflicts = append(pack.PackageConflicts, dep)
 				} else {
 					pack.PackageRequires = append(pack.PackageRequires, dep)
 				}
 			}
+
 		}
 
 	}
