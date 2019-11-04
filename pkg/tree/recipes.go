@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 
 	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/pkg/errors"
 )
 
 const (

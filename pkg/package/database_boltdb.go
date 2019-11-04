@@ -16,11 +16,12 @@
 package pkg
 
 import (
-	"errors"
 	"os"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	storm "github.com/asdine/storm"
 	"github.com/asdine/storm/q"
@@ -160,7 +161,7 @@ func (db *BoltDatabase) GetAllPackages(packages chan Package) error {
 func (db *BoltDatabase) CreatePackage(p Package) (string, error) {
 	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "Error opening boltdb "+db.Path)
 	}
 	defer bolt.Close()
 
@@ -168,9 +169,10 @@ func (db *BoltDatabase) CreatePackage(p Package) (string, error) {
 	if !ok {
 		return "", errors.New("Bolt DB support only DefaultPackage type for now")
 	}
+
 	err = bolt.Save(dp)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "Error saving package to "+db.Path)
 	}
 
 	return strconv.Itoa(dp.ID), err
