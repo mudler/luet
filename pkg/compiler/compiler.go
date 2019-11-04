@@ -56,3 +56,11 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 	}
 	return NewLuetCompilationSpec(dat)
 }
+
+func (cs *LuetCompiler) GetBackend() CompilerBackend {
+	return cs.Backend
+}
+
+func (cs *LuetCompiler) SetBackend(b CompilerBackend) {
+	cs.Backend = b
+}
