@@ -54,6 +54,9 @@ type Package interface {
 
 	Yaml() ([]byte, error)
 	Explain()
+
+	SetPath(string)
+	GetPath() string
 }
 
 type PackageSet interface {
@@ -96,6 +99,8 @@ type DefaultPackage struct {
 	PackageRequires  []*DefaultPackage `json:"requires"`  // Affects YAML field names too.
 	PackageConflicts []*DefaultPackage `json:"conflicts"` // Affects YAML field names too.
 	IsSet            bool              `json:"set"`       // Affects YAML field names too.
+
+	Path string `json:"-"` // primary key with auto increment
 }
 
 // State represent the package state
@@ -110,6 +115,15 @@ func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*D
 // FIXME: this needs to be unique, now just name is generalized
 func (p *DefaultPackage) GetFingerPrint() string {
 	return fmt.Sprintf("%s-%s-%s", p.Name, p.Category, p.Version)
+}
+
+// GetPath returns the path where the definition file was found
+func (p *DefaultPackage) GetPath() string {
+	return p.Path
+}
+
+func (p *DefaultPackage) SetPath(s string) {
+	p.Path = s
 }
 
 // AddUse adds a use to a package

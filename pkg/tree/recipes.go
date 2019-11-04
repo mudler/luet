@@ -28,7 +28,9 @@ import (
 	pkg "github.com/mudler/luet/pkg/package"
 )
 
-const DefinitionFile = "definition.yaml"
+const (
+	DefinitionFile = "definition.yaml"
+)
 
 func NewGeneralRecipe() Builder { return &Recipe{} }
 
@@ -89,6 +91,9 @@ func (r *Recipe) Load(path string) error {
 		if err != nil {
 			return err
 		}
+
+		pack.SetPath(filepath.Dir(path))
+
 		_, err = r.Tree().GetPackageSet().CreatePackage(&pack)
 		if err != nil {
 			return err
