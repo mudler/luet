@@ -17,6 +17,7 @@ package pkg
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/crillab/gophersat/bf"
 	version "github.com/hashicorp/go-version"
@@ -57,6 +58,7 @@ type Package interface {
 
 	SetPath(string)
 	GetPath() string
+	Rel(string) string
 }
 
 type PackageSet interface {
@@ -120,6 +122,11 @@ func (p *DefaultPackage) GetFingerPrint() string {
 // GetPath returns the path where the definition file was found
 func (p *DefaultPackage) GetPath() string {
 	return p.Path
+}
+
+func (p *DefaultPackage) Rel(s string) string {
+	return filepath.Join(p.GetPath(), s)
+
 }
 
 func (p *DefaultPackage) SetPath(s string) {
