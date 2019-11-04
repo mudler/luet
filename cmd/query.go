@@ -17,7 +17,8 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"os"
+
+	. "github.com/mudler/luet/pkg/logger"
 
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
@@ -44,8 +45,7 @@ var queryCmd = &cobra.Command{
 
 		err := generalRecipe.Load(input)
 		if err != nil {
-			fmt.Println("Error: " + err.Error())
-			os.Exit(1)
+			Fatal("Error: " + err.Error())
 		}
 
 		defer generalRecipe.Tree().GetPackageSet().Clean()
@@ -60,15 +60,13 @@ var queryCmd = &cobra.Command{
 			// Tree caches generated world when using FindPackage
 			pack, err := generalRecipe.Tree().FindPackage(&pkg.DefaultPackage{Category: cat, Name: v, Version: version})
 			if err != nil {
-				fmt.Println("Error: " + err.Error())
-				os.Exit(1)
+				Fatal("Error: " + err.Error())
 			}
 
 			fmt.Println("Install query from " + input + " [" + v + "]")
 			world, err := generalRecipe.Tree().World()
 			if err != nil {
-				fmt.Println("Error: " + err.Error())
-				os.Exit(1)
+				Fatal("Error: " + err.Error())
 			}
 			fmt.Println(">>> World")
 			for _, packss := range world {
@@ -77,8 +75,7 @@ var queryCmd = &cobra.Command{
 			s := solver.NewSolver([]pkg.Package{}, world)
 			solution, err := s.Install([]pkg.Package{pack})
 			if err != nil {
-				fmt.Println("Error: " + err.Error())
-				os.Exit(1)
+				Fatal("Error: " + err.Error())
 			}
 			fmt.Println(">>> Solution")
 

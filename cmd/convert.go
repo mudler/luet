@@ -15,7 +15,6 @@
 package cmd
 
 import (
-	"os"
 	"runtime"
 
 	. "github.com/mudler/luet/pkg/logger"
@@ -36,8 +35,7 @@ var convertCmd = &cobra.Command{
 		c := viper.GetInt("concurrency")
 
 		if len(args) != 2 {
-			Error("Incorrect number of arguments")
-			os.Exit(1)
+			Fatal("Incorrect number of arguments")
 		}
 
 		input := args[0]
@@ -54,8 +52,7 @@ var convertCmd = &cobra.Command{
 
 		packageTree, err := builder.Generate(input)
 		if err != nil {
-			Error("Error: " + err.Error())
-			os.Exit(1)
+			Fatal("Error: " + err.Error())
 		}
 
 		defer packageTree.GetPackageSet().Clean()
@@ -67,8 +64,7 @@ var convertCmd = &cobra.Command{
 		generalRecipe.WithTree(packageTree)
 		err = generalRecipe.Save(output)
 		if err != nil {
-			Error("Error: " + err.Error())
-			os.Exit(1)
+			Fatal("Error: " + err.Error())
 		}
 	},
 }
