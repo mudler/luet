@@ -11,6 +11,10 @@ ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 .PHONY: all
 all: deps build
 
+.PHONY: fmt
+fmt:
+	go fmt ./...
+
 .PHONY: test
 test:
 	go get github.com/onsi/ginkgo/ginkgo
