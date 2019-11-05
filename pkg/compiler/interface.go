@@ -26,11 +26,23 @@ type Compiler interface {
 }
 
 type CompilerBackend interface {
-	Tree() pkg.Tree
-	WithTree(pkg.Tree)
+	BuildImage(name, path,dockerfileName string) error
 }
 
 // CompilationSpec represent a compilation specification derived from a package
 type CompilationSpec interface {
-	ToDocker() (string, error)
+	RenderBuildImage() (string, error)
+	WriteBuildImageDefinition(string) error
+
+	RenderStepImage(image string) (string, error)
+	WriteStepImageDefinition(fromimage, path string) error
+
+	GetPackage() pkg.Package
+	BuildSteps() []string
+
+	GetSeedImage() string
+	SetSeedImage(string)
+
+	GetImage() string
+	SetImage(string)
 }

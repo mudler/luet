@@ -27,15 +27,37 @@ import (
 const BuildFile = "build.yaml"
 
 type LuetCompiler struct {
-	*tree.Recipe
+	*tree.CompilerRecipe
 	Backend CompilerBackend
 }
 
 func NewLuetCompiler(backend CompilerBackend, t pkg.Tree) Compiler {
-	return &LuetCompiler{Backend: backend, Recipe: &tree.Recipe{PackageTree: t}}
+	// The CompilerRecipe will gives us a tree with only build deps listed.
+	return &LuetCompiler{
+		Backend: backend,
+		CompilerRecipe: &tree.CompilerRecipe{
+			tree.Recipe{PackageTree: t},
+		},
+	}
 }
 
 func (cs *LuetCompiler) Compile(p CompilationSpec) (*Artifact, error) {
+
+	// - If image is not set, we read a base_image. Then we will build one image from it to kick-off our build based
+	// on how we compute the resolvable tree.
+	// This means to recursively build all the build-images needed to reach that tree part.
+	// - We later on compute an hash used to identify the image, so each similar deptree keeps the same build image.
+	// - If image is set we just generate a plain dockerfile
+
+	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
+
+	if p.GetImage() != "" {
+		p.SetSeedImage(p.GetImage())
+		//p.WriteBuildImageDefinition(path)
+		//backend.BuildImage(path)
+		//backend.RunSteps(CompilationSpec)
+	}
+
 	return nil, errors.New("Not implemented yet")
 }
 
@@ -54,7 +76,7 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewLuetCompilationSpec(dat)
+	return NewLuetCompilationSpec(dat, p)
 }
 
 func (cs *LuetCompiler) GetBackend() CompilerBackend {

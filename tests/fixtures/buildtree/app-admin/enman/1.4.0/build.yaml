@@ -1,4 +1,5 @@
 image: "luet/base"
+seed: "luet/baseimage"
 steps:
   - echo foo
   - bar

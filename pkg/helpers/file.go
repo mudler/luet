@@ -15,7 +15,10 @@
 
 package helpers
 
-import "os"
+import (
+	"io/ioutil"
+	"os"
+)
 
 // Exists reports whether the named file or directory exists.
 func Exists(name string) bool {
@@ -25,4 +28,12 @@ func Exists(name string) bool {
 		}
 	}
 	return true
+}
+
+func Read(file string) (string, error) {
+	dat, err := ioutil.ReadFile(file)
+	if err != nil {
+		return "", err
+	}
+	return string(dat), nil
 }

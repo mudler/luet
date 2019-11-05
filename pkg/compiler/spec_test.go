@@ -17,10 +17,14 @@ package compiler_test
 
 import (
 	. "github.com/mudler/luet/pkg/compiler"
+	helpers "github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/tree"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 )
 
 var _ = Describe("Spec", func() {
@@ -43,6 +47,30 @@ var _ = Describe("Spec", func() {
 
 			Expect(lspec.Steps).To(Equal([]string{"echo foo", "bar"}))
 			Expect(lspec.Image).To(Equal("luet/base"))
+			Expect(lspec.Seed).To(Equal("luet/baseimage"))
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			err = lspec.WriteBuildImageDefinition(filepath.Join(tmpdir, "Dockerfile"))
+			Expect(err).ToNot(HaveOccurred())
+			dockerfile, err := helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(dockerfile).To(Equal(`
+FROM luet/baseimage
+COPY . /luetbuild
+WORKDIR /luetbuild
+`))
+
+			err = lspec.WriteStepImageDefinition(lspec.Image, filepath.Join(tmpdir, "Dockerfile"))
+			Expect(err).ToNot(HaveOccurred())
+			dockerfile, err = helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(dockerfile).To(Equal(`
+FROM luet/base
+RUN echo foo
+RUN bar`))
+
 		})
 
 	})
