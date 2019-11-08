@@ -18,7 +18,7 @@ package compiler
 import pkg "github.com/mudler/luet/pkg/package"
 
 type Compiler interface {
-	Compile(CompilationSpec) (*Artifact, error)
+	Compile(CompilationSpec) (Artifact, error)
 	FromPackage(pkg.Package) (CompilationSpec, error)
 
 	SetBackend(CompilerBackend)

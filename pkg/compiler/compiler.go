@@ -52,11 +52,43 @@ func (cs *LuetCompiler) Compile(p CompilationSpec) (Artifact, error) {
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
 
 	if p.GetImage() != "" {
-		p.SetSeedImage(p.GetImage())
-		p.WriteBuildImageDefinition(p.Rel(p.GetPackage().GetFingerPrint() + ".dockerfile"))
-		//p.WriteBuildImageDefinition(path)
-		//backend.BuildImage(path)
-		//backend.RunSteps(CompilationSpec)
+		p.SetSeedImage(p.GetImage()) // In this case, we ignore the build deps as we suppose that the image has them - otherwise we recompose the tree with a solver,
+		// and we build all the images first.
+
+		// First we create the builder image
+		p.WriteBuildImageDefinition(p.Rel(p.GetPackage().GetFingerPrint() + "-builder.dockerfile"))
+		builderOpts := CompilerBackendOptions{
+			ImageName:      "luet/" + p.GetPackage().GetFingerPrint() + "-builder",
+			SourcePath:     p.GetOutputPath(),
+			DockerFileName: p.Rel(p.GetPackage().GetFingerPrint() + "-builder.dockerfile"),
+			Destination:    p.Rel(p.GetPackage().GetFingerPrint() + "-builder.rootfs.tar"),
+		}
+		err := cs.Backend.BuildImage(builderOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		// Then we write the step image, which uses the builder one
+		p.WriteStepImageDefinition("luet/"+p.GetPackage().GetFingerPrint()+"-builder", p.Rel(p.GetPackage().GetFingerPrint()+".dockerfile"))
+		runnerOpts := CompilerBackendOptions{
+			ImageName:      "luet/" + p.GetPackage().GetFingerPrint(),
+			SourcePath:     p.GetOutputPath(),
+			DockerFileName: p.Rel(p.GetPackage().GetFingerPrint() + ".dockerfile"),
+			Destination:    p.Rel(p.GetPackage().GetFingerPrint() + ".rootfs.tar"),
+		}
+		err = cs.Backend.ImageDefinitionToTar(runnerOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO: Handle caching and optionally do not remove things
+		err = cs.Backend.RemoveImage(builderOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO: Delta should be the artifact
+		return NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".rootfs.tar")), nil
 	}
 
 	return nil, errors.New("Not implemented yet")
