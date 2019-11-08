@@ -129,7 +129,6 @@ func (p *DefaultPackage) GetPath() string {
 
 func (p *DefaultPackage) Rel(s string) string {
 	return filepath.Join(p.GetPath(), s)
-
 }
 
 func (p *DefaultPackage) SetPath(s string) {

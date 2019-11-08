@@ -16,15 +16,16 @@
 package compiler_test
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+
 	. "github.com/mudler/luet/pkg/compiler"
 	helpers "github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/tree"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 )
 
 var _ = Describe("Spec", func() {
@@ -45,9 +46,9 @@ var _ = Describe("Spec", func() {
 			lspec, ok := spec.(*LuetCompilationSpec)
 			Expect(ok).To(BeTrue())
 
-			Expect(lspec.Steps).To(Equal([]string{"echo foo", "bar"}))
+			Expect(lspec.Steps).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 			Expect(lspec.Image).To(Equal("luet/base"))
-			Expect(lspec.Seed).To(Equal("luet/baseimage"))
+			Expect(lspec.Seed).To(Equal("alpine"))
 			tmpdir, err := ioutil.TempDir("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
@@ -57,7 +58,7 @@ var _ = Describe("Spec", func() {
 			dockerfile, err := helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dockerfile).To(Equal(`
-FROM luet/baseimage
+FROM alpine
 COPY . /luetbuild
 WORKDIR /luetbuild
 `))
@@ -68,8 +69,8 @@ WORKDIR /luetbuild
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dockerfile).To(Equal(`
 FROM luet/base
-RUN echo foo
-RUN bar`))
+RUN echo foo > /test
+RUN echo bar > /test2`))
 
 		})
 

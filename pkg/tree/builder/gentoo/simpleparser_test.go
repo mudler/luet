@@ -40,7 +40,7 @@ var _ = Describe("GentooBuilder", func() {
 					p, err := tree.GetPackageSet().GetPackage(pid)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(p.GetName()).To(ContainSubstring("pinentry"))
-					//	Expect(p.GetVersion()).To(ContainSubstring("1."))
+					Expect(p.GetVersion()).To(ContainSubstring("1."))
 				}
 
 			})

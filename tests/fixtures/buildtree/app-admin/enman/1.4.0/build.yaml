@@ -1,5 +1,5 @@
 image: "luet/base"
-seed: "luet/baseimage"
+seed: "alpine"
 steps:
-  - echo foo
-  - bar
+  - echo foo > /test
+  - echo bar > /test2
