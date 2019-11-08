@@ -31,31 +31,62 @@ func NewSimpleImgBackend() compiler.CompilerBackend {
 }
 
 // TODO: Missing still: labels, and build args expansion
-func (*SimpleImg) BuildImage(name, path, dockerfileName string) error {
-	buildarg := "img build -t " + name + " " + path + " -f " + dockerfileName
+func (*SimpleImg) BuildImage(opts compiler.CompilerBackendOptions) error {
+	name := opts.ImageName
+	path := opts.SourcePath
+	dockerfileName := opts.DockerFileName
+
+	buildarg := []string{"build", "-t", name, path, "-f ", dockerfileName}
 	Spinner(22)
 	Debug("Building image "+name+" - running img with: ", buildarg)
-	out, err := exec.Command(buildarg).CombinedOutput()
+	out, err := exec.Command("img", buildarg...).CombinedOutput()
 	if err != nil {
-		return errors.Wrap(err, "Failed building image: "+out)
+		return errors.Wrap(err, "Failed building image: "+string(out))
 	}
 	SpinnerStop()
 	Info(out)
 	return nil
 }
 
-func (*SimpleImg) ExportImage(name, path string) error {
-	buildarg := "img save " + name + " -o " + path
+func (*SimpleImg) RemoveImage(opts compiler.CompilerBackendOptions) error {
+	name := opts.ImageName
+	buildarg := []string{"rm", name}
 	Spinner(22)
-	Debug("Saving image "+name+" - running img with: ", buildarg)
-	out, err := exec.Command(buildarg).CombinedOutput()
+	out, err := exec.Command("img", buildarg...).CombinedOutput()
 	if err != nil {
-		return errors.Wrap(err, "Failed building image: "+out)
+		return errors.Wrap(err, "Failed building image: "+string(out))
 	}
 	SpinnerStop()
 	Info(out)
 	return nil
+}
 
+func (s *SimpleImg) ImageDefinitionToTar(opts compiler.CompilerBackendOptions) error {
+	if err := s.BuildImage(opts); err != nil {
+		return errors.Wrap(err, "Failed building image")
+	}
+	if err := s.ExportImage(opts); err != nil {
+		return errors.Wrap(err, "Failed exporting image")
+	}
+	if err := s.RemoveImage(opts); err != nil {
+		return errors.Wrap(err, "Failed removing image")
+	}
+	return nil
+}
+
+func (*SimpleImg) ExportImage(opts compiler.CompilerBackendOptions) error {
+	name := opts.ImageName
+	path := opts.Destination
+	buildarg := []string{"save", name, "-o", path}
+	Spinner(22)
+	Debug("Saving image "+name+" - running img with: ", buildarg)
+	out, err := exec.Command("img", buildarg...).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed building image: "+string(out))
+	}
+	SpinnerStop()
+	Info(out)
+	return nil
 }
 
 // TODO: Use container-diff (https://github.com/GoogleContainerTools/container-diff) for checking out layer diffs

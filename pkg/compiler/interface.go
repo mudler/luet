@@ -25,8 +25,18 @@ type Compiler interface {
 	GetBackend() CompilerBackend
 }
 
+type CompilerBackendOptions struct {
+	ImageName      string
+	SourcePath     string
+	DockerFileName string
+	Destination    string
+}
+
 type CompilerBackend interface {
-	BuildImage(name, path,dockerfileName string) error
+	BuildImage(CompilerBackendOptions) error
+	ExportImage(CompilerBackendOptions) error
+	RemoveImage(CompilerBackendOptions) error
+	ImageDefinitionToTar(CompilerBackendOptions) error
 }
 
 // CompilationSpec represent a compilation specification derived from a package
