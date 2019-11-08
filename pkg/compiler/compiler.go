@@ -41,7 +41,7 @@ func NewLuetCompiler(backend CompilerBackend, t pkg.Tree) Compiler {
 	}
 }
 
-func (cs *LuetCompiler) Compile(p CompilationSpec) (*Artifact, error) {
+func (cs *LuetCompiler) Compile(p CompilationSpec) (Artifact, error) {
 
 	// - If image is not set, we read a base_image. Then we will build one image from it to kick-off our build based
 	// on how we compute the resolvable tree.

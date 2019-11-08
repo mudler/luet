@@ -15,4 +15,23 @@
 
 package compiler
 
-type Artifact struct{}
+type Artifact interface {
+	GetPath() string
+	SetPath(string)
+}
+
+type PackageArtifact struct {
+	Path string
+}
+
+func NewPackageArtifact(path string) Artifact {
+	return &PackageArtifact{Path: path}
+}
+
+func (a *PackageArtifact) GetPath() string {
+	return a.Path
+}
+
+func (a *PackageArtifact) SetPath(p string) {
+	a.Path = p
+}
