@@ -45,4 +45,10 @@ type CompilationSpec interface {
 
 	GetImage() string
 	SetImage(string)
+
+	SetOutputPath(string)
+	GetOutputPath() string
+	Rel(string) string
+
+	GetPreBuildSteps() []string
 }

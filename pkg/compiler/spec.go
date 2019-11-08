@@ -16,16 +16,20 @@
 package compiler
 
 import (
+	"io/ioutil"
+	"path/filepath"
+
 	pkg "github.com/mudler/luet/pkg/package"
 	yaml "gopkg.in/yaml.v2"
-	"io/ioutil"
 )
 
 type LuetCompilationSpec struct {
-	Steps   []string    `json:"steps"` // Are run inside a container and the result layer diff is saved
-	Image   string      `json:"image"`
-	Seed    string      `json:"seed"`
-	Package pkg.Package `json:"-"`
+	Steps         []string    `json:"steps"`     // Are run inside a container and the result layer diff is saved
+	PreBuildSteps []string    `json:"pre_steps"` // Are run inside the image which will be our builder
+	Image         string      `json:"image"`
+	Seed          string      `json:"seed"`
+	Package       pkg.Package `json:"-"`
+	OutputPath    string      `json:"-"` // Where the build processfiles go
 }
 
 func NewLuetCompilationSpec(b []byte, p pkg.Package) (CompilationSpec, error) {
@@ -44,6 +48,10 @@ func (cs *LuetCompilationSpec) GetPackage() pkg.Package {
 
 func (cs *LuetCompilationSpec) BuildSteps() []string {
 	return cs.Steps
+}
+
+func (cs *LuetCompilationSpec) GetPreBuildSteps() []string {
+	return cs.PreBuildSteps
 }
 
 func (cs *LuetCompilationSpec) GetSeedImage() string {
@@ -69,6 +77,10 @@ FROM ` + cs.GetSeedImage() + `
 COPY . /luetbuild
 WORKDIR /luetbuild
 `
+	for _, s := range cs.GetPreBuildSteps() {
+		spec = spec + `
+RUN ` + s
+	}
 	return spec, nil
 }
 
