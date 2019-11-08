@@ -53,6 +53,7 @@ func (cs *LuetCompiler) Compile(p CompilationSpec) (*Artifact, error) {
 
 	if p.GetImage() != "" {
 		p.SetSeedImage(p.GetImage())
+		p.WriteBuildImageDefinition(p.Rel(p.GetPackage().GetFingerPrint() + ".dockerfile"))
 		//p.WriteBuildImageDefinition(path)
 		//backend.BuildImage(path)
 		//backend.RunSteps(CompilationSpec)
