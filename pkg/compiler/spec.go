@@ -62,8 +62,20 @@ func (cs *LuetCompilationSpec) GetImage() string {
 	return cs.Image
 }
 
+func (cs *LuetCompilationSpec) GetOutputPath() string {
+	return cs.OutputPath
+}
+
+func (p *LuetCompilationSpec) Rel(s string) string {
+	return filepath.Join(p.GetOutputPath(), s)
+}
+
 func (cs *LuetCompilationSpec) SetImage(s string) {
 	cs.Image = s
+}
+
+func (cs *LuetCompilationSpec) SetOutputPath(s string) {
+	cs.OutputPath = s
 }
 
 func (cs *LuetCompilationSpec) SetSeedImage(s string) {
