@@ -12,13 +12,16 @@ import (
 
 var s *spinner.Spinner = spinner.New(spinner.CharSets[22], 100*time.Millisecond)
 
+// TODO: handle this from configuration
+var debug = false
+
 func Spinner(i int) {
 
 	if i > 43 {
 		i = 43
 	}
 
-	if !s.Active() {
+	if !debug && !s.Active() {
 		//	s.UpdateCharSet(spinner.CharSets[i])
 		s.Start() // Start the spinner
 	}
@@ -27,13 +30,21 @@ func Spinner(i int) {
 func SpinnerText(suffix, prefix string) {
 	s.Lock()
 	defer s.Unlock()
-	s.Suffix = Bold(Magenta(suffix)).BgBlack().String()
-	s.Prefix = Bold(Cyan(prefix)).String()
+	if debug {
+		fmt.Println(fmt.Sprintf("%s %s",
+			Bold(Cyan(prefix)).String(),
+			Bold(Magenta(suffix)).BgBlack().String(),
+		))
+	} else {
+		s.Suffix = Bold(Magenta(suffix)).BgBlack().String()
+		s.Prefix = Bold(Cyan(prefix)).String()
+	}
 }
 
 func SpinnerStop() {
-
-	s.Stop()
+	if !debug {
+		s.Stop()
+	}
 }
 
 func msg(level string, msg ...interface{}) {
