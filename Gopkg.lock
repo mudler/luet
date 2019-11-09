@@ -213,6 +213,14 @@
   version = "v1.6.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:7b5f2c7513992f4202e747a065620a4adaa94e331c4b415cfb92356a34c029e0"
+  name = "github.com/philopon/go-toposort"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "9be86dbd762f98b5b9a4eca110a3f40ef31d0375"
+
+[[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -399,6 +407,7 @@
     "github.com/logrusorgru/aurora",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
+    "github.com/philopon/go-toposort",
     "github.com/pkg/errors",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
