@@ -421,6 +421,16 @@ var _ = Describe("Solver", func() {
 				} else {
 					equality++
 				}
+				if solution[4].Package.GetName() != "A" {
+					disequality++
+				} else {
+					equality++
+				}
+				if solution[5].Package.GetName() != "C" {
+					disequality++
+				} else {
+					equality++
+				}
 			})
 			It("Expect disequality", func() {
 				Expect(disequality).ToNot(Equal(0))
