@@ -55,6 +55,10 @@ var _ = Describe("Docker backend", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
+			tmpdir2, err := ioutil.TempDir(os.TempDir(), "tree2")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir2) // clean up
+
 			err = lspec.WriteBuildImageDefinition(filepath.Join(tmpdir, "Dockerfile"))
 			Expect(err).ToNot(HaveOccurred())
 			dockerfile, err := helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
@@ -69,10 +73,10 @@ WORKDIR /luetbuild
 				ImageName:      "luet/base",
 				SourcePath:     tmpdir,
 				DockerFileName: "Dockerfile",
-				Destination:    filepath.Join(tmpdir, "output1"),
+				Destination:    filepath.Join(tmpdir2, "output1.tar"),
 			}
 			Expect(b.ImageDefinitionToTar(opts)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(filepath.Join(tmpdir, "output1"))).To(BeTrue())
+			Expect(helpers.Exists(filepath.Join(tmpdir2, "output1.tar"))).To(BeTrue())
 			Expect(b.BuildImage(opts)).ToNot(HaveOccurred())
 
 			err = lspec.WriteStepImageDefinition(lspec.Image, filepath.Join(tmpdir, "LuetDockerfile"))
@@ -87,10 +91,22 @@ RUN echo bar > /test2`))
 				ImageName:      "test",
 				SourcePath:     tmpdir,
 				DockerFileName: "LuetDockerfile",
-				Destination:    filepath.Join(tmpdir, "output2"),
+				Destination:    filepath.Join(tmpdir, "output2.tar"),
 			}
 			Expect(b.ImageDefinitionToTar(opts)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(filepath.Join(tmpdir, "output2"))).To(BeTrue())
+			Expect(helpers.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
+
+			Expect(b.Changes(filepath.Join(tmpdir2, "output1.tar"), filepath.Join(tmpdir, "output2.tar"))).To(Equal(
+				[]ArtifactLayer{{
+					FromImage: filepath.Join(tmpdir2, "output1.tar"),
+					ToImage:   filepath.Join(tmpdir, "output2.tar"),
+					Diffs: ArtifactDiffs{
+						Additions: []ArtifactNode{
+							{Name: "/test", Size: 4},
+							{Name: "/test2", Size: 4},
+						},
+					},
+				}}))
 
 		})
 

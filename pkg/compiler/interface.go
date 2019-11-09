@@ -15,7 +15,9 @@
 
 package compiler
 
-import pkg "github.com/mudler/luet/pkg/package"
+import (
+	pkg "github.com/mudler/luet/pkg/package"
+)
 
 type Compiler interface {
 	Compile(CompilationSpec) (Artifact, error)
@@ -36,7 +38,28 @@ type CompilerBackend interface {
 	BuildImage(CompilerBackendOptions) error
 	ExportImage(CompilerBackendOptions) error
 	RemoveImage(CompilerBackendOptions) error
+	Changes(fromImage, toImage string) ([]ArtifactLayer, error)
 	ImageDefinitionToTar(CompilerBackendOptions) error
+}
+
+type Artifact interface {
+	GetPath() string
+	SetPath(string)
+}
+
+type ArtifactNode struct {
+	Name string `json:"Name"`
+	Size int    `json:"Size"`
+}
+type ArtifactDiffs struct {
+	Additions []ArtifactNode `json:"Adds"`
+	Deletions []ArtifactNode `json:"Dels"`
+	Changes   []ArtifactNode `json:"Mods"`
+}
+type ArtifactLayer struct {
+	FromImage string        `json:"Image1"`
+	ToImage   string        `json:"Image2"`
+	Diffs     ArtifactDiffs `json:"Diff"`
 }
 
 // CompilationSpec represent a compilation specification derived from a package

@@ -16,6 +16,7 @@
 package backend
 
 import (
+	"encoding/json"
 	"os/exec"
 
 	"github.com/mudler/luet/pkg/compiler"
@@ -37,6 +38,8 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	dockerfileName := opts.DockerFileName
 	buildarg := []string{"build", "-f", dockerfileName, "-t", name, "."}
 	Spinner(22)
+	defer SpinnerStop()
+
 	Debug("Building image "+name+" - running docker with: ", buildarg)
 	cmd := exec.Command("docker", buildarg...)
 	cmd.Dir = path
@@ -44,7 +47,6 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed building image: "+string(out))
 	}
-	SpinnerStop()
 	Info(string(out))
 	return nil
 }
@@ -53,11 +55,11 @@ func (*SimpleDocker) RemoveImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	buildarg := []string{"rmi", name}
 	Spinner(22)
+	defer SpinnerStop()
 	out, err := exec.Command("docker", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed removing image: "+string(out))
 	}
-	SpinnerStop()
 	Info(string(out))
 	return nil
 }
@@ -81,14 +83,59 @@ func (*SimpleDocker) ExportImage(opts compiler.CompilerBackendOptions) error {
 
 	buildarg := []string{"save", name, "-o", path}
 	Spinner(22)
+	defer SpinnerStop()
 	Debug("Saving image "+name+" - running docker with: ", buildarg)
 	out, err := exec.Command("docker", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed exporting image: "+string(out))
 	}
-	SpinnerStop()
+
 	Info(string(out))
 	return nil
 }
 
-// TODO: Use container-diff (https://github.com/GoogleContainerTools/container-diff) for checking out layer diffs
+// 	container-diff diff daemon://luet/base alpine --type=file -j
+// [
+//   {
+//     "Image1": "luet/base",
+//     "Image2": "alpine",
+//     "DiffType": "File",
+//     "Diff": {
+//       "Adds": null,
+//       "Dels": [
+//         {
+//           "Name": "/luetbuild",
+//           "Size": 5830706
+//         },
+//         {
+//           "Name": "/luetbuild/Dockerfile",
+//           "Size": 50
+//         },
+//         {
+//           "Name": "/luetbuild/output1",
+//           "Size": 5830656
+//         }
+//       ],
+//       "Mods": null
+//     }
+//   }
+// ]
+// Changes uses container-diff (https://github.com/GoogleContainerTools/container-diff) for retrieving out layer diffs
+func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLayer, error) {
+	diffargs := []string{"diff", fromImage, toImage, "--type=file", "-j"}
+	Spinner(22)
+	defer SpinnerStop()
+
+	out, err := exec.Command("container-diff", diffargs...).CombinedOutput()
+	if err != nil {
+		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed Resolving layer diffs: "+string(out))
+	}
+
+	var diffs []compiler.ArtifactLayer
+
+	err = json.Unmarshal(out, &diffs)
+	if err != nil {
+		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed unmarshalling json response: "+string(out))
+	}
+	return diffs, nil
+}

@@ -15,11 +15,6 @@
 
 package compiler
 
-type Artifact interface {
-	GetPath() string
-	SetPath(string)
-}
-
 type PackageArtifact struct {
 	Path string
 }
