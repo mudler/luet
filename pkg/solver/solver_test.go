@@ -336,6 +336,7 @@ var _ = Describe("Solver", func() {
 		})
 	})
 	Context("Assertion ordering", func() {
+		eq := 0
 		for index := 0; index < 300; index++ { // Just to make sure we don't have false positives
 			It("Orders them correctly #"+strconv.Itoa(index), func() {
 				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -365,10 +366,66 @@ var _ = Describe("Solver", func() {
 				Expect(solution[1].Package.GetName()).To(Equal("H"))
 				Expect(solution[2].Package.GetName()).To(Equal("D"))
 				Expect(solution[3].Package.GetName()).To(Equal("B"))
+				eq += len(solution)
 				//Expect(solution[4].Package.GetName()).To(Equal("A"))
 				//Expect(solution[5].Package.GetName()).To(Equal("C")) As C doesn't have any dep it can be in both positions
 			})
 		}
-	})
 
+		It("Expects perfect equality when ordered", func() {
+			Expect(eq).To(Equal(300 * 6)) // assertions lenghts
+		})
+
+		disequality := 0
+		equality := 0
+		for index := 0; index < 300; index++ { // Just to make sure we don't have false positives
+			It("Doesn't order them correctly otherwise #"+strconv.Itoa(index), func() {
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				G := pkg.NewPackage("G", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				H := pkg.NewPackage("H", "", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+
+				s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D, E, F, G})
+
+				solution, err := s.Install([]pkg.Package{A})
+				Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true), Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true), Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true), Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: H.IsFlagged(true), Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: G.IsFlagged(true), Value: true}))
+
+				Expect(len(solution)).To(Equal(6))
+				Expect(err).ToNot(HaveOccurred())
+				if solution[0].Package.GetName() != "G" {
+					disequality++
+				} else {
+					equality++
+				}
+				if solution[1].Package.GetName() != "H" {
+					disequality++
+				} else {
+					equality++
+				}
+				if solution[2].Package.GetName() != "D" {
+					disequality++
+				} else {
+					equality++
+				}
+				if solution[3].Package.GetName() != "B" {
+					disequality++
+				} else {
+					equality++
+				}
+			})
+			It("Expect disequality", func() {
+				Expect(disequality).ToNot(Equal(0))
+				Expect(equality).ToNot(Equal(300 * 6))
+			})
+		}
+	})
 })
