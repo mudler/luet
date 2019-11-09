@@ -16,6 +16,7 @@
 package pkg
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 
@@ -117,6 +118,14 @@ type State string
 // NewPackage returns a new package
 func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*DefaultPackage) *DefaultPackage {
 	return &DefaultPackage{Name: name, Version: version, PackageRequires: requires, PackageConflicts: conflicts}
+}
+
+func (p *DefaultPackage) String() string {
+	b, err := json.Marshal(p)
+	if err != nil {
+		return fmt.Sprintf("{ id: \"%s\", name: \"%s\" }", p.ID, p.Name)
+	}
+	return fmt.Sprintf("%s", string(b))
 }
 
 // GetFingerPrint returns a UUID of the package.

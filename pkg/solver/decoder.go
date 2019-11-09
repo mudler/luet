@@ -61,6 +61,10 @@ func (a *PackageAssert) Explain() {
 	a.Package.Explain()
 }
 
+func (a *PackageAssert) String() string {
+	return a.ToString()
+}
+
 func (a *PackageAssert) ToString() string {
 	var msg string
 	if a.Package.Flagged() {
