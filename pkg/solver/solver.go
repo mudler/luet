@@ -20,6 +20,7 @@ import (
 
 	"github.com/crillab/gophersat/bf"
 	pkg "github.com/mudler/luet/pkg/package"
+	toposort "github.com/philopon/go-toposort"
 )
 
 // PackageSolver is an interface to a generic package solving algorithm
@@ -29,6 +30,7 @@ type PackageSolver interface {
 	Uninstall(candidate pkg.Package) ([]pkg.Package, error)
 	ConflictsWithInstalled(p pkg.Package) (bool, error)
 	ConflictsWith(p pkg.Package, ls []pkg.Package) (bool, error)
+	Order([]PackageAssert) []PackageAssert
 }
 
 // Solver is the default solver for luet
@@ -265,6 +267,48 @@ func (s *Solver) Solve() ([]PackageAssert, error) {
 	}
 
 	return DecodeModel(model)
+}
+
+func (s *Solver) Order(assertions []PackageAssert) []PackageAssert {
+
+	orderedAssertions := []PackageAssert{}
+	unorderedAssertions := []PackageAssert{}
+	fingerprints := []string{}
+
+	tmpMap := map[string]PackageAssert{}
+
+	for _, a := range assertions {
+		if a.Package.Flagged() {
+			unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
+			fingerprints = append(fingerprints, a.Package.GetFingerPrint())
+			tmpMap[a.Package.GetFingerPrint()] = a
+		} else {
+			orderedAssertions = append(orderedAssertions, a) // Keep last the ones which are not meant to be installed
+		}
+	}
+
+	// Build a topological graph
+	graph := toposort.NewGraph(len(unorderedAssertions))
+	graph.AddNodes(fingerprints...)
+	for _, a := range unorderedAssertions {
+		for _, req := range a.Package.GetRequires() {
+			graph.AddEdge(a.Package.GetFingerPrint(), req.GetFingerPrint())
+		}
+	}
+	result, ok := graph.Toposort()
+	if !ok {
+		panic("cycle detected")
+	}
+
+	for _, res := range result {
+		a, ok := tmpMap[res]
+		if !ok {
+			panic("Sort order - this shouldn't happen")
+		}
+		orderedAssertions = append([]PackageAssert{a}, orderedAssertions...) // push upfront
+	}
+
+	return orderedAssertions
 }
 
 // Install given a list of packages, returns package assertions to indicate the packages that must be installed in the system in order
