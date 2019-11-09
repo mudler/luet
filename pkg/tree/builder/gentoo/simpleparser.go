@@ -22,7 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"time"
@@ -80,6 +80,14 @@ func NewGentooDependency(pkg, use string) (*GentooDependency, error) {
 	return ans, nil
 }
 
+func (d *GentooDependency) String() string {
+	if d.Dep != nil {
+		return fmt.Sprintf("%s", d.Dep)
+	} else {
+		return fmt.Sprintf("%s %d %s", d.Use, d.UseCondition, d.SubDeps)
+	}
+}
+
 func (d *GentooDependency) GetDepsList() []*GentooDependency {
 	ans := make([]*GentooDependency, 0)
 
@@ -106,6 +114,30 @@ func (d *GentooDependency) AddSubDependency(pkg, use string) (*GentooDependency,
 	d.SubDeps = append(d.SubDeps, ans)
 
 	return ans, nil
+}
+
+func (r *GentooRDEPEND) GetDependencies() []*GentooDependency {
+	ans := make([]*GentooDependency, 0)
+
+	for _, d := range r.Dependencies {
+		list := d.GetDepsList()
+		ans = append(ans, list...)
+	}
+
+	// the same dependency could be available in multiple use flags.
+	// It's needed avoid duplicate.
+	m := make(map[string]*GentooDependency, 0)
+
+	for _, p := range ans {
+		m[p.String()] = p
+	}
+
+	ans = make([]*GentooDependency, 0)
+	for _, p := range m {
+		ans = append(ans, p)
+	}
+
+	return ans
 }
 
 func ParseRDEPEND(rdepend string) (*GentooRDEPEND, error) {
@@ -195,13 +227,18 @@ func ParseRDEPEND(rdepend string) (*GentooRDEPEND, error) {
 	return ans, nil
 }
 
-func SourceFile(ctx context.Context, path string) (map[string]expand.Variable, error) {
-	f, err := os.Open(path)
+func SourceFile(ctx context.Context, path string, pkg *_gentoo.GentooPackage) (map[string]expand.Variable, error) {
+	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("could not open: %v", err)
 	}
-	defer f.Close()
-	file, err := syntax.NewParser(syntax.StopAt("src")).Parse(f, path)
+	// Add default Genoo Variables
+	ebuild := fmt.Sprintf("P=%s\n", pkg.GetPackageName()) +
+		fmt.Sprintf("PN=%s\n", pkg.Name) +
+		fmt.Sprintf("PV=%s\n", pkg.Version) +
+		string(content)
+
+	file, err := syntax.NewParser(syntax.StopAt("src")).Parse(strings.NewReader(ebuild), path)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse: %v", err)
 	}
@@ -227,10 +264,12 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Pack
 		Category: gp.Category,
 	}
 
+	Debug("Prepare package ", pack)
+
 	// Adding a timeout of 60secs, as with some bash files it can hang indefinetly
 	timeout, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	vars, err := SourceFile(timeout, path)
+	vars, err := SourceFile(timeout, path, gp)
 	if err != nil {
 		return []pkg.Package{pack}, nil
 		//	return []pkg.Package{}, err
@@ -255,30 +294,29 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Pack
 
 		pack.PackageConflicts = []*pkg.DefaultPackage{}
 		pack.PackageRequires = []*pkg.DefaultPackage{}
-		for _, d := range gRDEPEND.Dependencies {
 
-			deps := d.GetDepsList()
+		// TODO: See how handle use flags enabled.
+		// and if it's correct get list of deps directly.
+		for _, d := range gRDEPEND.GetDependencies() {
 
-			// TODO: See how handle use flags enabled.
-			// and if it's correct get list of deps directly.
-			for _, d2 := range deps {
-				//TODO: Resolve to db or create a new one.
-				dep := &pkg.DefaultPackage{
-					Name:     d2.Dep.Name,
-					Version:  d2.Dep.Version + d2.Dep.VersionSuffix,
-					Category: d2.Dep.Category,
-				}
-				if d2.Dep.Condition == _gentoo.PkgCondNot {
-					pack.PackageConflicts = append(pack.PackageConflicts, dep)
-				} else {
-					pack.PackageRequires = append(pack.PackageRequires, dep)
-				}
+			//TODO: Resolve to db or create a new one.
+			dep := &pkg.DefaultPackage{
+				Name:     d.Dep.Name,
+				Version:  d.Dep.Version + d.Dep.VersionSuffix,
+				Category: d.Dep.Category,
+			}
+			Debug(fmt.Sprintf("For package %s found dep: %s/%s %s",
+				gp, dep.Category, dep.Name, dep.Version))
+			if d.Dep.Condition == _gentoo.PkgCondNot {
+				pack.PackageConflicts = append(pack.PackageConflicts, dep)
+			} else {
+				pack.PackageRequires = append(pack.PackageRequires, dep)
 			}
 
 		}
 
 	}
-	Debug("Finished processing ebuild", path)
+	Debug("Finished processing ebuild", path, "deps ", len(pack.PackageRequires))
 
 	//TODO: Deps and conflicts
 	return []pkg.Package{pack}, nil
