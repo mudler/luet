@@ -101,6 +101,31 @@ func (p *GentooPackage) GetPackageName() (ans string) {
 	return
 }
 
+func (p *GentooPackage) GetP() string {
+	return fmt.Sprintf("%s-%s", p.Name, p.GetPV())
+}
+
+func (p *GentooPackage) GetPN() string {
+	return p.Name
+}
+
+func (p *GentooPackage) GetPV() string {
+	return fmt.Sprintf("%s", p.Version)
+}
+
+func (p *GentooPackage) GetPVR() (ans string) {
+	if p.VersionSuffix != "" {
+		ans = fmt.Sprintf("%s%s", p.Version, p.VersionSuffix)
+	} else {
+		ans = p.GetPV()
+	}
+	return
+}
+
+func (p *GentooPackage) GetPF() string {
+	return fmt.Sprintf("%s-%s", p.GetPN(), p.GetPVR())
+}
+
 func (p *GentooPackage) Admit(i *GentooPackage) (bool, error) {
 	var ans bool = false
 	var v1 *version.Version = nil
@@ -263,7 +288,7 @@ func ParsePackageStr(pkg string) (*GentooPackage, error) {
 	}
 
 	regexPkg := regexp.MustCompile(
-		fmt.Sprintf("[-](%s|%s|%s|%s|%s|%s)((%s|%s|%s|%s|%s|%s)+)*$",
+		fmt.Sprintf("[-](%s|%s|%s|%s|%s|%s)((%s|%s|%s|%s|%s|%s|%s)+)*$",
 			// Version regex
 			// 1.1
 			"[0-9]+[.][0-9]+[a-z]*",
@@ -282,6 +307,8 @@ func ParsePackageStr(pkg string) (*GentooPackage, error) {
 			"_p[0-9]+",
 			"_pre[0-9]*",
 			"_rc[0-9]+",
+			// handle also rc without number
+			"_rc",
 			"_alpha",
 			"_beta",
 		),

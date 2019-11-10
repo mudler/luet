@@ -3,11 +3,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:055364e7afd5d53ddf82407296aa23c52b753e9ed014ce28456f4c16529f62ab"
+  digest = "1:02083a13eba76620ed7548af199aab0e7955ba059997aac578d6341582a3e065"
   name = "github.com/Sabayon/pkgs-checker"
   packages = ["pkg/gentoo"]
   pruneopts = "UT"
-  revision = "4fbbdaefc15bf6f16b7950481d8e92e2a19c79f7"
+  revision = "673f8f976791c3acca0af31769cffed3d0ac8c68"
 
 [[projects]]
   digest = "1:f7499626626215283473733b7428e3b26457a92cf9dbb1518262fbc4f7523423"
