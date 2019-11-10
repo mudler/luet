@@ -40,6 +40,7 @@ type CompilerBackend interface {
 	RemoveImage(CompilerBackendOptions) error
 	Changes(fromImage, toImage string) ([]ArtifactLayer, error)
 	ImageDefinitionToTar(CompilerBackendOptions) error
+	ExtractRootfs(opts CompilerBackendOptions, keepPerms bool) error
 }
 
 type Artifact interface {

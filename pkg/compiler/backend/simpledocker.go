@@ -17,9 +17,16 @@ package backend
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
+
+	capi "github.com/mudler/docker-companion/api"
 
 	"github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/pkg/errors"
@@ -91,6 +98,71 @@ func (*SimpleDocker) ExportImage(opts compiler.CompilerBackendOptions) error {
 	}
 
 	Info(string(out))
+	return nil
+}
+
+type ManifestEntry struct {
+	Layers []string `json:"Layers"`
+}
+
+func (*SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerms bool) error {
+	src := opts.SourcePath
+	dst := opts.Destination
+
+	rootfs, err := ioutil.TempDir(os.TempDir(), "rootfs")
+	if err != nil {
+		return errors.Wrap(err, "Error met while creating tempdir for rootfs")
+	}
+	defer os.RemoveAll(rootfs) // clean up
+
+	// TODO: Following as option if archive as output?
+	// archive, err := ioutil.TempDir(os.TempDir(), "archive")
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
+	// }
+	// defer os.RemoveAll(archive) // clean up
+
+	err = helpers.Untar(src, rootfs, keepPerms)
+	if err != nil {
+		return errors.Wrap(err, "Error met while unpacking rootfs")
+	}
+
+	manifest, err := helpers.Read(filepath.Join(rootfs, "manifest.json"))
+	if err != nil {
+		return errors.Wrap(err, "Error met while reading image manifest")
+	}
+
+	// Unpack all layers
+	var manifestData []ManifestEntry
+
+	if err := json.Unmarshal([]byte(manifest), &manifestData); err != nil {
+		return errors.Wrap(err, "Error met while unmarshalling manifest")
+	}
+
+	layers_sha := []string{}
+
+	if len(manifestData) != 1 {
+		return errors.New("Manifest should have one entry")
+	}
+	for _, l := range manifestData[0].Layers {
+		layers_sha = append(layers_sha, strings.Replace(l, "/layer.tar", "", -1))
+	}
+
+	export, err := capi.CreateExport(rootfs)
+	if err != nil {
+		return err
+	}
+
+	err = export.UnPackLayers(layers_sha, dst, "")
+	if err != nil {
+		return err
+	}
+
+	// err = helpers.Tar(archive, dst)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "Error met while creating package archive")
+	// }
+
 	return nil
 }
 
