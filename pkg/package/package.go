@@ -123,7 +123,7 @@ func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*D
 func (p *DefaultPackage) String() string {
 	b, err := json.Marshal(p)
 	if err != nil {
-		return fmt.Sprintf("{ id: \"%s\", name: \"%s\" }", p.ID, p.Name)
+		return fmt.Sprintf("{ id: \"%d\", name: \"%s\" }", p.ID, p.Name)
 	}
 	return fmt.Sprintf("%s", string(b))
 }
