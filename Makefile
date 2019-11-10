@@ -17,8 +17,8 @@ fmt:
 
 .PHONY: test
 test:
-	go get github.com/onsi/ginkgo/ginkgo
-	go get github.com/onsi/gomega/...
+	GO111MODULE=off go get github.com/onsi/ginkgo/ginkgo
+	GO111MODULE=off go get github.com/onsi/gomega/...
 	ginkgo -r ./...
 
 .PHONY: coverage
@@ -41,11 +41,11 @@ clean:
 deps:
 	go env
 	# Installing dependencies...
-	go get -u golang.org/x/lint/golint
-	go get github.com/mitchellh/gox
-	go get golang.org/x/tools/cmd/cover
-	go get github.com/onsi/ginkgo/ginkgo
-	go get github.com/onsi/gomega/...
+	GO111MODULE=off go get golang.org/x/lint/golint
+	GO111MODULE=off go get github.com/mitchellh/gox
+	GO111MODULE=off go get golang.org/x/tools/cmd/cover
+	GO111MODULE=off go get github.com/onsi/ginkgo/ginkgo
+	GO111MODULE=off go get github.com/onsi/gomega/...
 
 .PHONY: build
 build:
@@ -60,6 +60,10 @@ gox-build:
 lint:
 	# Checking project code style...
 	golint ./... | grep -v "be unexported"
+
+.PHONY: vendor
+vendor:
+	go mod vendor
 
 .PHONY: test-docker
 test-docker:
