@@ -20,7 +20,7 @@ import (
 )
 
 type Compiler interface {
-	Compile(CompilationSpec) (Artifact, error)
+	Compile(int, bool, CompilationSpec) (Artifact, error)
 	FromPackage(pkg.Package) (CompilationSpec, error)
 
 	SetBackend(CompilerBackend)

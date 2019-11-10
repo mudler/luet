@@ -18,6 +18,8 @@ package compiler
 import (
 	"errors"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -41,7 +43,7 @@ func NewLuetCompiler(backend CompilerBackend, t pkg.Tree) Compiler {
 	}
 }
 
-func (cs *LuetCompiler) Compile(p CompilationSpec) (Artifact, error) {
+func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
 
 	// - If image is not set, we read a base_image. Then we will build one image from it to kick-off our build based
 	// on how we compute the resolvable tree.
@@ -55,28 +57,47 @@ func (cs *LuetCompiler) Compile(p CompilationSpec) (Artifact, error) {
 		p.SetSeedImage(p.GetImage()) // In this case, we ignore the build deps as we suppose that the image has them - otherwise we recompose the tree with a solver,
 		// and we build all the images first.
 
+		buildDir := p.Rel("build")
+
+		// First we copy the source definitions into the output - we create a copy which the builds will need (we need to cache this phase somehow)
+		err := helpers.CopyDir(p.GetPackage().GetPath(), buildDir)
+		if err != nil {
+			return nil, err
+
+		}
+
 		// First we create the builder image
-		p.WriteBuildImageDefinition(p.Rel(p.GetPackage().GetFingerPrint() + "-builder.dockerfile"))
+		p.WriteBuildImageDefinition(filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+"-builder.dockerfile"))
 		builderOpts := CompilerBackendOptions{
 			ImageName:      "luet/" + p.GetPackage().GetFingerPrint() + "-builder",
-			SourcePath:     p.GetOutputPath(),
-			DockerFileName: p.Rel(p.GetPackage().GetFingerPrint() + "-builder.dockerfile"),
-			Destination:    p.Rel(p.GetPackage().GetFingerPrint() + "-builder.rootfs.tar"),
+			SourcePath:     buildDir,
+			DockerFileName: p.GetPackage().GetFingerPrint() + "-builder.dockerfile",
+			Destination:    p.Rel(p.GetPackage().GetFingerPrint() + "-builder.image.tar"),
 		}
-		err := cs.Backend.BuildImage(builderOpts)
+		err = cs.Backend.BuildImage(builderOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		err = cs.Backend.ExportImage(builderOpts)
 		if err != nil {
 			return nil, err
 		}
 
 		// Then we write the step image, which uses the builder one
-		p.WriteStepImageDefinition("luet/"+p.GetPackage().GetFingerPrint()+"-builder", p.Rel(p.GetPackage().GetFingerPrint()+".dockerfile"))
+		p.WriteStepImageDefinition("luet/"+p.GetPackage().GetFingerPrint()+"-builder", filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+".dockerfile"))
 		runnerOpts := CompilerBackendOptions{
 			ImageName:      "luet/" + p.GetPackage().GetFingerPrint(),
-			SourcePath:     p.GetOutputPath(),
-			DockerFileName: p.Rel(p.GetPackage().GetFingerPrint() + ".dockerfile"),
-			Destination:    p.Rel(p.GetPackage().GetFingerPrint() + ".rootfs.tar"),
+			SourcePath:     buildDir,
+			DockerFileName: p.GetPackage().GetFingerPrint() + ".dockerfile",
+			Destination:    p.Rel(p.GetPackage().GetFingerPrint() + ".image.tar"),
 		}
 		err = cs.Backend.ImageDefinitionToTar(runnerOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		diffs, err := cs.Backend.Changes(p.Rel(p.GetPackage().GetFingerPrint()+"-builder.image.tar"), p.Rel(p.GetPackage().GetFingerPrint()+".image.tar"))
 		if err != nil {
 			return nil, err
 		}
@@ -87,10 +108,23 @@ func (cs *LuetCompiler) Compile(p CompilationSpec) (Artifact, error) {
 			return nil, err
 		}
 
-		// TODO: Delta should be the artifact
-		return NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".rootfs.tar")), nil
+		rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
+		defer os.RemoveAll(rootfs) // clean up
+
+		// TODO: Compression and such
+		err = cs.Backend.ExtractRootfs(CompilerBackendOptions{SourcePath: runnerOpts.Destination, Destination: rootfs}, keepPermissions)
+		if err != nil {
+			return nil, err
+		}
+		artifact, err := ExtractArtifactFromDelta(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions)
+		if err != nil {
+			return nil, err
+		}
+
+		return artifact, nil
 	}
 
+	// TODO: Solve - hash
 	return nil, errors.New("Not implemented yet")
 }
 
@@ -100,6 +134,7 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	buildFile := pack.Rel(BuildFile)
 	if !helpers.Exists(buildFile) {
 		return nil, errors.New("No build file present for " + p.GetFingerPrint())
@@ -109,7 +144,7 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewLuetCompilationSpec(dat, p)
+	return NewLuetCompilationSpec(dat, pack)
 }
 
 func (cs *LuetCompiler) GetBackend() CompilerBackend {

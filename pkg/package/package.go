@@ -105,7 +105,7 @@ type DefaultPackage struct {
 	// TODO: Annotations?
 
 	// Path is set only internally when tree is loaded from disk
-	Path string `json:"path,omitempty"` // primary key with auto increment
+	Path string `json:"path,omitempty"`
 }
 
 // State represent the package state
