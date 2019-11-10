@@ -24,12 +24,12 @@ import (
 )
 
 type LuetCompilationSpec struct {
-	Steps         []string    `json:"steps"`     // Are run inside a container and the result layer diff is saved
-	PreBuildSteps []string    `json:"pre_steps"` // Are run inside the image which will be our builder
-	Image         string      `json:"image"`
-	Seed          string      `json:"seed"`
-	Package       pkg.Package `json:"-"`
-	OutputPath    string      `json:"-"` // Where the build processfiles go
+	Steps      []string    `json:"steps"`   // Are run inside a container and the result layer diff is saved
+	Prelude    []string    `json:"prelude"` // Are run inside the image which will be our builder
+	Image      string      `json:"image"`
+	Seed       string      `json:"seed"`
+	Package    pkg.Package `json:"-"`
+	OutputPath string      `json:"-"` // Where the build processfiles go
 }
 
 func NewLuetCompilationSpec(b []byte, p pkg.Package) (CompilationSpec, error) {
@@ -51,7 +51,7 @@ func (cs *LuetCompilationSpec) BuildSteps() []string {
 }
 
 func (cs *LuetCompilationSpec) GetPreBuildSteps() []string {
-	return cs.PreBuildSteps
+	return cs.Prelude
 }
 
 func (cs *LuetCompilationSpec) GetSeedImage() string {
