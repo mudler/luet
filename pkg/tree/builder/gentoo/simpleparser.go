@@ -233,9 +233,10 @@ func SourceFile(ctx context.Context, path string, pkg *_gentoo.GentooPackage) (m
 		return nil, fmt.Errorf("could not open: %v", err)
 	}
 	// Add default Genoo Variables
-	ebuild := fmt.Sprintf("P=%s\n", pkg.GetPackageName()) +
-		fmt.Sprintf("PN=%s\n", pkg.Name) +
-		fmt.Sprintf("PV=%s\n", pkg.Version) +
+	ebuild := fmt.Sprintf("P=%s\n", pkg.GetP()) +
+		fmt.Sprintf("PN=%s\n", pkg.GetPN()) +
+		fmt.Sprintf("PV=%s\n", pkg.GetPV()) +
+		fmt.Sprintf("PVR=%s\n", pkg.GetPVR()) +
 		string(content)
 
 	file, err := syntax.NewParser(syntax.StopAt("src")).Parse(strings.NewReader(ebuild), path)
