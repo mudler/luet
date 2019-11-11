@@ -129,4 +129,72 @@ var _ = Describe("Decoder", func() {
 			})
 		}
 	})
+
+	Context("Assertion hashing", func() {
+		It("Hashes them, and could be used for comparison", func() {
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			G := pkg.NewPackage("G", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			H := pkg.NewPackage("H", "", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+
+			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D, E, F, G})
+
+			solution, err := s.Install([]pkg.Package{A})
+			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: H.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: G.IsFlagged(true), Value: true}))
+
+			Expect(len(solution)).To(Equal(6))
+			Expect(err).ToNot(HaveOccurred())
+			solution = solution.Order()
+			Expect(len(solution)).To(Equal(6))
+			Expect(solution[0].Package.GetName()).To(Equal("G"))
+			Expect(solution[1].Package.GetName()).To(Equal("H"))
+			Expect(solution[2].Package.GetName()).To(Equal("D"))
+			Expect(solution[3].Package.GetName()).To(Equal("B"))
+
+			hash := solution.AssertionHash()
+
+			solution, err = s.Install([]pkg.Package{B})
+			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: H.IsFlagged(true), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: G.IsFlagged(true), Value: true}))
+
+			Expect(len(solution)).To(Equal(6))
+			Expect(err).ToNot(HaveOccurred())
+			solution = solution.Order()
+			hash2 := solution.AssertionHash()
+
+			Expect(len(solution)).To(Equal(6))
+			Expect(solution[0].Package.GetName()).To(Equal("G"))
+			Expect(solution[1].Package.GetName()).To(Equal("H"))
+			Expect(solution[2].Package.GetName()).To(Equal("D"))
+			Expect(solution[3].Package.GetName()).To(Equal("B"))
+
+			Expect(hash).ToNot(Equal(""))
+			Expect(hash2).ToNot(Equal(""))
+			Expect(hash != hash2).To(BeTrue())
+
+			X := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			Y := pkg.NewPackage("Y", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
+			Z := pkg.NewPackage("Z", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
+			s = NewSolver([]pkg.Package{}, []pkg.Package{X, Y, Z})
+			solution, err = s.Install([]pkg.Package{Y})
+			Expect(err).ToNot(HaveOccurred())
+
+			solution2, err := s.Install([]pkg.Package{Z})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(solution.Drop(Y).AssertionHash() == solution2.Drop(Z).AssertionHash()).To(BeTrue())
+		})
+
+	})
 })

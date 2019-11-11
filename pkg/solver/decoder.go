@@ -16,6 +16,7 @@
 package solver
 
 import (
+	"crypto/sha256"
 	"fmt"
 
 	pkg "github.com/mudler/luet/pkg/package"
@@ -101,4 +102,34 @@ func (assertions PackagesAssertions) Order() PackagesAssertions {
 	}
 
 	return orderedAssertions
+}
+
+func (assertions PackagesAssertions) Explain() string {
+	var fingerprint string
+	for _, assertion := range assertions.Order() { // Always order them
+		fingerprint += assertion.ToString() + "\n"
+	}
+	return fingerprint
+}
+
+func (assertions PackagesAssertions) AssertionHash() string {
+	var fingerprint string
+	for _, assertion := range assertions.Order() { // Always order them
+		if assertion.Value && assertion.Package.Flagged() { // Tke into account only dependencies installed (get fingerprint of subgraph)
+			fingerprint += assertion.ToString() + "\n"
+		}
+	}
+	hash := sha256.Sum256([]byte(fingerprint))
+	return fmt.Sprintf("%x", hash)
+}
+
+func (assertions PackagesAssertions) Drop(p pkg.Package) PackagesAssertions {
+	ass := PackagesAssertions{}
+
+	for _, a := range assertions {
+		if a.Package.GetFingerPrint() != p.GetFingerPrint() {
+			ass = append(ass, a)
+		}
+	}
+	return ass
 }
