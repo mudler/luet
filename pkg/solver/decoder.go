@@ -19,7 +19,10 @@ import (
 	"fmt"
 
 	pkg "github.com/mudler/luet/pkg/package"
+	toposort "github.com/philopon/go-toposort"
 )
+
+type PackagesAssertions []PackageAssert
 
 // PackageAssert represent a package assertion.
 // It is composed of a Package and a Value which is indicating the absence or not
@@ -30,8 +33,8 @@ type PackageAssert struct {
 }
 
 // DecodeModel decodes a model from the SAT solver to package assertions (PackageAssert)
-func DecodeModel(model map[string]bool) ([]PackageAssert, error) {
-	ass := make([]PackageAssert, 0)
+func DecodeModel(model map[string]bool) (PackagesAssertions, error) {
+	ass := make(PackagesAssertions, 0)
 	for k, v := range model {
 		a, err := pkg.DecodePackage(k)
 		if err != nil {
@@ -56,4 +59,46 @@ func (a *PackageAssert) ToString() string {
 		msg = "not installed"
 	}
 	return fmt.Sprintf("%s/%s %s %s: %t", a.Package.GetCategory(), a.Package.GetName(), a.Package.GetVersion(), msg, a.Value)
+}
+
+func (assertions PackagesAssertions) Order() PackagesAssertions {
+
+	orderedAssertions := PackagesAssertions{}
+	unorderedAssertions := PackagesAssertions{}
+	fingerprints := []string{}
+
+	tmpMap := map[string]PackageAssert{}
+
+	for _, a := range assertions {
+		if a.Package.Flagged() {
+			unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
+			fingerprints = append(fingerprints, a.Package.GetFingerPrint())
+			tmpMap[a.Package.GetFingerPrint()] = a
+		} else {
+			orderedAssertions = append(orderedAssertions, a) // Keep last the ones which are not meant to be installed
+		}
+	}
+
+	// Build a topological graph
+	graph := toposort.NewGraph(len(unorderedAssertions))
+	graph.AddNodes(fingerprints...)
+	for _, a := range unorderedAssertions {
+		for _, req := range a.Package.GetRequires() {
+			graph.AddEdge(a.Package.GetFingerPrint(), req.GetFingerPrint())
+		}
+	}
+	result, ok := graph.Toposort()
+	if !ok {
+		panic("cycle detected")
+	}
+
+	for _, res := range result {
+		a, ok := tmpMap[res]
+		if !ok {
+			panic("Sort order - this shouldn't happen")
+		}
+		orderedAssertions = append([]PackageAssert{a}, orderedAssertions...) // push upfront
+	}
+
+	return orderedAssertions
 }
