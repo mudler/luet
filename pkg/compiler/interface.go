@@ -21,6 +21,7 @@ import (
 
 type Compiler interface {
 	Compile(int, bool, CompilationSpec) (Artifact, error)
+	CompileParallel(concurrency int, keepPermissions bool, ps []CompilationSpec) ([]Artifact, []error)
 	FromPackage(pkg.Package) (CompilationSpec, error)
 
 	SetBackend(CompilerBackend)

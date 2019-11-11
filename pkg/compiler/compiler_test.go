@@ -70,4 +70,38 @@ var _ = Describe("Compiler", func() {
 
 		})
 	})
+
+	Context("Simple package build definition", func() {
+		It("Compiles it in parallel", func() {
+			generalRecipe := tree.NewCompilerRecipe()
+
+			err := generalRecipe.Load("../../tests/fixtures/buildable")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
+
+			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+			spec2, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			spec.SetOutputPath(tmpdir)
+			spec2.SetOutputPath(tmpdir)
+			artifacts, errs := compiler.CompileParallel(2, false, []CompilationSpec{spec, spec2})
+			Expect(len(errs)).To(Equal(0))
+			for _, artifact := range artifacts {
+				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			}
+
+		})
+	})
 })

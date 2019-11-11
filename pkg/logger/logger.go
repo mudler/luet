@@ -13,14 +13,20 @@ import (
 
 var s *spinner.Spinner
 var m = &sync.Mutex{}
+var enabled = false
 
 func Spinner(i int) {
+	m.Lock()
+	defer m.Unlock()
 	if i > 43 {
 		i = 43
 	}
 
-	s = spinner.New(spinner.CharSets[i], 100*time.Millisecond) // Build our new spinner
-	s.Start()                                                  // Start the spinner
+	if s == nil {
+		s = spinner.New(spinner.CharSets[i], 100*time.Millisecond) // Build our new spinner
+	}
+	enabled = true
+	s.Start() // Start the spinner
 }
 
 func SpinnerText(suffix, prefix string) {
@@ -31,8 +37,10 @@ func SpinnerText(suffix, prefix string) {
 }
 
 func SpinnerStop() {
+	m.Lock()
+	defer m.Unlock()
 	s.Stop()
-	s = nil
+	enabled = false
 }
 
 func msg(level string, msg ...interface{}) {
@@ -48,7 +56,7 @@ func msg(level string, msg ...interface{}) {
 		levelMsg = Bold(Red("Error")).BgBlack().String()
 	}
 
-	if s != nil {
+	if enabled {
 		SpinnerText(Sprintf(msg), levelMsg)
 		return
 	}
@@ -57,7 +65,8 @@ func msg(level string, msg ...interface{}) {
 	for _, f := range msg {
 		cmd = append(cmd, f)
 	}
-
+	m.Lock()
+	defer m.Unlock()
 	fmt.Println(cmd...)
 }
 

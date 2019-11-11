@@ -16,14 +16,15 @@
 package compiler
 
 import (
-	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/tree"
+	"github.com/pkg/errors"
 )
 
 const BuildFile = "build.yaml"
@@ -41,6 +42,49 @@ func NewLuetCompiler(backend CompilerBackend, t pkg.Tree) Compiler {
 			tree.Recipe{PackageTree: t},
 		},
 	}
+}
+
+func (cs *LuetCompiler) compilerWorker(i int, wg *sync.WaitGroup, cspecs chan CompilationSpec, a *[]Artifact, m *sync.Mutex, concurrency int, keepPermissions bool, errors chan error) {
+	defer wg.Done()
+
+	for s := range cspecs {
+		ar, err := cs.Compile(concurrency, keepPermissions, s)
+		if err != nil {
+			errors <- err
+		}
+
+		m.Lock()
+		*a = append(*a, ar)
+		m.Unlock()
+	}
+}
+
+func (cs *LuetCompiler) CompileParallel(concurrency int, keepPermissions bool, ps []CompilationSpec) ([]Artifact, []error) {
+	all := make(chan CompilationSpec)
+	artifacts := []Artifact{}
+	mutex := &sync.Mutex{}
+	errors := make(chan error, len(ps))
+	var wg = new(sync.WaitGroup)
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go cs.compilerWorker(i, wg, all, &artifacts, mutex, concurrency, keepPermissions, errors)
+	}
+
+	for _, p := range ps {
+		all <- p
+	}
+
+	close(all)
+	wg.Wait()
+	close(errors)
+
+	var allErrors []error
+
+	for e := range errors {
+		allErrors = append(allErrors, e)
+	}
+
+	return artifacts, allErrors
 }
 
 func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
@@ -62,7 +106,7 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 		// First we copy the source definitions into the output - we create a copy which the builds will need (we need to cache this phase somehow)
 		err := helpers.CopyDir(p.GetPackage().GetPath(), buildDir)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Could not copy package sources")
 
 		}
 
@@ -76,12 +120,12 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 		}
 		err = cs.Backend.BuildImage(builderOpts)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Could not build image")
 		}
 
 		err = cs.Backend.ExportImage(builderOpts)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Could not export image")
 		}
 
 		// Then we write the step image, which uses the builder one
@@ -94,18 +138,18 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 		}
 		err = cs.Backend.ImageDefinitionToTar(runnerOpts)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Could not export image to tar")
 		}
 
 		diffs, err := cs.Backend.Changes(p.Rel(p.GetPackage().GetFingerPrint()+"-builder.image.tar"), p.Rel(p.GetPackage().GetFingerPrint()+".image.tar"))
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Could not generate changes from layers")
 		}
 
 		// TODO: Handle caching and optionally do not remove things
 		err = cs.Backend.RemoveImage(builderOpts)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Could not remove image")
 		}
 
 		rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
@@ -114,18 +158,18 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 		// TODO: Compression and such
 		err = cs.Backend.ExtractRootfs(CompilerBackendOptions{SourcePath: runnerOpts.Destination, Destination: rootfs}, keepPermissions)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Could not extract rootfs")
 		}
 		artifact, err := ExtractArtifactFromDelta(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Could not generate deltas")
 		}
 
 		return artifact, nil
 	}
 
 	// TODO: Solve - hash
-	return nil, errors.New("Not implemented yet")
+	return nil, errors.New("Image build with a seed image is not implemented yet")
 }
 
 func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
