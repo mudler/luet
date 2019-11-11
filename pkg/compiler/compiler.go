@@ -123,7 +123,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 
 	err = cs.Backend.BuildImage(builderOpts)
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not build image: "+image)
+		return nil, errors.Wrap(err, "Could not build image: "+image+" "+builderOpts.DockerFileName)
 	}
 
 	err = cs.Backend.ExportImage(builderOpts)
@@ -147,7 +147,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		}
 	} else {
 		if err := cs.Backend.BuildImage(runnerOpts); err != nil {
-			return nil, errors.Wrap(err, "Failed building image")
+			return nil, errors.Wrap(err, "Failed building image for "+runnerOpts.ImageName+" "+runnerOpts.DockerFileName)
 		}
 		if err := cs.Backend.ExportImage(runnerOpts); err != nil {
 			return nil, errors.Wrap(err, "Failed exporting image")
@@ -168,6 +168,9 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		}
 	}
 	rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not create tempdir")
+	}
 	defer os.RemoveAll(rootfs) // clean up
 
 	// TODO: Compression and such
@@ -184,6 +187,12 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 }
 
 func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
+	Debug("Compiling " + p.GetPackage().GetName())
+
+	if len(p.GetPackage().GetRequires()) == 0 && p.GetImage() == "" {
+		Error("Package with no deps and no seed image supplied, bailing out")
+		return nil, errors.New("Package " + p.GetPackage().GetFingerPrint() + "with no deps and no seed image supplied, bailing out")
+	}
 
 	// - If image is not set, we read a base_image. Then we will build one image from it to kick-off our build based
 	// on how we compute the resolvable tree.
@@ -203,42 +212,52 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 	}
 
 	s := solver.NewSolver([]pkg.Package{}, world)
-	solution, err := s.Install([]pkg.Package{p.GetPackage()})
+	pack, err := cs.Tree().FindPackage(p.GetPackage())
 	if err != nil {
 		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
 	}
+	solution, err := s.Install([]pkg.Package{pack})
+	if err != nil {
+		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
+	}
+	Info("Build dependencies: ( target "+p.GetPackage().GetName()+")", solution.Explain())
 
 	dependencies := solution.Drop(p.GetPackage()).Order() // at this point we should have a flattened list of deps to build, including all of them (with all constraints propagated already)
 	departifacts := []Artifact{}                          // TODO: Return this somehow
 	deperrs := []error{}
 	var lastHash string
-	Info("Build dependencies:", dependencies.Explain())
+	//Info("Build dependencies: ( target "+p.GetPackage().GetName()+")", dependencies.Explain())
 
 	if len(dependencies[0].Package.GetRequires()) != 0 {
 		return nil, errors.New("The first dependency of the deptree doesn't have an image base")
 	}
 	for _, assertion := range dependencies { //highly dependent on the order
 		if assertion.Value && assertion.Package.Flagged() {
-			Info("Building", assertion.Package.GetName())
+			Info("( target "+p.GetPackage().GetName()+") Building", assertion.Package.GetName())
 			compileSpec, err := cs.FromPackage(assertion.Package)
 			if err != nil {
 				return nil, errors.New("Error while generating compilespec for " + assertion.Package.GetName())
 			}
 			compileSpec.SetOutputPath(p.GetOutputPath())
-			pack, err := cs.Tree().FindPackage(p.GetPackage())
-			if err != nil {
-				return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
-			}
-			//TODO: Generate image name of builder image - it should match with the hash up to this point - package
-			nthsolution, err := s.Install([]pkg.Package{pack})
+			depPack, err := cs.Tree().FindPackage(assertion.Package)
 			if err != nil {
 				return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
 			}
 
-			buildImageHash := "luet/cache-" + nthsolution.Drop(p.GetPackage()).AssertionHash()
+			// Generate image name of builder image - it should match with the hash up to this point - package
+			nthsolution, err := s.Install([]pkg.Package{depPack})
+			if err != nil {
+				return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
+			}
+
+			buildImageHash := "luet/cache-" + nthsolution.Drop(depPack).AssertionHash()
 			currentPackageImageHash := "luet/cache-" + nthsolution.AssertionHash()
+			Debug("("+p.GetPackage().GetName()+") Builder image name:", buildImageHash)
+			Debug("("+p.GetPackage().GetName()+") Package image name:", currentPackageImageHash)
+
 			lastHash = currentPackageImageHash
 			if compileSpec.GetImage() != "" {
+				Debug("(" + p.GetPackage().GetName() + ") Compiling " + compileSpec.GetPackage().GetFingerPrint() + " from image")
 				artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, compileSpec)
 				if err != nil {
 					deperrs = append(deperrs, err)
@@ -257,6 +276,7 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 			departifacts = append(departifacts, artifact)
 		}
 	}
+	Debug("("+p.GetPackage().GetName()+") Building target from", lastHash)
 
 	return cs.compileWithImage(lastHash, "", "", concurrency, keepPermissions, p)
 }

@@ -116,21 +116,25 @@ var _ = Describe("Compiler", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
+			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(4))
 
 			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "c", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 			spec2, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
+			spec3, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
-			artifacts, errs := compiler.CompileParallel(2, false, []CompilationSpec{spec, spec2})
-			Expect(errs).To(Equal(""))
-			Expect(len(errs)).To(Equal(0))
+			spec3.SetOutputPath(tmpdir)
+			artifacts, errs := compiler.CompileParallel(2, false, []CompilationSpec{spec, spec2, spec3})
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(3))
+
 			for _, artifact := range artifacts {
 				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
 				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())

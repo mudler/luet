@@ -71,10 +71,10 @@ func (assertions PackagesAssertions) Order() PackagesAssertions {
 	tmpMap := map[string]PackageAssert{}
 
 	for _, a := range assertions {
+		tmpMap[a.Package.GetFingerPrint()] = a
 		if a.Package.Flagged() {
 			unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
 			fingerprints = append(fingerprints, a.Package.GetFingerPrint())
-			tmpMap[a.Package.GetFingerPrint()] = a
 		} else {
 			orderedAssertions = append(orderedAssertions, a) // Keep last the ones which are not meant to be installed
 		}
@@ -92,13 +92,12 @@ func (assertions PackagesAssertions) Order() PackagesAssertions {
 	if !ok {
 		panic("cycle detected")
 	}
-
 	for _, res := range result {
 		a, ok := tmpMap[res]
 		if !ok {
-			panic("Sort order - this shouldn't happen")
+			continue
 		}
-		orderedAssertions = append([]PackageAssert{a}, orderedAssertions...) // push upfront
+		orderedAssertions = append(PackagesAssertions{a}, orderedAssertions...) // push upfront
 	}
 
 	return orderedAssertions
