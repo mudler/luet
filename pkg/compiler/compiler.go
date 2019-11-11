@@ -21,8 +21,11 @@ import (
 	"path/filepath"
 	"sync"
 
+	. "github.com/mudler/luet/pkg/logger"
+
 	"github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/solver"
 	"github.com/mudler/luet/pkg/tree"
 	"github.com/pkg/errors"
 )
@@ -87,6 +90,99 @@ func (cs *LuetCompiler) CompileParallel(concurrency int, keepPermissions bool, p
 	return artifacts, allErrors
 }
 
+func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage string, concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
+	p.SetSeedImage(image) // In this case, we ignore the build deps as we suppose that the image has them - otherwise we recompose the tree with a solver,
+	// and we build all the images first.
+	keepImg := true
+	keepPackageImg := true
+	buildDir := p.Rel("build")
+
+	// First we copy the source definitions into the output - we create a copy which the builds will need (we need to cache this phase somehow)
+	err := helpers.CopyDir(p.GetPackage().GetPath(), buildDir)
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not copy package sources")
+
+	}
+	if buildertaggedImage == "" {
+		keepImg = false
+		buildertaggedImage = "luet/" + p.GetPackage().GetFingerPrint() + "-builder"
+	}
+	if packageImage == "" {
+		keepPackageImg = false
+		packageImage = "luet/" + p.GetPackage().GetFingerPrint()
+	}
+
+	// First we create the builder image
+	p.WriteBuildImageDefinition(filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+"-builder.dockerfile"))
+	builderOpts := CompilerBackendOptions{
+		ImageName:      buildertaggedImage,
+		SourcePath:     buildDir,
+		DockerFileName: p.GetPackage().GetFingerPrint() + "-builder.dockerfile",
+		Destination:    p.Rel(p.GetPackage().GetFingerPrint() + "-builder.image.tar"),
+	}
+
+	err = cs.Backend.BuildImage(builderOpts)
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not build image: "+image)
+	}
+
+	err = cs.Backend.ExportImage(builderOpts)
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not export image")
+	}
+
+	// Then we write the step image, which uses the builder one
+	p.WriteStepImageDefinition(buildertaggedImage, filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+".dockerfile"))
+	runnerOpts := CompilerBackendOptions{
+		ImageName:      packageImage,
+		SourcePath:     buildDir,
+		DockerFileName: p.GetPackage().GetFingerPrint() + ".dockerfile",
+		Destination:    p.Rel(p.GetPackage().GetFingerPrint() + ".image.tar"),
+	}
+
+	if !keepPackageImg {
+		err = cs.Backend.ImageDefinitionToTar(runnerOpts)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not export image to tar")
+		}
+	} else {
+		if err := cs.Backend.BuildImage(runnerOpts); err != nil {
+			return nil, errors.Wrap(err, "Failed building image")
+		}
+		if err := cs.Backend.ExportImage(runnerOpts); err != nil {
+			return nil, errors.Wrap(err, "Failed exporting image")
+		}
+	}
+
+	diffs, err := cs.Backend.Changes(p.Rel(p.GetPackage().GetFingerPrint()+"-builder.image.tar"), p.Rel(p.GetPackage().GetFingerPrint()+".image.tar"))
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not generate changes from layers")
+	}
+
+	if !keepImg {
+		// We keep them around, so to not reload them from the tar (which should be the "correct way") and we automatically share the same layers
+		// TODO: Handle caching and optionally do not remove things
+		err = cs.Backend.RemoveImage(builderOpts)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not remove image")
+		}
+	}
+	rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
+	defer os.RemoveAll(rootfs) // clean up
+
+	// TODO: Compression and such
+	err = cs.Backend.ExtractRootfs(CompilerBackendOptions{SourcePath: runnerOpts.Destination, Destination: rootfs}, keepPermissions)
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not extract rootfs")
+	}
+	artifact, err := ExtractArtifactFromDelta(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions)
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not generate deltas")
+	}
+
+	return artifact, nil
+}
+
 func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
 
 	// - If image is not set, we read a base_image. Then we will build one image from it to kick-off our build based
@@ -96,80 +192,73 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 	// - If image is set we just generate a plain dockerfile
 
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
-
 	if p.GetImage() != "" {
-		p.SetSeedImage(p.GetImage()) // In this case, we ignore the build deps as we suppose that the image has them - otherwise we recompose the tree with a solver,
-		// and we build all the images first.
-
-		buildDir := p.Rel("build")
-
-		// First we copy the source definitions into the output - we create a copy which the builds will need (we need to cache this phase somehow)
-		err := helpers.CopyDir(p.GetPackage().GetPath(), buildDir)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not copy package sources")
-
-		}
-
-		// First we create the builder image
-		p.WriteBuildImageDefinition(filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+"-builder.dockerfile"))
-		builderOpts := CompilerBackendOptions{
-			ImageName:      "luet/" + p.GetPackage().GetFingerPrint() + "-builder",
-			SourcePath:     buildDir,
-			DockerFileName: p.GetPackage().GetFingerPrint() + "-builder.dockerfile",
-			Destination:    p.Rel(p.GetPackage().GetFingerPrint() + "-builder.image.tar"),
-		}
-		err = cs.Backend.BuildImage(builderOpts)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not build image")
-		}
-
-		err = cs.Backend.ExportImage(builderOpts)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not export image")
-		}
-
-		// Then we write the step image, which uses the builder one
-		p.WriteStepImageDefinition("luet/"+p.GetPackage().GetFingerPrint()+"-builder", filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+".dockerfile"))
-		runnerOpts := CompilerBackendOptions{
-			ImageName:      "luet/" + p.GetPackage().GetFingerPrint(),
-			SourcePath:     buildDir,
-			DockerFileName: p.GetPackage().GetFingerPrint() + ".dockerfile",
-			Destination:    p.Rel(p.GetPackage().GetFingerPrint() + ".image.tar"),
-		}
-		err = cs.Backend.ImageDefinitionToTar(runnerOpts)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not export image to tar")
-		}
-
-		diffs, err := cs.Backend.Changes(p.Rel(p.GetPackage().GetFingerPrint()+"-builder.image.tar"), p.Rel(p.GetPackage().GetFingerPrint()+".image.tar"))
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not generate changes from layers")
-		}
-
-		// TODO: Handle caching and optionally do not remove things
-		err = cs.Backend.RemoveImage(builderOpts)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not remove image")
-		}
-
-		rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
-		defer os.RemoveAll(rootfs) // clean up
-
-		// TODO: Compression and such
-		err = cs.Backend.ExtractRootfs(CompilerBackendOptions{SourcePath: runnerOpts.Destination, Destination: rootfs}, keepPermissions)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not extract rootfs")
-		}
-		artifact, err := ExtractArtifactFromDelta(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not generate deltas")
-		}
-
-		return artifact, nil
+		return cs.compileWithImage(p.GetImage(), "", "", concurrency, keepPermissions, p)
 	}
 
-	// TODO: Solve - hash
-	return nil, errors.New("Image build with a seed image is not implemented yet")
+	// Get build deps tree (ordered)
+	world, err := cs.Tree().World()
+	if err != nil {
+		return nil, errors.Wrap(err, "While computing tree world")
+	}
+
+	s := solver.NewSolver([]pkg.Package{}, world)
+	solution, err := s.Install([]pkg.Package{p.GetPackage()})
+	if err != nil {
+		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
+	}
+
+	dependencies := solution.Drop(p.GetPackage()).Order() // at this point we should have a flattened list of deps to build, including all of them (with all constraints propagated already)
+	departifacts := []Artifact{}                          // TODO: Return this somehow
+	deperrs := []error{}
+	var lastHash string
+	Info("Build dependencies:", dependencies.Explain())
+
+	if len(dependencies[0].Package.GetRequires()) != 0 {
+		return nil, errors.New("The first dependency of the deptree doesn't have an image base")
+	}
+	for _, assertion := range dependencies { //highly dependent on the order
+		if assertion.Value && assertion.Package.Flagged() {
+			Info("Building", assertion.Package.GetName())
+			compileSpec, err := cs.FromPackage(assertion.Package)
+			if err != nil {
+				return nil, errors.New("Error while generating compilespec for " + assertion.Package.GetName())
+			}
+			compileSpec.SetOutputPath(p.GetOutputPath())
+			pack, err := cs.Tree().FindPackage(p.GetPackage())
+			if err != nil {
+				return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
+			}
+			//TODO: Generate image name of builder image - it should match with the hash up to this point - package
+			nthsolution, err := s.Install([]pkg.Package{pack})
+			if err != nil {
+				return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
+			}
+
+			buildImageHash := "luet/cache-" + nthsolution.Drop(p.GetPackage()).AssertionHash()
+			currentPackageImageHash := "luet/cache-" + nthsolution.AssertionHash()
+			lastHash = currentPackageImageHash
+			if compileSpec.GetImage() != "" {
+				artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, compileSpec)
+				if err != nil {
+					deperrs = append(deperrs, err)
+					break // stop at first error
+				}
+				departifacts = append(departifacts, artifact)
+				continue
+			}
+
+			artifact, err := cs.compileWithImage(buildImageHash, "", currentPackageImageHash, concurrency, keepPermissions, compileSpec)
+			if err != nil {
+				return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().GetName())
+				//	deperrs = append(deperrs, err)
+				//		break // stop at first error
+			}
+			departifacts = append(departifacts, artifact)
+		}
+	}
+
+	return cs.compileWithImage(lastHash, "", "", concurrency, keepPermissions, p)
 }
 
 func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
