@@ -15,23 +15,23 @@
 package cmd
 
 import (
-	"os"
-	"runtime"
-
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	tree "github.com/mudler/luet/pkg/tree"
+	"os"
+	"regexp"
+	"runtime"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var buildCmd = &cobra.Command{
-	Use:   "build <cat> <name> <version>",
+	Use:   "build <package name> <package name> <package name> ...",
 	Short: "build a package or a tree",
-	Long:  `build packages or trees from luet tree definitions`,
+	Long:  `build packages or trees from luet tree definitions. Packages are in [category]/[name]-[version] form`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		src := viper.GetString("tree")
@@ -40,14 +40,7 @@ var buildCmd = &cobra.Command{
 		backendType := viper.GetString("backend")
 		privileged := viper.GetBool("privileged")
 
-		if len(args) != 3 {
-			Fatal("Incorrect number of arguments")
-		}
-
-		category := args[0]
-		name := args[1]
-		version := args[2]
-
+		var compilerSpecs []compiler.CompilationSpec
 		var compilerBackend compiler.CompilerBackend
 
 		switch backendType {
@@ -65,18 +58,36 @@ var buildCmd = &cobra.Command{
 			Fatal("Error: " + err.Error())
 		}
 		compiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.Tree())
-		spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: name, Category: category, Version: version})
-		if err != nil {
-			Fatal("Error: " + err.Error())
+
+		for _, a := range args {
+			decodepackage, err := regexp.Compile(`^([<>]?\~?=?)((([^\/]+)\/)?(?U)(\S+))(-(\d+(\.\d+)*[a-z]?(_(alpha|beta|pre|rc|p)\d*)*(-r\d+)?))?$`)
+			if err != nil {
+				Fatal("Error: " + err.Error())
+			}
+			packageInfo := decodepackage.FindAllStringSubmatch(a, -1)
+
+			category := packageInfo[0][4]
+			name := packageInfo[0][5]
+			version := packageInfo[0][7]
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: name, Category: category, Version: version})
+			if err != nil {
+				Fatal("Error: " + err.Error())
+			}
+
+			spec.SetOutputPath(dst)
+			compilerSpecs = append(compilerSpecs, spec)
 		}
 
-		spec.SetOutputPath(dst)
-		artifact, err := compiler.Compile(concurrency, privileged, spec)
-		if err != nil {
-			Fatal("Error: " + err.Error())
+		artifact, errs := compiler.CompileParallel(concurrency, privileged, compilerSpecs)
+		if len(errs) != 0 {
+			for _, e := range errs {
+				Error("Error: " + e.Error())
+			}
+			Fatal("Bailing out")
 		}
-
-		Info("Artifact generated:", artifact.GetPath())
+		for _, a := range artifact {
+			Info("Artifact generated:", a.GetPath())
+		}
 	},
 }
 
