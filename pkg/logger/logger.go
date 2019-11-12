@@ -32,6 +32,9 @@ func Spinner(i int) {
 func SpinnerText(suffix, prefix string) {
 	m.Lock()
 	defer m.Unlock()
+	if s == nil {
+		s = spinner.New(spinner.CharSets[22], 100*time.Millisecond) // Build our new spinner
+	}
 	s.Suffix = Bold(Magenta(suffix)).BgBlack().String()
 	s.Prefix = Bold(Cyan(prefix)).String()
 }

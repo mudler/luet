@@ -189,6 +189,11 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
 	Debug("Compiling " + p.GetPackage().GetName())
 
+	err := cs.Tree().ResolveDeps(concurrency) // FIXME: This should be cached in CompileParallel, and not done for each compilation
+	if err != nil {
+		return nil, errors.Wrap(err, "While resoolving tree world deps")
+	}
+
 	if len(p.GetPackage().GetRequires()) == 0 && p.GetImage() == "" {
 		Error("Package with no deps and no seed image supplied, bailing out")
 		return nil, errors.New("Package " + p.GetPackage().GetFingerPrint() + "with no deps and no seed image supplied, bailing out")

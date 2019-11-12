@@ -106,7 +106,7 @@ var _ = Describe("Compiler", func() {
 	})
 
 	Context("Reconstruct image tree", func() {
-		FIt("Compiles it", func() {
+		It("Compiles it", func() {
 			generalRecipe := tree.NewCompilerRecipe()
 			tmpdir, err := ioutil.TempDir("", "package")
 			Expect(err).ToNot(HaveOccurred())
@@ -125,12 +125,12 @@ var _ = Describe("Compiler", func() {
 			Expect(err).ToNot(HaveOccurred())
 			spec3, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
-
-			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+			Expect(spec3.GetPackage().GetRequires()[0].GetName()).To(Equal("c"))
 
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
 			spec3.SetOutputPath(tmpdir)
+
 			artifacts, errs := compiler.CompileParallel(2, false, []CompilationSpec{spec, spec2, spec3})
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(3))
