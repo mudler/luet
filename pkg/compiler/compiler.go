@@ -225,17 +225,13 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 	if err != nil {
 		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
 	}
-	Info("Build dependencies: ( target "+p.GetPackage().GetName()+")", solution.Explain())
 
-	dependencies := solution.Drop(p.GetPackage()).Order() // at this point we should have a flattened list of deps to build, including all of them (with all constraints propagated already)
-	departifacts := []Artifact{}                          // TODO: Return this somehow
+	dependencies := solution.Order(p.GetPackage().GetFingerPrint()).Drop(p.GetPackage()) // at this point we should have a flattened list of deps to build, including all of them (with all constraints propagated already)
+	departifacts := []Artifact{}                                                         // TODO: Return this somehow
 	deperrs := []error{}
 	var lastHash string
-	//Info("Build dependencies: ( target "+p.GetPackage().GetName()+")", dependencies.Explain())
+	Info("Build dependencies: ( target "+p.GetPackage().GetName()+")", dependencies.Explain())
 
-	if len(dependencies[0].Package.GetRequires()) != 0 {
-		return nil, errors.New("The first dependency of the deptree doesn't have an image base")
-	}
 	for _, assertion := range dependencies { //highly dependent on the order
 		if assertion.Value && assertion.Package.Flagged() {
 			Info("( target "+p.GetPackage().GetName()+") Building", assertion.Package.GetName())
