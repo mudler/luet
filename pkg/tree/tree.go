@@ -21,10 +21,10 @@
 package tree
 
 import (
-	"errors"
 	"sync"
 
 	. "github.com/mudler/luet/pkg/logger"
+	"github.com/pkg/errors"
 
 	pkg "github.com/mudler/luet/pkg/package"
 )
@@ -65,6 +65,22 @@ func (gt *DefaultTree) World() ([]pkg.Package, error) {
 	return packages, nil
 }
 
+func (gt *DefaultTree) UpdateWorldPackage(p pkg.Package) {
+	//FIXME: Improve, no copy is needed
+	var CacheWorld []pkg.Package
+
+	for _, pid := range gt.CacheWorld {
+		if p.GetFingerPrint() == pid.GetFingerPrint() {
+			CacheWorld = append(CacheWorld, p)
+		} else {
+			CacheWorld = append(CacheWorld, pid)
+
+		}
+	}
+
+	gt.CacheWorld = CacheWorld
+}
+
 // FIXME: Dup in Packageset
 func (gt *DefaultTree) FindPackage(pack pkg.Package) (pkg.Package, error) {
 	packages, err := gt.World()
@@ -79,50 +95,83 @@ func (gt *DefaultTree) FindPackage(pack pkg.Package) (pkg.Package, error) {
 	return nil, errors.New("No package found")
 }
 
+func (gb *DefaultTree) updatePackage(p pkg.Package) error {
+	Debug(" "+p.GetName(), "Deps ")
+	for i, r := range p.GetRequires() {
+
+		foundPackage, err := gb.FindPackage(r)
+		if err == nil {
+
+			found, ok := foundPackage.(*pkg.DefaultPackage)
+			if !ok {
+				panic("Simpleparser should deal only with DefaultPackages")
+			}
+			// err = gb.updatePackage(foundPackage)
+			// if err != nil {
+			// 	return errors.Wrap(err, "Failure while updating recursively")
+			// }
+			p.GetRequires()[i] = found
+		} else {
+			Warning("Unmatched require for", r.GetName())
+		}
+	}
+
+	Debug("Walking conflicts for", p.GetName())
+	for i, r := range p.GetConflicts() {
+		Debug("conflict", r.GetName())
+
+		foundPackage, err := gb.FindPackage(r)
+		if err == nil {
+
+			found, ok := foundPackage.(*pkg.DefaultPackage)
+			if !ok {
+				panic("Simpleparser should deal only with DefaultPackages")
+			}
+			// err = gb.updatePackage(foundPackage)
+			// if err != nil {
+			// 	return errors.Wrap(err, "Failure while updating recursively")
+			// }
+			p.GetConflicts()[i] = found
+
+			//r = found
+		} else {
+			Warning("Unmatched conflict for", r.GetName())
+
+		}
+	}
+	Debug("Finished processing", p.GetName())
+
+	if err := gb.GetPackageSet().UpdatePackage(p); err != nil {
+		return err
+	}
+
+	gb.UpdateWorldPackage(p)
+	Debug("Update done", p.GetName())
+	Debug("Triggering propagation", p.GetName())
+
+	Debug(" "+p.GetName(), "Deps ")
+	for _, r := range p.GetRequires() {
+		if err := gb.updatePackage(r); err != nil {
+			return err
+		}
+	}
+
+	Debug("Walking conflicts for", p.GetName())
+	for _, r := range p.GetConflicts() {
+		if err := gb.updatePackage(r); err != nil {
+			return err
+		}
+	}
+
+	return nil
+
+}
+
 func (gb *DefaultTree) depsWorker(i int, wg *sync.WaitGroup, c <-chan pkg.Package) error {
 	defer wg.Done()
 
 	for p := range c {
-		SpinnerText(" "+p.GetName(), "Deps ")
-		for _, r := range p.GetRequires() {
-
-			foundPackage, err := gb.GetPackageSet().FindPackage(r)
-			if err == nil {
-
-				found, ok := foundPackage.(*pkg.DefaultPackage)
-				if !ok {
-					panic("Simpleparser should deal only with DefaultPackages")
-				}
-				r = found
-			} else {
-				Warning("Unmatched require for", r.GetName())
-			}
-		}
-
-		Debug("Walking conflicts for", p.GetName())
-		for _, r := range p.GetConflicts() {
-			Debug("conflict", r.GetName())
-
-			foundPackage, err := gb.GetPackageSet().FindPackage(r)
-			if err == nil {
-
-				found, ok := foundPackage.(*pkg.DefaultPackage)
-				if !ok {
-					panic("Simpleparser should deal only with DefaultPackages")
-				}
-				r = found
-			} else {
-				Warning("Unmatched conflict for", r.GetName())
-
-			}
-		}
-		Debug("Finished processing", p.GetName())
-
-		if err := gb.GetPackageSet().UpdatePackage(p); err != nil {
-			return err
-		}
-		Debug("Update done", p.GetName())
-
+		gb.updatePackage(p)
 	}
 
 	return nil
@@ -130,6 +179,8 @@ func (gb *DefaultTree) depsWorker(i int, wg *sync.WaitGroup, c <-chan pkg.Packag
 
 // Search for deps/conflicts in db and replaces it with packages in the db
 func (t *DefaultTree) ResolveDeps(concurrency int) error {
+	Spinner(32)
+	defer SpinnerStop()
 	all := make(chan pkg.Package)
 
 	var wg = new(sync.WaitGroup)

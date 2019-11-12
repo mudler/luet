@@ -69,12 +69,13 @@ func (r *Recipe) Load(path string) error {
 		r.PackageTree = NewDefaultTree()
 	}
 
-	tmpfile, err := ioutil.TempFile("", "luet")
-	if err != nil {
-		return err
-	}
+	// tmpfile, err := ioutil.TempFile("", "luet")
+	// if err != nil {
+	// 	return err
+	// }
+	r.Tree().SetPackageSet(pkg.NewInMemoryDatabase(false))
 
-	r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
+	//r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
 	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
 
 	// the function that handles each file or dir
@@ -103,7 +104,7 @@ func (r *Recipe) Load(path string) error {
 		return nil
 	}
 
-	err = filepath.Walk(path, ff)
+	err := filepath.Walk(path, ff)
 	if err != nil {
 		return err
 	}

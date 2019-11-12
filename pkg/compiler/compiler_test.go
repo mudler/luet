@@ -125,6 +125,10 @@ var _ = Describe("Compiler", func() {
 			Expect(err).ToNot(HaveOccurred())
 			spec3, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
+
+			//		err = generalRecipe.Tree().ResolveDeps(3)
+			//		Expect(err).ToNot(HaveOccurred())
+
 			Expect(spec3.GetPackage().GetRequires()[0].GetName()).To(Equal("c"))
 
 			spec.SetOutputPath(tmpdir)
