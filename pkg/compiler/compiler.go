@@ -189,7 +189,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
 	Debug("Compiling " + p.GetPackage().GetName())
 
-	err := cs.Tree().ResolveDeps(concurrency) // FIXME: This should be cached in CompileParallel, and not done for each compilation
+	err := cs.Tree().ResolveDeps(concurrency) // FIXME: When done in parallel, this could be done on top before starting
 	if err != nil {
 		return nil, errors.Wrap(err, "While resoolving tree world deps")
 	}
@@ -199,16 +199,17 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 		return nil, errors.New("Package " + p.GetPackage().GetFingerPrint() + "with no deps and no seed image supplied, bailing out")
 	}
 
-	// - If image is not set, we read a base_image. Then we will build one image from it to kick-off our build based
-	// on how we compute the resolvable tree.
-	// This means to recursively build all the build-images needed to reach that tree part.
-	// - We later on compute an hash used to identify the image, so each similar deptree keeps the same build image.
 	// - If image is set we just generate a plain dockerfile
 
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
 	if p.GetImage() != "" {
 		return cs.compileWithImage(p.GetImage(), "", "", concurrency, keepPermissions, p)
 	}
+
+	// - If image is not set, we read a base_image. Then we will build one image from it to kick-off our build based
+	// on how we compute the resolvable tree.
+	// This means to recursively build all the build-images needed to reach that tree part.
+	// - We later on compute an hash used to identify the image, so each similar deptree keeps the same build image.
 
 	// Get build deps tree (ordered)
 	world, err := cs.Tree().World()
