@@ -231,6 +231,8 @@ github.com/spf13/jwalterweatherman
 github.com/spf13/pflag
 # github.com/spf13/viper v1.4.0
 github.com/spf13/viper
+# github.com/stevenle/topsort v0.0.0-20130922064739-8130c1d7596b
+github.com/stevenle/topsort
 # github.com/urfave/cli v1.22.1
 github.com/urfave/cli
 # github.com/vbatts/go-mtree v0.4.4
