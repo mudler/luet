@@ -55,7 +55,6 @@ func (r *CompilerRecipe) Load(path string) error {
 	r.Tree().SetPackageSet(pkg.NewInMemoryDatabase(false))
 	//r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
 	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
-
 	// the function that handles each file or dir
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
 
@@ -78,7 +77,7 @@ func (r *CompilerRecipe) Load(path string) error {
 		// Instead of rdeps, have a different tree for build deps.
 		compileDefPath := pack.Rel(CompilerDefinitionFile)
 		if helpers.Exists(compileDefPath) {
-			dat, err = ioutil.ReadFile(currentpath)
+			dat, err = ioutil.ReadFile(compileDefPath)
 			if err != nil {
 				return errors.Wrap(err, "Error reading file "+currentpath)
 			}
@@ -104,3 +103,6 @@ func (r *CompilerRecipe) Load(path string) error {
 	}
 	return nil
 }
+
+func (r *CompilerRecipe) Tree() pkg.Tree      { return r.PackageTree }
+func (r *CompilerRecipe) WithTree(t pkg.Tree) { r.PackageTree = t }

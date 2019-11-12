@@ -24,6 +24,7 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.4.0
+	github.com/stevenle/topsort v0.0.0-20130922064739-8130c1d7596b
 	go.etcd.io/bbolt v1.3.3
 	golang.org/x/crypto v0.0.0-20191028145041-f83a4685e152 // indirect
 	gopkg.in/yaml.v2 v2.2.4

@@ -77,6 +77,7 @@ type Tree interface {
 	SetPackageSet(s PackageSet)
 	World() ([]Package, error)
 	FindPackage(Package) (Package, error)
+	ResolveDeps(int) error
 }
 
 // >> Unmarshallers

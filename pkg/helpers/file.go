@@ -113,7 +113,7 @@ func CopyDir(src string, dst string) (err error) {
 		return
 	}
 	if err == nil {
-		return fmt.Errorf("destination already exists")
+		//	return fmt.Errorf("destination already exists")
 	}
 
 	err = os.MkdirAll(dst, si.Mode())
