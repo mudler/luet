@@ -18,9 +18,11 @@ package solver
 import (
 	"crypto/sha256"
 	"fmt"
-
 	pkg "github.com/mudler/luet/pkg/package"
-	toposort "github.com/philopon/go-toposort"
+	"github.com/philopon/go-toposort"
+	"github.com/stevenle/topsort"
+	"sort"
+	"unicode"
 )
 
 type PackagesAssertions []PackageAssert
@@ -62,7 +64,7 @@ func (a *PackageAssert) ToString() string {
 	return fmt.Sprintf("%s/%s %s %s: %t", a.Package.GetCategory(), a.Package.GetName(), a.Package.GetVersion(), msg, a.Value)
 }
 
-func (assertions PackagesAssertions) Order() PackagesAssertions {
+func (assertions PackagesAssertions) EnsureOrder() PackagesAssertions {
 
 	orderedAssertions := PackagesAssertions{}
 	unorderedAssertions := PackagesAssertions{}
@@ -72,13 +74,17 @@ func (assertions PackagesAssertions) Order() PackagesAssertions {
 
 	for _, a := range assertions {
 		tmpMap[a.Package.GetFingerPrint()] = a
-		if a.Package.Flagged() {
+		fingerprints = append(fingerprints, a.Package.GetFingerPrint())
+		unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
+
+		if a.Package.Flagged() && a.Value {
 			unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
-			fingerprints = append(fingerprints, a.Package.GetFingerPrint())
 		} else {
 			orderedAssertions = append(orderedAssertions, a) // Keep last the ones which are not meant to be installed
 		}
 	}
+
+	sort.Sort(unorderedAssertions)
 
 	// Build a topological graph
 	graph := toposort.NewGraph(len(unorderedAssertions))
@@ -90,30 +96,114 @@ func (assertions PackagesAssertions) Order() PackagesAssertions {
 	}
 	result, ok := graph.Toposort()
 	if !ok {
-		panic("cycle detected")
+		panic("Cycle found")
 	}
 	for _, res := range result {
 		a, ok := tmpMap[res]
 		if !ok {
-			continue
+			panic("fail")
+			//	continue
 		}
-		orderedAssertions = append(PackagesAssertions{a}, orderedAssertions...) // push upfront
+		orderedAssertions = append(orderedAssertions, a)
+		//	orderedAssertions = append(PackagesAssertions{a}, orderedAssertions...) // push upfront
+	}
+	//helpers.ReverseAny(orderedAssertions)
+	return orderedAssertions
+}
+
+func (assertions PackagesAssertions) Order(fingerprint string) PackagesAssertions {
+
+	orderedAssertions := PackagesAssertions{}
+	unorderedAssertions := PackagesAssertions{}
+	fingerprints := []string{}
+
+	tmpMap := map[string]PackageAssert{}
+	graph := topsort.NewGraph()
+
+	for _, a := range assertions {
+		graph.AddNode(a.Package.GetFingerPrint())
+		tmpMap[a.Package.GetFingerPrint()] = a
+		fingerprints = append(fingerprints, a.Package.GetFingerPrint())
+		unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
+
+		if a.Package.Flagged() && a.Value {
+			unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
+		} else {
+			orderedAssertions = append(orderedAssertions, a) // Keep last the ones which are not meant to be installed
+		}
 	}
 
+	sort.Sort(unorderedAssertions)
+
+	// Build a topological graph
+	//graph := toposort.NewGraph(len(unorderedAssertions))
+	//	graph.AddNodes(fingerprints...)
+	for _, a := range unorderedAssertions {
+		for _, req := range a.Package.GetRequires() {
+			graph.AddEdge(a.Package.GetFingerPrint(), req.GetFingerPrint())
+		}
+	}
+	result, err := graph.TopSort(fingerprint)
+	if err != nil {
+		panic(err)
+	}
+	for _, res := range result {
+		a, ok := tmpMap[res]
+		if !ok {
+			panic("fail")
+			//	continue
+		}
+		orderedAssertions = append(orderedAssertions, a)
+		//	orderedAssertions = append(PackagesAssertions{a}, orderedAssertions...) // push upfront
+	}
+	//helpers.ReverseAny(orderedAssertions)
 	return orderedAssertions
 }
 
 func (assertions PackagesAssertions) Explain() string {
 	var fingerprint string
-	for _, assertion := range assertions.Order() { // Always order them
+	for _, assertion := range assertions { // Always order them
 		fingerprint += assertion.ToString() + "\n"
 	}
 	return fingerprint
 }
 
+func (a PackagesAssertions) Len() int      { return len(a) }
+func (a PackagesAssertions) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a PackagesAssertions) Less(i, j int) bool {
+
+	iRunes := []rune(a[i].Package.GetName())
+	jRunes := []rune(a[j].Package.GetName())
+
+	max := len(iRunes)
+	if max > len(jRunes) {
+		max = len(jRunes)
+	}
+
+	for idx := 0; idx < max; idx++ {
+		ir := iRunes[idx]
+		jr := jRunes[idx]
+
+		lir := unicode.ToLower(ir)
+		ljr := unicode.ToLower(jr)
+
+		if lir != ljr {
+			return lir < ljr
+		}
+
+		// the lowercase runes are the same, so compare the original
+		if ir != jr {
+			return ir < jr
+		}
+	}
+
+	return false
+
+}
+
 func (assertions PackagesAssertions) AssertionHash() string {
 	var fingerprint string
-	for _, assertion := range assertions.Order() { // Always order them
+	for _, assertion := range assertions { // Note: Always order them first!
 		if assertion.Value && assertion.Package.Flagged() { // Tke into account only dependencies installed (get fingerprint of subgraph)
 			fingerprint += assertion.ToString() + "\n"
 		}
