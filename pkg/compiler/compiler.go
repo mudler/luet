@@ -284,7 +284,7 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 
 func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 
-	pack, err := cs.Tree().GetPackageSet().FindPackage(p)
+	pack, err := cs.Tree().FindPackage(p)
 	if err != nil {
 		return nil, err
 	}
