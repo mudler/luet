@@ -251,8 +251,8 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 				return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
 			}
 
-			buildImageHash := "luet/cache-" + nthsolution.Drop(depPack).AssertionHash()
-			currentPackageImageHash := "luet/cache-" + nthsolution.AssertionHash()
+			buildImageHash := "luet/cache:" + nthsolution.Order(depPack.GetFingerPrint()).Drop(depPack).AssertionHash()
+			currentPackageImageHash := "luet/cache:" + nthsolution.Order(depPack.GetFingerPrint()).AssertionHash()
 			Debug("("+p.GetPackage().GetName()+") Builder image name:", buildImageHash)
 			Debug("("+p.GetPackage().GetName()+") Package image name:", currentPackageImageHash)
 
