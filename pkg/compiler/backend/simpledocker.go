@@ -44,10 +44,10 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	path := opts.SourcePath
 	dockerfileName := opts.DockerFileName
 	buildarg := []string{"build", "-f", dockerfileName, "-t", name, "."}
-	Spinner(22)
+	Spinner(24)
 	defer SpinnerStop()
 
-	Debug("Building image "+name+" - running docker with: ", buildarg)
+	Debug(" 🐋 Building image "+name+" - running docker with: ", buildarg)
 	cmd := exec.Command("docker", buildarg...)
 	cmd.Dir = path
 	out, err := cmd.CombinedOutput()
@@ -59,10 +59,10 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 }
 
 func (*SimpleDocker) CopyImage(src, dst string) error {
-	Spinner(22)
+	Spinner(24)
 	defer SpinnerStop()
 
-	Debug("Tagging image - running docker with: ", src, dst)
+	Debug(" 🐋 Tagging image - running docker with: ", src, dst)
 	cmd := exec.Command("docker", "tag", src, dst)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -75,10 +75,10 @@ func (*SimpleDocker) CopyImage(src, dst string) error {
 func (*SimpleDocker) DownloadImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	buildarg := []string{"pull", name}
-	Spinner(22)
+	Spinner(24)
 	defer SpinnerStop()
 
-	Debug("Downloading image "+name+" - running docker with: ", buildarg)
+	Debug(" 🐋 Downloading image "+name+" - running docker with: ", buildarg)
 	cmd := exec.Command("docker", buildarg...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -91,7 +91,7 @@ func (*SimpleDocker) DownloadImage(opts compiler.CompilerBackendOptions) error {
 func (*SimpleDocker) RemoveImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	buildarg := []string{"rmi", name}
-	Spinner(22)
+	Spinner(24)
 	defer SpinnerStop()
 	out, err := exec.Command("docker", buildarg...).CombinedOutput()
 	if err != nil {
@@ -119,9 +119,9 @@ func (*SimpleDocker) ExportImage(opts compiler.CompilerBackendOptions) error {
 	path := opts.Destination
 
 	buildarg := []string{"save", name, "-o", path}
-	Spinner(22)
+	Spinner(24)
 	defer SpinnerStop()
-	Debug("Saving image "+name+" - running docker with: ", buildarg)
+	Debug(" 🐋 Saving image "+name+" - running docker with: ", buildarg)
 	out, err := exec.Command("docker", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed exporting image: "+string(out))

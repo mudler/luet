@@ -230,7 +230,7 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 }
 
 func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
-	Debug("Compiling " + p.GetPackage().GetName())
+	Debug(" 📦 Compiling " + p.GetPackage().GetName())
 
 	err := cs.Tree().ResolveDeps(concurrency) // FIXME: When done in parallel, this could be done on top before starting
 	if err != nil {
@@ -278,11 +278,11 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 	departifacts := []Artifact{}                                                         // TODO: Return this somehow
 	deperrs := []error{}
 	var lastHash string
-	Info("Build dependencies: ( target "+p.GetPackage().GetName()+")", dependencies.Explain())
+	Info(" 📦 Build dependencies: ( target "+p.GetPackage().GetName()+")", dependencies.Explain())
 
 	for _, assertion := range dependencies { //highly dependent on the order
 		if assertion.Value && assertion.Package.Flagged() {
-			Info("( target "+p.GetPackage().GetName()+") Building", assertion.Package.GetName())
+			Info("( 📦 target "+p.GetPackage().GetName()+") Building", assertion.Package.GetName())
 			compileSpec, err := cs.FromPackage(assertion.Package)
 			if err != nil {
 				return nil, errors.New("Error while generating compilespec for " + assertion.Package.GetName())
@@ -301,8 +301,8 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 
 			buildImageHash := "luet/cache:" + nthsolution.Order(depPack.GetFingerPrint()).Drop(depPack).AssertionHash()
 			currentPackageImageHash := "luet/cache:" + nthsolution.Order(depPack.GetFingerPrint()).AssertionHash()
-			Debug("("+p.GetPackage().GetName()+") Builder image name:", buildImageHash)
-			Debug("("+p.GetPackage().GetName()+") Package image name:", currentPackageImageHash)
+			Debug("( 📦"+p.GetPackage().GetName()+") 🐋 Builder image name:", buildImageHash)
+			Debug("( 📦 "+p.GetPackage().GetName()+") 🐋 Package image name:", currentPackageImageHash)
 
 			lastHash = currentPackageImageHash
 			if compileSpec.GetImage() != "" {
@@ -317,7 +317,7 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 					continue
 				}
 
-				Debug("(" + p.GetPackage().GetName() + ") Compiling " + compileSpec.GetPackage().GetFingerPrint() + " from image")
+				Debug(" 📦 (" + p.GetPackage().GetName() + ") Compiling " + compileSpec.GetPackage().GetFingerPrint() + " from image")
 				artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, compileSpec)
 				if err != nil {
 					deperrs = append(deperrs, err)
@@ -336,7 +336,7 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 			departifacts = append(departifacts, artifact)
 		}
 	}
-	Debug("("+p.GetPackage().GetName()+") Building target from", lastHash)
+	Debug(" 📦 ("+p.GetPackage().GetName()+") Building target from", lastHash)
 
 	return cs.compileWithImage(lastHash, "", "", concurrency, keepPermissions, p)
 }
