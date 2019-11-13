@@ -47,6 +47,7 @@ func (a *PackageArtifact) SetPath(p string) {
 
 type CopyJob struct {
 	Src, Dst string
+	Artifact string
 }
 
 func worker(i int, wg *sync.WaitGroup, s <-chan CopyJob) {
@@ -103,7 +104,7 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 	for _, l := range layers {
 		// Consider d.Additions (and d.Changes? - warn at least) only
 		for _, a := range l.Diffs.Additions {
-			toCopy <- CopyJob{Src: filepath.Join(src, a.Name), Dst: filepath.Join(archive, a.Name)}
+			toCopy <- CopyJob{Src: filepath.Join(src, a.Name), Dst: filepath.Join(archive, a.Name), Artifact: a.Name}
 		}
 	}
 	close(toCopy)
