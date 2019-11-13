@@ -42,6 +42,9 @@ type CompilerBackend interface {
 	Changes(fromImage, toImage string) ([]ArtifactLayer, error)
 	ImageDefinitionToTar(CompilerBackendOptions) error
 	ExtractRootfs(opts CompilerBackendOptions, keepPerms bool) error
+
+	CopyImage(string, string) error
+	DownloadImage(opts CompilerBackendOptions) error
 }
 
 type Artifact interface {
@@ -66,6 +69,8 @@ type ArtifactLayer struct {
 
 // CompilationSpec represent a compilation specification derived from a package
 type CompilationSpec interface {
+	ImageUnpack() bool // tells if the definition is just an image
+
 	RenderBuildImage() (string, error)
 	WriteBuildImageDefinition(string) error
 

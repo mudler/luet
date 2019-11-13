@@ -62,6 +62,36 @@ func (*SimpleImg) RemoveImage(opts compiler.CompilerBackendOptions) error {
 	return nil
 }
 
+func (*SimpleImg) DownloadImage(opts compiler.CompilerBackendOptions) error {
+
+	name := opts.ImageName
+	buildarg := []string{"pull", name}
+	Spinner(22)
+	defer SpinnerStop()
+
+	Debug("Downloading image "+name+" - running img with: ", buildarg)
+	cmd := exec.Command("img", buildarg...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed building image: "+string(out))
+	}
+	Info(string(out))
+	return nil
+}
+func (*SimpleImg) CopyImage(src, dst string) error {
+	Spinner(22)
+	defer SpinnerStop()
+
+	Debug("Tagging image - running img with: ", src, dst)
+	cmd := exec.Command("img", "tag", src, dst)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed tagging image: "+string(out))
+	}
+	Info(string(out))
+	return nil
+}
+
 func (s *SimpleImg) ImageDefinitionToTar(opts compiler.CompilerBackendOptions) error {
 	if err := s.BuildImage(opts); err != nil {
 		return errors.Wrap(err, "Failed building image")

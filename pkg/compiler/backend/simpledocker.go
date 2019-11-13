@@ -58,6 +58,36 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	return nil
 }
 
+func (*SimpleDocker) CopyImage(src, dst string) error {
+	Spinner(22)
+	defer SpinnerStop()
+
+	Debug("Tagging image - running docker with: ", src, dst)
+	cmd := exec.Command("docker", "tag", src, dst)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed tagging image: "+string(out))
+	}
+	Info(string(out))
+	return nil
+}
+
+func (*SimpleDocker) DownloadImage(opts compiler.CompilerBackendOptions) error {
+	name := opts.ImageName
+	buildarg := []string{"pull", name}
+	Spinner(22)
+	defer SpinnerStop()
+
+	Debug("Downloading image "+name+" - running docker with: ", buildarg)
+	cmd := exec.Command("docker", buildarg...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed building image: "+string(out))
+	}
+	Info(string(out))
+	return nil
+}
+
 func (*SimpleDocker) RemoveImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	buildarg := []string{"rmi", name}

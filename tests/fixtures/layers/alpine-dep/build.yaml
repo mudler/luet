@@ -1,0 +1,6 @@
+requires:
+  - category: "layer"
+    name: "base"
+    version: "0.2"
+steps:
+  - echo alpine > /test1

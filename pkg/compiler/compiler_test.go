@@ -144,6 +144,64 @@ var _ = Describe("Compiler", func() {
 				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
 			}
 
+			Expect(helpers.Exists(spec.Rel("test3"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("test4"))).To(BeTrue())
+
+			content1, err := helpers.Read(spec.Rel("c"))
+			Expect(err).ToNot(HaveOccurred())
+			content2, err := helpers.Read(spec.Rel("cd"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(content1).To(Equal("c\n"))
+			Expect(content2).To(Equal("c\n"))
+
+			content1, err = helpers.Read(spec.Rel("d"))
+			Expect(err).ToNot(HaveOccurred())
+			content2, err = helpers.Read(spec.Rel("dd"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(content1).To(Equal("s\n"))
+			Expect(content2).To(Equal("dd\n"))
+		})
+
+		It("unpacks images when needed", func() {
+			generalRecipe := tree.NewCompilerRecipe()
+			tmpdir, err := ioutil.TempDir("", "package")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			err = generalRecipe.Load("../../tests/fixtures/layers")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
+
+			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(2))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "extra", Category: "layer", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+			spec2, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "base", Category: "layer", Version: "0.2"})
+			Expect(err).ToNot(HaveOccurred())
+			spec.SetOutputPath(tmpdir)
+			spec2.SetOutputPath(tmpdir)
+
+			artifacts, errs := compiler.CompileParallel(1, false, []CompilationSpec{spec})
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(1))
+
+			artifacts2, errs := compiler.CompileParallel(1, false, []CompilationSpec{spec2})
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts2)).To(Equal(1))
+
+			for _, artifact := range artifacts {
+				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			}
+
+			for _, artifact := range artifacts2 {
+				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			}
+
+			Expect(helpers.Exists(spec.Rel("etc/hosts"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("test1"))).To(BeTrue())
 		})
 	})
 })

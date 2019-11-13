@@ -188,6 +188,47 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	return artifact, nil
 }
 
+func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPermissions bool) (Artifact, error) {
+	builderOpts := CompilerBackendOptions{
+		ImageName:   p.GetImage(),
+		Destination: p.Rel(p.GetPackage().GetFingerPrint() + ".image.tar"),
+	}
+	err := cs.Backend.DownloadImage(builderOpts)
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not download image")
+	}
+
+	if tag != "" {
+		err = cs.Backend.CopyImage(p.GetImage(), tag)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not download image")
+		}
+	}
+	err = cs.Backend.ExportImage(builderOpts)
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not export image")
+	}
+
+	rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not create tempdir")
+	}
+	defer os.RemoveAll(rootfs) // clean up
+
+	// TODO: Compression and such
+	err = cs.Backend.ExtractRootfs(CompilerBackendOptions{SourcePath: builderOpts.Destination, Destination: rootfs}, keepPermissions)
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not extract rootfs")
+	}
+
+	err = helpers.Tar(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"))
+	if err != nil {
+		return nil, errors.Wrap(err, "Error met while creating package archive")
+	}
+	return NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar")), nil
+
+}
+
 func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
 	Debug("Compiling " + p.GetPackage().GetName())
 
@@ -205,6 +246,10 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
 	if p.GetImage() != "" {
+		if p.ImageUnpack() { // If it is just an entire image, create a package from it
+			return cs.packageFromImage(p, "", keepPermissions)
+		}
+
 		return cs.compileWithImage(p.GetImage(), "", "", concurrency, keepPermissions, p)
 	}
 
@@ -261,6 +306,17 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 
 			lastHash = currentPackageImageHash
 			if compileSpec.GetImage() != "" {
+				// TODO: Refactor this
+				if p.ImageUnpack() { // If it is just an entire image, create a package from it
+					artifact, err := cs.packageFromImage(p, currentPackageImageHash, keepPermissions)
+					if err != nil {
+						deperrs = append(deperrs, err)
+						break // stop at first error
+					}
+					departifacts = append(departifacts, artifact)
+					continue
+				}
+
 				Debug("(" + p.GetPackage().GetName() + ") Compiling " + compileSpec.GetPackage().GetFingerPrint() + " from image")
 				artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, compileSpec)
 				if err != nil {
