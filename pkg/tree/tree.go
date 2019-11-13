@@ -66,19 +66,14 @@ func (gt *DefaultTree) World() ([]pkg.Package, error) {
 }
 
 func (gt *DefaultTree) UpdateWorldPackage(p pkg.Package) {
-	//FIXME: Improve, no copy is needed
-	var CacheWorld []pkg.Package
-
+	//var CacheWorld []pkg.Package
 	for _, pid := range gt.CacheWorld {
 		if p.GetFingerPrint() == pid.GetFingerPrint() {
-			CacheWorld = append(CacheWorld, p)
-		} else {
-			CacheWorld = append(CacheWorld, pid)
-
+			pid.Requires(p.GetRequires())
+			pid.Conflicts(p.GetConflicts())
 		}
 	}
 
-	gt.CacheWorld = CacheWorld
 }
 
 // FIXME: Dup in Packageset
@@ -96,47 +91,33 @@ func (gt *DefaultTree) FindPackage(pack pkg.Package) (pkg.Package, error) {
 }
 
 func (gb *DefaultTree) updatePackage(p pkg.Package) error {
-	Debug(" "+p.GetName(), "Deps ")
+	Debug("Calculating deps for", p.GetName())
 	for i, r := range p.GetRequires() {
-
 		foundPackage, err := gb.FindPackage(r)
 		if err == nil {
-
 			found, ok := foundPackage.(*pkg.DefaultPackage)
 			if !ok {
 				panic("Simpleparser should deal only with DefaultPackages")
 			}
-			// err = gb.updatePackage(foundPackage)
-			// if err != nil {
-			// 	return errors.Wrap(err, "Failure while updating recursively")
-			// }
+
 			p.GetRequires()[i] = found
 		} else {
-			Warning("Unmatched require for", r.GetName())
+			Warning("Unmatched require for", r.GetFingerPrint())
 		}
 	}
 
 	Debug("Walking conflicts for", p.GetName())
 	for i, r := range p.GetConflicts() {
-		Debug("conflict", r.GetName())
-
 		foundPackage, err := gb.FindPackage(r)
 		if err == nil {
-
 			found, ok := foundPackage.(*pkg.DefaultPackage)
 			if !ok {
 				panic("Simpleparser should deal only with DefaultPackages")
 			}
-			// err = gb.updatePackage(foundPackage)
-			// if err != nil {
-			// 	return errors.Wrap(err, "Failure while updating recursively")
-			// }
+
 			p.GetConflicts()[i] = found
-
-			//r = found
 		} else {
-			Warning("Unmatched conflict for", r.GetName())
-
+			Warning("Unmatched conflict for", r.GetFingerPrint())
 		}
 	}
 	Debug("Finished processing", p.GetName())
@@ -147,21 +128,21 @@ func (gb *DefaultTree) updatePackage(p pkg.Package) error {
 
 	gb.UpdateWorldPackage(p)
 	Debug("Update done", p.GetName())
-	Debug("Triggering propagation", p.GetName())
+	// Debug("Triggering propagation", p.GetName())
 
-	Debug(" "+p.GetName(), "Deps ")
-	for _, r := range p.GetRequires() {
-		if err := gb.updatePackage(r); err != nil {
-			return err
-		}
-	}
+	// Debug(" "+p.GetName(), "Deps ")
+	// for _, r := range p.GetRequires() {
+	// 	if err := gb.updatePackage(r); err != nil {
+	// 		return err
+	// 	}
+	// }
 
-	Debug("Walking conflicts for", p.GetName())
-	for _, r := range p.GetConflicts() {
-		if err := gb.updatePackage(r); err != nil {
-			return err
-		}
-	}
+	// Debug("Walking conflicts for", p.GetName())
+	// for _, r := range p.GetConflicts() {
+	// 	if err := gb.updatePackage(r); err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return nil
 
