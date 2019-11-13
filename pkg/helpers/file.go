@@ -41,6 +41,16 @@ func Read(file string) (string, error) {
 	return string(dat), nil
 }
 
+func ensureDir(fileName string) {
+	dirName := filepath.Dir(fileName)
+	if _, serr := os.Stat(dirName); serr != nil {
+		merr := os.MkdirAll(dirName, os.ModePerm) // FIXME: It should preserve permissions from src to dst instead
+		if merr != nil {
+			panic(merr)
+		}
+	}
+}
+
 // CopyFile copies the contents of the file named src to the file named
 // by dst. The file will be created if it does not already exist. If the
 // destination file exists, all it's contents will be replaced by the contents
@@ -52,6 +62,8 @@ func CopyFile(src, dst string) (err error) {
 		return
 	}
 	defer in.Close()
+
+	ensureDir(dst) // FIXME: Breaks permissions
 
 	out, err := os.Create(dst)
 	if err != nil {
@@ -77,7 +89,7 @@ func CopyFile(src, dst string) (err error) {
 	if err != nil {
 		return
 	}
-	err = os.Chmod(dst, si.Mode())
+	err = os.Chmod(dst, si.Mode()) // FIXME: Needs owners copy as well.
 	if err != nil {
 		return
 	}
