@@ -47,46 +47,52 @@ func SpinnerStop() {
 }
 
 func msg(level string, msg ...interface{}) {
+	var message string
+	for _, m := range msg {
+		message += " " + fmt.Sprintf("%v", m)
+	}
+
 	var levelMsg string
 	switch level {
 	case "warning":
-		levelMsg = Bold(Yellow("Warn")).BgBlack().String()
+		levelMsg = Bold(Yellow(message)).BgBlack().String()
 	case "debug":
-		levelMsg = Bold(White("Debug")).BgBlack().String()
+		levelMsg = Bold(White(message)).BgBlack().String()
 	case "info":
-		levelMsg = Bold(Blue("Info")).BgBlack().String()
+		levelMsg = Bold(Blue(message)).BgBlack().String()
 	case "error":
-		levelMsg = Bold(Red("Error")).BgBlack().String()
+		levelMsg = Bold(Red(message)).BgBlack().String()
 	}
 
 	if enabled {
-		SpinnerText(Sprintf(msg), levelMsg)
+		SpinnerText(levelMsg, "")
 		return
 	}
 
-	cmd := []interface{}{levelMsg}
+	cmd := []interface{}{}
 	for _, f := range msg {
 		cmd = append(cmd, f)
 	}
 	m.Lock()
 	defer m.Unlock()
-	fmt.Println(cmd...)
+	fmt.Println(levelMsg)
+	//fmt.Println(cmd...)
 }
 
 func Warning(mess ...interface{}) {
-	msg("warning", mess)
+	msg("warning", mess...)
 }
 
 func Debug(mess ...interface{}) {
-	msg("debug", mess)
+	msg("debug", mess...)
 }
 
 func Info(mess ...interface{}) {
-	msg("info", mess)
+	msg("info", mess...)
 }
 
 func Error(mess ...interface{}) {
-	msg("error", mess)
+	msg("error", mess...)
 }
 
 func Fatal(mess ...interface{}) {
