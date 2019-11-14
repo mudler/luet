@@ -29,7 +29,7 @@ var _ = Describe("Package", func() {
 		a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
 		a01 := NewPackage("A", "0.1", []*DefaultPackage{}, []*DefaultPackage{})
 		It("Expands correctly", func() {
-			lst, err := a.Expand([]Package{a1, a11, a01})
+			lst, err := a.Expand(&[]Package{a1, a11, a01})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(lst).To(ContainElement(a11))
 			Expect(lst).To(ContainElement(a1))

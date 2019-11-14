@@ -40,7 +40,7 @@ type Package interface {
 
 	GetRequires() []*DefaultPackage
 	GetConflicts() []*DefaultPackage
-	Expand([]Package) ([]Package, error)
+	Expand(*[]Package) ([]Package, error)
 	SetCategory(string)
 
 	GetName() string
@@ -220,10 +220,10 @@ func (p *DefaultPackage) Clone() Package {
 	return new
 }
 
-func (p *DefaultPackage) Expand(world []Package) ([]Package, error) {
+func (p *DefaultPackage) Expand(world *[]Package) ([]Package, error) {
 
 	var versionsInWorld []Package
-	for _, w := range world {
+	for _, w := range *world {
 		if w.GetName() != p.GetName() {
 			continue
 		}
