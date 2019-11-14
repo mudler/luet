@@ -31,6 +31,7 @@ type LuetCompilationSpec struct {
 	Package    pkg.Package `json:"-"`
 	OutputPath string      `json:"-"` // Where the build processfiles go
 	Unpack     bool        `json:"unpack"`
+	Includes   []string    `json:"includes"`
 }
 
 func NewLuetCompilationSpec(b []byte, p pkg.Package) (CompilationSpec, error) {
@@ -57,6 +58,10 @@ func (cs *LuetCompilationSpec) ImageUnpack() bool {
 
 func (cs *LuetCompilationSpec) GetPreBuildSteps() []string {
 	return cs.Prelude
+}
+
+func (cs *LuetCompilationSpec) GetIncludes() []string {
+	return cs.Includes
 }
 
 func (cs *LuetCompilationSpec) GetSeedImage() string {

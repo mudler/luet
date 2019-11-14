@@ -70,6 +70,7 @@ type ArtifactLayer struct {
 // CompilationSpec represent a compilation specification derived from a package
 type CompilationSpec interface {
 	ImageUnpack() bool // tells if the definition is just an image
+	GetIncludes() []string
 
 	RenderBuildImage() (string, error)
 	WriteBuildImageDefinition(string) error

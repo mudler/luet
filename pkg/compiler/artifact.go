@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -72,7 +73,7 @@ func worker(i int, wg *sync.WaitGroup, s <-chan CopyJob) {
 }
 
 // ExtractArtifactFromDelta extracts deltas from ArtifactLayer from an image in tar format
-func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurrency int, keepPerms bool) (Artifact, error) {
+func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurrency int, keepPerms bool, includes []string) (Artifact, error) {
 
 	archive, err := ioutil.TempDir(os.TempDir(), "archive")
 	if err != nil {
@@ -101,12 +102,39 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 		go worker(i, wg, toCopy)
 	}
 
-	for _, l := range layers {
-		// Consider d.Additions (and d.Changes? - warn at least) only
-		for _, a := range l.Diffs.Additions {
-			toCopy <- CopyJob{Src: filepath.Join(src, a.Name), Dst: filepath.Join(archive, a.Name), Artifact: a.Name}
+	// Handle includes in spec. If specified they filter what gets in the package
+	if len(includes) > 0 {
+		var includeRegexp []*regexp.Regexp
+		for _, i := range includes {
+			r, e := regexp.Compile(i)
+			if e != nil {
+				Warning("Failed compiling regex:", e)
+				continue
+			}
+			includeRegexp = append(includeRegexp, r)
+		}
+		for _, l := range layers {
+			// Consider d.Additions (and d.Changes? - warn at least) only
+		ADDS:
+			for _, a := range l.Diffs.Additions {
+				for _, i := range includeRegexp {
+					if i.MatchString(a.Name) {
+						toCopy <- CopyJob{Src: filepath.Join(src, a.Name), Dst: filepath.Join(archive, a.Name), Artifact: a.Name}
+						continue ADDS
+					}
+				}
+			}
+		}
+	} else {
+		// Otherwise just grab all
+		for _, l := range layers {
+			// Consider d.Additions (and d.Changes? - warn at least) only
+			for _, a := range l.Diffs.Additions {
+				toCopy <- CopyJob{Src: filepath.Join(src, a.Name), Dst: filepath.Join(archive, a.Name), Artifact: a.Name}
+			}
 		}
 	}
+
 	close(toCopy)
 	wg.Wait()
 

@@ -180,7 +180,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not extract rootfs")
 	}
-	artifact, err := ExtractArtifactFromDelta(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions)
+	artifact, err := ExtractArtifactFromDelta(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions, p.GetIncludes())
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not generate deltas")
 	}
