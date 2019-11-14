@@ -227,7 +227,14 @@ func (*SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPer
 // ]
 // Changes uses container-diff (https://github.com/GoogleContainerTools/container-diff) for retrieving out layer diffs
 func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLayer, error) {
-	diffargs := []string{"diff", fromImage, toImage, "--type=file", "-j"}
+
+	tmpdiffs, err := ioutil.TempDir(os.TempDir(), "tmpdiffs")
+	if err != nil {
+		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while creating tempdir for rootfs")
+	}
+	defer os.RemoveAll(tmpdiffs) // clean up
+
+	diffargs := []string{"diff", fromImage, toImage, "--type=file", "-j", "-n", "-c", tmpdiffs}
 	Spinner(22)
 	defer SpinnerStop()
 
