@@ -38,6 +38,35 @@ var _ = Describe("Package", func() {
 		})
 	})
 
+	Context("revdeps", func() {
+		a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		b := NewPackage("B", "1.0", []*DefaultPackage{a}, []*DefaultPackage{})
+		c := NewPackage("C", "1.1", []*DefaultPackage{b}, []*DefaultPackage{})
+		d := NewPackage("D", "0.1", []*DefaultPackage{}, []*DefaultPackage{})
+		It("Computes correctly", func() {
+			lst := a.Revdeps(&[]Package{a, b, c, d})
+			Expect(lst).To(ContainElement(b))
+			Expect(lst).To(ContainElement(c))
+			Expect(len(lst)).To(Equal(2))
+		})
+	})
+
+	Context("revdeps", func() {
+		a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		b := NewPackage("B", "1.0", []*DefaultPackage{a}, []*DefaultPackage{})
+		c := NewPackage("C", "1.1", []*DefaultPackage{b}, []*DefaultPackage{})
+		d := NewPackage("D", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
+		e := NewPackage("D", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
+
+		It("Computes correctly", func() {
+			lst := b.Revdeps(&[]Package{a, b, c, d, e})
+			Expect(lst).To(ContainElement(c))
+			Expect(lst).To(ContainElement(d))
+			Expect(lst).To(ContainElement(e))
+			Expect(len(lst)).To(Equal(3))
+		})
+	})
+
 	Context("RequiresContains", func() {
 		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
 		a1 := NewPackage("A", "1.0", []*DefaultPackage{a}, []*DefaultPackage{})

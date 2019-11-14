@@ -37,6 +37,7 @@ type Package interface {
 	GetFingerPrint() string
 	Requires([]*DefaultPackage) Package
 	Conflicts([]*DefaultPackage) Package
+	Revdeps(world *[]Package) []Package
 
 	GetRequires() []*DefaultPackage
 	GetConflicts() []*DefaultPackage
@@ -242,6 +243,23 @@ func (p *DefaultPackage) Expand(world *[]Package) ([]Package, error) {
 	}
 
 	return versionsInWorld, nil
+}
+
+func (p *DefaultPackage) Revdeps(world *[]Package) []Package {
+	var versionsInWorld []Package
+	for _, w := range *world {
+		if w.GetFingerPrint() == p.GetFingerPrint() {
+			continue
+		}
+		for _, r := range w.GetRequires() {
+			if r.GetFingerPrint() == p.GetFingerPrint() {
+				versionsInWorld = append(versionsInWorld, w)
+				versionsInWorld = append(versionsInWorld, w.Revdeps(world)...)
+			}
+		}
+	}
+
+	return versionsInWorld
 }
 
 func DecodePackage(ID string) (Package, error) {
