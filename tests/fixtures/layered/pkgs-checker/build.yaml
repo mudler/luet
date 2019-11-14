@@ -1,0 +1,12 @@
+requires:
+  - category: "layer"
+    name: "extra"
+    version: "0.1"
+prelude:
+- apk add git
+- mkdir -p /go/src/github.com/Sabayon/
+- git clone https://github.com/Sabayon/pkgs-checker /go/src/github.com/Sabayon/pkgs-checker
+steps:
+- cd /go/src/github.com/Sabayon/pkgs-checker && go build -o /usr/bin/pkgs-checker && chmod +x /usr/bin/pkgs-checker
+includes:
+- pkgs-checker

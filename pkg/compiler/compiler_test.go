@@ -203,5 +203,78 @@ var _ = Describe("Compiler", func() {
 			Expect(helpers.Exists(spec.Rel("etc/hosts"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("test1"))).To(BeTrue())
 		})
+
+		It("Compiles and includes ony wanted files", func() {
+			generalRecipe := tree.NewCompilerRecipe()
+			tmpdir, err := ioutil.TempDir("", "package")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			err = generalRecipe.Load("../../tests/fixtures/include")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
+
+			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(1))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			//		err = generalRecipe.Tree().ResolveDeps(3)
+			//		Expect(err).ToNot(HaveOccurred())
+
+			spec.SetOutputPath(tmpdir)
+
+			artifacts, errs := compiler.CompileParallel(1, false, []CompilationSpec{spec})
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(1))
+
+			for _, artifact := range artifacts {
+				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			}
+			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("marvin"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("test6"))).ToNot(BeTrue())
+		})
+
+		It("Compiles a more complex tree", func() {
+			generalRecipe := tree.NewCompilerRecipe()
+			tmpdir, err := ioutil.TempDir("", "package")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			err = generalRecipe.Load("../../tests/fixtures/layered")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
+
+			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "pkgs-checker", Category: "package", Version: "9999"})
+			Expect(err).ToNot(HaveOccurred())
+
+			//		err = generalRecipe.Tree().ResolveDeps(3)
+			//		Expect(err).ToNot(HaveOccurred())
+
+			spec.SetOutputPath(tmpdir)
+
+			artifacts, errs := compiler.CompileParallel(1, false, []CompilationSpec{spec})
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(1))
+
+			for _, artifact := range artifacts {
+				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			}
+			Expect(helpers.Untar(spec.Rel("extra-layer-0.1.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
+
+			Expect(helpers.Exists(spec.Rel("extra-layer"))).To(BeTrue())
+
+			Expect(helpers.Exists(spec.Rel("usr/bin/pkgs-checker"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("base-layer-0.1.package.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("extra-layer-0.1.package.tar"))).To(BeTrue())
+		})
+
 	})
 })

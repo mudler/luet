@@ -1,0 +1,2 @@
+image: "golang:alpine"
+unpack: true

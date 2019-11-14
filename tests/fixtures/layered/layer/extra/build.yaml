@@ -1,0 +1,10 @@
+requires:
+  - category: "layer"
+    name: "base"
+    version: "0.1"
+prelude:
+- apk update
+- apk add git
+- rm -rf /go/pkg/mod
+steps:
+- echo test > /extra-layer
