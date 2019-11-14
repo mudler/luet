@@ -25,6 +25,7 @@ func Spinner(i int) {
 	if s == nil {
 		s = spinner.New(spinner.CharSets[i], 100*time.Millisecond) // Build our new spinner
 	}
+	s.UpdateCharSet(spinner.CharSets[i])
 	enabled = true
 	s.Start() // Start the spinner
 }
@@ -42,7 +43,9 @@ func SpinnerText(suffix, prefix string) {
 func SpinnerStop() {
 	m.Lock()
 	defer m.Unlock()
-	s.Stop()
+	if s != nil {
+		s.Stop()
+	}
 	enabled = false
 }
 
@@ -55,13 +58,13 @@ func msg(level string, msg ...interface{}) {
 	var levelMsg string
 	switch level {
 	case "warning":
-		levelMsg = Bold(Yellow(message)).BgBlack().String()
+		levelMsg = Bold(Yellow("🌩 " + message)).BgBlack().String()
 	case "debug":
-		levelMsg = Bold(White(message)).BgBlack().String()
+		levelMsg = White(message).BgBlack().String()
 	case "info":
-		levelMsg = Bold(Blue(message)).BgBlack().String()
+		levelMsg = Bold(White(message)).BgBlack().String()
 	case "error":
-		levelMsg = Bold(Red(message)).BgBlack().String()
+		levelMsg = Bold(Red("💣 " + message + "🔥")).BgBlack().String()
 	}
 
 	if enabled {

@@ -91,7 +91,7 @@ func (gt *DefaultTree) FindPackage(pack pkg.Package) (pkg.Package, error) {
 }
 
 func (gb *DefaultTree) updatePackage(p pkg.Package) error {
-	Debug("Calculating deps for", p.GetName())
+	Debug("🔧 Calculating deps for", p.GetName())
 	for i, r := range p.GetRequires() {
 		foundPackage, err := gb.FindPackage(r)
 		if err == nil {
@@ -106,7 +106,7 @@ func (gb *DefaultTree) updatePackage(p pkg.Package) error {
 		}
 	}
 
-	Debug("Walking conflicts for", p.GetName())
+	Debug("🔍 Walking conflicts for", p.GetName())
 	for i, r := range p.GetConflicts() {
 		foundPackage, err := gb.FindPackage(r)
 		if err == nil {
@@ -120,14 +120,14 @@ func (gb *DefaultTree) updatePackage(p pkg.Package) error {
 			Warning("Unmatched conflict for", r.GetFingerPrint())
 		}
 	}
-	Debug("Finished processing", p.GetName())
+	Debug("💫 Finished processing", p.GetName())
 
 	if err := gb.GetPackageSet().UpdatePackage(p); err != nil {
 		return err
 	}
 
 	gb.UpdateWorldPackage(p)
-	Debug("Update done", p.GetName())
+	//Debug("Update done", p.GetName())
 	// Debug("Triggering propagation", p.GetName())
 
 	// Debug(" "+p.GetName(), "Deps ")

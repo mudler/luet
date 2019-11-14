@@ -47,14 +47,16 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	Spinner(24)
 	defer SpinnerStop()
 
-	Debug(" 🐋 Building image "+name+" - running docker with: ", buildarg)
+	Debug(" 🐋 Building image " + name)
 	cmd := exec.Command("docker", buildarg...)
 	cmd.Dir = path
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed building image: "+string(out))
 	}
-	Info(string(out))
+	Info(" 🐋 Building image " + name + " done")
+
+	//Info(string(out))
 	return nil
 }
 
@@ -62,13 +64,13 @@ func (*SimpleDocker) CopyImage(src, dst string) error {
 	Spinner(24)
 	defer SpinnerStop()
 
-	Debug(" 🐋 Tagging image - running docker with: ", src, dst)
+	Debug(" 🐋 Tagging image:", src, "->", dst)
 	cmd := exec.Command("docker", "tag", src, dst)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed tagging image: "+string(out))
 	}
-	Info(string(out))
+	Info(" 🐋 Tagged image:", src, "->", dst)
 	return nil
 }
 
@@ -78,13 +80,13 @@ func (*SimpleDocker) DownloadImage(opts compiler.CompilerBackendOptions) error {
 	Spinner(24)
 	defer SpinnerStop()
 
-	Debug(" 🐋 Downloading image "+name+" - running docker with: ", buildarg)
+	Debug(" 🐋 Downloading image " + name)
 	cmd := exec.Command("docker", buildarg...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed building image: "+string(out))
 	}
-	Info(string(out))
+	Info(" 🐋 Downloaded image:", name)
 	return nil
 }
 
@@ -97,7 +99,8 @@ func (*SimpleDocker) RemoveImage(opts compiler.CompilerBackendOptions) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed removing image: "+string(out))
 	}
-	Info(string(out))
+	Info(" 🐋 Removed image:", name)
+	//Info(string(out))
 	return nil
 }
 
@@ -121,13 +124,13 @@ func (*SimpleDocker) ExportImage(opts compiler.CompilerBackendOptions) error {
 	buildarg := []string{"save", name, "-o", path}
 	Spinner(24)
 	defer SpinnerStop()
-	Debug(" 🐋 Saving image "+name+" - running docker with: ", buildarg)
+	Debug(" 🐋 Saving image " + name)
 	out, err := exec.Command("docker", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed exporting image: "+string(out))
 	}
 
-	Info(string(out))
+	Info(" 🐋 Exported image:", name)
 	return nil
 }
 
@@ -139,7 +142,7 @@ func (*SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPer
 	src := opts.SourcePath
 	dst := opts.Destination
 
-	rootfs, err := ioutil.TempDir(os.TempDir(), "rootfs")
+	rootfs, err := ioutil.TempDir(dst, "tmprootfs")
 	if err != nil {
 		return errors.Wrap(err, "Error met while creating tempdir for rootfs")
 	}

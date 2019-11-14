@@ -16,6 +16,7 @@
 package compiler
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -189,6 +190,10 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 }
 
 func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPermissions bool) (Artifact, error) {
+	pkgTag := "📦  " + p.GetPackage().GetName()
+
+	Info(pkgTag, "   🍩 Build starts 🔨 🔨 🔨 ")
+
 	builderOpts := CompilerBackendOptions{
 		ImageName:   p.GetImage(),
 		Destination: p.Rel(p.GetPackage().GetFingerPrint() + ".image.tar"),
@@ -225,12 +230,13 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating package archive")
 	}
-	return NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar")), nil
 
+	Info(pkgTag, "   🎉 Done")
+	return NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar")), nil
 }
 
 func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
-	Debug(" 📦 Compiling " + p.GetPackage().GetName())
+	Info("📦 Compiling", p.GetPackage().GetName(), "version", p.GetPackage().GetVersion(), ".... ☕")
 
 	err := cs.Tree().ResolveDeps(concurrency) // FIXME: When done in parallel, this could be done on top before starting
 	if err != nil {
@@ -278,11 +284,22 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 	departifacts := []Artifact{}                                                         // TODO: Return this somehow
 	deperrs := []error{}
 	var lastHash string
-	Info(" 📦 Build dependencies: ( target "+p.GetPackage().GetName()+")", dependencies.Explain())
+	depsN := 0
+	currentN := 0
+
+	Info("🌲 Build dependencies for " + p.GetPackage().GetName())
+	for _, assertion := range dependencies { //highly dependent on the order
+		if assertion.Value && assertion.Package.Flagged() {
+			depsN++
+			Info(" ⤷", assertion.Package.GetName(), "🍃", assertion.Package.GetVersion(), "(", assertion.Package.GetCategory(), ")")
+		}
+	}
 
 	for _, assertion := range dependencies { //highly dependent on the order
 		if assertion.Value && assertion.Package.Flagged() {
-			Info("( 📦 target "+p.GetPackage().GetName()+") Building", assertion.Package.GetName())
+			currentN++
+			pkgTag := fmt.Sprintf("📦  %d/%d %s ⤑ %s", currentN, depsN, p.GetPackage().GetName(), assertion.Package.GetName())
+			Info(pkgTag, "   🏗  Building dependency")
 			compileSpec, err := cs.FromPackage(assertion.Package)
 			if err != nil {
 				return nil, errors.New("Error while generating compilespec for " + assertion.Package.GetName())
@@ -301,8 +318,8 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 
 			buildImageHash := "luet/cache:" + nthsolution.Order(depPack.GetFingerPrint()).Drop(depPack).AssertionHash()
 			currentPackageImageHash := "luet/cache:" + nthsolution.Order(depPack.GetFingerPrint()).AssertionHash()
-			Debug("( 📦"+p.GetPackage().GetName()+") 🐋 Builder image name:", buildImageHash)
-			Debug("( 📦 "+p.GetPackage().GetName()+") 🐋 Package image name:", currentPackageImageHash)
+			Debug(pkgTag, "    ⤷ 🐋 Builder image name", buildImageHash)
+			Debug(pkgTag, "    ⤷ 🐋 Package image name", currentPackageImageHash)
 
 			lastHash = currentPackageImageHash
 			if compileSpec.GetImage() != "" {
@@ -317,13 +334,14 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 					continue
 				}
 
-				Debug(" 📦 (" + p.GetPackage().GetName() + ") Compiling " + compileSpec.GetPackage().GetFingerPrint() + " from image")
+				Debug(pkgTag, " 🍰 Compiling "+compileSpec.GetPackage().GetFingerPrint()+" from image 🐋")
 				artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, compileSpec)
 				if err != nil {
 					deperrs = append(deperrs, err)
 					break // stop at first error
 				}
 				departifacts = append(departifacts, artifact)
+				Info(pkgTag, "💥 Done")
 				continue
 			}
 
@@ -334,9 +352,10 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 				//		break // stop at first error
 			}
 			departifacts = append(departifacts, artifact)
+			Info(pkgTag, "💥 Done")
 		}
 	}
-	Debug(" 📦 ("+p.GetPackage().GetName()+") Building target from", lastHash)
+	Info("📦", p.GetPackage().GetName(), "🌪  Building package target from:", lastHash)
 
 	return cs.compileWithImage(lastHash, "", "", concurrency, keepPermissions, p)
 }
