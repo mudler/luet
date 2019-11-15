@@ -95,7 +95,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
-			artifacts, errs := compiler.CompileParallel(2, false, []CompilationSpec{spec, spec2})
+			artifacts, errs := compiler.CompileParallel(2, false, NewLuetCompilationspecs(spec, spec2))
 			Expect(len(errs)).To(Equal(0))
 			for _, artifact := range artifacts {
 				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
@@ -135,7 +135,7 @@ var _ = Describe("Compiler", func() {
 			spec2.SetOutputPath(tmpdir)
 			spec3.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(2, false, []CompilationSpec{spec, spec2, spec3})
+			artifacts, errs := compiler.CompileParallel(2, false, NewLuetCompilationspecs(spec, spec2, spec3))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(3))
 
@@ -182,11 +182,11 @@ var _ = Describe("Compiler", func() {
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(1, false, []CompilationSpec{spec})
+			artifacts, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
-			artifacts2, errs := compiler.CompileParallel(1, false, []CompilationSpec{spec2})
+			artifacts2, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec2))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts2)).To(Equal(1))
 
@@ -225,7 +225,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(1, false, []CompilationSpec{spec})
+			artifacts, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
@@ -259,7 +259,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(1, false, []CompilationSpec{spec})
+			artifacts, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
@@ -274,6 +274,96 @@ var _ = Describe("Compiler", func() {
 			Expect(helpers.Exists(spec.Rel("usr/bin/pkgs-checker"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("base-layer-0.1.package.tar"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("extra-layer-0.1.package.tar"))).To(BeTrue())
+		})
+
+		It("Compiles revdeps", func() {
+			generalRecipe := tree.NewCompilerRecipe()
+			tmpdir, err := ioutil.TempDir("", "revdep")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			err = generalRecipe.Load("../../tests/fixtures/layered")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
+
+			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "extra", Category: "layer", Version: "0.1"})
+			Expect(err).ToNot(HaveOccurred())
+
+			//		err = generalRecipe.Tree().ResolveDeps(3)
+			//		Expect(err).ToNot(HaveOccurred())
+
+			spec.SetOutputPath(tmpdir)
+
+			artifacts, errs := compiler.CompileWithReverseDeps(1, false, NewLuetCompilationspecs(spec))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(2))
+
+			for _, artifact := range artifacts {
+				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			}
+			Expect(helpers.Untar(spec.Rel("extra-layer-0.1.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
+
+			Expect(helpers.Exists(spec.Rel("extra-layer"))).To(BeTrue())
+
+			Expect(helpers.Exists(spec.Rel("usr/bin/pkgs-checker"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("base-layer-0.1.package.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("extra-layer-0.1.package.tar"))).To(BeTrue())
+		})
+
+		It("Compiles revdeps with seeds", func() {
+			generalRecipe := tree.NewCompilerRecipe()
+			tmpdir, err := ioutil.TempDir("", "package")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			err = generalRecipe.Load("../../tests/fixtures/buildableseed")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
+
+			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(4))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+
+			spec.SetOutputPath(tmpdir)
+
+			artifacts, errs := compiler.CompileWithReverseDeps(1, false, NewLuetCompilationspecs(spec))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(4))
+
+			for _, artifact := range artifacts {
+				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			}
+
+			// A deps on B, so A artifacts are here:
+			Expect(helpers.Exists(spec.Rel("test3"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("test4"))).To(BeTrue())
+
+			// B
+			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("artifact42"))).To(BeTrue())
+
+			// C depends on B, so B is here
+			content1, err := helpers.Read(spec.Rel("c"))
+			Expect(err).ToNot(HaveOccurred())
+			content2, err := helpers.Read(spec.Rel("cd"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(content1).To(Equal("c\n"))
+			Expect(content2).To(Equal("c\n"))
+
+			// D is here as it requires C, and C was recompiled
+			content1, err = helpers.Read(spec.Rel("d"))
+			Expect(err).ToNot(HaveOccurred())
+			content2, err = helpers.Read(spec.Rel("dd"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(content1).To(Equal("s\n"))
+			Expect(content2).To(Equal("dd\n"))
 		})
 
 	})

@@ -25,17 +25,46 @@ import (
 	"sync"
 
 	. "github.com/mudler/luet/pkg/logger"
+	"github.com/mudler/luet/pkg/solver"
 
 	"github.com/mudler/luet/pkg/helpers"
 	"github.com/pkg/errors"
 )
 
 type PackageArtifact struct {
-	Path string
+	Path         string
+	Dependencies []Artifact
+	CompileSpec  CompilationSpec
+
+	SourceAssertion solver.PackagesAssertions
 }
 
 func NewPackageArtifact(path string) Artifact {
-	return &PackageArtifact{Path: path}
+	return &PackageArtifact{Path: path, Dependencies: []Artifact{}}
+}
+
+func (a *PackageArtifact) GetSourceAssertion() solver.PackagesAssertions {
+	return a.SourceAssertion
+}
+
+func (a *PackageArtifact) SetCompileSpec(as CompilationSpec) {
+	a.CompileSpec = as
+}
+
+func (a *PackageArtifact) GetCompileSpec() CompilationSpec {
+	return a.CompileSpec
+}
+
+func (a *PackageArtifact) SetSourceAssertion(as solver.PackagesAssertions) {
+	a.SourceAssertion = as
+}
+
+func (a *PackageArtifact) GetDependencies() []Artifact {
+	return a.Dependencies
+}
+
+func (a *PackageArtifact) SetDependencies(d []Artifact) {
+	a.Dependencies = d
 }
 
 func (a *PackageArtifact) GetPath() string {

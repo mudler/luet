@@ -17,11 +17,14 @@ package compiler
 
 import (
 	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/solver"
 )
 
 type Compiler interface {
 	Compile(int, bool, CompilationSpec) (Artifact, error)
-	CompileParallel(concurrency int, keepPermissions bool, ps []CompilationSpec) ([]Artifact, []error)
+	CompileParallel(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
+	CompileWithReverseDeps(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
+
 	FromPackage(pkg.Package) (CompilationSpec, error)
 
 	SetBackend(CompilerBackend)
@@ -50,6 +53,13 @@ type CompilerBackend interface {
 type Artifact interface {
 	GetPath() string
 	SetPath(string)
+	GetDependencies() []Artifact
+	SetDependencies(d []Artifact)
+	GetSourceAssertion() solver.PackagesAssertions
+	SetSourceAssertion(as solver.PackagesAssertions)
+
+	SetCompileSpec(as CompilationSpec)
+	GetCompileSpec() CompilationSpec
 }
 
 type ArtifactNode struct {
@@ -92,4 +102,12 @@ type CompilationSpec interface {
 	Rel(string) string
 
 	GetPreBuildSteps() []string
+}
+
+type CompilationSpecs interface {
+	Unique() CompilationSpecs
+	Len() int
+	All() []CompilationSpec
+	Add(CompilationSpec)
+	Remove(s CompilationSpecs) CompilationSpecs
 }

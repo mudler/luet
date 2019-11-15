@@ -56,7 +56,7 @@ var _ = Describe("Package", func() {
 		b := NewPackage("B", "1.0", []*DefaultPackage{a}, []*DefaultPackage{})
 		c := NewPackage("C", "1.1", []*DefaultPackage{b}, []*DefaultPackage{})
 		d := NewPackage("D", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
-		e := NewPackage("D", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
+		e := NewPackage("E", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
 
 		It("Computes correctly", func() {
 			lst := b.Revdeps(&[]Package{a, b, c, d, e})

@@ -29,6 +29,29 @@ import (
 )
 
 var _ = Describe("Spec", func() {
+	Context("Luet specs", func() {
+		It("Allows normal operations", func() {
+			testSpec := &LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Category: "a", Version: "0"}}
+			testSpec2 := &LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "bar", Category: "a", Version: "0"}}
+			testSpec3 := &LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "baz", Category: "a", Version: "0"}}
+			testSpec4 := &LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Category: "a", Version: "0"}}
+
+			specs := NewLuetCompilationspecs(testSpec, testSpec2)
+			Expect(specs.Len()).To(Equal(2))
+			Expect(specs.All()).To(Equal([]CompilationSpec{testSpec, testSpec2}))
+			specs.Add(testSpec3)
+			Expect(specs.All()).To(Equal([]CompilationSpec{testSpec, testSpec2, testSpec3}))
+			specs.Add(testSpec4)
+			Expect(specs.All()).To(Equal([]CompilationSpec{testSpec, testSpec2, testSpec3, testSpec4}))
+			newSpec := specs.Unique()
+			Expect(newSpec.All()).To(Equal([]CompilationSpec{testSpec, testSpec2, testSpec3}))
+
+			newSpec2 := specs.Remove(NewLuetCompilationspecs(testSpec, testSpec2))
+			Expect(newSpec2.All()).To(Equal([]CompilationSpec{testSpec3}))
+
+		})
+	})
+
 	Context("Simple package build definition", func() {
 		It("Loads it correctly", func() {
 			generalRecipe := tree.NewGeneralRecipe()

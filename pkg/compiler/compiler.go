@@ -62,19 +62,74 @@ func (cs *LuetCompiler) compilerWorker(i int, wg *sync.WaitGroup, cspecs chan Co
 		m.Unlock()
 	}
 }
+func (cs *LuetCompiler) CompileWithReverseDeps(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error) {
+	artifacts, err := cs.CompileParallel(concurrency, keepPermissions, ps)
+	if len(err) != 0 {
+		return artifacts, err
+	}
 
-func (cs *LuetCompiler) CompileParallel(concurrency int, keepPermissions bool, ps []CompilationSpec) ([]Artifact, []error) {
+	Info("🌲 Resolving reverse dependencies")
+	toCompile := NewLuetCompilationspecs()
+	for _, a := range artifacts {
+		w, asserterr := cs.Tree().World()
+		if asserterr != nil {
+			return nil, append(err, asserterr)
+		}
+		revdeps := a.GetCompileSpec().GetPackage().Revdeps(&w)
+		for _, r := range revdeps {
+			spec, asserterr := cs.FromPackage(r)
+			if err != nil {
+				return nil, append(err, asserterr)
+			}
+			spec.SetOutputPath(ps.All()[0].GetOutputPath())
+
+			toCompile.Add(spec)
+		}
+		// for _, assertion := range a.GetSourceAssertion() {
+		// 	if assertion.Value && assertion.Package.Flagged() {
+		// 		spec, asserterr := cs.FromPackage(assertion.Package)
+		// 		if err != nil {
+		// 			return nil, append(err, asserterr)
+		// 		}
+		// 		w, asserterr := cs.Tree().World()
+		// 		if err != nil {
+		// 			return nil, append(err, asserterr)
+		// 		}
+		// 		revdeps := spec.GetPackage().Revdeps(&w)
+		// 		for _, r := range revdeps {
+		// 			spec, asserterr := cs.FromPackage(r)
+		// 			if asserterr != nil {
+		// 				return nil, append(err, asserterr)
+		// 			}
+		// 			spec.SetOutputPath(ps.All()[0].GetOutputPath())
+
+		// 			toCompile.Add(spec)
+		// 		}
+		// 	}
+		// }
+	}
+
+	uniques := toCompile.Unique().Remove(ps)
+	for _, u := range uniques.All() {
+		Info(" ⤷", u.GetPackage().GetName(), "🍃", u.GetPackage().GetVersion(), "(", u.GetPackage().GetCategory(), ")")
+	}
+
+	artifacts2, err := cs.CompileParallel(concurrency, keepPermissions, uniques)
+	return append(artifacts, artifacts2...), err
+}
+
+func (cs *LuetCompiler) CompileParallel(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error) {
 	all := make(chan CompilationSpec)
 	artifacts := []Artifact{}
 	mutex := &sync.Mutex{}
-	errors := make(chan error, len(ps))
+	errors := make(chan error, ps.Len())
 	var wg = new(sync.WaitGroup)
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go cs.compilerWorker(i, wg, all, &artifacts, mutex, concurrency, keepPermissions, errors)
 	}
 
-	for _, p := range ps {
+	for _, p := range ps.All() {
 		all <- p
 	}
 
@@ -185,7 +240,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not generate deltas")
 	}
-
+	artifact.SetCompileSpec(p)
 	return artifact, nil
 }
 
@@ -232,7 +287,9 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 	}
 
 	Info(pkgTag, "   🎉 Done")
-	return NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar")), nil
+	artifact := NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
+	artifact.SetCompileSpec(p)
+	return artifact, nil
 }
 
 func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
@@ -280,8 +337,9 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
 	}
 
-	dependencies := solution.Order(p.GetPackage().GetFingerPrint()).Drop(p.GetPackage()) // at this point we should have a flattened list of deps to build, including all of them (with all constraints propagated already)
-	departifacts := []Artifact{}                                                         // TODO: Return this somehow
+	allOrderedDeps := solution.Order(p.GetPackage().GetFingerPrint())
+	dependencies := allOrderedDeps.Drop(p.GetPackage()) // at this point we should have a flattened list of deps to build, including all of them (with all constraints propagated already)
+	departifacts := []Artifact{}                        // TODO: Return this somehow
 	deperrs := []error{}
 	var lastHash string
 	depsN := 0
@@ -356,8 +414,14 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 		}
 	}
 	Info("📦", p.GetPackage().GetName(), "🌪  Building package target from:", lastHash)
+	artifact, err := cs.compileWithImage(lastHash, "", "", concurrency, keepPermissions, p)
+	if err != nil {
+		return artifact, err
+	}
+	artifact.SetDependencies(departifacts)
+	artifact.SetSourceAssertion(allOrderedDeps)
 
-	return cs.compileWithImage(lastHash, "", "", concurrency, keepPermissions, p)
+	return artifact, err
 }
 
 func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {

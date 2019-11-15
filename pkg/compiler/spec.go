@@ -23,6 +23,68 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+type LuetCompilationspecs []LuetCompilationSpec
+
+func NewLuetCompilationspecs(s ...CompilationSpec) CompilationSpecs {
+	all := LuetCompilationspecs{}
+
+	for _, spec := range s {
+		all.Add(spec)
+	}
+	return &all
+}
+
+func (specs LuetCompilationspecs) Len() int {
+	return len(specs)
+}
+
+func (specs *LuetCompilationspecs) Remove(s CompilationSpecs) CompilationSpecs {
+	newSpecs := LuetCompilationspecs{}
+SPECS:
+	for _, spec := range specs.All() {
+		for _, target := range s.All() {
+			if target.GetPackage().Matches(spec.GetPackage()) {
+				continue SPECS
+			}
+		}
+		newSpecs.Add(spec)
+	}
+	return &newSpecs
+}
+
+func (specs *LuetCompilationspecs) Add(s CompilationSpec) {
+	c, ok := s.(*LuetCompilationSpec)
+	if !ok {
+		panic("LuetCompilationspecs supports only []LuetCompilationSpec")
+	}
+	*specs = append(*specs, *c)
+}
+
+func (specs *LuetCompilationspecs) All() []CompilationSpec {
+	var cspecs []CompilationSpec
+	for i, _ := range *specs {
+		f := (*specs)[i]
+		cspecs = append(cspecs, &f)
+	}
+
+	return cspecs
+}
+
+func (specs *LuetCompilationspecs) Unique() CompilationSpecs {
+	newSpecs := LuetCompilationspecs{}
+	seen := map[string]bool{}
+
+	for i, _ := range *specs {
+		j := (*specs)[i]
+		_, ok := seen[j.GetPackage().GetFingerPrint()]
+		if !ok {
+			seen[j.GetPackage().GetFingerPrint()] = true
+			newSpecs = append(newSpecs, j)
+		}
+	}
+	return &newSpecs
+}
+
 type LuetCompilationSpec struct {
 	Steps      []string    `json:"steps"`   // Are run inside a container and the result layer diff is saved
 	Prelude    []string    `json:"prelude"` // Are run inside the image which will be our builder

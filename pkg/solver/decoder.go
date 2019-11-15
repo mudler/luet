@@ -18,11 +18,12 @@ package solver
 import (
 	"crypto/sha256"
 	"fmt"
+	"sort"
+	"unicode"
+
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/philopon/go-toposort"
 	"github.com/stevenle/topsort"
-	"sort"
-	"unicode"
 )
 
 type PackagesAssertions []PackageAssert
