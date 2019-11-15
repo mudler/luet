@@ -33,11 +33,12 @@ const (
 	DefinitionFile = "definition.yaml"
 )
 
-func NewGeneralRecipe() Builder { return &Recipe{} }
+func NewGeneralRecipe(db pkg.PackageDatabase) Builder { return &Recipe{Database: db} }
 
 // Recipe is the "general" reciper for Trees
 type Recipe struct {
 	PackageTree pkg.Tree
+	Database    pkg.PackageDatabase
 }
 
 func (r *Recipe) Save(path string) error {
@@ -73,7 +74,7 @@ func (r *Recipe) Load(path string) error {
 	// if err != nil {
 	// 	return err
 	// }
-	r.Tree().SetPackageSet(pkg.NewInMemoryDatabase(false))
+	r.Tree().SetPackageSet(r.Database)
 
 	//r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
 	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()

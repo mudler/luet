@@ -24,7 +24,10 @@ import (
 	"sync"
 )
 
-var DBInMemoryInstance PackageDatabase
+var DBInMemoryInstance = &InMemoryDatabase{
+	Mutex: &sync.Mutex{},
+
+	Database: map[string]string{}}
 
 type InMemoryDatabase struct {
 	*sync.Mutex
@@ -33,12 +36,6 @@ type InMemoryDatabase struct {
 
 func NewInMemoryDatabase(singleton bool) PackageDatabase {
 	// In memoryDB is a singleton
-	if singleton && DBInMemoryInstance == nil {
-		DBInMemoryInstance = &InMemoryDatabase{
-			Mutex: &sync.Mutex{},
-
-			Database: map[string]string{}}
-	}
 	if !singleton {
 		return &InMemoryDatabase{
 			Mutex: &sync.Mutex{},

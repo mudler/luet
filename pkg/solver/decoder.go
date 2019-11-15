@@ -28,19 +28,25 @@ import (
 
 type PackagesAssertions []PackageAssert
 
+type PackageHash struct {
+	BuildHash   string
+	PackageHash string
+}
+
 // PackageAssert represent a package assertion.
 // It is composed of a Package and a Value which is indicating the absence or not
 // of the associated package state.
 type PackageAssert struct {
 	Package pkg.Package
 	Value   bool
+	Hash    PackageHash
 }
 
 // DecodeModel decodes a model from the SAT solver to package assertions (PackageAssert)
-func DecodeModel(model map[string]bool) (PackagesAssertions, error) {
+func DecodeModel(model map[string]bool, db pkg.PackageDatabase) (PackagesAssertions, error) {
 	ass := make(PackagesAssertions, 0)
 	for k, v := range model {
-		a, err := pkg.DecodePackage(k)
+		a, err := pkg.DecodePackage(k, db)
 		if err != nil {
 			return nil, err
 

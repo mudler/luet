@@ -61,6 +61,11 @@ var buildCmd = &cobra.Command{
 			Fatal("Error: " + err.Error())
 		}
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.Tree())
+
+		err = luetCompiler.Prepare(concurrency)
+		if err != nil {
+			Fatal("Error: " + err.Error())
+		}
 		if !all {
 			for _, a := range args {
 				decodepackage, err := regexp.Compile(`^([<>]?\~?=?)((([^\/]+)\/)?(?U)(\S+))(-(\d+(\.\d+)*[a-z]?(_(alpha|beta|pre|rc|p)\d*)*(-r\d+)?))?$`)

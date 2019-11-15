@@ -29,9 +29,9 @@ import (
 // Package is a package interface (TBD)
 // FIXME: Currently some of the methods are returning DefaultPackages due to JSON serialization of the package
 type Package interface {
-	Encode() (string, error)
+	Encode(PackageDatabase) (string, error)
 
-	BuildFormula() ([]bf.Formula, error)
+	BuildFormula(PackageDatabase) ([]bf.Formula, error)
 	IsFlagged(bool) Package
 	Flagged() bool
 	GetFingerPrint() string
@@ -74,9 +74,9 @@ type PackageSet interface {
 }
 
 type Tree interface {
-	GetPackageSet() PackageSet
+	GetPackageSet() PackageDatabase
 	Prelude() string // A tree might have a prelude to be able to consume a tree
-	SetPackageSet(s PackageSet)
+	SetPackageSet(s PackageDatabase)
 	World() ([]Package, error)
 	FindPackage(Package) (Package, error)
 	ResolveDeps(int) error
@@ -161,8 +161,8 @@ func (p *DefaultPackage) RemoveUse(use string) {
 
 // Encode encodes the package to string.
 // It returns an ID which can be used to retrieve the package later on.
-func (p *DefaultPackage) Encode() (string, error) {
-	return NewInMemoryDatabase(true).CreatePackage(p)
+func (p *DefaultPackage) Encode(db PackageDatabase) (string, error) {
+	return db.CreatePackage(p)
 }
 
 func (p *DefaultPackage) Yaml() ([]byte, error) {
@@ -270,8 +270,8 @@ func (p *DefaultPackage) Revdeps(world *[]Package) []Package {
 	return versionsInWorld
 }
 
-func DecodePackage(ID string) (Package, error) {
-	return NewInMemoryDatabase(true).GetPackage(ID)
+func DecodePackage(ID string, db PackageDatabase) (Package, error) {
+	return db.GetPackage(ID)
 }
 
 func NormalizeFlagged(p Package) {
@@ -299,8 +299,8 @@ func (p *DefaultPackage) RequiresContains(s Package) bool {
 	return false
 }
 
-func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
-	encodedA, err := p.IsFlagged(true).Encode()
+func (p *DefaultPackage) BuildFormula(db PackageDatabase) ([]bf.Formula, error) {
+	encodedA, err := p.IsFlagged(true).Encode(db)
 	if err != nil {
 		return nil, err
 	}
@@ -311,14 +311,14 @@ func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
 	var formulas []bf.Formula
 
 	for _, required := range p.PackageRequires {
-		encodedB, err := required.Encode()
+		encodedB, err := required.Encode(db)
 		if err != nil {
 			return nil, err
 		}
 		B := bf.Var(encodedB)
 		formulas = append(formulas, bf.Or(bf.Not(A), B))
 
-		f, err := required.BuildFormula()
+		f, err := required.BuildFormula(db)
 		if err != nil {
 			return nil, err
 		}
@@ -327,7 +327,7 @@ func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
 	}
 
 	for _, required := range p.PackageConflicts {
-		encodedB, err := required.Encode()
+		encodedB, err := required.Encode(db)
 		if err != nil {
 			return nil, err
 		}
@@ -335,7 +335,7 @@ func (p *DefaultPackage) BuildFormula() ([]bf.Formula, error) {
 		formulas = append(formulas, bf.Or(bf.Not(A),
 			bf.Not(B)))
 
-		f, err := required.BuildFormula()
+		f, err := required.BuildFormula(db)
 		if err != nil {
 			return nil, err
 		}

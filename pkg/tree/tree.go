@@ -32,11 +32,12 @@ import (
 func NewDefaultTree() pkg.Tree { return &DefaultTree{} }
 
 type DefaultTree struct {
-	Packages   pkg.PackageSet
+	sync.Mutex
+	Packages   pkg.PackageDatabase
 	CacheWorld []pkg.Package
 }
 
-func (gt *DefaultTree) GetPackageSet() pkg.PackageSet {
+func (gt *DefaultTree) GetPackageSet() pkg.PackageDatabase {
 	return gt.Packages
 }
 
@@ -44,11 +45,13 @@ func (gt *DefaultTree) Prelude() string {
 	return ""
 }
 
-func (gt *DefaultTree) SetPackageSet(s pkg.PackageSet) {
+func (gt *DefaultTree) SetPackageSet(s pkg.PackageDatabase) {
 	gt.Packages = s
 }
 
 func (gt *DefaultTree) World() ([]pkg.Package, error) {
+	gt.Lock()
+	defer gt.Unlock()
 	if len(gt.CacheWorld) > 0 {
 		return gt.CacheWorld, nil
 	}
@@ -66,6 +69,8 @@ func (gt *DefaultTree) World() ([]pkg.Package, error) {
 }
 
 func (gt *DefaultTree) UpdateWorldPackage(p pkg.Package) {
+	gt.Lock()
+	defer gt.Unlock()
 	//var CacheWorld []pkg.Package
 	for _, pid := range gt.CacheWorld {
 		if p.Matches(pid) {

@@ -35,16 +35,18 @@ const BuildFile = "build.yaml"
 
 type LuetCompiler struct {
 	*tree.CompilerRecipe
-	Backend CompilerBackend
+	Backend  CompilerBackend
+	Database pkg.PackageDatabase
 }
 
-func NewLuetCompiler(backend CompilerBackend, t pkg.Tree) Compiler {
+func NewLuetCompiler(backend CompilerBackend, t pkg.Tree, db pkg.PackageDatabase) Compiler {
 	// The CompilerRecipe will gives us a tree with only build deps listed.
 	return &LuetCompiler{
 		Backend: backend,
 		CompilerRecipe: &tree.CompilerRecipe{
 			tree.Recipe{PackageTree: t},
 		},
+		Database: db,
 	}
 }
 
@@ -52,7 +54,7 @@ func (cs *LuetCompiler) compilerWorker(i int, wg *sync.WaitGroup, cspecs chan Co
 	defer wg.Done()
 
 	for s := range cspecs {
-		ar, err := cs.Compile(concurrency, keepPermissions, s)
+		ar, err := cs.compile(concurrency, keepPermissions, s)
 		if err != nil {
 			errors <- err
 		}
@@ -130,6 +132,11 @@ func (cs *LuetCompiler) CompileParallel(concurrency int, keepPermissions bool, p
 	}
 
 	for _, p := range ps.All() {
+		asserts, err := cs.ComputeDepTree(p)
+		if err != nil {
+			panic(err)
+		}
+		p.SetSourceAssertion(asserts)
 		all <- p
 	}
 
@@ -243,7 +250,14 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	artifact.SetCompileSpec(p)
 	return artifact, nil
 }
+func (cs *LuetCompiler) Prepare(concurrency int) error {
 
+	err := cs.Tree().ResolveDeps(concurrency) // FIXME: When done in parallel, this could be done on top before starting
+	if err != nil {
+		return errors.Wrap(err, "While resoolving tree world deps")
+	}
+	return nil
+}
 func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPermissions bool) (Artifact, error) {
 	pkgTag := "📦  " + p.GetPackage().GetName()
 
@@ -292,13 +306,59 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 	return artifact, nil
 }
 
-func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
-	Info("📦 Compiling", p.GetPackage().GetName(), "version", p.GetPackage().GetVersion(), ".... ☕")
+func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssertions, error) {
 
-	err := cs.Tree().ResolveDeps(concurrency) // FIXME: When done in parallel, this could be done on top before starting
+	// Get build deps tree (ordered)
+	world, err := cs.Tree().World()
 	if err != nil {
-		return nil, errors.Wrap(err, "While resoolving tree world deps")
+		return nil, errors.Wrap(err, "While computing tree world")
 	}
+	s := solver.NewSolver([]pkg.Package{}, world, cs.Database)
+	pack, err := cs.Tree().FindPackage(p.GetPackage())
+	if err != nil {
+		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
+	}
+	solution, err := s.Install([]pkg.Package{pack})
+	if err != nil {
+		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
+	}
+	dependencies := solution.Order(p.GetPackage().GetFingerPrint())
+	assertions := solver.PackagesAssertions{}
+
+	for _, assertion := range dependencies { //highly dependent on the order
+		if assertion.Value && assertion.Package.Flagged() {
+			depPack, err := cs.Tree().FindPackage(assertion.Package)
+			if err != nil {
+				return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
+			}
+			nthsolution, err := s.Install([]pkg.Package{depPack})
+			if err != nil {
+				return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
+			}
+
+			assertion.Hash = solver.PackageHash{
+				BuildHash:   nthsolution.Order(depPack.GetFingerPrint()).Drop(depPack).AssertionHash(),
+				PackageHash: nthsolution.Order(depPack.GetFingerPrint()).AssertionHash(),
+			}
+			assertions = append(assertions, assertion)
+		}
+	}
+	p.SetSourceAssertion(assertions)
+	return assertions, nil
+}
+
+// Compile is non-parallel
+func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
+	asserts, err := cs.ComputeDepTree(p)
+	if err != nil {
+		panic(err)
+	}
+	p.SetSourceAssertion(asserts)
+	return cs.compile(concurrency, keepPermissions, p)
+}
+
+func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
+	Info("📦 Compiling", p.GetPackage().GetName(), "version", p.GetPackage().GetVersion(), ".... ☕")
 
 	if len(p.GetPackage().GetRequires()) == 0 && p.GetImage() == "" {
 		Error("Package with no deps and no seed image supplied, bailing out")
@@ -306,7 +366,6 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 	}
 
 	// - If image is set we just generate a plain dockerfile
-
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
 	if p.GetImage() != "" {
 		if p.ImageUnpack() { // If it is just an entire image, create a package from it
@@ -321,25 +380,8 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 	// This means to recursively build all the build-images needed to reach that tree part.
 	// - We later on compute an hash used to identify the image, so each similar deptree keeps the same build image.
 
-	// Get build deps tree (ordered)
-	world, err := cs.Tree().World()
-	if err != nil {
-		return nil, errors.Wrap(err, "While computing tree world")
-	}
-
-	s := solver.NewSolver([]pkg.Package{}, world)
-	pack, err := cs.Tree().FindPackage(p.GetPackage())
-	if err != nil {
-		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
-	}
-	solution, err := s.Install([]pkg.Package{pack})
-	if err != nil {
-		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
-	}
-
-	allOrderedDeps := solution.Order(p.GetPackage().GetFingerPrint())
-	dependencies := allOrderedDeps.Drop(p.GetPackage()) // at this point we should have a flattened list of deps to build, including all of them (with all constraints propagated already)
-	departifacts := []Artifact{}                        // TODO: Return this somehow
+	dependencies := p.GetSourceAssertion().Drop(p.GetPackage()) // at this point we should have a flattened list of deps to build, including all of them (with all constraints propagated already)
+	departifacts := []Artifact{}                                // TODO: Return this somehow
 	deperrs := []error{}
 	var lastHash string
 	depsN := 0
@@ -347,71 +389,58 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 
 	Info("🌲 Build dependencies for " + p.GetPackage().GetName())
 	for _, assertion := range dependencies { //highly dependent on the order
-		if assertion.Value && assertion.Package.Flagged() {
-			depsN++
-			Info(" ⤷", assertion.Package.GetName(), "🍃", assertion.Package.GetVersion(), "(", assertion.Package.GetCategory(), ")")
-		}
+		depsN++
+		Info(" ⤷", assertion.Package.GetName(), "🍃", assertion.Package.GetVersion(), "(", assertion.Package.GetCategory(), ")")
+
 	}
 
 	for _, assertion := range dependencies { //highly dependent on the order
-		if assertion.Value && assertion.Package.Flagged() {
-			currentN++
-			pkgTag := fmt.Sprintf("📦  %d/%d %s ⤑ %s", currentN, depsN, p.GetPackage().GetName(), assertion.Package.GetName())
-			Info(pkgTag, "   🏗  Building dependency")
-			compileSpec, err := cs.FromPackage(assertion.Package)
-			if err != nil {
-				return nil, errors.New("Error while generating compilespec for " + assertion.Package.GetName())
-			}
-			compileSpec.SetOutputPath(p.GetOutputPath())
-			depPack, err := cs.Tree().FindPackage(assertion.Package)
-			if err != nil {
-				return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
-			}
+		currentN++
+		pkgTag := fmt.Sprintf("📦  %d/%d %s ⤑ %s", currentN, depsN, p.GetPackage().GetName(), assertion.Package.GetName())
+		Info(pkgTag, "   🏗  Building dependency")
+		compileSpec, err := cs.FromPackage(assertion.Package)
+		if err != nil {
+			return nil, errors.New("Error while generating compilespec for " + assertion.Package.GetName())
+		}
+		compileSpec.SetOutputPath(p.GetOutputPath())
 
-			// Generate image name of builder image - it should match with the hash up to this point - package
-			nthsolution, err := s.Install([]pkg.Package{depPack})
-			if err != nil {
-				return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
-			}
+		buildImageHash := "luet/cache:" + assertion.Hash.BuildHash
+		currentPackageImageHash := "luet/cache:" + assertion.Hash.PackageHash
+		Debug(pkgTag, "    ⤷ 🐋 Builder image name", buildImageHash)
+		Debug(pkgTag, "    ⤷ 🐋 Package image name", currentPackageImageHash)
 
-			buildImageHash := "luet/cache:" + nthsolution.Order(depPack.GetFingerPrint()).Drop(depPack).AssertionHash()
-			currentPackageImageHash := "luet/cache:" + nthsolution.Order(depPack.GetFingerPrint()).AssertionHash()
-			Debug(pkgTag, "    ⤷ 🐋 Builder image name", buildImageHash)
-			Debug(pkgTag, "    ⤷ 🐋 Package image name", currentPackageImageHash)
-
-			lastHash = currentPackageImageHash
-			if compileSpec.GetImage() != "" {
-				// TODO: Refactor this
-				if p.ImageUnpack() { // If it is just an entire image, create a package from it
-					artifact, err := cs.packageFromImage(p, currentPackageImageHash, keepPermissions)
-					if err != nil {
-						deperrs = append(deperrs, err)
-						break // stop at first error
-					}
-					departifacts = append(departifacts, artifact)
-					continue
-				}
-
-				Debug(pkgTag, " 🍰 Compiling "+compileSpec.GetPackage().GetFingerPrint()+" from image 🐋")
-				artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, compileSpec)
+		lastHash = currentPackageImageHash
+		if compileSpec.GetImage() != "" {
+			// TODO: Refactor this
+			if p.ImageUnpack() { // If it is just an entire image, create a package from it
+				artifact, err := cs.packageFromImage(p, currentPackageImageHash, keepPermissions)
 				if err != nil {
 					deperrs = append(deperrs, err)
 					break // stop at first error
 				}
 				departifacts = append(departifacts, artifact)
-				Info(pkgTag, "💥 Done")
 				continue
 			}
 
-			artifact, err := cs.compileWithImage(buildImageHash, "", currentPackageImageHash, concurrency, keepPermissions, compileSpec)
+			Debug(pkgTag, " 🍰 Compiling "+compileSpec.GetPackage().GetFingerPrint()+" from image 🐋")
+			artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, compileSpec)
 			if err != nil {
-				return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().GetName())
-				//	deperrs = append(deperrs, err)
-				//		break // stop at first error
+				deperrs = append(deperrs, err)
+				break // stop at first error
 			}
 			departifacts = append(departifacts, artifact)
 			Info(pkgTag, "💥 Done")
+			continue
 		}
+
+		artifact, err := cs.compileWithImage(buildImageHash, "", currentPackageImageHash, concurrency, keepPermissions, compileSpec)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().GetName())
+			//	deperrs = append(deperrs, err)
+			//		break // stop at first error
+		}
+		departifacts = append(departifacts, artifact)
+		Info(pkgTag, "💥 Done")
 	}
 	Info("📦", p.GetPackage().GetName(), "🌪  Building package target from:", lastHash)
 	artifact, err := cs.compileWithImage(lastHash, "", "", concurrency, keepPermissions, p)
@@ -419,7 +448,7 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 		return artifact, err
 	}
 	artifact.SetDependencies(departifacts)
-	artifact.SetSourceAssertion(allOrderedDeps)
+	artifact.SetSourceAssertion(p.GetSourceAssertion())
 
 	return artifact, err
 }

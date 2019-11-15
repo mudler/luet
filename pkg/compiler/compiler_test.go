@@ -31,7 +31,7 @@ import (
 var _ = Describe("Compiler", func() {
 	Context("Simple package build definition", func() {
 		It("Compiles it correctly", func() {
-			generalRecipe := tree.NewCompilerRecipe()
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 
 			err := generalRecipe.Load("../../tests/fixtures/buildable")
 			Expect(err).ToNot(HaveOccurred())
@@ -39,7 +39,10 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
+			err = compiler.Prepare(1)
+			Expect(err).ToNot(HaveOccurred())
+
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
@@ -73,7 +76,7 @@ var _ = Describe("Compiler", func() {
 
 	Context("Simple package build definition", func() {
 		It("Compiles it in parallel", func() {
-			generalRecipe := tree.NewCompilerRecipe()
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 
 			err := generalRecipe.Load("../../tests/fixtures/buildable")
 			Expect(err).ToNot(HaveOccurred())
@@ -81,7 +84,10 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
+			err = compiler.Prepare(1)
+			Expect(err).ToNot(HaveOccurred())
+
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 			spec2, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.0"})
@@ -107,7 +113,7 @@ var _ = Describe("Compiler", func() {
 
 	Context("Reconstruct image tree", func() {
 		It("Compiles it", func() {
-			generalRecipe := tree.NewCompilerRecipe()
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 			tmpdir, err := ioutil.TempDir("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
@@ -118,7 +124,11 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(4))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
+
+			err = compiler.Prepare(1)
+			Expect(err).ToNot(HaveOccurred())
+
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "c", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 			spec2, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.0"})
@@ -163,7 +173,7 @@ var _ = Describe("Compiler", func() {
 		})
 
 		It("unpacks images when needed", func() {
-			generalRecipe := tree.NewCompilerRecipe()
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 			tmpdir, err := ioutil.TempDir("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
@@ -174,7 +184,10 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
+			err = compiler.Prepare(1)
+			Expect(err).ToNot(HaveOccurred())
+
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "extra", Category: "layer", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 			spec2, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "base", Category: "layer", Version: "0.2"})
@@ -205,7 +218,7 @@ var _ = Describe("Compiler", func() {
 		})
 
 		It("Compiles and includes ony wanted files", func() {
-			generalRecipe := tree.NewCompilerRecipe()
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 			tmpdir, err := ioutil.TempDir("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
@@ -216,7 +229,10 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(1))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
+			err = compiler.Prepare(1)
+			Expect(err).ToNot(HaveOccurred())
+
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
@@ -239,7 +255,7 @@ var _ = Describe("Compiler", func() {
 		})
 
 		It("Compiles a more complex tree", func() {
-			generalRecipe := tree.NewCompilerRecipe()
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 			tmpdir, err := ioutil.TempDir("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
@@ -250,7 +266,10 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
+			err = compiler.Prepare(1)
+			Expect(err).ToNot(HaveOccurred())
+
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "pkgs-checker", Category: "package", Version: "9999"})
 			Expect(err).ToNot(HaveOccurred())
 
@@ -277,7 +296,7 @@ var _ = Describe("Compiler", func() {
 		})
 
 		It("Compiles revdeps", func() {
-			generalRecipe := tree.NewCompilerRecipe()
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 			tmpdir, err := ioutil.TempDir("", "revdep")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
@@ -288,7 +307,10 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
+			err = compiler.Prepare(1)
+			Expect(err).ToNot(HaveOccurred())
+
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "extra", Category: "layer", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
 
@@ -315,7 +337,7 @@ var _ = Describe("Compiler", func() {
 		})
 
 		It("Compiles revdeps with seeds", func() {
-			generalRecipe := tree.NewCompilerRecipe()
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 			tmpdir, err := ioutil.TempDir("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
@@ -326,7 +348,10 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(4))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
+			err = compiler.Prepare(1)
+			Expect(err).ToNot(HaveOccurred())
+
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 
 			spec.SetOutputPath(tmpdir)

@@ -24,6 +24,8 @@ type Compiler interface {
 	Compile(int, bool, CompilationSpec) (Artifact, error)
 	CompileParallel(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
 	CompileWithReverseDeps(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
+	ComputeDepTree(p CompilationSpec) (solver.PackagesAssertions, error)
+	Prepare(concurrency int) error
 
 	FromPackage(pkg.Package) (CompilationSpec, error)
 
@@ -102,6 +104,9 @@ type CompilationSpec interface {
 	Rel(string) string
 
 	GetPreBuildSteps() []string
+
+	GetSourceAssertion() solver.PackagesAssertions
+	SetSourceAssertion(as solver.PackagesAssertions)
 }
 
 type CompilationSpecs interface {

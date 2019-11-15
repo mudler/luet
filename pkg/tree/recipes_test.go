@@ -117,7 +117,7 @@ var _ = Describe("Recipe", func() {
 				world, err := tree.World()
 				Expect(err).ToNot(HaveOccurred())
 
-				s := solver.NewSolver([]pkg.Package{}, world)
+				s := solver.NewSolver([]pkg.Package{}, world, tree.GetPackageSet())
 				solution, err := s.Install([]pkg.Package{pack})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(solution)).To(Equal(3))

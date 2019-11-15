@@ -34,7 +34,9 @@ const (
 	CompilerDefinitionFile = "build.yaml"
 )
 
-func NewCompilerRecipe() Builder { return &CompilerRecipe{} }
+func NewCompilerRecipe(d pkg.PackageDatabase) Builder {
+	return &CompilerRecipe{Recipe: Recipe{Database: d}}
+}
 
 // Recipe is the "general" reciper for Trees
 type CompilerRecipe struct {
@@ -52,7 +54,7 @@ func (r *CompilerRecipe) Load(path string) error {
 	//	return err
 	//}
 
-	r.Tree().SetPackageSet(pkg.NewInMemoryDatabase(false))
+	r.Tree().SetPackageSet(r.Database)
 	//r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
 	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
 	// the function that handles each file or dir

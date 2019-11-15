@@ -33,7 +33,7 @@ import (
 var _ = Describe("Docker backend", func() {
 	Context("Simple Docker backend satisfies main interface functionalities", func() {
 		It("Builds and generate tars", func() {
-			generalRecipe := tree.NewGeneralRecipe()
+			generalRecipe := tree.NewGeneralRecipe(pkg.NewInMemoryDatabase(false))
 
 			err := generalRecipe.Load("../../../tests/fixtures/buildtree")
 			Expect(err).ToNot(HaveOccurred())
@@ -41,7 +41,7 @@ var _ = Describe("Docker backend", func() {
 
 			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(1))
 
-			compiler := NewLuetCompiler(nil, generalRecipe.Tree())
+			compiler := NewLuetCompiler(nil, generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
 

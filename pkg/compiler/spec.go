@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/solver"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -86,14 +87,16 @@ func (specs *LuetCompilationspecs) Unique() CompilationSpecs {
 }
 
 type LuetCompilationSpec struct {
-	Steps      []string    `json:"steps"`   // Are run inside a container and the result layer diff is saved
-	Prelude    []string    `json:"prelude"` // Are run inside the image which will be our builder
-	Image      string      `json:"image"`
-	Seed       string      `json:"seed"`
-	Package    pkg.Package `json:"-"`
-	OutputPath string      `json:"-"` // Where the build processfiles go
-	Unpack     bool        `json:"unpack"`
-	Includes   []string    `json:"includes"`
+	Steps           []string                  `json:"steps"`   // Are run inside a container and the result layer diff is saved
+	Prelude         []string                  `json:"prelude"` // Are run inside the image which will be our builder
+	Image           string                    `json:"image"`
+	Seed            string                    `json:"seed"`
+	Package         pkg.Package               `json:"-"`
+	SourceAssertion solver.PackagesAssertions `json:"-"`
+
+	OutputPath string   `json:"-"` // Where the build processfiles go
+	Unpack     bool     `json:"unpack"`
+	Includes   []string `json:"includes"`
 }
 
 func NewLuetCompilationSpec(b []byte, p pkg.Package) (CompilationSpec, error) {
@@ -105,7 +108,13 @@ func NewLuetCompilationSpec(b []byte, p pkg.Package) (CompilationSpec, error) {
 	spec.Package = p
 	return &spec, nil
 }
+func (a *LuetCompilationSpec) GetSourceAssertion() solver.PackagesAssertions {
+	return a.SourceAssertion
+}
 
+func (a *LuetCompilationSpec) SetSourceAssertion(as solver.PackagesAssertions) {
+	a.SourceAssertion = as
+}
 func (cs *LuetCompilationSpec) GetPackage() pkg.Package {
 	return cs.Package
 }
