@@ -15,14 +15,15 @@
 package cmd
 
 import (
+	"os"
+	"regexp"
+	"runtime"
+
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	tree "github.com/mudler/luet/pkg/tree"
-	"os"
-	"regexp"
-	"runtime"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -39,8 +40,10 @@ var buildCmd = &cobra.Command{
 		concurrency := viper.GetInt("concurrency")
 		backendType := viper.GetString("backend")
 		privileged := viper.GetBool("privileged")
+		revdeps := viper.GetBool("revdeps")
+		all := viper.GetBool("all")
 
-		var compilerSpecs []compiler.CompilationSpec
+		var compilerSpecs compiler.CompilationSpecs
 		var compilerBackend compiler.CompilerBackend
 
 		switch backendType {
@@ -57,28 +60,50 @@ var buildCmd = &cobra.Command{
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
-		compiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.Tree())
+		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.Tree())
+		if !all {
+			for _, a := range args {
+				decodepackage, err := regexp.Compile(`^([<>]?\~?=?)((([^\/]+)\/)?(?U)(\S+))(-(\d+(\.\d+)*[a-z]?(_(alpha|beta|pre|rc|p)\d*)*(-r\d+)?))?$`)
+				if err != nil {
+					Fatal("Error: " + err.Error())
+				}
+				packageInfo := decodepackage.FindAllStringSubmatch(a, -1)
 
-		for _, a := range args {
-			decodepackage, err := regexp.Compile(`^([<>]?\~?=?)((([^\/]+)\/)?(?U)(\S+))(-(\d+(\.\d+)*[a-z]?(_(alpha|beta|pre|rc|p)\d*)*(-r\d+)?))?$`)
-			if err != nil {
+				category := packageInfo[0][4]
+				name := packageInfo[0][5]
+				version := packageInfo[0][7]
+				spec, err := luetCompiler.FromPackage(&pkg.DefaultPackage{Name: name, Category: category, Version: version})
+				if err != nil {
+					Fatal("Error: " + err.Error())
+				}
+
+				spec.SetOutputPath(dst)
+				compilerSpecs.Add(spec)
+			}
+		} else {
+			w, e := generalRecipe.Tree().World()
+			if e != nil {
 				Fatal("Error: " + err.Error())
 			}
-			packageInfo := decodepackage.FindAllStringSubmatch(a, -1)
-
-			category := packageInfo[0][4]
-			name := packageInfo[0][5]
-			version := packageInfo[0][7]
-			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: name, Category: category, Version: version})
-			if err != nil {
-				Fatal("Error: " + err.Error())
+			for _, p := range w {
+				spec, err := luetCompiler.FromPackage(p)
+				if err != nil {
+					Fatal("Error: " + err.Error())
+				}
+				Info("📦 Selecting ", p.GetName(), p.GetVersion())
+				compilerSpecs.Add(spec)
 			}
-
-			spec.SetOutputPath(dst)
-			compilerSpecs = append(compilerSpecs, spec)
 		}
 
-		artifact, errs := compiler.CompileParallel(concurrency, privileged, compilerSpecs)
+		var artifact []compiler.Artifact
+		var errs []error
+		if revdeps {
+			artifact, errs = luetCompiler.CompileWithReverseDeps(concurrency, privileged, compilerSpecs)
+
+		} else {
+			artifact, errs = luetCompiler.CompileParallel(concurrency, privileged, compilerSpecs)
+
+		}
 		if len(errs) != 0 {
 			for _, e := range errs {
 				Error("Error: " + e.Error())
@@ -106,5 +131,11 @@ func init() {
 	viper.BindPFlag("concurrency", buildCmd.Flags().Lookup("concurrency"))
 	buildCmd.Flags().Bool("privileged", false, "Privileged (Keep permissions)")
 	viper.BindPFlag("privileged", buildCmd.Flags().Lookup("privileged"))
+
+	buildCmd.Flags().Bool("revdeps", false, "Build with revdeps")
+	viper.BindPFlag("revdeps", buildCmd.Flags().Lookup("revdeps"))
+
+	buildCmd.Flags().Bool("all", false, "Build all packages in the tree")
+	viper.BindPFlag("all", buildCmd.Flags().Lookup("all"))
 	RootCmd.AddCommand(buildCmd)
 }
