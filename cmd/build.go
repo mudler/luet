@@ -43,7 +43,7 @@ var buildCmd = &cobra.Command{
 		revdeps := viper.GetBool("revdeps")
 		all := viper.GetBool("all")
 
-		var compilerSpecs compiler.CompilationSpecs
+		compilerSpecs := compiler.NewLuetCompilationspecs()
 		var compilerBackend compiler.CompilerBackend
 
 		switch backendType {
