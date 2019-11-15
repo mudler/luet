@@ -68,7 +68,7 @@ func (gt *DefaultTree) World() ([]pkg.Package, error) {
 func (gt *DefaultTree) UpdateWorldPackage(p pkg.Package) {
 	//var CacheWorld []pkg.Package
 	for _, pid := range gt.CacheWorld {
-		if p.GetFingerPrint() == pid.GetFingerPrint() {
+		if p.Matches(pid) {
 			pid.Requires(p.GetRequires())
 			pid.Conflicts(p.GetConflicts())
 		}
@@ -83,7 +83,7 @@ func (gt *DefaultTree) FindPackage(pack pkg.Package) (pkg.Package, error) {
 		return nil, err
 	}
 	for _, pid := range packages {
-		if pack.GetFingerPrint() == pid.GetFingerPrint() {
+		if pack.Matches(pid) {
 			return pid, nil
 		}
 	}

@@ -216,7 +216,7 @@ func (assertions PackagesAssertions) Drop(p pkg.Package) PackagesAssertions {
 	ass := PackagesAssertions{}
 
 	for _, a := range assertions {
-		if a.Package.GetFingerPrint() != p.GetFingerPrint() {
+		if !a.Package.Matches(p) {
 			ass = append(ass, a)
 		}
 	}

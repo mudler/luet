@@ -49,6 +49,7 @@ type Package interface {
 
 	GetVersion() string
 	RequiresContains(Package) bool
+	Matches(m Package) bool
 
 	AddUse(use string)
 	RemoveUse(use string)
@@ -221,6 +222,13 @@ func (p *DefaultPackage) Clone() Package {
 	return new
 }
 
+func (p *DefaultPackage) Matches(m Package) bool {
+	if p.GetFingerPrint() == m.GetFingerPrint() {
+		return true
+	}
+	return false
+}
+
 func (p *DefaultPackage) Expand(world *[]Package) ([]Package, error) {
 
 	var versionsInWorld []Package
@@ -248,11 +256,11 @@ func (p *DefaultPackage) Expand(world *[]Package) ([]Package, error) {
 func (p *DefaultPackage) Revdeps(world *[]Package) []Package {
 	var versionsInWorld []Package
 	for _, w := range *world {
-		if w.GetFingerPrint() == p.GetFingerPrint() {
+		if w.Matches(p) {
 			continue
 		}
-		for _, r := range w.GetRequires() {
-			if r.GetFingerPrint() == p.GetFingerPrint() {
+		for _, re := range w.GetRequires() {
+			if re.Matches(p) {
 				versionsInWorld = append(versionsInWorld, w)
 				versionsInWorld = append(versionsInWorld, w.Revdeps(world)...)
 			}
@@ -279,7 +287,7 @@ func NormalizeFlagged(p Package) {
 
 func (p *DefaultPackage) RequiresContains(s Package) bool {
 	for _, re := range p.GetRequires() {
-		if re.GetFingerPrint() == s.GetFingerPrint() {
+		if re.Matches(s) {
 			return true
 		}
 

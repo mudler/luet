@@ -160,7 +160,7 @@ func (db *InMemoryDatabase) FindPackage(p Package) (Package, error) {
 		if err != nil {
 			return nil, err
 		}
-		if pack.GetFingerPrint() == p.GetFingerPrint() {
+		if pack.Matches(p) {
 			return pack, nil
 		}
 	}
@@ -175,7 +175,7 @@ func (db *InMemoryDatabase) UpdatePackage(p Package) error {
 		if err != nil {
 			return err
 		}
-		if pack.GetFingerPrint() == p.GetFingerPrint() {
+		if pack.Matches(p) {
 			id = k
 			found = true
 			break

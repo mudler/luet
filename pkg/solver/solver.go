@@ -126,7 +126,7 @@ func (s *Solver) ConflictsWith(p pkg.Package, ls []pkg.Package) (bool, error) {
 	formulas = append(formulas, bf.And(bf.Not(P), r))
 
 	for _, i := range ls {
-		if i.GetFingerPrint() == p.GetFingerPrint() {
+		if i.Matches(p) {
 			continue
 		}
 		// XXX: Skip check on any of its requires ?  ( Drop to avoid removing system packages when selecting an uninstall)
@@ -163,7 +163,7 @@ func (s *Solver) Uninstall(candidate pkg.Package) ([]pkg.Package, error) {
 	// Build a fake "Installed" - Candidate and its requires tree
 	var InstalledMinusCandidate []pkg.Package
 	for _, i := range s.Installed {
-		if i.GetFingerPrint() != candidate.GetFingerPrint() && !candidate.RequiresContains(i) {
+		if !i.Matches(candidate) && !candidate.RequiresContains(i) {
 			InstalledMinusCandidate = append(InstalledMinusCandidate, i)
 		}
 	}
