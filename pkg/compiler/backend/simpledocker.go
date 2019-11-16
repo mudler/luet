@@ -44,8 +44,6 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	path := opts.SourcePath
 	dockerfileName := opts.DockerFileName
 	buildarg := []string{"build", "-f", dockerfileName, "-t", name, "."}
-	Spinner(24)
-	defer SpinnerStop()
 
 	Debug(" 🐋 Building image " + name)
 	cmd := exec.Command("docker", buildarg...)
@@ -61,9 +59,6 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 }
 
 func (*SimpleDocker) CopyImage(src, dst string) error {
-	Spinner(24)
-	defer SpinnerStop()
-
 	Debug(" 🐋 Tagging image:", src, "->", dst)
 	cmd := exec.Command("docker", "tag", src, dst)
 	out, err := cmd.CombinedOutput()
@@ -77,9 +72,6 @@ func (*SimpleDocker) CopyImage(src, dst string) error {
 func (*SimpleDocker) DownloadImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	buildarg := []string{"pull", name}
-	Spinner(24)
-	defer SpinnerStop()
-
 	Debug(" 🐋 Downloading image " + name)
 	cmd := exec.Command("docker", buildarg...)
 	out, err := cmd.CombinedOutput()
@@ -93,8 +85,6 @@ func (*SimpleDocker) DownloadImage(opts compiler.CompilerBackendOptions) error {
 func (*SimpleDocker) RemoveImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	buildarg := []string{"rmi", name}
-	Spinner(24)
-	defer SpinnerStop()
 	out, err := exec.Command("docker", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed removing image: "+string(out))
@@ -122,8 +112,6 @@ func (*SimpleDocker) ExportImage(opts compiler.CompilerBackendOptions) error {
 	path := opts.Destination
 
 	buildarg := []string{"save", name, "-o", path}
-	Spinner(24)
-	defer SpinnerStop()
 	Debug(" 🐋 Saving image " + name)
 	out, err := exec.Command("docker", buildarg...).CombinedOutput()
 	if err != nil {
@@ -227,7 +215,6 @@ func (*SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPer
 // ]
 // Changes uses container-diff (https://github.com/GoogleContainerTools/container-diff) for retrieving out layer diffs
 func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLayer, error) {
-
 	tmpdiffs, err := ioutil.TempDir(os.TempDir(), "tmpdiffs")
 	if err != nil {
 		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while creating tempdir for rootfs")
@@ -235,9 +222,6 @@ func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLaye
 	defer os.RemoveAll(tmpdiffs) // clean up
 
 	diffargs := []string{"diff", fromImage, toImage, "--type=file", "-j", "-n", "-c", tmpdiffs}
-	Spinner(22)
-	defer SpinnerStop()
-
 	out, err := exec.Command("container-diff", diffargs...).CombinedOutput()
 	if err != nil {
 		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed Resolving layer diffs: "+string(out))
