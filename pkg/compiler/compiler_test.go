@@ -102,7 +102,7 @@ var _ = Describe("Compiler", func() {
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
 			artifacts, errs := compiler.CompileParallel(2, false, NewLuetCompilationspecs(spec, spec2))
-			Expect(len(errs)).To(Equal(0))
+			Expect(errs).To(BeNil())
 			for _, artifact := range artifacts {
 				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
 				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())

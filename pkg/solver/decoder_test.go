@@ -30,6 +30,8 @@ var _ = Describe("Decoder", func() {
 		eq := 0
 		for index := 0; index < 300; index++ { // Just to make sure we don't have false positives
 			It("Orders them correctly #"+strconv.Itoa(index), func() {
+				db := pkg.NewInMemoryDatabase(false)
+
 				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 				E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 				F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -39,7 +41,7 @@ var _ = Describe("Decoder", func() {
 				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
 				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-				s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D, E, F, G})
+				s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D, E, F, G}, db)
 
 				solution, err := s.Install([]pkg.Package{A})
 				Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
@@ -71,6 +73,8 @@ var _ = Describe("Decoder", func() {
 		equality := 0
 		for index := 0; index < 300; index++ { // Just to make sure we don't have false positives
 			It("Doesn't order them correctly otherwise #"+strconv.Itoa(index), func() {
+				db := pkg.NewInMemoryDatabase(false)
+
 				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 				E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 				F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -80,7 +84,7 @@ var _ = Describe("Decoder", func() {
 				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
 				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-				s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D, E, F, G})
+				s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D, E, F, G}, db)
 
 				solution, err := s.Install([]pkg.Package{A})
 				Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
@@ -128,6 +132,8 @@ var _ = Describe("Decoder", func() {
 
 	Context("Assertion hashing", func() {
 		It("Hashes them, and could be used for comparison", func() {
+			db := pkg.NewInMemoryDatabase(false)
+
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -137,7 +143,7 @@ var _ = Describe("Decoder", func() {
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D, E, F, G})
+			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D, E, F, G}, db)
 
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true), Value: true}))
@@ -182,11 +188,12 @@ var _ = Describe("Decoder", func() {
 			Expect(hash).ToNot(Equal(""))
 			Expect(hash2).ToNot(Equal(""))
 			Expect(hash != hash2).To(BeTrue())
+			db2 := pkg.NewInMemoryDatabase(false)
 
 			X := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			Y := pkg.NewPackage("Y", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
 			Z := pkg.NewPackage("Z", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
-			s = NewSolver([]pkg.Package{}, []pkg.Package{X, Y, Z})
+			s = NewSolver([]pkg.Package{}, []pkg.Package{X, Y, Z}, db2)
 			solution, err = s.Install([]pkg.Package{Y})
 			Expect(err).ToNot(HaveOccurred())
 

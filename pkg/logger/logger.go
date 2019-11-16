@@ -3,7 +3,6 @@ package logger
 import (
 	"fmt"
 	"os"
-	"sync"
 	"time"
 
 	. "github.com/logrusorgru/aurora"
@@ -11,42 +10,30 @@ import (
 	"github.com/briandowns/spinner"
 )
 
-var s *spinner.Spinner
-var m = &sync.Mutex{}
-var enabled = false
+var s *spinner.Spinner = spinner.New(spinner.CharSets[22], 100*time.Millisecond)
 
 func Spinner(i int) {
-	m.Lock()
-	defer m.Unlock()
+
 	if i > 43 {
 		i = 43
 	}
 
-	if s == nil {
-		s = spinner.New(spinner.CharSets[i], 100*time.Millisecond) // Build our new spinner
+	if !s.Active() {
+		//	s.UpdateCharSet(spinner.CharSets[i])
+		s.Start() // Start the spinner
 	}
-	s.UpdateCharSet(spinner.CharSets[i])
-	enabled = true
-	s.Start() // Start the spinner
 }
 
 func SpinnerText(suffix, prefix string) {
-	m.Lock()
-	defer m.Unlock()
-	if s == nil {
-		s = spinner.New(spinner.CharSets[22], 100*time.Millisecond) // Build our new spinner
-	}
+	s.Lock()
+	defer s.Unlock()
 	s.Suffix = Bold(Magenta(suffix)).BgBlack().String()
 	s.Prefix = Bold(Cyan(prefix)).String()
 }
 
 func SpinnerStop() {
-	m.Lock()
-	defer m.Unlock()
-	if s != nil {
-		s.Stop()
-	}
-	enabled = false
+
+	s.Stop()
 }
 
 func msg(level string, msg ...interface{}) {
@@ -67,17 +54,16 @@ func msg(level string, msg ...interface{}) {
 		levelMsg = Bold(Red("💣 " + message + "🔥")).BgBlack().String()
 	}
 
-	if enabled {
-		SpinnerText(levelMsg, "")
-		return
-	}
+	//if s.Active() {
+	//		SpinnerText(levelMsg, "")
+	//	return
+	//	}
 
 	cmd := []interface{}{}
 	for _, f := range msg {
 		cmd = append(cmd, f)
 	}
-	m.Lock()
-	defer m.Unlock()
+
 	fmt.Println(levelMsg)
 	//fmt.Println(cmd...)
 }

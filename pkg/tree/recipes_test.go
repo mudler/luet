@@ -53,7 +53,7 @@ var _ = Describe("Recipe", func() {
 
 				Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
 
-				generalRecipe := NewGeneralRecipe()
+				generalRecipe := NewGeneralRecipe(tree.GetPackageSet())
 				generalRecipe.WithTree(tree)
 				err = generalRecipe.Save(tmpdir)
 				Expect(err).ToNot(HaveOccurred())
@@ -61,7 +61,7 @@ var _ = Describe("Recipe", func() {
 		})
 
 		Context("Reloading trees", func() {
-			It("writes and reads back the same tree", func() {
+			FIt("writes and reads back the same tree", func() {
 				tmpdir, err := ioutil.TempDir("", "tree")
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
@@ -75,10 +75,13 @@ var _ = Describe("Recipe", func() {
 
 				Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
 
-				generalRecipe := NewGeneralRecipe()
+				generalRecipe := NewGeneralRecipe(tree.GetPackageSet())
 				generalRecipe.WithTree(tree)
 				err = generalRecipe.Save(tmpdir)
 				Expect(err).ToNot(HaveOccurred())
+
+				db := pkg.NewInMemoryDatabase(false)
+				generalRecipe = NewGeneralRecipe(db)
 
 				generalRecipe.WithTree(nil)
 				Expect(generalRecipe.Tree()).To(BeNil())

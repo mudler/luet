@@ -81,15 +81,16 @@ var _ = Describe("Package", func() {
 	})
 
 	Context("Encoding", func() {
+		db := NewInMemoryDatabase(false)
 		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
 		a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
 		a := NewPackage("A", ">=1.0", []*DefaultPackage{a1}, []*DefaultPackage{a11})
 		It("decodes and encodes correctly", func() {
 
-			ID, err := a.Encode()
+			ID, err := a.Encode(db)
 			Expect(err).ToNot(HaveOccurred())
 
-			p, err := DecodePackage(ID)
+			p, err := DecodePackage(ID, db)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(p.GetVersion()).To(Equal(a.GetVersion()))
@@ -109,18 +110,22 @@ var _ = Describe("Package", func() {
 
 	Context("BuildFormula", func() {
 		It("builds empty constraints", func() {
+			db := NewInMemoryDatabase(false)
+
 			a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-			f, err := a1.BuildFormula()
+			f, err := a1.BuildFormula(db)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(f).To(BeNil())
 		})
 		It("builds constraints correctly", func() {
+			db := NewInMemoryDatabase(false)
+
 			a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
 			a21 := NewPackage("A", "1.2", []*DefaultPackage{}, []*DefaultPackage{})
 			a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
 			a1.Requires([]*DefaultPackage{a11})
 			a1.Conflicts([]*DefaultPackage{a21})
-			f, err := a1.BuildFormula()
+			f, err := a1.BuildFormula(db)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(f)).To(Equal(2))
 			Expect(f[0].String()).To(Equal("or(not(c31f5842), a4910f77)"))

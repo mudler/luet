@@ -37,8 +37,8 @@ var _ = Describe("Tree", func() {
 	Context("Simple solving with the fixture tree", func() {
 		It("writes and reads back the same tree", func() {
 			for index := 0; index < 300; index++ { // Just to make sure we don't have false positives
-
-				generalRecipe := NewCompilerRecipe()
+				db := pkg.NewInMemoryDatabase(false)
+				generalRecipe := NewCompilerRecipe(db)
 				tmpdir, err := ioutil.TempDir("", "package")
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
@@ -62,7 +62,7 @@ var _ = Describe("Tree", func() {
 				w, err := generalRecipe.Tree().World()
 				Expect(err).ToNot(HaveOccurred())
 
-				s := solver.NewSolver([]pkg.Package{}, w)
+				s := solver.NewSolver([]pkg.Package{}, w, db)
 				pack, err := generalRecipe.Tree().FindPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
 				Expect(err).ToNot(HaveOccurred())
 
