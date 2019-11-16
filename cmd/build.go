@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"io/ioutil"
 	"os"
 	"regexp"
 	"runtime"
@@ -42,10 +43,11 @@ var buildCmd = &cobra.Command{
 		privileged := viper.GetBool("privileged")
 		revdeps := viper.GetBool("revdeps")
 		all := viper.GetBool("all")
+		databaseType := viper.GetString("database")
 
 		compilerSpecs := compiler.NewLuetCompilationspecs()
 		var compilerBackend compiler.CompilerBackend
-
+		var db pkg.PackageDatabase
 		switch backendType {
 		case "img":
 			compilerBackend = backend.NewSimpleImgBackend()
@@ -53,14 +55,26 @@ var buildCmd = &cobra.Command{
 			compilerBackend = backend.NewSimpleDockerBackend()
 		}
 
-		generalRecipe := tree.NewCompilerRecipe()
+		switch databaseType {
+		case "memory":
+			db = pkg.NewInMemoryDatabase(false)
+		case "boltdb":
+			tmpdir, err := ioutil.TempDir("", "package")
+			if err != nil {
+				Fatal(err)
+			}
+			db = pkg.NewBoltDatabase(tmpdir)
+		}
+		defer db.Clean()
+
+		generalRecipe := tree.NewCompilerRecipe(db)
 
 		Info("Loading", src)
 		err := generalRecipe.Load(src)
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
-		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.Tree())
+		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
 
 		err = luetCompiler.Prepare(concurrency)
 		if err != nil {
@@ -136,7 +150,8 @@ func init() {
 	viper.BindPFlag("concurrency", buildCmd.Flags().Lookup("concurrency"))
 	buildCmd.Flags().Bool("privileged", false, "Privileged (Keep permissions)")
 	viper.BindPFlag("privileged", buildCmd.Flags().Lookup("privileged"))
-
+	buildCmd.Flags().String("database", "memory", "database used for solving (memory,boltdb)")
+	viper.BindPFlag("database", buildCmd.Flags().Lookup("database"))
 	buildCmd.Flags().Bool("revdeps", false, "Build with revdeps")
 	viper.BindPFlag("revdeps", buildCmd.Flags().Lookup("revdeps"))
 

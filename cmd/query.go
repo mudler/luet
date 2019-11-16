@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 
 	. "github.com/mudler/luet/pkg/logger"
@@ -39,8 +40,22 @@ var queryCmd = &cobra.Command{
 		if len(args) != 4 {
 			log.Fatalln("Incorrect number of arguments")
 		}
+		databaseType := viper.GetString("database")
+		var db pkg.PackageDatabase
 
-		generalRecipe := tree.NewGeneralRecipe()
+		switch databaseType {
+		case "memory":
+			db = pkg.NewInMemoryDatabase(false)
+		case "boltdb":
+			tmpdir, err := ioutil.TempDir("", "package")
+			if err != nil {
+				Fatal(err)
+			}
+			db = pkg.NewBoltDatabase(tmpdir)
+		}
+		defer db.Clean()
+
+		generalRecipe := tree.NewGeneralRecipe(db)
 		fmt.Println("Loading generated tree from " + input)
 
 		err := generalRecipe.Load(input)
@@ -72,7 +87,7 @@ var queryCmd = &cobra.Command{
 			for _, packss := range world {
 				packss.Explain()
 			}
-			s := solver.NewSolver([]pkg.Package{}, world)
+			s := solver.NewSolver([]pkg.Package{}, world, generalRecipe.Tree().GetPackageSet())
 			solution, err := s.Install([]pkg.Package{pack})
 			if err != nil {
 				Fatal("Error: " + err.Error())
@@ -90,5 +105,8 @@ var queryCmd = &cobra.Command{
 func init() {
 	queryCmd.Flags().String("input", "", "source folder")
 	viper.BindPFlag("input", queryCmd.Flags().Lookup("input"))
+	queryCmd.Flags().String("database", "memory", "database used for solving (memory,boltdb)")
+	viper.BindPFlag("database", queryCmd.Flags().Lookup("database"))
+
 	RootCmd.AddCommand(queryCmd)
 }

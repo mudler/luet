@@ -15,9 +15,11 @@
 package cmd
 
 import (
+	"io/ioutil"
 	"runtime"
 
 	. "github.com/mudler/luet/pkg/logger"
+	pkg "github.com/mudler/luet/pkg/package"
 	tree "github.com/mudler/luet/pkg/tree"
 
 	"github.com/mudler/luet/pkg/tree/builder/gentoo"
@@ -33,6 +35,8 @@ var convertCmd = &cobra.Command{
 
 		t := viper.GetString("type")
 		c := viper.GetInt("concurrency")
+		databaseType := viper.GetString("database")
+		var db pkg.PackageDatabase
 
 		if len(args) != 2 {
 			Fatal("Incorrect number of arguments")
@@ -50,6 +54,18 @@ var convertCmd = &cobra.Command{
 			builder = gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, c, gentoo.InMemory)
 		}
 
+		switch databaseType {
+		case "memory":
+			db = pkg.NewInMemoryDatabase(false)
+		case "boltdb":
+			tmpdir, err := ioutil.TempDir("", "package")
+			if err != nil {
+				Fatal(err)
+			}
+			db = pkg.NewBoltDatabase(tmpdir)
+		}
+		defer db.Clean()
+
 		packageTree, err := builder.Generate(input)
 		if err != nil {
 			Fatal("Error: " + err.Error())
@@ -58,7 +74,7 @@ var convertCmd = &cobra.Command{
 		defer packageTree.GetPackageSet().Clean()
 		Info("Tree generated")
 
-		generalRecipe := tree.NewGeneralRecipe()
+		generalRecipe := tree.NewGeneralRecipe(db)
 		Info("Saving generated tree to " + output)
 
 		generalRecipe.WithTree(packageTree)
@@ -74,5 +90,8 @@ func init() {
 	viper.BindPFlag("type", convertCmd.Flags().Lookup("type"))
 	convertCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
 	viper.BindPFlag("concurrency", convertCmd.Flags().Lookup("concurrency"))
+	convertCmd.Flags().String("database", "memory", "database used for solving (memory,boltdb)")
+	viper.BindPFlag("database", convertCmd.Flags().Lookup("database"))
+
 	RootCmd.AddCommand(convertCmd)
 }
