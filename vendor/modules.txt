@@ -135,6 +135,8 @@ github.com/klauspost/cpuid
 github.com/klauspost/pgzip
 # github.com/konsorten/go-windows-terminal-sequences v1.0.2
 github.com/konsorten/go-windows-terminal-sequences
+# github.com/kyokomi/emoji v2.1.0+incompatible
+github.com/kyokomi/emoji
 # github.com/logrusorgru/aurora v0.0.0-20190417123914-21d75270181e
 github.com/logrusorgru/aurora
 # github.com/magiconair/properties v1.8.1
