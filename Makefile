@@ -70,3 +70,7 @@ test-docker:
 	docker run -v $(ROOT_DIR):/go/src/github.com/mudler/luet \
 				--workdir /go/src/github.com/mudler/luet -ti golang:latest \
 				bash -c "make test"
+
+.PHONY: multiarch-build
+multiarch-build:
+	gox $(BUILD_PLATFORMS) -output="release/$(NAME)-$(VERSION)-{{.OS}}-{{.Arch}}"
