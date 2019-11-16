@@ -233,7 +233,7 @@ func (p *DefaultPackage) Expand(world *[]Package) ([]Package, error) {
 
 	var versionsInWorld []Package
 	for _, w := range *world {
-		if w.GetName() != p.GetName() {
+		if w.GetName() != p.GetName() || w.GetCategory() != p.GetCategory() {
 			continue
 		}
 

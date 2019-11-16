@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	. "github.com/mudler/luet/pkg/logger"
+	"github.com/mudler/luet/pkg/solver"
 	"github.com/pkg/errors"
 
 	pkg "github.com/mudler/luet/pkg/package"
@@ -102,12 +103,32 @@ func (gb *DefaultTree) updatePackage(p pkg.Package) error {
 		if err == nil {
 			found, ok := foundPackage.(*pkg.DefaultPackage)
 			if !ok {
-				panic("Simpleparser should deal only with DefaultPackages")
+				return errors.New("Simpleparser should deal only with DefaultPackages")
 			}
 
 			p.GetRequires()[i] = found
 		} else {
 			Warning("Unmatched require for", r.GetFingerPrint())
+			w, err := gb.World()
+			if err != nil {
+				return errors.Wrap(err, "Error while computing world")
+			}
+			packages, err := r.Expand(&w)
+			if err != nil {
+				return errors.Wrap(err, "Error while expanding to world")
+			}
+			if len(packages) == 0 {
+				Warning("Could not expand")
+				continue
+			}
+
+			s := solver.NewSolver([]pkg.Package{}, []pkg.Package{}, gb.GetPackageSet())
+			best := s.Best(packages)
+			found, ok := best.(*pkg.DefaultPackage)
+			if !ok {
+				return errors.New("Simpleparser should deal only with DefaultPackages")
+			}
+			p.GetRequires()[i] = found
 		}
 	}
 
@@ -117,12 +138,32 @@ func (gb *DefaultTree) updatePackage(p pkg.Package) error {
 		if err == nil {
 			found, ok := foundPackage.(*pkg.DefaultPackage)
 			if !ok {
-				panic("Simpleparser should deal only with DefaultPackages")
+				return errors.New("Simpleparser should deal only with DefaultPackages")
 			}
 
 			p.GetConflicts()[i] = found
 		} else {
 			Warning("Unmatched conflict for", r.GetFingerPrint())
+			w, err := gb.World()
+			if err != nil {
+				return errors.Wrap(err, "Error while computing world")
+			}
+			packages, err := r.Expand(&w)
+			if err != nil {
+				return errors.Wrap(err, "Error while expanding to world")
+			}
+			if len(packages) == 0 {
+				Warning("Could not expand")
+				continue
+			}
+
+			s := solver.NewSolver([]pkg.Package{}, []pkg.Package{}, gb.GetPackageSet())
+			best := s.Best(packages)
+			found, ok := best.(*pkg.DefaultPackage)
+			if !ok {
+				return errors.New("Simpleparser should deal only with DefaultPackages")
+			}
+			p.GetConflicts()[i] = found
 		}
 	}
 	Debug("💫 Finished processing", p.GetName())
