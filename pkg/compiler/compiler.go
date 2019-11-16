@@ -113,7 +113,7 @@ func (cs *LuetCompiler) CompileWithReverseDeps(concurrency int, keepPermissions 
 
 	uniques := toCompile.Unique().Remove(ps)
 	for _, u := range uniques.All() {
-		Info(" :arrow_right_hook:", u.GetPackage().GetName(), "🍃", u.GetPackage().GetVersion(), "(", u.GetPackage().GetCategory(), ")")
+		Info(" :arrow_right_hook:", u.GetPackage().GetName(), ":leaves:", u.GetPackage().GetVersion(), "(", u.GetPackage().GetCategory(), ")")
 	}
 
 	artifacts2, err := cs.CompileParallel(concurrency, keepPermissions, uniques)
@@ -121,6 +121,8 @@ func (cs *LuetCompiler) CompileWithReverseDeps(concurrency int, keepPermissions 
 }
 
 func (cs *LuetCompiler) CompileParallel(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error) {
+	Spinner(22)
+	defer SpinnerStop()
 	all := make(chan CompilationSpec)
 	artifacts := []Artifact{}
 	mutex := &sync.Mutex{}

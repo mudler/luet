@@ -17,6 +17,8 @@ package pkg_test
 
 import (
 	. "github.com/mudler/luet/pkg/package"
+	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/solver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -35,6 +37,9 @@ var _ = Describe("Package", func() {
 			Expect(lst).To(ContainElement(a1))
 			Expect(lst).ToNot(ContainElement(a01))
 			Expect(len(lst)).To(Equal(2))
+			s := solver.NewSolver([]pkg.Package{}, []pkg.Package{}, NewInMemoryDatabase(false))
+			p := s.Best(lst)
+			Expect(p).To(Equal(a11))
 		})
 	})
 

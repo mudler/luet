@@ -17,8 +17,10 @@ package solver
 
 import (
 	"errors"
+	"sort"
 
 	"github.com/crillab/gophersat/bf"
+	"github.com/hashicorp/go-version"
 	pkg "github.com/mudler/luet/pkg/package"
 )
 
@@ -29,6 +31,7 @@ type PackageSolver interface {
 	Uninstall(candidate pkg.Package) ([]pkg.Package, error)
 	ConflictsWithInstalled(p pkg.Package) (bool, error)
 	ConflictsWith(p pkg.Package, ls []pkg.Package) (bool, error)
+	Best([]pkg.Package) pkg.Package
 }
 
 // Solver is the default solver for luet
@@ -49,6 +52,31 @@ func NewSolver(init []pkg.Package, w []pkg.Package, db pkg.PackageDatabase) Pack
 		pkg.NormalizeFlagged(v)
 	}
 	return &Solver{Installed: init, World: w, Database: db}
+}
+
+// TODO: []pkg.Package should have its own type with this kind of methods in (+Unique, sort, etc.)
+func (s *Solver) Best(set []pkg.Package) pkg.Package {
+	var versionsMap map[string]pkg.Package = make(map[string]pkg.Package)
+	if len(set) == 0 {
+		panic("Best needs a list with elements")
+	}
+
+	versionsRaw := []string{}
+	for _, p := range set {
+		versionsRaw = append(versionsRaw, p.GetVersion())
+		versionsMap[p.GetVersion()] = p
+	}
+
+	versions := make([]*version.Version, len(versionsRaw))
+	for i, raw := range versionsRaw {
+		v, _ := version.NewVersion(raw)
+		versions[i] = v
+	}
+
+	// After this, the versions are properly sorted
+	sort.Sort(version.Collection(versions))
+
+	return versionsMap[versions[len(versions)-1].Original()]
 }
 
 // SetWorld is a setter for the list of all known packages to the solver

@@ -17,6 +17,7 @@ package solver_test
 
 import (
 	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/solver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -368,6 +369,31 @@ var _ = Describe("Solver", func() {
 
 			Expect(len(solution)).To(Equal(6))
 			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
+	Context("Selection", func() {
+		a := pkg.NewPackage("A", ">=2.0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+		a1 := pkg.NewPackage("A", "2.0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+		a11 := pkg.NewPackage("A", "2.1", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+		a01 := pkg.NewPackage("A", "2.2", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+		a02 := pkg.NewPackage("A", "2.3", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+		a03 := pkg.NewPackage("A", "2.3.4", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+		old := pkg.NewPackage("A", "1.3.1", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+		It("Expands correctly", func() {
+			lst, err := a.Expand(&[]pkg.Package{a1, a11, a01, a02, a03, old})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(lst).To(ContainElement(a11))
+			Expect(lst).To(ContainElement(a1))
+			Expect(lst).To(ContainElement(a01))
+			Expect(lst).To(ContainElement(a02))
+			Expect(lst).To(ContainElement(a03))
+			Expect(lst).ToNot(ContainElement(old))
+			Expect(len(lst)).To(Equal(5))
+			s := solver.NewSolver([]pkg.Package{}, []pkg.Package{}, pkg.NewInMemoryDatabase(false))
+			p := s.Best(lst)
+			Expect(p).To(Equal(a03))
 		})
 	})
 
