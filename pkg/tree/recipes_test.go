@@ -115,7 +115,11 @@ var _ = Describe("Recipe", func() {
 
 				Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
 
-				pack, err := tree.FindPackage(&pkg.DefaultPackage{Name: "pinentry", Version: "1.0.0-r2", Category: "app-crypt"}) // Note: the definition depends on pinentry-base without an explicit version
+				pack, err := tree.FindPackage(&pkg.DefaultPackage{
+					Name:     "pinentry",
+					Version:  "1.0.0-r2",
+					Category: "app-crypt",
+				}) // Note: the definition depends on pinentry-base without an explicit version
 				Expect(err).ToNot(HaveOccurred())
 				world, err := tree.World()
 				Expect(err).ToNot(HaveOccurred())
@@ -123,14 +127,14 @@ var _ = Describe("Recipe", func() {
 				s := solver.NewSolver([]pkg.Package{}, world, tree.GetPackageSet())
 				solution, err := s.Install([]pkg.Package{pack})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(len(solution)).To(Equal(3))
+				Expect(len(solution)).To(Equal(10))
 
 				var allSol string
 				for _, sol := range solution {
 					allSol = allSol + "\n" + sol.ToString()
 				}
 
-				Expect(allSol).To(ContainSubstring("app-crypt/pinentry-base  installed: true"))
+				Expect(allSol).To(ContainSubstring("app-crypt/pinentry-base 1.0.0 installed: true"))
 				Expect(allSol).To(ContainSubstring("app-crypt/pinentry 1.1.0-r2 installed: false"))
 				Expect(allSol).To(ContainSubstring("app-crypt/pinentry 1.0.0-r2 installed: true"))
 			})
