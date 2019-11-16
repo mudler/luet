@@ -61,7 +61,7 @@ var _ = Describe("Recipe", func() {
 		})
 
 		Context("Reloading trees", func() {
-			FIt("writes and reads back the same tree", func() {
+			It("writes and reads back the same tree", func() {
 				tmpdir, err := ioutil.TempDir("", "tree")
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
