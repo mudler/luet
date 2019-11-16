@@ -45,40 +45,40 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	dockerfileName := opts.DockerFileName
 	buildarg := []string{"build", "-f", dockerfileName, "-t", name, "."}
 
-	Debug(" 🐋 Building image " + name)
+	Debug(":whale2: Building image " + name)
 	cmd := exec.Command("docker", buildarg...)
 	cmd.Dir = path
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed building image: "+string(out))
 	}
-	Info(" 🐋 Building image " + name + " done")
+	Info(":whale: Building image " + name + " done")
 
 	//Info(string(out))
 	return nil
 }
 
 func (*SimpleDocker) CopyImage(src, dst string) error {
-	Debug(" 🐋 Tagging image:", src, "->", dst)
+	Debug(":whale: Tagging image:", src, "->", dst)
 	cmd := exec.Command("docker", "tag", src, dst)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed tagging image: "+string(out))
 	}
-	Info(" 🐋 Tagged image:", src, "->", dst)
+	Info(":whale: Tagged image:", src, "->", dst)
 	return nil
 }
 
 func (*SimpleDocker) DownloadImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	buildarg := []string{"pull", name}
-	Debug(" 🐋 Downloading image " + name)
+	Debug(":whale: Downloading image " + name)
 	cmd := exec.Command("docker", buildarg...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed building image: "+string(out))
 	}
-	Info(" 🐋 Downloaded image:", name)
+	Info(":whale: Downloaded image:", name)
 	return nil
 }
 
@@ -89,7 +89,7 @@ func (*SimpleDocker) RemoveImage(opts compiler.CompilerBackendOptions) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed removing image: "+string(out))
 	}
-	Info(" 🐋 Removed image:", name)
+	Info(":whale: Removed image:", name)
 	//Info(string(out))
 	return nil
 }
@@ -112,13 +112,13 @@ func (*SimpleDocker) ExportImage(opts compiler.CompilerBackendOptions) error {
 	path := opts.Destination
 
 	buildarg := []string{"save", name, "-o", path}
-	Debug(" 🐋 Saving image " + name)
+	Debug(":whale: Saving image " + name)
 	out, err := exec.Command("docker", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed exporting image: "+string(out))
 	}
 
-	Info(" 🐋 Exported image:", name)
+	Info(":whale: Exported image:", name)
 	return nil
 }
 

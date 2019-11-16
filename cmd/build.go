@@ -109,7 +109,7 @@ var buildCmd = &cobra.Command{
 				if err != nil {
 					Fatal("Error: " + err.Error())
 				}
-				Info("📦 Selecting ", p.GetName(), p.GetVersion())
+				Info(":package: Selecting ", p.GetName(), p.GetVersion())
 				compilerSpecs.Add(spec)
 			}
 		}

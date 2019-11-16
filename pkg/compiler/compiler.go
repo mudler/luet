@@ -70,7 +70,7 @@ func (cs *LuetCompiler) CompileWithReverseDeps(concurrency int, keepPermissions 
 		return artifacts, err
 	}
 
-	Info("🌲 Resolving reverse dependencies")
+	Info(":ant: Resolving reverse dependencies")
 	toCompile := NewLuetCompilationspecs()
 	for _, a := range artifacts {
 		w, asserterr := cs.Tree().World()
@@ -113,7 +113,7 @@ func (cs *LuetCompiler) CompileWithReverseDeps(concurrency int, keepPermissions 
 
 	uniques := toCompile.Unique().Remove(ps)
 	for _, u := range uniques.All() {
-		Info(" ⤷", u.GetPackage().GetName(), "🍃", u.GetPackage().GetVersion(), "(", u.GetPackage().GetCategory(), ")")
+		Info(" :arrow_right_hook:", u.GetPackage().GetName(), "🍃", u.GetPackage().GetVersion(), "(", u.GetPackage().GetCategory(), ")")
 	}
 
 	artifacts2, err := cs.CompileParallel(concurrency, keepPermissions, uniques)
@@ -259,7 +259,7 @@ func (cs *LuetCompiler) Prepare(concurrency int) error {
 	return nil
 }
 func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPermissions bool) (Artifact, error) {
-	pkgTag := "📦  " + p.GetPackage().GetName()
+	pkgTag := ":package:  " + p.GetPackage().GetName()
 
 	Info(pkgTag, "   🍩 Build starts 🔨 🔨 🔨 ")
 
@@ -300,7 +300,7 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 		return nil, errors.Wrap(err, "Error met while creating package archive")
 	}
 
-	Info(pkgTag, "   🎉 Done")
+	Info(pkgTag, "   :white_check_mark: Done")
 	artifact := NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
 	artifact.SetCompileSpec(p)
 	return artifact, nil
@@ -358,7 +358,7 @@ func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p Compila
 }
 
 func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
-	Info("📦 Compiling", p.GetPackage().GetName(), "version", p.GetPackage().GetVersion(), ".... ☕")
+	Info(":package: Compiling", p.GetPackage().GetName(), "version", p.GetPackage().GetVersion(), ".... :coffee:")
 
 	if len(p.GetPackage().GetRequires()) == 0 && p.GetImage() == "" {
 		Error("Package with no deps and no seed image supplied, bailing out")
@@ -387,17 +387,17 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	depsN := 0
 	currentN := 0
 
-	Info("🌲 Build dependencies for " + p.GetPackage().GetName())
+	Info(":deciduous_tree: Build dependencies for " + p.GetPackage().GetName())
 	for _, assertion := range dependencies { //highly dependent on the order
 		depsN++
-		Info(" ⤷", assertion.Package.GetName(), "🍃", assertion.Package.GetVersion(), "(", assertion.Package.GetCategory(), ")")
+		Info(" :arrow_right_hook:", assertion.Package.GetName(), ":leaves:", assertion.Package.GetVersion(), "(", assertion.Package.GetCategory(), ")")
 
 	}
 
 	for _, assertion := range dependencies { //highly dependent on the order
 		currentN++
-		pkgTag := fmt.Sprintf("📦  %d/%d %s ⤑ %s", currentN, depsN, p.GetPackage().GetName(), assertion.Package.GetName())
-		Info(pkgTag, "   🏗  Building dependency")
+		pkgTag := fmt.Sprintf(":package:  %d/%d %s ⤑ %s", currentN, depsN, p.GetPackage().GetName(), assertion.Package.GetName())
+		Info(pkgTag, "   :zap:  Building dependency")
 		compileSpec, err := cs.FromPackage(assertion.Package)
 		if err != nil {
 			return nil, errors.New("Error while generating compilespec for " + assertion.Package.GetName())
@@ -406,8 +406,8 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 
 		buildImageHash := "luet/cache:" + assertion.Hash.BuildHash
 		currentPackageImageHash := "luet/cache:" + assertion.Hash.PackageHash
-		Debug(pkgTag, "    ⤷ 🐋 Builder image name", buildImageHash)
-		Debug(pkgTag, "    ⤷ 🐋 Package image name", currentPackageImageHash)
+		Debug(pkgTag, "    :arrow_right_hook: :whale: Builder image name", buildImageHash)
+		Debug(pkgTag, "    :arrow_right_hook: :whale: Package image name", currentPackageImageHash)
 
 		lastHash = currentPackageImageHash
 		if compileSpec.GetImage() != "" {
@@ -422,14 +422,14 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 				continue
 			}
 
-			Debug(pkgTag, " 🍰 Compiling "+compileSpec.GetPackage().GetFingerPrint()+" from image 🐋")
+			Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().GetFingerPrint()+" from image")
 			artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, compileSpec)
 			if err != nil {
 				deperrs = append(deperrs, err)
 				break // stop at first error
 			}
 			departifacts = append(departifacts, artifact)
-			Info(pkgTag, "💥 Done")
+			Info(pkgTag, ":white_check_mark: Done")
 			continue
 		}
 
@@ -440,9 +440,9 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 			//		break // stop at first error
 		}
 		departifacts = append(departifacts, artifact)
-		Info(pkgTag, "💥 Done")
+		Info(pkgTag, ":collision: Done")
 	}
-	Info("📦", p.GetPackage().GetName(), "🌪  Building package target from:", lastHash)
+	Info(":package:", p.GetPackage().GetName(), ":cyclone:  Building package target from:", lastHash)
 	artifact, err := cs.compileWithImage(lastHash, "", "", concurrency, keepPermissions, p)
 	if err != nil {
 		return artifact, err

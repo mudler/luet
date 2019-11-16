@@ -41,7 +41,7 @@ type Solver struct {
 
 // NewSolver accepts as argument two lists of packages, the first is the initial set,
 // the second represent all the known packages.
-func NewSolver(init []pkg.Package, w []pkg.Package , db pkg.PackageDatabase) PackageSolver {
+func NewSolver(init []pkg.Package, w []pkg.Package, db pkg.PackageDatabase) PackageSolver {
 	for _, v := range init {
 		pkg.NormalizeFlagged(v)
 	}

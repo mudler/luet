@@ -5,9 +5,9 @@ import (
 	"os"
 	"time"
 
-	. "github.com/logrusorgru/aurora"
-
 	"github.com/briandowns/spinner"
+	"github.com/kyokomi/emoji"
+	. "github.com/logrusorgru/aurora"
 )
 
 var s *spinner.Spinner = spinner.New(spinner.CharSets[22], 100*time.Millisecond)
@@ -45,14 +45,16 @@ func msg(level string, msg ...interface{}) {
 	var levelMsg string
 	switch level {
 	case "warning":
-		levelMsg = Bold(Yellow("🌩 " + message)).BgBlack().String()
+		levelMsg = Bold(Yellow(":construction: " + message)).BgBlack().String()
 	case "debug":
 		levelMsg = White(message).BgBlack().String()
 	case "info":
 		levelMsg = Bold(White(message)).BgBlack().String()
 	case "error":
-		levelMsg = Bold(Red("💣 " + message + "🔥")).BgBlack().String()
+		levelMsg = Bold(Red(":bomb: " + message + ":fire:")).BgBlack().String()
 	}
+
+	levelMsg = emoji.Sprint(levelMsg)
 
 	//if s.Active() {
 	//		SpinnerText(levelMsg, "")
