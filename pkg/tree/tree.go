@@ -128,6 +128,7 @@ func (gb *DefaultTree) updatePackage(p pkg.Package) error {
 			if !ok {
 				return errors.New("Simpleparser should deal only with DefaultPackages")
 			}
+			Info(":ok_hand: Automatically selected", found.GetName(), found.GetVersion())
 			p.GetRequires()[i] = found
 		}
 	}
