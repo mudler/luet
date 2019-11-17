@@ -245,6 +245,16 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not extract rootfs")
 	}
+	if p.ImageUnpack() {
+		err = helpers.Tar(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"))
+		if err != nil {
+			return nil, errors.Wrap(err, "Error met while creating package archive")
+		}
+
+		artifact := NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
+		artifact.SetCompileSpec(p)
+		return artifact, nil
+	}
 	artifact, err := ExtractArtifactFromDelta(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions, p.GetIncludes())
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not generate deltas")
@@ -252,6 +262,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	artifact.SetCompileSpec(p)
 	return artifact, nil
 }
+
 func (cs *LuetCompiler) Prepare(concurrency int) error {
 
 	err := cs.Tree().ResolveDeps(concurrency) // FIXME: When done in parallel, this could be done on top before starting
@@ -414,8 +425,12 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 		lastHash = currentPackageImageHash
 		if compileSpec.GetImage() != "" {
 			// TODO: Refactor this
-			if p.ImageUnpack() { // If it is just an entire image, create a package from it
-				artifact, err := cs.packageFromImage(p, currentPackageImageHash, keepPermissions)
+			if compileSpec.ImageUnpack() { // If it is just an entire image, create a package from it
+				if compileSpec.GetImage() == "" {
+					return nil, errors.New("No image defined for package: " + assertion.Package.GetName())
+				}
+				Info(":whale: Sourcing package from image", compileSpec.GetImage())
+				artifact, err := cs.packageFromImage(compileSpec, currentPackageImageHash, keepPermissions)
 				if err != nil {
 					deperrs = append(deperrs, err)
 					break // stop at first error
