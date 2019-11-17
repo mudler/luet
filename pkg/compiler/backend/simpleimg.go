@@ -16,7 +16,6 @@
 package backend
 
 import (
-	"encoding/json"
 	"os/exec"
 
 	"github.com/mudler/luet/pkg/compiler"
@@ -122,26 +121,11 @@ func (*SimpleImg) ExportImage(opts compiler.CompilerBackendOptions) error {
 
 // TODO: Dup in docker, refactor common code in helpers for shared parts
 func (*SimpleImg) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerms bool) error {
-	return errors.New("Not implemented")
+	return NewSimpleDockerBackend().ExtractRootfs(opts, keepPerms)
 }
 
 // TODO: Use container-diff (https://github.com/GoogleContainerTools/container-diff) for checking out layer diffs
 // Changes uses container-diff (https://github.com/GoogleContainerTools/container-diff) for retrieving out layer diffs
 func (*SimpleImg) Changes(fromImage, toImage string) ([]compiler.ArtifactLayer, error) {
-	diffargs := []string{"diff", fromImage, toImage, "--type=file", "-j"}
-	Spinner(22)
-	defer SpinnerStop()
-
-	out, err := exec.Command("container-diff", diffargs...).CombinedOutput()
-	if err != nil {
-		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed Resolving layer diffs: "+string(out))
-	}
-
-	var diffs []compiler.ArtifactLayer
-
-	err = json.Unmarshal(out, &diffs)
-	if err != nil {
-		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed unmarshalling json response: "+string(out))
-	}
-	return diffs, nil
+	return NewSimpleDockerBackend().Changes(fromImage, toImage)
 }
