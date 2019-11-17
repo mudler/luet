@@ -160,10 +160,18 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	// and we build all the images first.
 	keepImg := true
 	keepPackageImg := true
-	buildDir := p.Rel("build")
+	err := os.MkdirAll(p.Rel("build"), os.ModePerm)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error met while creating tempdir for building")
+	}
+	buildDir, err := ioutil.TempDir(p.Rel("build"), "pack")
+	if err != nil {
+		return nil, errors.Wrap(err, "Error met while creating tempdir for building")
+	}
+	defer os.RemoveAll(buildDir) // clean up
 
 	// First we copy the source definitions into the output - we create a copy which the builds will need (we need to cache this phase somehow)
-	err := helpers.CopyDir(p.GetPackage().GetPath(), buildDir)
+	err = helpers.CopyDir(p.GetPackage().GetPath(), buildDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not copy package sources")
 
