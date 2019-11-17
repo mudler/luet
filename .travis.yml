@@ -13,3 +13,6 @@ script:
 after_success:
   - make coverage
   - bash <(curl -s https://codecov.io/bash)
+  - git config --global user.name "Deployer" && git config --global user.email foo@bar.com
+  - go get github.com/tcnksm/ghr
+  - ghr -u mudler -r luet --replace $TRAVIS_TAG release/
