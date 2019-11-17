@@ -29,13 +29,13 @@ import (
 var cfgFile string
 var Verbose bool
 
-const LuetCLIVersion = "0.1-dev"
+const LuetCLIVersion = "0.1"
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:     "luet",
 	Short:   "Package manager for the XXth century!",
-	Long:    `Package manager which supports Gentoo and Entropy packages`,
+	Long:    `Package manager which uses containers to build packages`,
 	Version: LuetCLIVersion,
 }
 

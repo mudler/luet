@@ -65,8 +65,6 @@ func (*SimpleImg) DownloadImage(opts compiler.CompilerBackendOptions) error {
 
 	name := opts.ImageName
 	buildarg := []string{"pull", name}
-	Spinner(22)
-	defer SpinnerStop()
 
 	Debug("Downloading image "+name+" - running img with: ", buildarg)
 	cmd := exec.Command("img", buildarg...)
@@ -74,7 +72,6 @@ func (*SimpleImg) DownloadImage(opts compiler.CompilerBackendOptions) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed building image: "+string(out))
 	}
-	Info(string(out))
 	return nil
 }
 func (*SimpleImg) CopyImage(src, dst string) error {
@@ -87,7 +84,6 @@ func (*SimpleImg) CopyImage(src, dst string) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed tagging image: "+string(out))
 	}
-	Info(string(out))
 	return nil
 }
 
@@ -108,14 +104,11 @@ func (*SimpleImg) ExportImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	path := opts.Destination
 	buildarg := []string{"save", name, "-o", path}
-	Spinner(22)
 	Debug("Saving image "+name+" - running img with: ", buildarg)
 	out, err := exec.Command("img", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed building image: "+string(out))
 	}
-	SpinnerStop()
-	Info(out)
 	return nil
 }
 
