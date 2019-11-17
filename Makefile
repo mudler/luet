@@ -1,8 +1,8 @@
 NAME ?= luet
 PACKAGE_NAME ?= $(NAME)
 PACKAGE_CONFLICT ?= $(PACKAGE_NAME)-beta
-REVISION := $(shell git rev-parse --short HEAD || echo unknown)
-VERSION := $(shell git describe --tags || echo dev)
+REVISION := $(shell git rev-parse --short HEAD || echo dev)
+VERSION := $(shell git describe --tags || echo $(REVISION))
 VERSION := $(shell echo $(VERSION) | sed -e 's/^v//g')
 ITTERATION := $(shell date +%s)
 BUILD_PLATFORMS ?= -osarch="linux/amd64" -osarch="linux/386" -osarch="linux/arm"
