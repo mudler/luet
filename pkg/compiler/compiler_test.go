@@ -436,4 +436,38 @@ var _ = Describe("Compiler", func() {
 
 		})
 	})
+
+	Context("Packages which conents are the container image", func() {
+		It("Compiles it in parallel", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err := generalRecipe.Load("../../tests/fixtures/packagelayers")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
+
+			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(2))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
+			err = compiler.Prepare(1)
+			Expect(err).ToNot(HaveOccurred())
+
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "runtime", Category: "layer", Version: "0.1"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			spec.SetOutputPath(tmpdir)
+			artifacts, errs := compiler.CompileParallel(2, false, NewLuetCompilationspecs(spec))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(1))
+			Expect(len(artifacts[0].GetDependencies())).To(Equal(1))
+			Expect(helpers.Untar(spec.Rel("runtime-layer-0.1.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(spec.Rel("bin/sh"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("var"))).ToNot(BeTrue())
+		})
+	})
 })
