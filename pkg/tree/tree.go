@@ -158,16 +158,19 @@ func (gb *DefaultTree) updatePackage(p pkg.Package) error {
 				continue
 			}
 
-			s := solver.NewSolver([]pkg.Package{}, []pkg.Package{}, gb.GetPackageSet())
-			best := s.Best(packages)
-			found, ok := best.(*pkg.DefaultPackage)
-			if !ok {
-				return errors.New("Simpleparser should deal only with DefaultPackages")
+			confs := []*pkg.DefaultPackage{}
+			for _, c := range packages {
+				found, ok := c.(*pkg.DefaultPackage)
+				if !ok {
+					return errors.New("Simpleparser should deal only with DefaultPackages")
+				}
+				confs = append(confs, found)
 			}
-			p.GetConflicts()[i] = found
+			p.Conflicts(append(p.GetConflicts(), confs...))
+
 		}
 	}
-	Debug("💫 Finished processing", p.GetName())
+	//	Debug("💫 Finished processing", p.GetName())
 
 	if err := gb.GetPackageSet().UpdatePackage(p); err != nil {
 		return err
