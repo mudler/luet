@@ -16,9 +16,12 @@
 package installer
 
 import (
+	"io/ioutil"
+	"os/exec"
 	"sort"
 	"sync"
 
+	"github.com/ghodss/yaml"
 	compiler "github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -37,6 +40,47 @@ type ArtifactMatch struct {
 	Package    pkg.Package
 	Artifact   compiler.Artifact
 	Repository Repository
+}
+
+type LuetFinalizer struct {
+	Install   []string `json:"install"`
+	Uninstall []string `json:"uninstall"` // TODO: Where to store?
+}
+
+func (f *LuetFinalizer) RunInstall() error {
+	for _, c := range f.Install {
+		Debug("finalizer:", "sh", "-c", c)
+		cmd := exec.Command("sh", "-c", c)
+		stdoutStderr, err := cmd.CombinedOutput()
+		if err != nil {
+			return errors.Wrap(err, "Failed running command: "+string(stdoutStderr))
+		}
+		Info(stdoutStderr)
+	}
+	return nil
+}
+
+// TODO: We don't store uninstall finalizers ?!
+func (f *LuetFinalizer) RunUnInstall() error {
+	for _, c := range f.Install {
+		Debug("finalizer:", "sh", "-c", c)
+		cmd := exec.Command("sh", "-c", c)
+		stdoutStderr, err := cmd.CombinedOutput()
+		if err != nil {
+			return errors.Wrap(err, "Failed running command: "+string(stdoutStderr))
+		}
+		Info(stdoutStderr)
+	}
+	return nil
+}
+
+func NewLuetFinalizerFromYaml(data []byte) (*LuetFinalizer, error) {
+	var p LuetFinalizer
+	err := yaml.Unmarshal(data, &p)
+	if err != nil {
+		return &p, err
+	}
+	return &p, err
 }
 
 func NewLuetInstaller(concurrency int) Installer {
@@ -61,7 +105,7 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 	sort.Sort(syncedRepos)
 
 	// First match packages against repositories by priority
-	matches := syncedRepos.PackageMatches(p)
+	//	matches := syncedRepos.PackageMatches(p)
 
 	// Get installed definition
 	installed, err := s.World()
@@ -76,11 +120,11 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 	realInstalled := []pkg.Package{}
 	for _, i := range installed {
 		var found pkg.Package
-	W:
+	I:
 		for _, p := range allrepoWorld {
 			if p.Matches(i) {
 				found = p
-				break W
+				break I
 			}
 		}
 
@@ -112,33 +156,35 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 		}
 	}
 
-	s := solver.NewSolver(realInstalled, allrepoWorld, pkg.NewInMemoryDatabase(false))
-	solution, err := s.Install(allwanted)
+	solv := solver.NewSolver(realInstalled, allrepoWorld, pkg.NewInMemoryDatabase(false))
+	solution, err := solv.Install(allwanted)
 
 	// Gathers things to install
-	toInstall := []ArtifactMatch{}
+	toInstall := map[string]ArtifactMatch{}
 	for _, assertion := range solution {
-		if assertion.Value && assertion.Package.IsFlagged() {
+		if assertion.Value && assertion.Package.Flagged() {
 			matches := syncedRepos.PackageMatches([]pkg.Package{assertion.Package})
 			if len(matches) != 1 {
 				return errors.New("Failed matching solutions against repository - where are definitions coming from?!")
 			}
-		W:
+		A:
 			for _, artefact := range matches[0].Repo.GetIndex() {
 				if matches[0].Package.Matches(artefact.GetCompileSpec().GetPackage()) {
-					toInstall = append(toInstall, ArtifactMatch{Package: assertion.Package, Artifact: artefact, Repository: matches[0].Repo})
-					break W
+					// TODO: Filter out already installed?
+					toInstall[assertion.Package.GetFingerPrint()] = ArtifactMatch{Package: assertion.Package, Artifact: artefact, Repository: matches[0].Repo}
+					break A
 				}
 			}
 		}
 	}
 
+	// Install packages into rootfs in parallel.
 	all := make(chan ArtifactMatch)
 
 	var wg = new(sync.WaitGroup)
 	for i := 0; i < l.Concurrency; i++ {
 		wg.Add(1)
-		go t.installerWorker(i, wg, all, s)
+		go l.installerWorker(i, wg, all, s)
 	}
 
 	for _, c := range toInstall {
@@ -147,17 +193,59 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 	close(all)
 	wg.Wait()
 
-	// Next: Look up for each solution with PackageMatches to check where to install.
+	executedFinalizer := map[string]bool{}
 
-	// install (parallel)
-	// finalizers(sequential -  generate an ordered list of packagematches of installs from packagematches order for each package. Just make sure to run the finalizers ones.)
-	// mark the installation to the system db, along with the files that belongs to the package
+	// TODO: Lower those errors as warning
+	for _, w := range allwanted {
+		// Finalizers needs to run in order and in sequence.
+		ordered := solution.Order(w.GetFingerPrint()).Drop(w)
+		for _, ass := range ordered {
+			if ass.Value && ass.Package.Flagged() {
+				// Annotate to the system that the package was installed
+				// TODO: Annotate also files that belong to the package, somewhere to uninstall
+				if _, err := s.Database.FindPackage(ass.Package); err == nil {
+					s.Database.UpdatePackage(ass.Package)
+				} else {
+					s.Database.CreatePackage(ass.Package)
+				}
+				installed, ok := toInstall[ass.Package.GetFingerPrint()]
+				if !ok {
+					return errors.New("Couldn't find ArtifactMatch for " + ass.Package.GetFingerPrint())
+				}
+
+				treePackage, err := installed.Repository.GetTree().Tree().FindPackage(ass.Package)
+				if err != nil {
+					return errors.Wrap(err, "Error getting package "+ass.Package.GetFingerPrint())
+				}
+
+				finalizerRaw, err := ioutil.ReadFile(treePackage.Rel("finalizer.yaml"))
+				if err != nil {
+					return errors.Wrap(err, "Error reading file "+treePackage.Rel("finalizer.yaml"))
+				}
+				if _, exists := executedFinalizer[ass.Package.GetFingerPrint()]; !exists {
+					finalizer, err := NewLuetFinalizerFromYaml(finalizerRaw)
+					if err != nil {
+						return errors.Wrap(err, "Error reading finalizer "+treePackage.Rel("finalizer.yaml"))
+					}
+					err = finalizer.RunInstall()
+					if err != nil {
+						return errors.Wrap(err, "Error executing install finalizer "+treePackage.Rel("finalizer.yaml"))
+					}
+					executedFinalizer[ass.Package.GetFingerPrint()] = true
+				}
+			}
+		}
+
+	}
+
 	return nil
 
 }
 
 func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
 
+	// FIXME: Implement
+	return nil
 }
 
 func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch, s *System) error {
