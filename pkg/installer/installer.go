@@ -17,12 +17,14 @@ package installer
 
 import (
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"sort"
 	"sync"
 
 	"github.com/ghodss/yaml"
 	compiler "github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
@@ -31,7 +33,6 @@ import (
 )
 
 type LuetInstaller struct {
-	PackageClient       Client
 	PackageRepositories Repositories
 	Concurrency         int
 }
@@ -94,7 +95,7 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 	defer SpinnerStop()
 	syncedRepos := Repositories{}
 	for _, r := range l.PackageRepositories {
-		repo, err := r.Sync(l.PackageClient)
+		repo, err := r.Sync()
 		if err != nil {
 			return errors.Wrap(err, "Failed syncing repository"+r.GetName())
 		}
@@ -245,6 +246,14 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
 
 	// FIXME: Implement
+	artifact, err := a.Repository.Client().DownloadArtifact(a.Artifact)
+	defer os.Remove(artifact.GetPath())
+	err = helpers.Untar(artifact.GetPath(), s.Target, true)
+	if err != nil {
+		return errors.Wrap(err, "Error met while unpacking rootfs")
+	}
+	// First create client and download
+	// Then unpack to system
 	return nil
 }
 
@@ -268,5 +277,4 @@ func (l *LuetInstaller) Uninstall(p []pkg.Package, s *System) error {
 
 }
 
-func (l *LuetInstaller) Client(c Client)             { l.PackageClient = c }
 func (l *LuetInstaller) Repositories(r []Repository) { l.PackageRepositories = r }

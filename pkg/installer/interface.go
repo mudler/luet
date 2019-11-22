@@ -25,16 +25,12 @@ import (
 type Installer interface {
 	Install([]pkg.Package, *System) error
 	Uninstall([]pkg.Package, *System) error
-	Client(Client)
 	Repositories([]Repository)
 }
 
 type Client interface {
 	DownloadArtifact(compiler.Artifact) (compiler.Artifact, error)
 	DownloadFile(string) (string, error)
-
-	GetRepository() Repository
-	SetRepository(Repository)
 }
 
 type Repositories []Repository
@@ -46,9 +42,10 @@ type Repository interface {
 	GetIndex() compiler.ArtifactIndex
 	GetTree() tree.Builder
 	Write(path string) error
-	Sync(Client) (Repository, error)
+	Sync() (Repository, error)
 	GetTreePath() string
 	SetTreePath(string)
 	GetType() string
 	SetType(string)
+	Client() Client
 }

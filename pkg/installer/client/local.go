@@ -22,33 +22,25 @@ import (
 
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/helpers"
-	"github.com/mudler/luet/pkg/installer"
 )
 
 type LocalClient struct {
-	Repository installer.Repository
+	RepoData RepoData
 }
 
-func NewLocalClient(r installer.Repository) installer.Client {
-	return &LocalClient{Repository: r}
+func NewLocalClient(r RepoData) *LocalClient {
+	return &LocalClient{RepoData: r}
 }
 
-func (c *LocalClient) GetRepository() installer.Repository {
-	return c.Repository
-}
-
-func (c *LocalClient) SetRepository(r installer.Repository) {
-	c.Repository = r
-}
 func (c *LocalClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Artifact, error) {
 
 	file, err := ioutil.TempFile(os.TempDir(), "localclient")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	//defer os.Remove(file.Name())
 
-	err = helpers.CopyFile(filepath.Join(repo.GetUri(), artifact.GetPath()), file.Name())
+	err = helpers.CopyFile(filepath.Join(c.RepoData.Uri, artifact.GetPath()), file.Name())
 
 	return compiler.NewPackageArtifact(file.Name()), nil
 }
@@ -60,7 +52,7 @@ func (c *LocalClient) DownloadFile(name string) (string, error) {
 	}
 	//defer os.Remove(file.Name())
 
-	err = helpers.CopyFile(filepath.Join(r.GetUri(), name), file.Name())
+	err = helpers.CopyFile(filepath.Join(c.RepoData.Uri, name), file.Name())
 
 	return file.Name(), err
 }

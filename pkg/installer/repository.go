@@ -22,6 +22,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/mudler/luet/pkg/installer/client"
 	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/ghodss/yaml"
@@ -153,8 +154,16 @@ func (r *LuetRepository) Write(dst string) error {
 	return nil
 }
 
-func (r *LuetRepository) Sync(c Client) (Repository, error) {
-	c.SetRepository(r)
+func (r *LuetRepository) Client() Client {
+	switch r.GetType() {
+	case "local":
+		return client.NewLocalClient(client.RepoData{Uri: r.GetUri()})
+	}
+
+	return nil
+}
+func (r *LuetRepository) Sync() (Repository, error) {
+	c := r.Client()
 
 	file, err := c.DownloadFile("repository.yaml")
 	if err != nil {
@@ -205,8 +214,6 @@ func (r *LuetRepository) Sync(c Client) (Repository, error) {
 
 	return repo, nil
 }
-
-// TODO:
 
 func (r Repositories) Len() int      { return len(r) }
 func (r Repositories) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
