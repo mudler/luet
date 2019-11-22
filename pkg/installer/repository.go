@@ -43,18 +43,23 @@ type LuetRepository struct {
 	Type     string                 `json:"type"`
 }
 
-func GenerateRepository(name, uri string, priority int, src, tree string, db pkg.PackageDatabase) (Repository, error) {
+func GenerateRepository(name, uri, t string, priority int, src, treeDir string, db pkg.PackageDatabase) (Repository, error) {
 
 	art, err := buildPackageIndex(src)
 	if err != nil {
 		return nil, err
 	}
+	tr := tree.NewInstallerRecipe(db)
+	err = tr.Load(treeDir)
+	if err != nil {
+		return nil, err
+	}
 
-	return NewLuetRepository(name, uri, priority, art, db), nil
+	return NewLuetRepository(name, uri, t, priority, art, tr), nil
 }
 
-func NewLuetRepository(name, uri string, priority int, art []compiler.Artifact, db pkg.PackageDatabase) Repository {
-	return &LuetRepository{Index: art, Tree: tree.NewInstallerRecipe(db)}
+func NewLuetRepository(name, uri, t string, priority int, art []compiler.Artifact, builder tree.Builder) Repository {
+	return &LuetRepository{Index: art, Type: t, Tree: builder}
 }
 
 func NewLuetRepositoryFromYaml(data []byte) (Repository, error) {

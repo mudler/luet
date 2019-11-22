@@ -28,6 +28,7 @@ import (
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
+	"github.com/mudler/luet/pkg/tree"
 
 	"github.com/pkg/errors"
 )
@@ -219,18 +220,18 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 					return errors.Wrap(err, "Error getting package "+ass.Package.GetFingerPrint())
 				}
 
-				finalizerRaw, err := ioutil.ReadFile(treePackage.Rel("finalizer.yaml"))
+				finalizerRaw, err := ioutil.ReadFile(treePackage.Rel(tree.FinalizerFile))
 				if err != nil {
-					return errors.Wrap(err, "Error reading file "+treePackage.Rel("finalizer.yaml"))
+					return errors.Wrap(err, "Error reading file "+treePackage.Rel(tree.FinalizerFile))
 				}
 				if _, exists := executedFinalizer[ass.Package.GetFingerPrint()]; !exists {
 					finalizer, err := NewLuetFinalizerFromYaml(finalizerRaw)
 					if err != nil {
-						return errors.Wrap(err, "Error reading finalizer "+treePackage.Rel("finalizer.yaml"))
+						return errors.Wrap(err, "Error reading finalizer "+treePackage.Rel(tree.FinalizerFile))
 					}
 					err = finalizer.RunInstall()
 					if err != nil {
-						return errors.Wrap(err, "Error executing install finalizer "+treePackage.Rel("finalizer.yaml"))
+						return errors.Wrap(err, "Error executing install finalizer "+treePackage.Rel(tree.FinalizerFile))
 					}
 					executedFinalizer[ass.Package.GetFingerPrint()] = true
 				}

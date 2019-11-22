@@ -80,6 +80,7 @@ var _ = Describe("Installer", func() {
 			Expect(content2).To(Equal("artifact6\n"))
 
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
 
 		})
 
