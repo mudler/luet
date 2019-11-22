@@ -18,6 +18,7 @@ package compiler
 import (
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -26,21 +27,62 @@ import (
 
 	. "github.com/mudler/luet/pkg/logger"
 	"github.com/mudler/luet/pkg/solver"
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/mudler/luet/pkg/helpers"
 	"github.com/pkg/errors"
 )
 
-type PackageArtifact struct {
-	Path         string
-	Dependencies []Artifact
-	CompileSpec  CompilationSpec
+type ArtifactIndex []Artifact
 
-	SourceAssertion solver.PackagesAssertions
+func (i ArtifactIndex) CleanPath() ArtifactIndex {
+	var newIndex []Artifact
+	copy(newIndex, i)
+	for _, n := range newIndex {
+		n.SetPath(path.Base(n.GetPath()))
+	}
+	return newIndex
+	//Update if exists, otherwise just create
+}
+
+//  When compiling, we write also a fingerprint.metadata.yaml file with PackageArtifact. In this way we can have another command to create the repository
+// which will consist in just of an repository.yaml which is just the repository structure with the list of package artifact.
+// In this way a generic client can fetch the packages and, after unpacking the tree, performing queries to install packages.
+type PackageArtifact struct {
+	Path         string          `json:"path"`
+	Dependencies []Artifact      `json:"dependencies"`
+	CompileSpec  CompilationSpec `json:"compilationspec"`
+
+	SourceAssertion solver.PackagesAssertions `json:"-"`
 }
 
 func NewPackageArtifact(path string) Artifact {
 	return &PackageArtifact{Path: path, Dependencies: []Artifact{}}
+}
+
+func NewPackageArtifactFromYaml(data []byte) (Artifact, error) {
+	var p PackageArtifact
+	err := yaml.Unmarshal(data, &p)
+	if err != nil {
+		return &p, err
+	}
+	return &p, err
+}
+
+func (a *PackageArtifact) WriteYaml(dst string) error {
+	a.CompileSpec.GetPackage().SetPath("")
+	for _, ass := range a.CompileSpec.GetSourceAssertion() {
+		ass.Package.SetPath("")
+	}
+	data, err := yaml.Marshal(a)
+	if err != nil {
+		return errors.Wrap(err, "While marshalling for PackageArtifact YAML")
+	}
+	err = ioutil.WriteFile(filepath.Join(dst, a.GetCompileSpec().GetPackage().GetFingerPrint()+".metadata.yaml"), data, os.ModePerm)
+	if err != nil {
+		return errors.Wrap(err, "While writing PackageArtifact YAML")
+	}
+	return nil
 }
 
 func (a *PackageArtifact) GetSourceAssertion() solver.PackagesAssertions {

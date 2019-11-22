@@ -38,6 +38,7 @@ func NewGeneralRecipe(db pkg.PackageDatabase) Builder { return &Recipe{Database:
 // Recipe is the "general" reciper for Trees
 type Recipe struct {
 	PackageTree pkg.Tree
+	SourcePath  string
 	Database    pkg.PackageDatabase
 }
 
@@ -75,6 +76,7 @@ func (r *Recipe) Load(path string) error {
 	// 	return err
 	// }
 	r.Tree().SetPackageSet(r.Database)
+	r.SourcePath = path
 
 	//r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
 	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
@@ -112,5 +114,6 @@ func (r *Recipe) Load(path string) error {
 	return nil
 }
 
-func (r *Recipe) Tree() pkg.Tree      { return r.PackageTree }
-func (r *Recipe) WithTree(t pkg.Tree) { r.PackageTree = t }
+func (r *Recipe) Tree() pkg.Tree        { return r.PackageTree }
+func (r *Recipe) WithTree(t pkg.Tree)   { r.PackageTree = t }
+func (r *Recipe) GetSourcePath() string { return r.SourcePath }

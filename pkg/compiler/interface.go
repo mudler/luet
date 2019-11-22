@@ -62,6 +62,7 @@ type Artifact interface {
 
 	SetCompileSpec(as CompilationSpec)
 	GetCompileSpec() CompilationSpec
+	WriteYaml(dst string) error
 }
 
 type ArtifactNode struct {

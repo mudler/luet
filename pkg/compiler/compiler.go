@@ -276,6 +276,10 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		artifact.SetCompileSpec(p)
 	}
 
+	err = artifact.WriteYaml(p.GetOutputPath())
+	if err != nil {
+		return artifact, err
+	}
 	return artifact, nil
 }
 
@@ -332,6 +336,10 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 	Info(pkgTag, "   :white_check_mark: Done")
 	artifact := NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
 	artifact.SetCompileSpec(p)
+	err = artifact.WriteYaml(p.GetOutputPath())
+	if err != nil {
+		return artifact, err
+	}
 	return artifact, nil
 }
 

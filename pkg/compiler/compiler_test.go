@@ -292,6 +292,8 @@ var _ = Describe("Compiler", func() {
 
 			Expect(helpers.Exists(spec.Rel("usr/bin/pkgs-checker"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("base-layer-0.1.package.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("base-layer-0.1.metadata.yaml"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("extra-layer-0.1.metadata.yaml"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("extra-layer-0.1.package.tar"))).To(BeTrue())
 		})
 

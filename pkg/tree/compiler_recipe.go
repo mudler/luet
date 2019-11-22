@@ -48,7 +48,7 @@ func (r *CompilerRecipe) Load(path string) error {
 	if r.Tree() == nil {
 		r.PackageTree = NewDefaultTree()
 	}
-
+	r.SourcePath = path
 	//tmpfile, err := ioutil.TempFile("", "luet")
 	//if err != nil {
 	//	return err
@@ -106,5 +106,6 @@ func (r *CompilerRecipe) Load(path string) error {
 	return nil
 }
 
-func (r *CompilerRecipe) Tree() pkg.Tree      { return r.PackageTree }
-func (r *CompilerRecipe) WithTree(t pkg.Tree) { r.PackageTree = t }
+func (r *CompilerRecipe) Tree() pkg.Tree        { return r.PackageTree }
+func (r *CompilerRecipe) WithTree(t pkg.Tree)   { r.PackageTree = t }
+func (r *CompilerRecipe) GetSourcePath() string { return r.SourcePath }

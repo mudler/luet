@@ -25,4 +25,6 @@ type Builder interface {
 	Load(string) error // A tree might be loaded from a db (e.g. bolt) and written to folder
 	Tree() pkg.Tree    // generates world
 	WithTree(pkg.Tree)
+
+	GetSourcePath() string
 }
