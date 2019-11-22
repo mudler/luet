@@ -37,7 +37,7 @@ type PackageHash struct {
 // It is composed of a Package and a Value which is indicating the absence or not
 // of the associated package state.
 type PackageAssert struct {
-	Package pkg.Package
+	Package *pkg.DefaultPackage
 	Value   bool
 	Hash    PackageHash
 }
@@ -51,7 +51,7 @@ func DecodeModel(model map[string]bool, db pkg.PackageDatabase) (PackagesAsserti
 			return nil, err
 
 		}
-		ass = append(ass, PackageAssert{Package: a, Value: v})
+		ass = append(ass, PackageAssert{Package: a.(*pkg.DefaultPackage), Value: v})
 	}
 	return ass, nil
 }

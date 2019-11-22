@@ -306,11 +306,14 @@ func (s *Solver) Install(coll []pkg.Package) (PackagesAssertions, error) {
 	if s.noRulesWorld() {
 		var ass PackagesAssertions
 		for _, p := range s.Installed {
-			ass = append(ass, PackageAssert{Package: p.IsFlagged(true), Value: true})
+			pp := p.IsFlagged(true)
+			ass = append(ass, PackageAssert{Package: pp.(*pkg.DefaultPackage), Value: true})
 
 		}
 		for _, p := range s.Wanted {
-			ass = append(ass, PackageAssert{Package: p.IsFlagged(true), Value: true})
+			pp := p.IsFlagged(true)
+
+			ass = append(ass, PackageAssert{Package: pp.(*pkg.DefaultPackage), Value: true})
 		}
 		return ass, nil
 	}

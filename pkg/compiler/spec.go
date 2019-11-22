@@ -91,7 +91,7 @@ type LuetCompilationSpec struct {
 	Prelude         []string                  `json:"prelude"` // Are run inside the image which will be our builder
 	Image           string                    `json:"image"`
 	Seed            string                    `json:"seed"`
-	Package         pkg.Package               `json:"-"`
+	Package         *pkg.DefaultPackage       `json:"-"`
 	SourceAssertion solver.PackagesAssertions `json:"-"`
 
 	OutputPath string   `json:"-"` // Where the build processfiles go
@@ -105,7 +105,7 @@ func NewLuetCompilationSpec(b []byte, p pkg.Package) (CompilationSpec, error) {
 	if err != nil {
 		return &spec, err
 	}
-	spec.Package = p
+	spec.Package = p.(*pkg.DefaultPackage)
 	return &spec, nil
 }
 func (a *LuetCompilationSpec) GetSourceAssertion() solver.PackagesAssertions {

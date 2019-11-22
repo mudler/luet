@@ -59,7 +59,7 @@ func GenerateRepository(name, uri, t string, priority int, src, treeDir string, 
 }
 
 func NewLuetRepository(name, uri, t string, priority int, art []compiler.Artifact, builder tree.Builder) Repository {
-	return &LuetRepository{Index: art, Type: t, Tree: builder}
+	return &LuetRepository{Index: art, Type: t, Tree: builder, Name: name, Uri: uri, Priority: priority}
 }
 
 func NewLuetRepositoryFromYaml(data []byte) (Repository, error) {
@@ -85,6 +85,8 @@ func buildPackageIndex(path string) ([]compiler.Artifact, error) {
 			return errors.Wrap(err, "Error reading file "+currentpath)
 		}
 
+		Info("Reading ", currentpath)
+		Info(helpers.Read(currentpath))
 		artifact, err := compiler.NewPackageArtifactFromYaml(dat)
 		if err != nil {
 			return errors.Wrap(err, "Error reading yaml "+currentpath)

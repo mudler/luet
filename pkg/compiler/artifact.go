@@ -49,24 +49,25 @@ func (i ArtifactIndex) CleanPath() ArtifactIndex {
 // which will consist in just of an repository.yaml which is just the repository structure with the list of package artifact.
 // In this way a generic client can fetch the packages and, after unpacking the tree, performing queries to install packages.
 type PackageArtifact struct {
-	Path         string          `json:"path"`
-	Dependencies []Artifact      `json:"dependencies"`
-	CompileSpec  CompilationSpec `json:"compilationspec"`
+	Path         string               `json:"path"`
+	Dependencies []*PackageArtifact   `json:"dependencies"`
+	CompileSpec  *LuetCompilationSpec `json:"compilationspec"`
 
 	SourceAssertion solver.PackagesAssertions `json:"-"`
 }
 
 func NewPackageArtifact(path string) Artifact {
-	return &PackageArtifact{Path: path, Dependencies: []Artifact{}}
+	return &PackageArtifact{Path: path, Dependencies: []*PackageArtifact{}}
 }
 
 func NewPackageArtifactFromYaml(data []byte) (Artifact, error) {
-	var p PackageArtifact
+	p := &PackageArtifact{}
 	err := yaml.Unmarshal(data, &p)
 	if err != nil {
-		return &p, err
+		return p, err
 	}
-	return &p, err
+
+	return p, err
 }
 
 func (a *PackageArtifact) WriteYaml(dst string) error {
@@ -90,7 +91,7 @@ func (a *PackageArtifact) GetSourceAssertion() solver.PackagesAssertions {
 }
 
 func (a *PackageArtifact) SetCompileSpec(as CompilationSpec) {
-	a.CompileSpec = as
+	a.CompileSpec = as.(*LuetCompilationSpec)
 }
 
 func (a *PackageArtifact) GetCompileSpec() CompilationSpec {
@@ -102,11 +103,19 @@ func (a *PackageArtifact) SetSourceAssertion(as solver.PackagesAssertions) {
 }
 
 func (a *PackageArtifact) GetDependencies() []Artifact {
-	return a.Dependencies
+	ret := []Artifact{}
+	for _, d := range a.Dependencies {
+		ret = append(ret, d)
+	}
+	return ret
 }
 
 func (a *PackageArtifact) SetDependencies(d []Artifact) {
-	a.Dependencies = d
+	ret := []*PackageArtifact{}
+	for _, dd := range d {
+		ret = append(ret, dd.(*PackageArtifact))
+	}
+	a.Dependencies = ret
 }
 
 func (a *PackageArtifact) GetPath() string {
