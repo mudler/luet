@@ -16,6 +16,8 @@
 package installer
 
 import (
+	"archive/tar"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -255,13 +257,43 @@ func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
 	// FIXME: Implement
 	artifact, err := a.Repository.Client().DownloadArtifact(a.Artifact)
 	defer os.Remove(artifact.GetPath())
+
+	tarFile, err := os.Open(artifact.GetPath())
+	if err != nil {
+		return errors.Wrap(err, "Could not open package archive")
+	}
+	defer tarFile.Close()
+	tr := tar.NewReader(tarFile)
+
+	var files []string
+	// untar each segment
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		// determine proper file path info
+		finfo := hdr.FileInfo()
+		fileName := hdr.Name
+		if finfo.Mode().IsDir() {
+			continue
+		}
+		files = append(files, fileName)
+
+		// if a dir, create it, then go to next segment
+	}
+
 	err = helpers.Untar(artifact.GetPath(), s.Target, true)
 	if err != nil {
 		return errors.Wrap(err, "Error met while unpacking rootfs")
 	}
+
 	// First create client and download
 	// Then unpack to system
-	return nil
+	return s.Database.SetPackageFiles(pkg.PackageFile{PackageFingerprint: a.Package.GetFingerPrint(), Files: files})
 }
 
 func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch, s *System) error {

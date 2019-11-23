@@ -26,3 +26,22 @@ type PackageDatabase interface {
 	Create([]byte) (string, error)
 	Retrieve(ID string) ([]byte, error)
 }
+
+type PackageSet interface {
+	GetPackages() []string //Ids
+	CreatePackage(pkg Package) (string, error)
+	GetPackage(ID string) (Package, error)
+	Clean() error
+	FindPackage(Package) (Package, error)
+	UpdatePackage(p Package) error
+	GetAllPackages(packages chan Package) error
+
+	GetPackageFiles(Package) ([]string, error)
+	SetPackageFiles(PackageFile) error
+	RemovePackageFiles(Package) error
+}
+
+type PackageFile struct {
+	PackageFingerprint string
+	Files              []string
+}

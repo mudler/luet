@@ -120,6 +120,10 @@ uri: "`+tmpdir+`"
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test6"))).To(BeTrue())
 			_, err = systemDB.FindPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
+
+			files, err := systemDB.GetPackageFiles(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(files).To(Equal([]string{"artifact42", "test5", "test6"}))
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 	})

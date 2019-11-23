@@ -64,16 +64,6 @@ type Package interface {
 	Rel(string) string
 }
 
-type PackageSet interface {
-	GetPackages() []string //Ids
-	CreatePackage(pkg Package) (string, error)
-	GetPackage(ID string) (Package, error)
-	Clean() error
-	FindPackage(Package) (Package, error)
-	UpdatePackage(p Package) error
-	GetAllPackages(packages chan Package) error
-}
-
 type Tree interface {
 	GetPackageSet() PackageDatabase
 	Prelude() string // A tree might have a prelude to be able to consume a tree

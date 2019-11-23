@@ -25,22 +25,23 @@ import (
 )
 
 var DBInMemoryInstance = &InMemoryDatabase{
-	Mutex: &sync.Mutex{},
-
-	Database: map[string]string{}}
+	Mutex:        &sync.Mutex{},
+	FileDatabase: map[string][]string{},
+	Database:     map[string]string{}}
 
 type InMemoryDatabase struct {
 	*sync.Mutex
-	Database map[string]string
+	Database     map[string]string
+	FileDatabase map[string][]string
 }
 
 func NewInMemoryDatabase(singleton bool) PackageDatabase {
 	// In memoryDB is a singleton
 	if !singleton {
 		return &InMemoryDatabase{
-			Mutex: &sync.Mutex{},
-
-			Database: map[string]string{}}
+			Mutex:        &sync.Mutex{},
+			FileDatabase: map[string][]string{},
+			Database:     map[string]string{}}
 	}
 	return DBInMemoryInstance
 }
@@ -202,5 +203,30 @@ func (db *InMemoryDatabase) GetPackages() []string {
 
 func (db *InMemoryDatabase) Clean() error {
 	db.Database = map[string]string{}
+	return nil
+}
+
+func (db *InMemoryDatabase) GetPackageFiles(p Package) ([]string, error) {
+
+	db.Lock()
+	defer db.Unlock()
+
+	pa, ok := db.FileDatabase[p.GetFingerPrint()]
+	if !ok {
+		return pa, errors.New("No key found with that id")
+	}
+
+	return pa, nil
+}
+func (db *InMemoryDatabase) SetPackageFiles(p PackageFile) error {
+	db.Lock()
+	defer db.Unlock()
+	db.FileDatabase[p.PackageFingerprint] = p.Files
+	return nil
+}
+func (db *InMemoryDatabase) RemovePackageFiles(p Package) error {
+	db.Lock()
+	defer db.Unlock()
+	delete(db.FileDatabase, p.GetFingerPrint())
 	return nil
 }

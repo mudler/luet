@@ -183,3 +183,44 @@ func (db *BoltDatabase) Clean() error {
 	defer db.Unlock()
 	return os.RemoveAll(db.Path)
 }
+
+func (db *BoltDatabase) GetPackageFiles(p Package) ([]string, error) {
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
+	if err != nil {
+		return []string{}, errors.Wrap(err, "Error opening boltdb "+db.Path)
+	}
+	defer bolt.Close()
+
+	files := bolt.From("files")
+	var pf PackageFile
+	err = files.One("PackageFingerprint", p.GetFingerPrint(), &pf)
+	if err != nil {
+		return []string{}, errors.Wrap(err, "While finding files")
+	}
+	return pf.Files, nil
+}
+func (db *BoltDatabase) SetPackageFiles(p PackageFile) error {
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
+	if err != nil {
+		return errors.Wrap(err, "Error opening boltdb "+db.Path)
+	}
+	defer bolt.Close()
+
+	files := bolt.From("files")
+	return files.Save(p)
+}
+func (db *BoltDatabase) RemovePackageFiles(p Package) error {
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
+	if err != nil {
+		return errors.Wrap(err, "Error opening boltdb "+db.Path)
+	}
+	defer bolt.Close()
+
+	files := bolt.From("files")
+	var pf PackageFile
+	err = files.One("PackageFingerprint", p.GetFingerPrint(), &pf)
+	if err != nil {
+		return errors.Wrap(err, "While finding files")
+	}
+	return files.DeleteStruct(&pf)
+}
