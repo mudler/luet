@@ -35,6 +35,7 @@ type PackageSet interface {
 	FindPackage(Package) (Package, error)
 	UpdatePackage(p Package) error
 	GetAllPackages(packages chan Package) error
+	RemovePackage(Package) error
 
 	GetPackageFiles(Package) ([]string, error)
 	SetPackageFiles(PackageFile) error

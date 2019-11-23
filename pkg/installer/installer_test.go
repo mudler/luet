@@ -124,6 +124,18 @@ uri: "`+tmpdir+`"
 			files, err := systemDB.GetPackageFiles(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(files).To(Equal([]string{"artifact42", "test5", "test6"}))
 			Expect(err).ToNot(HaveOccurred())
+
+			err = inst.Uninstall(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}, system)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Nothing should be there anymore (files, packagedb entry)
+			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).ToNot(BeTrue())
+			Expect(helpers.Exists(filepath.Join(fakeroot, "test6"))).ToNot(BeTrue())
+
+			_, err = systemDB.FindPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).To(HaveOccurred())
+			_, err = systemDB.GetPackageFiles(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).To(HaveOccurred())
 		})
 
 	})

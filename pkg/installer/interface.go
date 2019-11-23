@@ -24,7 +24,7 @@ import (
 
 type Installer interface {
 	Install([]pkg.Package, *System) error
-	Uninstall([]pkg.Package, *System) error
+	Uninstall(pkg.Package, *System) error
 	Repositories([]Repository)
 }
 

@@ -224,3 +224,16 @@ func (db *BoltDatabase) RemovePackageFiles(p Package) error {
 	}
 	return files.DeleteStruct(&pf)
 }
+
+func (db *BoltDatabase) RemovePackage(p Package) error {
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
+	if err != nil {
+		return errors.Wrap(err, "Error opening boltdb "+db.Path)
+	}
+	defer bolt.Close()
+	p, err = db.FindPackage(p)
+	if err != nil {
+		return errors.Wrap(err, "No package found")
+	}
+	return bolt.DeleteStruct(p)
+}

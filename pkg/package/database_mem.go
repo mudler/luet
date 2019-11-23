@@ -230,3 +230,19 @@ func (db *InMemoryDatabase) RemovePackageFiles(p Package) error {
 	delete(db.FileDatabase, p.GetFingerPrint())
 	return nil
 }
+
+func (db *InMemoryDatabase) RemovePackage(p Package) error {
+	for _, k := range db.GetPackages() {
+		pack, err := db.GetPackage(k)
+		if err != nil {
+			return err
+		}
+		if pack.Matches(p) {
+			db.Lock()
+			delete(db.Database, k)
+			db.Unlock()
+			return nil
+		}
+	}
+	return errors.New("Package not found")
+}

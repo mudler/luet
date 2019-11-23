@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"sync"
 
@@ -311,8 +312,60 @@ func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan Arti
 
 	return nil
 }
-func (l *LuetInstaller) Uninstall(p []pkg.Package, s *System) error {
+
+func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
+	files, err := s.Database.GetPackageFiles(p)
+	if err != nil {
+		return errors.Wrap(err, "Failed getting installed files")
+	}
+
+	// Remove from target
+	for _, f := range files {
+		target := filepath.Join(s.Target, f)
+		Info("Removing", target)
+		err := os.Remove(target)
+		if err != nil {
+			Warning("Failed removing", target)
+		}
+	}
+
+	err = s.Database.RemovePackage(p)
+	if err != nil {
+		return errors.Wrap(err, "Failed removing package from database")
+	}
+
+	err = s.Database.RemovePackageFiles(p)
+	if err != nil {
+		return errors.Wrap(err, "Failed removing package files from database")
+	}
+	Info(p.GetFingerPrint(), "Removed")
+	return nil
+}
+
+func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 	// compute uninstall from all world - remove packages in parallel - run uninstall finalizer (in order) - mark the uninstallation in db
+	// Get installed definition
+	installed, err := s.World()
+	if err != nil {
+		return errors.Wrap(err, "Failed generating installed world ")
+	}
+
+	var selected pkg.Package
+	for _, i := range installed {
+		if i.Matches(p) {
+			selected = i
+		}
+	}
+	if selected == nil {
+		return errors.Wrap(err, "Package not installed")
+	}
+
+	solv := solver.NewSolver(installed, installed, pkg.NewInMemoryDatabase(false))
+	solution, err := solv.Uninstall(selected)
+	for _, p := range solution {
+		Info("Uninstalling", p.GetFingerPrint())
+		l.uninstall(p, s)
+	}
 	return nil
 
 }
