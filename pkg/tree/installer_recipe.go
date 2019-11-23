@@ -34,7 +34,11 @@ const (
 	FinalizerFile = "finalize.yaml"
 )
 
-func NewInstallerRecipe(db pkg.PackageDatabase) Builder { return &InstallerRecipe{Database: db} }
+func NewInstallerRecipe(db pkg.PackageDatabase) Builder {
+	tree := NewDefaultTree()
+	tree.SetPackageSet(db)
+	return &InstallerRecipe{Database: db, PackageTree: tree}
+}
 
 // InstallerRecipe is the "general" reciper for Trees
 type InstallerRecipe struct {

@@ -41,6 +41,7 @@ type Repository interface {
 	GetPriority() int
 	GetIndex() compiler.ArtifactIndex
 	GetTree() tree.Builder
+	SetTree(tree.Builder)
 	Write(path string) error
 	Sync() (Repository, error)
 	GetTreePath() string

@@ -98,7 +98,7 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 	for _, r := range l.PackageRepositories {
 		repo, err := r.Sync()
 		if err != nil {
-			return errors.Wrap(err, "Failed syncing repository"+r.GetName())
+			return errors.Wrap(err, "Failed syncing repository: "+r.GetName())
 		}
 		syncedRepos = append(syncedRepos, repo)
 	}
@@ -171,6 +171,10 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 			}
 		A:
 			for _, artefact := range matches[0].Repo.GetIndex() {
+				if artefact.GetCompileSpec().GetPackage() == nil {
+					return errors.New("Package in compilespec empty")
+
+				}
 				if matches[0].Package.Matches(artefact.GetCompileSpec().GetPackage()) {
 					// TODO: Filter out already installed?
 					toInstall[assertion.Package.GetFingerPrint()] = ArtifactMatch{Package: assertion.Package, Artifact: artefact, Repository: matches[0].Repo}

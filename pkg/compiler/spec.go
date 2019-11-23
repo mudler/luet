@@ -91,7 +91,7 @@ type LuetCompilationSpec struct {
 	Prelude         []string                  `json:"prelude"` // Are run inside the image which will be our builder
 	Image           string                    `json:"image"`
 	Seed            string                    `json:"seed"`
-	Package         *pkg.DefaultPackage       `json:"-"`
+	Package         *pkg.DefaultPackage       `json:"package"`
 	SourceAssertion solver.PackagesAssertions `json:"-"`
 
 	OutputPath string   `json:"-"` // Where the build processfiles go

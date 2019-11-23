@@ -104,8 +104,8 @@ var _ = Describe("Installer", func() {
 			repo2, err := NewLuetRepositoryFromYaml([]byte(`
 name: "test"
 type: "local"
-uri: "` + tmpdir + `"
-`))
+uri: "`+tmpdir+`"
+`), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
 			inst.Repositories(Repositories{repo2})

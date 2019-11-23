@@ -18,7 +18,10 @@ package client
 import (
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
+
+	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/helpers"
@@ -33,18 +36,20 @@ func NewLocalClient(r RepoData) *LocalClient {
 }
 
 func (c *LocalClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Artifact, error) {
-
+	artifactName := path.Base(artifact.GetPath())
+	Info("Downloading artifact", artifactName, "from", c.RepoData.Uri)
 	file, err := ioutil.TempFile(os.TempDir(), "localclient")
 	if err != nil {
 		return nil, err
 	}
 	//defer os.Remove(file.Name())
 
-	err = helpers.CopyFile(filepath.Join(c.RepoData.Uri, artifact.GetPath()), file.Name())
+	err = helpers.CopyFile(filepath.Join(c.RepoData.Uri, artifactName), file.Name())
 
 	return compiler.NewPackageArtifact(file.Name()), nil
 }
 func (c *LocalClient) DownloadFile(name string) (string, error) {
+	Info("Downloading file", name, "from", c.RepoData.Uri)
 
 	file, err := ioutil.TempFile(os.TempDir(), "localclient")
 	if err != nil {
