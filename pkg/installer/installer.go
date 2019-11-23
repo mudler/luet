@@ -204,7 +204,7 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 	// TODO: Lower those errors as warning
 	for _, w := range allwanted {
 		// Finalizers needs to run in order and in sequence.
-		ordered := solution.Order(w.GetFingerPrint()).Drop(w)
+		ordered := solution.Order(w.GetFingerPrint())
 		for _, ass := range ordered {
 			if ass.Value && ass.Package.Flagged() {
 				// Annotate to the system that the package was installed
@@ -223,21 +223,23 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 				if err != nil {
 					return errors.Wrap(err, "Error getting package "+ass.Package.GetFingerPrint())
 				}
-
-				finalizerRaw, err := ioutil.ReadFile(treePackage.Rel(tree.FinalizerFile))
-				if err != nil {
-					return errors.Wrap(err, "Error reading file "+treePackage.Rel(tree.FinalizerFile))
-				}
-				if _, exists := executedFinalizer[ass.Package.GetFingerPrint()]; !exists {
-					finalizer, err := NewLuetFinalizerFromYaml(finalizerRaw)
+				if helpers.Exists(treePackage.Rel(tree.FinalizerFile)) {
+					Info("Executing finalizer for " + ass.Package.GetName())
+					finalizerRaw, err := ioutil.ReadFile(treePackage.Rel(tree.FinalizerFile))
 					if err != nil {
-						return errors.Wrap(err, "Error reading finalizer "+treePackage.Rel(tree.FinalizerFile))
+						return errors.Wrap(err, "Error reading file "+treePackage.Rel(tree.FinalizerFile))
 					}
-					err = finalizer.RunInstall()
-					if err != nil {
-						return errors.Wrap(err, "Error executing install finalizer "+treePackage.Rel(tree.FinalizerFile))
+					if _, exists := executedFinalizer[ass.Package.GetFingerPrint()]; !exists {
+						finalizer, err := NewLuetFinalizerFromYaml(finalizerRaw)
+						if err != nil {
+							return errors.Wrap(err, "Error reading finalizer "+treePackage.Rel(tree.FinalizerFile))
+						}
+						err = finalizer.RunInstall()
+						if err != nil {
+							return errors.Wrap(err, "Error executing install finalizer "+treePackage.Rel(tree.FinalizerFile))
+						}
+						executedFinalizer[ass.Package.GetFingerPrint()] = true
 					}
-					executedFinalizer[ass.Package.GetFingerPrint()] = true
 				}
 			}
 		}
