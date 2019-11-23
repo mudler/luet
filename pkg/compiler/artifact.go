@@ -71,18 +71,39 @@ func NewPackageArtifactFromYaml(data []byte) (Artifact, error) {
 }
 
 func (a *PackageArtifact) WriteYaml(dst string) error {
-	a.CompileSpec.GetPackage().SetPath("")
-	for _, ass := range a.CompileSpec.GetSourceAssertion() {
-		ass.Package.SetPath("")
-	}
+	//p := a.CompileSpec.GetPackage().GetPath()
+
+	//a.CompileSpec.GetPackage().SetPath("")
+	//	for _, ass := range a.CompileSpec.GetSourceAssertion() {
+	//		ass.Package.SetPath("")
+	//	}
 	data, err := yaml.Marshal(a)
 	if err != nil {
 		return errors.Wrap(err, "While marshalling for PackageArtifact YAML")
 	}
+
+	mangle, err := NewPackageArtifactFromYaml(data)
+	if err != nil {
+		return errors.Wrap(err, "Generated invalid artifact")
+	}
+	//p := a.CompileSpec.GetPackage().GetPath()
+
+	mangle.GetCompileSpec().GetPackage().SetPath("")
+	for _, ass := range mangle.GetCompileSpec().GetSourceAssertion() {
+		ass.Package.SetPath("")
+	}
+
+	data, err = yaml.Marshal(mangle)
+	if err != nil {
+		return errors.Wrap(err, "While marshalling for PackageArtifact YAML")
+	}
+
 	err = ioutil.WriteFile(filepath.Join(dst, a.GetCompileSpec().GetPackage().GetFingerPrint()+".metadata.yaml"), data, os.ModePerm)
 	if err != nil {
 		return errors.Wrap(err, "While writing PackageArtifact YAML")
 	}
+	//a.CompileSpec.GetPackage().SetPath(p)
+
 	return nil
 }
 

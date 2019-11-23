@@ -266,6 +266,7 @@ func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan Arti
 	defer wg.Done()
 
 	for p := range c {
+		// TODO: Keep trace of what was added from the tar, and save it into system
 		err := l.installPackage(p, s)
 		if err != nil {
 			//TODO: Uninstall, rollback.

@@ -437,7 +437,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 		Info(pkgTag, "   :zap:  Building dependency")
 		compileSpec, err := cs.FromPackage(assertion.Package)
 		if err != nil {
-			return nil, errors.New("Error while generating compilespec for " + assertion.Package.GetName())
+			return nil, errors.Wrap(err, "Error while generating compilespec for "+assertion.Package.GetName())
 		}
 		compileSpec.SetOutputPath(p.GetOutputPath())
 
