@@ -118,6 +118,8 @@ uri: "`+tmpdir+`"
 
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test6"))).To(BeTrue())
+			_, err = systemDB.FindPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 	})
