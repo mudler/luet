@@ -18,6 +18,7 @@ package installer_test
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	//	. "github.com/mudler/luet/pkg/installer"
 	compiler "github.com/mudler/luet/pkg/compiler"
@@ -85,6 +86,38 @@ var _ = Describe("Installer", func() {
 			repo, err := GenerateRepository("test", tmpdir, "local", 1, tmpdir, "../../tests/fixtures/buildable", pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
+			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel("tree.tar"))).ToNot(BeTrue())
+			err = repo.Write(tmpdir)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("tree.tar"))).To(BeTrue())
+			Expect(repo.GetUri()).To(Equal(tmpdir))
+			Expect(repo.GetType()).To(Equal("local"))
+
+			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(fakeroot) // clean up
+
+			inst := NewLuetInstaller(1)
+			repo2, err := NewLuetRepositoryFromYaml([]byte(`
+name: "test"
+type: "local"
+uri: "` + tmpdir + `"
+`))
+			Expect(err).ToNot(HaveOccurred())
+
+			inst.Repositories(Repositories{repo2})
+			Expect(repo.GetUri()).To(Equal(tmpdir))
+			Expect(repo.GetType()).To(Equal("local"))
+			systemDB := pkg.NewInMemoryDatabase(false)
+			system := &System{Database: systemDB, Target: fakeroot}
+			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())
+			Expect(helpers.Exists(filepath.Join(fakeroot, "test6"))).To(BeTrue())
 		})
 
 	})
