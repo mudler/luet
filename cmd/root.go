@@ -61,7 +61,7 @@ func initConfig() {
 		Error(err)
 		os.Exit(1)
 	}
-
+	viper.SetConfigType("yaml")
 	viper.SetConfigName(".luet") // name of config file (without extension)
 	if cfgFile != "" {           // enable ability to specify config file via flag
 		Info(">>> cfgFile: ", cfgFile)
@@ -75,6 +75,8 @@ func initConfig() {
 	viper.AddConfigPath(dir)
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("$HOME")
+	viper.AddConfigPath("/etc/luet")
+
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
