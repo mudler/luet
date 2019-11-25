@@ -33,6 +33,11 @@ var uninstallCmd = &cobra.Command{
 	Use:   "uninstall <pkg>",
 	Short: "Uninstall a package",
 	Long:  `Uninstall packages`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		viper.BindPFlag("system-dbpath", cmd.Flags().Lookup("system-dbpath"))
+		viper.BindPFlag("system-target", cmd.Flags().Lookup("system-target"))
+		viper.BindPFlag("concurrency", cmd.Flags().Lookup("concurrency"))
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
 			Fatal("Wrong number of args")
@@ -50,8 +55,8 @@ var uninstallCmd = &cobra.Command{
 		version := packageInfo[0][7]
 
 		inst := installer.NewLuetInstaller(viper.GetInt("concurrency"))
-
-		systemDB := pkg.NewBoltDatabase(filepath.Join(viper.GetString("system-dbpath"), "luet"))
+		os.MkdirAll(viper.GetString("system-dbpath"), os.ModePerm)
+		systemDB := pkg.NewBoltDatabase(filepath.Join(viper.GetString("system-dbpath"), "luet.db"))
 		system := &installer.System{Database: systemDB, Target: viper.GetString("system-target")}
 		err = inst.Uninstall(&pkg.DefaultPackage{Name: name, Category: category, Version: version}, system)
 		if err != nil {
@@ -66,13 +71,7 @@ func init() {
 		Fatal(err)
 	}
 	uninstallCmd.Flags().String("system-dbpath", path, "System db path")
-	viper.BindPFlag("system-dbpath", uninstallCmd.Flags().Lookup("system-dbpath"))
-
 	uninstallCmd.Flags().String("system-target", path, "System rootpath")
-	viper.BindPFlag("system-target", uninstallCmd.Flags().Lookup("system-target"))
-
 	uninstallCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
-	viper.BindPFlag("concurrency", uninstallCmd.Flags().Lookup("concurrency"))
-
 	RootCmd.AddCommand(uninstallCmd)
 }

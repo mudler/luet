@@ -32,13 +32,19 @@ import (
 var installCmd = &cobra.Command{
 	Use:   "install <pkg1> <pkg2> ...",
 	Short: "Install a package",
-	Long:  `Install packages in parallel`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		viper.BindPFlag("system-dbpath", cmd.Flags().Lookup("system-dbpath"))
+		viper.BindPFlag("system-target", cmd.Flags().Lookup("system-target"))
+		viper.BindPFlag("concurrency", cmd.Flags().Lookup("concurrency"))
+	},
+	Long: `Install packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
-		c := installer.Repositories{}
+		c := []*installer.LuetRepository{}
 		err := viper.UnmarshalKey("system-repositories", &c)
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
+
 		var toInstall []pkg.Package
 
 		for _, a := range args {
@@ -55,11 +61,22 @@ var installCmd = &cobra.Command{
 
 		}
 
+		// This shouldn't be necessary, but we need to unmarshal the repositories to a concrete struct, thus we need to port them back to the Repositories type
+		synced := installer.Repositories{}
+		for _, toSync := range c {
+			s, err := toSync.Sync()
+			if err != nil {
+				Fatal("Error: " + err.Error())
+			}
+			synced = append(synced, s)
+		}
+
 		inst := installer.NewLuetInstaller(viper.GetInt("concurrency"))
 
-		inst.Repositories(c)
+		inst.Repositories(synced)
 
-		systemDB := pkg.NewBoltDatabase(filepath.Join(viper.GetString("system-dbpath"), "luet"))
+		os.MkdirAll(viper.GetString("system-dbpath"), os.ModePerm)
+		systemDB := pkg.NewBoltDatabase(filepath.Join(viper.GetString("system-dbpath"), "luet.db"))
 		system := &installer.System{Database: systemDB, Target: viper.GetString("system-target")}
 		err = inst.Install(toInstall, system)
 		if err != nil {
@@ -74,13 +91,8 @@ func init() {
 		Fatal(err)
 	}
 	installCmd.Flags().String("system-dbpath", path, "System db path")
-	viper.BindPFlag("system-dbpath", installCmd.Flags().Lookup("system-dbpath"))
-
 	installCmd.Flags().String("system-target", path, "System rootpath")
-	viper.BindPFlag("system-target", installCmd.Flags().Lookup("system-target"))
-
 	installCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
-	viper.BindPFlag("concurrency", installCmd.Flags().Lookup("concurrency"))
 
 	RootCmd.AddCommand(installCmd)
 }

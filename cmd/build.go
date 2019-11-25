@@ -34,10 +34,20 @@ var buildCmd = &cobra.Command{
 	Use:   "build <package name> <package name> <package name> ...",
 	Short: "build a package or a tree",
 	Long:  `build packages or trees from luet tree definitions. Packages are in [category]/[name]-[version] form`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		viper.BindPFlag("tree", cmd.Flags().Lookup("tree"))
+		viper.BindPFlag("destination", cmd.Flags().Lookup("destination"))
+		viper.BindPFlag("backend", cmd.Flags().Lookup("backend"))
+		viper.BindPFlag("concurrency", cmd.Flags().Lookup("concurrency"))
+		viper.BindPFlag("privileged", cmd.Flags().Lookup("privileged"))
+		viper.BindPFlag("database", cmd.Flags().Lookup("database"))
+		viper.BindPFlag("revdeps", cmd.Flags().Lookup("revdeps"))
+		viper.BindPFlag("all", cmd.Flags().Lookup("all"))
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 
 		src := viper.GetString("tree")
-		dst := viper.GetString("output")
+		dst := viper.GetString("destination")
 		concurrency := viper.GetInt("concurrency")
 		backendType := viper.GetString("backend")
 		privileged := viper.GetBool("privileged")
@@ -70,6 +80,8 @@ var buildCmd = &cobra.Command{
 		generalRecipe := tree.NewCompilerRecipe(db)
 
 		Info("Loading", src)
+		Info("Building in", dst)
+
 		err := generalRecipe.Load(src)
 		if err != nil {
 			Fatal("Error: " + err.Error())
@@ -110,6 +122,7 @@ var buildCmd = &cobra.Command{
 					Fatal("Error: " + err.Error())
 				}
 				Info(":package: Selecting ", p.GetName(), p.GetVersion())
+				spec.SetOutputPath(dst)
 				compilerSpecs.Add(spec)
 			}
 		}
@@ -141,21 +154,13 @@ func init() {
 		Fatal(err)
 	}
 	buildCmd.Flags().String("tree", path, "Source luet tree")
-	viper.BindPFlag("tree", buildCmd.Flags().Lookup("tree"))
-	buildCmd.Flags().String("output", path, "Destination folder")
-	viper.BindPFlag("output", buildCmd.Flags().Lookup("output"))
 	buildCmd.Flags().String("backend", "docker", "backend used (docker,img)")
-	viper.BindPFlag("backend", buildCmd.Flags().Lookup("backend"))
 	buildCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
-	viper.BindPFlag("concurrency", buildCmd.Flags().Lookup("concurrency"))
 	buildCmd.Flags().Bool("privileged", false, "Privileged (Keep permissions)")
-	viper.BindPFlag("privileged", buildCmd.Flags().Lookup("privileged"))
 	buildCmd.Flags().String("database", "memory", "database used for solving (memory,boltdb)")
-	viper.BindPFlag("database", buildCmd.Flags().Lookup("database"))
 	buildCmd.Flags().Bool("revdeps", false, "Build with revdeps")
-	viper.BindPFlag("revdeps", buildCmd.Flags().Lookup("revdeps"))
-
 	buildCmd.Flags().Bool("all", false, "Build all packages in the tree")
-	viper.BindPFlag("all", buildCmd.Flags().Lookup("all"))
+	buildCmd.Flags().String("destination", path, "Destination folder")
+
 	RootCmd.AddCommand(buildCmd)
 }

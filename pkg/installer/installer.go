@@ -115,7 +115,7 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 	// Get installed definition
 	installed, err := s.World()
 	if err != nil {
-		return errors.Wrap(err, "Failed generating installed world ")
+		return errors.Wrap(err, "Failed generating installed world")
 	}
 
 	// compute a "big" world

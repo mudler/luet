@@ -30,6 +30,14 @@ var createrepoCmd = &cobra.Command{
 	Use:   "create-repo",
 	Short: "Create a luet repository from a build",
 	Long:  `Generate and renew repository metadata`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		viper.BindPFlag("packages", cmd.Flags().Lookup("packages"))
+		viper.BindPFlag("tree", cmd.Flags().Lookup("tree"))
+		viper.BindPFlag("output", cmd.Flags().Lookup("output"))
+		viper.BindPFlag("name", cmd.Flags().Lookup("name"))
+		viper.BindPFlag("uri", cmd.Flags().Lookup("uri"))
+		viper.BindPFlag("type", cmd.Flags().Lookup("type"))
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 
 		tree := viper.GetString("tree")
@@ -56,20 +64,11 @@ func init() {
 		Fatal(err)
 	}
 	createrepoCmd.Flags().String("packages", path, "Packages folder (output from build)")
-	viper.BindPFlag("packages", createrepoCmd.Flags().Lookup("packages"))
-
 	createrepoCmd.Flags().String("tree", path, "Source luet tree")
-	viper.BindPFlag("tree", createrepoCmd.Flags().Lookup("tree"))
 	createrepoCmd.Flags().String("output", path, "Destination folder")
-	viper.BindPFlag("output", createrepoCmd.Flags().Lookup("output"))
 	createrepoCmd.Flags().String("name", "luet", "Repository name")
-	viper.BindPFlag("name", createrepoCmd.Flags().Lookup("name"))
-
 	createrepoCmd.Flags().String("uri", path, "Repository uri")
-	viper.BindPFlag("uri", createrepoCmd.Flags().Lookup("uri"))
-
 	createrepoCmd.Flags().String("type", "local", "Repository type (local)")
-	viper.BindPFlag("type", createrepoCmd.Flags().Lookup("type"))
 
 	RootCmd.AddCommand(createrepoCmd)
 }

@@ -33,6 +33,10 @@ var queryCmd = &cobra.Command{
 	Use:   "query install <pkg>",
 	Short: "query other package manager tree into luet",
 	Long:  `Parses external PM and produces a luet parsable tree`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		viper.BindPFlag("input", cmd.Flags().Lookup("input"))
+		viper.BindPFlag("database", cmd.Flags().Lookup("database"))
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 
 		input := viper.GetString("input")
@@ -104,9 +108,7 @@ var queryCmd = &cobra.Command{
 
 func init() {
 	queryCmd.Flags().String("input", "", "source folder")
-	viper.BindPFlag("input", queryCmd.Flags().Lookup("input"))
 	queryCmd.Flags().String("database", "memory", "database used for solving (memory,boltdb)")
-	viper.BindPFlag("database", queryCmd.Flags().Lookup("database"))
 
 	RootCmd.AddCommand(queryCmd)
 }

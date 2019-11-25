@@ -31,6 +31,11 @@ var convertCmd = &cobra.Command{
 	Use:   "convert",
 	Short: "convert other package manager tree into luet",
 	Long:  `Parses external PM and produces a luet parsable tree`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		viper.BindPFlag("type", cmd.Flags().Lookup("type"))
+		viper.BindPFlag("concurrency", cmd.Flags().Lookup("concurrency"))
+		viper.BindPFlag("database", cmd.Flags().Lookup("database"))
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 
 		t := viper.GetString("type")
@@ -87,11 +92,8 @@ var convertCmd = &cobra.Command{
 
 func init() {
 	convertCmd.Flags().String("type", "gentoo", "source type")
-	viper.BindPFlag("type", convertCmd.Flags().Lookup("type"))
 	convertCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
-	viper.BindPFlag("concurrency", convertCmd.Flags().Lookup("concurrency"))
 	convertCmd.Flags().String("database", "memory", "database used for solving (memory,boltdb)")
-	viper.BindPFlag("database", convertCmd.Flags().Lookup("database"))
 
 	RootCmd.AddCommand(convertCmd)
 }
