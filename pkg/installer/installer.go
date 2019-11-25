@@ -213,9 +213,15 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 				// Annotate to the system that the package was installed
 				// TODO: Annotate also files that belong to the package, somewhere to uninstall
 				if _, err := s.Database.FindPackage(ass.Package); err == nil {
-					s.Database.UpdatePackage(ass.Package)
+					err := s.Database.UpdatePackage(ass.Package)
+					if err != nil {
+						return errors.Wrap(err, "Failed updating package")
+					}
 				} else {
-					s.Database.CreatePackage(ass.Package)
+					_, err := s.Database.CreatePackage(ass.Package)
+					if err != nil {
+						return errors.Wrap(err, "Failed creating package")
+					}
 				}
 				installed, ok := toInstall[ass.Package.GetFingerPrint()]
 				if !ok {
@@ -294,7 +300,7 @@ func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
 
 	// First create client and download
 	// Then unpack to system
-	return s.Database.SetPackageFiles(pkg.PackageFile{PackageFingerprint: a.Package.GetFingerPrint(), Files: files})
+	return s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: a.Package.GetFingerPrint(), Files: files})
 }
 
 func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch, s *System) error {
@@ -305,8 +311,8 @@ func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan Arti
 		err := l.installPackage(p, s)
 		if err != nil {
 			//TODO: Uninstall, rollback.
-			Fatal("Failed installing package" + p.Package.GetName())
-			return err
+			Fatal("Failed installing package "+p.Package.GetName(), err.Error())
+			return errors.Wrap(err, "Failed installing package "+p.Package.GetName())
 		}
 	}
 
@@ -325,19 +331,18 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 		Info("Removing", target)
 		err := os.Remove(target)
 		if err != nil {
-			Warning("Failed removing", target)
+			Warning("Failed removing file (not present in the system target ?)", target)
 		}
 	}
-
+	err = s.Database.RemovePackageFiles(p)
+	if err != nil {
+		return errors.Wrap(err, "Failed removing package files from database")
+	}
 	err = s.Database.RemovePackage(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed removing package from database")
 	}
 
-	err = s.Database.RemovePackageFiles(p)
-	if err != nil {
-		return errors.Wrap(err, "Failed removing package files from database")
-	}
 	Info(p.GetFingerPrint(), "Removed")
 	return nil
 }
@@ -345,26 +350,24 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 	// compute uninstall from all world - remove packages in parallel - run uninstall finalizer (in order) - mark the uninstallation in db
 	// Get installed definition
+
+	selected, err := s.Database.FindPackage(p)
+	if err != nil {
+		return errors.Wrap(err, "Package not installed")
+	}
 	installed, err := s.World()
 	if err != nil {
-		return errors.Wrap(err, "Failed generating installed world ")
-	}
-
-	var selected pkg.Package
-	for _, i := range installed {
-		if i.Matches(p) {
-			selected = i
-		}
-	}
-	if selected == nil {
-		return errors.Wrap(err, "Package not installed")
+		return errors.Wrap(err, "Failed generating installed world")
 	}
 
 	solv := solver.NewSolver(installed, installed, pkg.NewInMemoryDatabase(false))
 	solution, err := solv.Uninstall(selected)
 	for _, p := range solution {
 		Info("Uninstalling", p.GetFingerPrint())
-		l.uninstall(p, s)
+		err := l.uninstall(p, s)
+		if err != nil {
+			return errors.Wrap(err, "Uninstall failed")
+		}
 	}
 	return nil
 
