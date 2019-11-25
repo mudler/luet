@@ -311,3 +311,21 @@ PACKAGE:
 	return matches
 
 }
+
+func (re Repositories) Search(s string) []PackageMatch {
+	sort.Sort(re)
+	var term = regexp.MustCompile(s)
+	var matches []PackageMatch
+
+	for _, r := range re {
+		ps := r.GetTree().Tree().GetPackageSet()
+		for _, k := range ps.GetPackages() {
+			pack, err := ps.GetPackage(k)
+			if err == nil && term.MatchString(pack.GetName()) {
+				matches = append(matches, PackageMatch{Package: pack, Repo: r})
+			}
+		}
+	}
+
+	return matches
+}
