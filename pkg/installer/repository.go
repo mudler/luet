@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -145,6 +146,9 @@ func (r *LuetRepository) SetType(p string) {
 	r.Type = p
 }
 
+func (r *LuetRepository) SetUri(p string) {
+	r.Uri = p
+}
 func (r *LuetRepository) GetUri() string {
 	return r.Uri
 }
@@ -247,6 +251,7 @@ func (r *LuetRepository) Sync() (Repository, error) {
 	}
 	repo.SetTree(reciper)
 	repo.SetTreePath(treefs)
+	repo.SetUri(r.GetUri())
 
 	return repo, nil
 }

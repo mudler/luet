@@ -38,6 +38,7 @@ type Repositories []Repository
 type Repository interface {
 	GetName() string
 	GetUri() string
+	SetUri(string)
 	GetPriority() int
 	GetIndex() compiler.ArtifactIndex
 	GetTree() tree.Builder
