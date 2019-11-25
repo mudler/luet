@@ -61,7 +61,7 @@ func (gt *DefaultTree) World() ([]pkg.Package, error) {
 
 		p, err := gt.GetPackageSet().GetPackage(pid)
 		if err != nil {
-			return packages, err
+			return packages, errors.Wrap(err, "Package "+pid+" not found in the packageset")
 		}
 		packages = append(packages, p)
 	}

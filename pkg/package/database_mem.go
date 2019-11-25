@@ -218,7 +218,7 @@ func (db *InMemoryDatabase) GetPackageFiles(p Package) ([]string, error) {
 
 	return pa, nil
 }
-func (db *InMemoryDatabase) SetPackageFiles(p PackageFile) error {
+func (db *InMemoryDatabase) SetPackageFiles(p *PackageFile) error {
 	db.Lock()
 	defer db.Unlock()
 	db.FileDatabase[p.PackageFingerprint] = p.Files

@@ -16,6 +16,9 @@
 package pkg
 
 import (
+	"encoding/base64"
+	"fmt"
+	"hash/crc32"
 	"os"
 	"strconv"
 	"sync"
@@ -44,20 +47,45 @@ func NewBoltDatabase(path string) PackageDatabase {
 }
 
 func (db *BoltDatabase) Get(s string) (string, error) {
-	return "", errors.New("Not implemented")
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
+	if err != nil {
+		return "", err
+	}
+	defer bolt.Close()
+	var str string
+	bolt.Get("solver", s, &str)
+
+	return str, errors.New("Not implemented")
 }
 
 func (db *BoltDatabase) Set(k, v string) error {
-	return errors.New("Not implemented")
-
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
+	if err != nil {
+		return err
+	}
+	defer bolt.Close()
+	return bolt.Set("solver", k, v)
 }
 
 func (db *BoltDatabase) Create(v []byte) (string, error) {
-	return "", errors.New("Not implemented")
+	enc := base64.StdEncoding.EncodeToString(v)
+	crc32q := crc32.MakeTable(0xD5828281)
+	ID := fmt.Sprintf("%08x", crc32.Checksum([]byte(enc), crc32q)) // TODO: Replace with package fingerprint?
+
+	return ID, db.Set(ID, enc)
 }
 
 func (db *BoltDatabase) Retrieve(ID string) ([]byte, error) {
-	return []byte{}, errors.New("Not implemented")
+	pa, err := db.Get(ID)
+	if err != nil {
+		return nil, err
+	}
+
+	enc, err := base64.StdEncoding.DecodeString(pa)
+	if err != nil {
+		return nil, err
+	}
+	return enc, nil
 }
 
 func (db *BoltDatabase) FindPackage(tofind Package) (Package, error) {
@@ -76,18 +104,13 @@ func (db *BoltDatabase) FindPackage(tofind Package) (Package, error) {
 }
 
 func (db *BoltDatabase) UpdatePackage(p Package) error {
-
-	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
+	// TODO: Change, but by query we cannot update by ID
+	err := db.RemovePackage(p)
 	if err != nil {
 		return err
 	}
-	defer bolt.Close()
+	_, err = db.CreatePackage(p)
 
-	dp, ok := p.(*DefaultPackage)
-	if !ok {
-		return errors.New("Bolt DB support only DefaultPackage type for now")
-	}
-	err = bolt.Update(dp)
 	if err != nil {
 		return err
 	}
@@ -106,7 +129,9 @@ func (db *BoltDatabase) GetPackage(ID string) (Package, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = bolt.One("ID", iid, p)
+	err = bolt.Select(q.Eq("ID", iid)).Limit(1).First(p)
+
+	//err = bolt.One("id", iid, p)
 	return p, err
 }
 
@@ -199,7 +224,7 @@ func (db *BoltDatabase) GetPackageFiles(p Package) ([]string, error) {
 	}
 	return pf.Files, nil
 }
-func (db *BoltDatabase) SetPackageFiles(p PackageFile) error {
+func (db *BoltDatabase) SetPackageFiles(p *PackageFile) error {
 	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return errors.Wrap(err, "Error opening boltdb "+db.Path)
@@ -231,9 +256,10 @@ func (db *BoltDatabase) RemovePackage(p Package) error {
 		return errors.Wrap(err, "Error opening boltdb "+db.Path)
 	}
 	defer bolt.Close()
-	p, err = db.FindPackage(p)
+	var found DefaultPackage
+	err = bolt.Select(q.Eq("Name", p.GetName()), q.Eq("Category", p.GetCategory()), q.Eq("Version", p.GetVersion())).Limit(1).Delete(&found)
 	if err != nil {
-		return errors.Wrap(err, "No package found")
+		return errors.Wrap(err, "No package found to delete")
 	}
-	return bolt.DeleteStruct(p)
+	return nil
 }

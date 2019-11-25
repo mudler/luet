@@ -38,11 +38,12 @@ type PackageSet interface {
 	RemovePackage(Package) error
 
 	GetPackageFiles(Package) ([]string, error)
-	SetPackageFiles(PackageFile) error
+	SetPackageFiles(*PackageFile) error
 	RemovePackageFiles(Package) error
 }
 
 type PackageFile struct {
+	ID                 int `storm:"id,increment"` // primary key with auto increment
 	PackageFingerprint string
 	Files              []string
 }
