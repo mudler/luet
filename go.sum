@@ -155,6 +155,8 @@ github.com/logrusorgru/aurora v0.0.0-20190417123914-21d75270181e/go.mod h1:7rIyQ
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/magiconair/properties v1.8.1 h1:ZC2Vc7/ZFkGmsVC9KvOjumD+G5lXy2RtTKyzRKO2BQ4=
 github.com/magiconair/properties v1.8.1/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
+github.com/marcsauter/single v0.0.0-20181104081128-f8bf46f26ec0 h1:c1oKPqtIulBHwu1rkz3dXsPt5hgDqJCPMN/RAdT8lvs=
+github.com/marcsauter/single v0.0.0-20181104081128-f8bf46f26ec0/go.mod h1:uUA07IN7rYmbr5YlZM5nDVLyoxiqqpprFlXBrjqI24A=
 github.com/mattn/go-colorable v0.1.1/go.mod h1:FuOcm+DKB9mbwrcAfNl7/TZVBZ6rcnceauSikq3lYCQ=
 github.com/mattn/go-colorable v0.1.2 h1:/bC9yWikZXAL9uJdulbSfyVNIR3n3trXl+v8+1sx8mU=
 github.com/mattn/go-colorable v0.1.2/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=

@@ -16,6 +16,7 @@ require (
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
 	github.com/kyokomi/emoji v2.1.0+incompatible
 	github.com/logrusorgru/aurora v0.0.0-20190417123914-21d75270181e
+	github.com/marcsauter/single v0.0.0-20181104081128-f8bf46f26ec0
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/mudler/docker-companion v0.4.6-0.20191110154655-b8b364100616
 	github.com/onsi/ginkgo v1.10.1

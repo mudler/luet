@@ -20,6 +20,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/marcsauter/single"
 	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/spf13/cobra"
@@ -42,6 +43,15 @@ var RootCmd = &cobra.Command{
 // Execute adds all child commands to the root command sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	s := single.New("luet")
+	if err := s.CheckLock(); err != nil && err == single.ErrAlreadyRunning {
+		Fatal("another instance of the app is already running, exiting")
+	} else if err != nil {
+		// Another error occurred, might be worth handling it as well
+		Fatal("failed to acquire exclusive app lock:", err.Error())
+	}
+	defer s.TryUnlock()
+
 	if err := RootCmd.Execute(); err != nil {
 		Error(err)
 		os.Exit(-1)
@@ -49,6 +59,7 @@ func Execute() {
 }
 
 func init() {
+
 	cobra.OnInitialize(initConfig)
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.luet.yaml)")
 	RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
@@ -56,6 +67,7 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		Error(err)

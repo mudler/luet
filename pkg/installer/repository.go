@@ -106,8 +106,6 @@ func buildPackageIndex(path string) ([]compiler.Artifact, error) {
 			return errors.Wrap(err, "Error reading file "+currentpath)
 		}
 
-		Info("Reading ", currentpath)
-		Info(helpers.Read(currentpath))
 		artifact, err := compiler.NewPackageArtifactFromYaml(dat)
 		if err != nil {
 			return errors.Wrap(err, "Error reading yaml "+currentpath)
