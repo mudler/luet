@@ -162,11 +162,10 @@ func (*SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPer
 
 	layers_sha := []string{}
 
-	if len(manifestData) != 1 {
-		return errors.New("Manifest should have one entry")
-	}
-	for _, l := range manifestData[0].Layers {
-		layers_sha = append(layers_sha, strings.Replace(l, "/layer.tar", "", -1))
+	for _, data := range manifestData {
+		for _, l := range data.Layers {
+			layers_sha = append(layers_sha, strings.Replace(l, "/layer.tar", "", -1))
+		}
 	}
 
 	export, err := capi.CreateExport(rootfs)
