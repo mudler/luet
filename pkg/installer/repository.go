@@ -192,6 +192,8 @@ func (r *LuetRepository) Client() Client {
 	switch r.GetType() {
 	case "local":
 		return client.NewLocalClient(client.RepoData{Uri: r.GetUri()})
+	case "http":
+		return client.NewHttpClient(client.RepoData{Uri: r.GetUri()})
 	}
 
 	return nil
