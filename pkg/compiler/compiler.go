@@ -156,6 +156,8 @@ func (cs *LuetCompiler) CompileParallel(concurrency int, keepPermissions bool, p
 }
 
 func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage string, concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
+	pkgTag := ":package:  " + p.GetPackage().GetName()
+
 	p.SetSeedImage(image) // In this case, we ignore the build deps as we suppose that the image has them - otherwise we recompose the tree with a solver,
 	// and we build all the images first.
 	keepImg := true
@@ -184,6 +186,8 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		keepPackageImg = false
 		packageImage = "luet/" + p.GetPackage().GetFingerPrint()
 	}
+
+	Info(pkgTag, "Generating :whale: definition")
 
 	// First we create the builder image
 	p.WriteBuildImageDefinition(filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+"-builder.dockerfile"))
@@ -269,6 +273,8 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		artifact = NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
 		artifact.SetCompileSpec(p)
 	} else {
+		Info(pkgTag, "Generating delta")
+
 		artifact, err = ExtractArtifactFromDelta(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions, p.GetIncludes())
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not generate deltas")
@@ -280,6 +286,8 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	if err != nil {
 		return artifact, err
 	}
+	Info(pkgTag, "   :white_check_mark: Done")
+
 	return artifact, nil
 }
 
