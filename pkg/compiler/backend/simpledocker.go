@@ -163,8 +163,11 @@ func (*SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPer
 	layers_sha := []string{}
 
 	for _, data := range manifestData {
+
 		for _, l := range data.Layers {
-			layers_sha = append(layers_sha, strings.Replace(l, "/layer.tar", "", -1))
+			if strings.Contains(l, "layer.tar") {
+				layers_sha = append(layers_sha, strings.Replace(l, "/layer.tar", "", -1))
+			}
 		}
 	}
 
