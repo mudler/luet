@@ -49,16 +49,18 @@ deps:
 
 .PHONY: build
 build:
-	go build
+	CGO_ENABLED=0 go build
+
+.PHONY: image
+image:
+	docker build --rm -t luet/base .
 
 .PHONY: gox-build
 gox-build:
-	# Building gitlab-ci-multi-runner for $(BUILD_PLATFORMS)
-	gox $(BUILD_PLATFORMS) -output="release/$(NAME)-$(VERSION)-{{.OS}}-{{.Arch}}"
+	CGO_ENABLED=0 gox $(BUILD_PLATFORMS) -output="release/$(NAME)-$(VERSION)-{{.OS}}-{{.Arch}}"
 
 .PHONY: lint
 lint:
-	# Checking project code style...
 	golint ./... | grep -v "be unexported"
 
 .PHONY: vendor
