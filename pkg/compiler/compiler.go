@@ -419,7 +419,6 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 
 	dependencies := p.GetSourceAssertion().Drop(p.GetPackage()) // at this point we should have a flattened list of deps to build, including all of them (with all constraints propagated already)
 	departifacts := []Artifact{}                                // TODO: Return this somehow
-	deperrs := []error{}
 	var lastHash string
 	depsN := 0
 	currentN := 0
@@ -453,11 +452,10 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 				if compileSpec.GetImage() == "" {
 					return nil, errors.New("No image defined for package: " + assertion.Package.GetName())
 				}
-				Info(":whale: Sourcing package from image", compileSpec.GetImage())
+				Info(pkgTag, ":whale: Sourcing package from image", compileSpec.GetImage())
 				artifact, err := cs.packageFromImage(compileSpec, currentPackageImageHash, keepPermissions)
 				if err != nil {
-					deperrs = append(deperrs, err)
-					break // stop at first error
+					return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().GetName())
 				}
 				departifacts = append(departifacts, artifact)
 				continue
@@ -466,14 +464,14 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 			Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().GetFingerPrint()+" from image")
 			artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, compileSpec)
 			if err != nil {
-				deperrs = append(deperrs, err)
-				break // stop at first error
+				return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().GetName())
 			}
 			departifacts = append(departifacts, artifact)
 			Info(pkgTag, ":white_check_mark: Done")
 			continue
 		}
 
+		Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().GetFingerPrint()+" from tree")
 		artifact, err := cs.compileWithImage(buildImageHash, "", currentPackageImageHash, concurrency, keepPermissions, compileSpec)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().GetName())
@@ -483,6 +481,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 		departifacts = append(departifacts, artifact)
 		Info(pkgTag, ":collision: Done")
 	}
+
 	Info(":package:", p.GetPackage().GetName(), ":cyclone:  Building package target from:", lastHash)
 	artifact, err := cs.compileWithImage(lastHash, "", "", concurrency, keepPermissions, p)
 	if err != nil {
