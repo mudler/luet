@@ -34,6 +34,8 @@ github.com/asdine/storm/index
 github.com/asdine/storm/internal
 # github.com/briandowns/spinner v1.7.0
 github.com/briandowns/spinner
+# github.com/cavaliercoder/grab v2.0.0+incompatible
+github.com/cavaliercoder/grab
 # github.com/containerd/containerd v1.2.4
 github.com/containerd/containerd/archive
 github.com/containerd/containerd/log
