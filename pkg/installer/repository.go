@@ -162,11 +162,12 @@ func (r *LuetRepository) GetTree() tree.Builder {
 func (r *LuetRepository) Write(dst string) error {
 
 	os.MkdirAll(dst, os.ModePerm)
+	r.Index = r.Index.CleanPath()
+
 	data, err := yaml.Marshal(r)
 	if err != nil {
 		return err
 	}
-	r.Index = r.Index.CleanPath()
 	err = ioutil.WriteFile(filepath.Join(dst, "repository.yaml"), data, os.ModePerm)
 	if err != nil {
 		return err

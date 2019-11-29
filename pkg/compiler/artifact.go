@@ -36,10 +36,10 @@ import (
 type ArtifactIndex []Artifact
 
 func (i ArtifactIndex) CleanPath() ArtifactIndex {
-	var newIndex []Artifact
-	copy(newIndex, i)
-	for _, n := range newIndex {
-		n.SetPath(path.Base(n.GetPath()))
+	newIndex := ArtifactIndex{}
+	for _, n := range i {
+		art := n.(*PackageArtifact)
+		newIndex = append(newIndex, &PackageArtifact{Path: path.Base(n.GetPath()), SourceAssertion: art.SourceAssertion, CompileSpec: art.CompileSpec, Dependencies: art.Dependencies})
 	}
 	return newIndex
 	//Update if exists, otherwise just create
