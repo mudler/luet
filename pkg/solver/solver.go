@@ -45,36 +45,6 @@ type Solver struct {
 // NewSolver accepts as argument two lists of packages, the first is the initial set,
 // the second represent all the known packages.
 func NewSolver(installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, solverdb pkg.PackageDatabase) PackageSolver {
-	// inst := pkg.NewInMemoryDatabase(false)
-	// def := pkg.NewInMemoryDatabase(false)
-	// // 		// FIXME: This should all be locked in the db - for now forbid the solver to be run in threads.
-	// for _, k := range installed.GetPackages() {
-	// 	pack, err := installed.GetPackage(k)
-	// 	if err == nil {
-	// 		inst.CreatePackage(pack)
-	// 	}
-	// }
-	// for _, k := range definitiondb.GetPackages() {
-	// 	pack, err := definitiondb.GetPackage(k)
-	// 	if err == nil {
-	// 		def.CreatePackage(pack)
-	// 	}
-	// }
-	// // FIXME:
-	// for _, k := range inst.GetPackages() {
-	// 	pack, err := inst.GetPackage(k)
-	// 	if err == nil {
-
-	// 		pkg.NormalizeFlagged(inst, pack)
-	// 	}
-	// }
-	// for _, k := range def.GetPackages() {
-	// 	pack, err := def.GetPackage(k)
-	// 	if err == nil {
-
-	// 		pkg.NormalizeFlagged(def, pack)
-	// 	}
-	// }
 	return &Solver{InstalledDatabase: installed, DefinitionDatabase: definitiondb, SolverDatabase: solverdb}
 }
 
@@ -169,8 +139,6 @@ func (s *Solver) ConflictsWith(pack pkg.Package, lsp []pkg.Package) (bool, error
 		return false, errors.Wrap(err, "Package not found in definition db")
 	}
 
-	// TODO: Needs to be find in package def before encoding!
-	//	pkg.NormalizeFlagged(s.DefinitionDatabase, p)
 	var formulas []bf.Formula
 
 	if s.noRulesWorld() {

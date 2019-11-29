@@ -349,7 +349,8 @@ func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssert
 	if err != nil {
 		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
 	}
-	dependencies := solution.Order(p.GetPackage().GetFingerPrint())
+
+	dependencies := solution.Order(cs.Database, p.GetPackage().GetFingerPrint())
 	assertions := solver.PackagesAssertions{}
 
 	for _, assertion := range dependencies { //highly dependent on the order
@@ -360,8 +361,8 @@ func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssert
 			}
 
 			assertion.Hash = solver.PackageHash{
-				BuildHash:   nthsolution.Order(assertion.Package.GetFingerPrint()).Drop(assertion.Package).AssertionHash(),
-				PackageHash: nthsolution.Order(assertion.Package.GetFingerPrint()).AssertionHash(),
+				BuildHash:   nthsolution.Order(cs.Database, assertion.Package.GetFingerPrint()).Drop(assertion.Package).AssertionHash(),
+				PackageHash: nthsolution.Order(cs.Database, assertion.Package.GetFingerPrint()).AssertionHash(),
 			}
 			assertions = append(assertions, assertion)
 		}

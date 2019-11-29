@@ -245,13 +245,40 @@ var _ = Describe("Solver", func() {
 			Expect(len(solution)).To(Equal(3))
 			Expect(err).ToNot(HaveOccurred())
 		})
-		It("Solves deps with moreexpansion", func() {
+		It("Solves deps with more expansion", func() {
+
+			C := pkg.NewPackage("c", "", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "a", Version: ">=1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+			C.SetCategory("test")
+			B := pkg.NewPackage("b", "1.0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B.SetCategory("test")
+			A := pkg.NewPackage("a", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "b", Version: "1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+			A.SetCategory("test")
+
+			for _, p := range []pkg.Package{A, B, C} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
+
+			solution, err := s.Install([]pkg.Package{C})
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+			Expect(len(solution)).To(Equal(3))
+			Expect(err).ToNot(HaveOccurred())
+		})
+		It("Solves deps with more expansion", func() {
 
 			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			D := pkg.NewPackage("D", "1.4", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B := pkg.NewPackage("B", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "D", Version: ">1.0"}}, []*pkg.DefaultPackage{})
-			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "B", Version: ">1.0"}}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "D", Version: ">=1.0"}}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "B", Version: ">=1.0"}}, []*pkg.DefaultPackage{})
 
 			for _, p := range []pkg.Package{A, B, C, D, E} {
 				_, err := dbDefinitions.CreatePackage(p)

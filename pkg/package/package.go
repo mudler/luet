@@ -356,11 +356,8 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 	// TODO: Expansion needs to go here - and so we ditch Resolvedeps()
 	p, err := definitiondb.FindPackage(pack)
 	if err != nil {
-		p = pack
-		// FIXME? : returning an errors here makes the world the only source of truth - which is ok in case definitions are all there
-		//return nil, errors.Wrap(err, "Couldn't find required package in db definition")
+		p = pack // Relax failures and trust the def
 	}
-	//	NormalizeFlagged(definitiondb, p)
 	encodedA, err := p.Encode(db)
 	if err != nil {
 		return nil, err

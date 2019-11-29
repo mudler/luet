@@ -122,7 +122,7 @@ func (assertions PackagesAssertions) EnsureOrder() PackagesAssertions {
 	return orderedAssertions
 }
 
-func (assertions PackagesAssertions) Order(fingerprint string) PackagesAssertions {
+func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fingerprint string) PackagesAssertions {
 
 	orderedAssertions := PackagesAssertions{}
 	unorderedAssertions := PackagesAssertions{}
@@ -145,12 +145,28 @@ func (assertions PackagesAssertions) Order(fingerprint string) PackagesAssertion
 	}
 
 	sort.Sort(unorderedAssertions)
+	w := definitiondb.World() // FIXME: this is heavy
 
 	// Build a topological graph
 	//graph := toposort.NewGraph(len(unorderedAssertions))
 	//	graph.AddNodes(fingerprints...)
 	for _, a := range unorderedAssertions {
-		for _, req := range a.Package.GetRequires() {
+		for _, requiredDef := range a.Package.GetRequires() {
+			req, err := definitiondb.FindPackage(requiredDef)
+			if err != nil {
+				//	return nil, errors.Wrap(err, "Couldn't find required package in db definition")
+				packages, err := requiredDef.Expand(&w)
+				//	Info("Expanded", packages, err)
+				if err != nil || len(packages) == 0 {
+					req = requiredDef
+				} else {
+					req = pkg.Best(packages)
+
+				}
+				//required = &DefaultPackage{Name: "test"}
+			}
+
+			// Expand also here, as we need to order them (or instead the solver should give back the dep correctly?)
 			graph.AddEdge(a.Package.GetFingerPrint(), req.GetFingerPrint())
 		}
 	}
