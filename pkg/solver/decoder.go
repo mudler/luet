@@ -22,7 +22,7 @@ import (
 	"unicode"
 
 	pkg "github.com/mudler/luet/pkg/package"
-	"github.com/philopon/go-toposort"
+	toposort "github.com/philopon/go-toposort"
 	"github.com/stevenle/topsort"
 )
 
@@ -88,7 +88,7 @@ func (assertions PackagesAssertions) EnsureOrder() PackagesAssertions {
 		fingerprints = append(fingerprints, a.Package.GetFingerPrint())
 		unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
 
-		if a.Package.Flagged() && a.Value {
+		if a.Value {
 			unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
 		} else {
 			orderedAssertions = append(orderedAssertions, a) // Keep last the ones which are not meant to be installed
@@ -137,7 +137,7 @@ func (assertions PackagesAssertions) Order(fingerprint string) PackagesAssertion
 		fingerprints = append(fingerprints, a.Package.GetFingerPrint())
 		unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
 
-		if a.Package.Flagged() && a.Value {
+		if a.Value {
 			unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
 		} else {
 			orderedAssertions = append(orderedAssertions, a) // Keep last the ones which are not meant to be installed
@@ -215,7 +215,7 @@ func (a PackagesAssertions) Less(i, j int) bool {
 func (assertions PackagesAssertions) AssertionHash() string {
 	var fingerprint string
 	for _, assertion := range assertions { // Note: Always order them first!
-		if assertion.Value && assertion.Package.Flagged() { // Tke into account only dependencies installed (get fingerprint of subgraph)
+		if assertion.Value { // Tke into account only dependencies installed (get fingerprint of subgraph)
 			fingerprint += assertion.ToString() + "\n"
 		}
 	}
