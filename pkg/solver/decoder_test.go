@@ -72,7 +72,7 @@ var _ = Describe("Decoder", func() {
 
 				Expect(len(solution)).To(Equal(6))
 				Expect(err).ToNot(HaveOccurred())
-				solution = solution.Order(A.GetFingerPrint())
+				solution = solution.Order(dbDefinitions, A.GetFingerPrint())
 				//	Expect(len(solution)).To(Equal(6))
 				Expect(solution[0].Package.GetName()).To(Equal("G"))
 				Expect(solution[1].Package.GetName()).To(Equal("H"))
@@ -188,7 +188,7 @@ var _ = Describe("Decoder", func() {
 
 			Expect(len(solution)).To(Equal(6))
 			Expect(err).ToNot(HaveOccurred())
-			solution = solution.Order(A.GetFingerPrint())
+			solution = solution.Order(dbDefinitions, A.GetFingerPrint())
 			//	Expect(len(solution)).To(Equal(6))
 			Expect(solution[0].Package.GetName()).To(Equal("G"))
 			Expect(solution[1].Package.GetName()).To(Equal("H"))
@@ -206,7 +206,7 @@ var _ = Describe("Decoder", func() {
 
 			Expect(len(solution)).To(Equal(6))
 			Expect(err).ToNot(HaveOccurred())
-			solution = solution.Order(B.GetFingerPrint())
+			solution = solution.Order(dbDefinitions, B.GetFingerPrint())
 			hash2 := solution.AssertionHash()
 
 			//	Expect(len(solution)).To(Equal(6))
@@ -243,7 +243,7 @@ var _ = Describe("Decoder", func() {
 
 			solution2, err := s.Install([]pkg.Package{Z})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(solution.Order(Y.GetFingerPrint()).Drop(Y).AssertionHash() == solution2.Order(Z.GetFingerPrint()).Drop(Z).AssertionHash()).To(BeTrue())
+			Expect(solution.Order(dbDefinitions, Y.GetFingerPrint()).Drop(Y).AssertionHash() == solution2.Order(dbDefinitions, Z.GetFingerPrint()).Drop(Z).AssertionHash()).To(BeTrue())
 		})
 
 	})
