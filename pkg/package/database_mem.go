@@ -246,3 +246,14 @@ func (db *InMemoryDatabase) RemovePackage(p Package) error {
 	}
 	return errors.New("Package not found")
 }
+func (db *InMemoryDatabase) World() []Package {
+	var all []Package
+	// FIXME: This should all be locked in the db - for now forbid the solver to be run in threads.
+	for _, k := range db.GetPackages() {
+		pack, err := db.GetPackage(k)
+		if err == nil {
+			all = append(all, pack)
+		}
+	}
+	return all
+}
