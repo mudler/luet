@@ -67,12 +67,12 @@ func (a *PackageAssert) String() string {
 
 func (a *PackageAssert) ToString() string {
 	var msg string
-	if a.Package.Flagged() {
+	if a.Value {
 		msg = "installed"
 	} else {
 		msg = "not installed"
 	}
-	return fmt.Sprintf("%s/%s %s %s: %t", a.Package.GetCategory(), a.Package.GetName(), a.Package.GetVersion(), msg, a.Value)
+	return fmt.Sprintf("%s/%s %s %s", a.Package.GetCategory(), a.Package.GetName(), a.Package.GetVersion(), msg)
 }
 
 func (assertions PackagesAssertions) EnsureOrder() PackagesAssertions {
