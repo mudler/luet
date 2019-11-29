@@ -25,7 +25,6 @@ type Compiler interface {
 	CompileParallel(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
 	CompileWithReverseDeps(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
 	ComputeDepTree(p CompilationSpec) (solver.PackagesAssertions, error)
-	Prepare(concurrency int) error
 
 	FromPackage(pkg.Package) (CompilationSpec, error)
 

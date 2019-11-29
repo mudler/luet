@@ -167,7 +167,7 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 	// Gathers things to install
 	toInstall := map[string]ArtifactMatch{}
 	for _, assertion := range solution {
-		if assertion.Value && assertion.Package.Flagged() {
+		if assertion.Value {
 			matches := syncedRepos.PackageMatches([]pkg.Package{assertion.Package})
 			if len(matches) != 1 {
 				return errors.New("Failed matching solutions against repository - where are definitions coming from?!")
@@ -209,7 +209,7 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 		// Finalizers needs to run in order and in sequence.
 		ordered := solution.Order(w.GetFingerPrint())
 		for _, ass := range ordered {
-			if ass.Value && ass.Package.Flagged() {
+			if ass.Value {
 				// Annotate to the system that the package was installed
 				// TODO: Annotate also files that belong to the package, somewhere to uninstall
 				if _, err := s.Database.FindPackage(ass.Package); err == nil {
