@@ -354,7 +354,6 @@ func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssert
 
 	for _, assertion := range dependencies { //highly dependent on the order
 		if assertion.Value {
-
 			nthsolution, err := s.Install([]pkg.Package{assertion.Package})
 			if err != nil {
 				return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
