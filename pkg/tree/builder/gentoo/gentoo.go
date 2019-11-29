@@ -49,32 +49,24 @@ type GentooBuilder struct {
 	DBType       MemoryDB
 }
 
-type GentooTree struct {
-	*tree.DefaultTree
-}
-
 type EbuildParser interface {
-	ScanEbuild(string, pkg.Tree) ([]pkg.Package, error)
+	ScanEbuild(string) ([]pkg.Package, error)
 }
 
-func (gt *GentooTree) Prelude() string {
-	return "/usr/portage/"
-}
-
-func (gb *GentooBuilder) scanEbuild(path string, t pkg.Tree) error {
+func (gb *GentooBuilder) scanEbuild(path string, db pkg.PackageDatabase) error {
 	defer func() {
 		if r := recover(); r != nil {
 			Error(r)
 		}
 	}()
-	pkgs, err := gb.EbuildParser.ScanEbuild(path, t)
+	pkgs, err := gb.EbuildParser.ScanEbuild(path)
 	if err != nil {
 		return err
 	}
 	for _, p := range pkgs {
-		_, err := t.GetPackageSet().FindPackage(p)
+		_, err := db.FindPackage(p)
 		if err != nil {
-			_, err := t.GetPackageSet().CreatePackage(p)
+			_, err := db.CreatePackage(p)
 			if err != nil {
 				return err
 			}
@@ -83,12 +75,12 @@ func (gb *GentooBuilder) scanEbuild(path string, t pkg.Tree) error {
 	return nil
 }
 
-func (gb *GentooBuilder) worker(i int, wg *sync.WaitGroup, s <-chan string, t pkg.Tree) {
+func (gb *GentooBuilder) worker(i int, wg *sync.WaitGroup, s <-chan string, db pkg.PackageDatabase) {
 	defer wg.Done()
 
 	for path := range s {
 		Info("#"+strconv.Itoa(i), "parsing", path)
-		err := gb.scanEbuild(path, t)
+		err := gb.scanEbuild(path, db)
 		if err != nil {
 			Error(path, ":", err.Error())
 		}
@@ -96,25 +88,24 @@ func (gb *GentooBuilder) worker(i int, wg *sync.WaitGroup, s <-chan string, t pk
 
 }
 
-func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
+func (gb *GentooBuilder) Generate(dir string) (pkg.PackageDatabase, error) {
 
 	var toScan = make(chan string)
 	Spinner(27)
 	defer SpinnerStop()
-	var gtree *GentooTree
-
+	var db pkg.PackageDatabase
 	// Support for
 	switch gb.DBType {
 	case InMemory:
-		gtree = &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewInMemoryDatabase(false)}}
+		db = pkg.NewInMemoryDatabase(false)
 	case BoltDB:
 		tmpfile, err := ioutil.TempFile("", "boltdb")
 		if err != nil {
 			return nil, err
 		}
-		gtree = &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewBoltDatabase(tmpfile.Name())}}
+		db = pkg.NewBoltDatabase(tmpfile.Name())
 	default:
-		gtree = &GentooTree{DefaultTree: &tree.DefaultTree{Packages: pkg.NewInMemoryDatabase(false)}}
+		db = pkg.NewInMemoryDatabase(false)
 	}
 
 	Debug("Concurrency", gb.Concurrency)
@@ -122,7 +113,7 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 	var wg = new(sync.WaitGroup)
 	for i := 0; i < gb.Concurrency; i++ {
 		wg.Add(1)
-		go gb.worker(i, wg, toScan, gtree)
+		go gb.worker(i, wg, toScan, db)
 	}
 
 	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
@@ -142,9 +133,8 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.Tree, error) {
 	close(toScan)
 	wg.Wait()
 	if err != nil {
-		return gtree, err
+		return db, err
 	}
 
-	Info("Resolving deps")
-	return gtree, gtree.ResolveDeps(gb.Concurrency)
+	return db, nil
 }

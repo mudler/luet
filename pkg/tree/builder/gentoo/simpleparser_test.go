@@ -651,14 +651,13 @@ var _ = Describe("GentooBuilder", func() {
 				tree, err := gb.Generate("../../../../tests/fixtures/overlay")
 				Expect(err).ToNot(HaveOccurred())
 				defer func() {
-					Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
+					Expect(tree.Clean()).ToNot(HaveOccurred())
 				}()
 
-				Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
+				Expect(len(tree.GetPackages())).To(Equal(10))
 
-				for _, pid := range tree.GetPackageSet().GetPackages() {
-					p, err := tree.GetPackageSet().GetPackage(pid)
-					Expect(err).ToNot(HaveOccurred())
+				for _, p := range tree.World() {
+
 					Expect(p.GetName()).To(ContainSubstring("pinentry"))
 					Expect(p.GetVersion()).To(ContainSubstring("1."))
 				}

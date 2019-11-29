@@ -48,13 +48,12 @@ var _ = Describe("Recipe", func() {
 				tree, err := gb.Generate("../../tests/fixtures/overlay")
 				Expect(err).ToNot(HaveOccurred())
 				defer func() {
-					Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
+					Expect(tree.Clean()).ToNot(HaveOccurred())
 				}()
 
-				Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
+				Expect(len(tree.GetPackages())).To(Equal(10))
 
-				generalRecipe := NewGeneralRecipe(tree.GetPackageSet())
-				generalRecipe.WithTree(tree)
+				generalRecipe := NewGeneralRecipe(tree)
 				err = generalRecipe.Save(tmpdir)
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -70,31 +69,27 @@ var _ = Describe("Recipe", func() {
 				tree, err := gb.Generate("../../tests/fixtures/overlay")
 				Expect(err).ToNot(HaveOccurred())
 				defer func() {
-					Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
+					Expect(tree.Clean()).ToNot(HaveOccurred())
 				}()
 
-				Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
+				Expect(len(tree.GetPackages())).To(Equal(10))
 
-				generalRecipe := NewGeneralRecipe(tree.GetPackageSet())
-				generalRecipe.WithTree(tree)
+				generalRecipe := NewGeneralRecipe(tree)
 				err = generalRecipe.Save(tmpdir)
 				Expect(err).ToNot(HaveOccurred())
 
 				db := pkg.NewInMemoryDatabase(false)
 				generalRecipe = NewGeneralRecipe(db)
 
-				generalRecipe.WithTree(nil)
-				Expect(generalRecipe.Tree()).To(BeNil())
+				generalRecipe.WithDatabase(nil)
+				Expect(generalRecipe.GetDatabase()).To(BeNil())
 
 				err = generalRecipe.Load(tmpdir)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-				Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(10))
+				Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(10))
 
-				for _, pid := range tree.GetPackageSet().GetPackages() {
-					p, err := tree.GetPackageSet().GetPackage(pid)
-					Expect(err).ToNot(HaveOccurred())
+				for _, p := range tree.World() {
 					Expect(p.GetName()).To(ContainSubstring("pinentry"))
 				}
 			})
@@ -110,10 +105,10 @@ var _ = Describe("Recipe", func() {
 				tree, err := gb.Generate("../../tests/fixtures/overlay")
 				Expect(err).ToNot(HaveOccurred())
 				defer func() {
-					Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
+					Expect(tree.Clean()).ToNot(HaveOccurred())
 				}()
 
-				Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
+				Expect(len(tree.GetPackages())).To(Equal(10))
 
 				pack, err := tree.FindPackage(&pkg.DefaultPackage{
 					Name:     "pinentry",
@@ -121,10 +116,8 @@ var _ = Describe("Recipe", func() {
 					Category: "app-crypt",
 				}) // Note: the definition depends on pinentry-base without an explicit version
 				Expect(err).ToNot(HaveOccurred())
-				world, err := tree.World()
-				Expect(err).ToNot(HaveOccurred())
 
-				s := solver.NewSolver([]pkg.Package{}, world, tree.GetPackageSet())
+				s := solver.NewSolver(pkg.NewInMemoryDatabase(false), tree, tree)
 				solution, err := s.Install([]pkg.Package{pack})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(solution)).To(Equal(10))
@@ -134,9 +127,9 @@ var _ = Describe("Recipe", func() {
 					allSol = allSol + "\n" + sol.ToString()
 				}
 
-				Expect(allSol).To(ContainSubstring("app-crypt/pinentry-base 1.0.0 installed: true"))
-				Expect(allSol).To(ContainSubstring("app-crypt/pinentry 1.1.0-r2 installed: false"))
-				Expect(allSol).To(ContainSubstring("app-crypt/pinentry 1.0.0-r2 installed: true"))
+				Expect(allSol).To(ContainSubstring("app-crypt/pinentry-base 1.0.0 installed"))
+				Expect(allSol).To(ContainSubstring("app-crypt/pinentry 1.1.0-r2 not installed"))
+				Expect(allSol).To(ContainSubstring("app-crypt/pinentry 1.0.0-r2 installed"))
 			})
 		})
 	}

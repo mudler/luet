@@ -45,25 +45,21 @@ var _ = Describe("Tree", func() {
 
 				err = generalRecipe.Load("../../tests/fixtures/buildableseed")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-				Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(4))
-				err = generalRecipe.Tree().ResolveDeps(1)
-				Expect(err).ToNot(HaveOccurred())
+				Expect(len(generalRecipe.GetDatabase().World())).To(Equal(4))
 
-				D, err := generalRecipe.Tree().FindPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
+				D, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(D.GetRequires()[0].GetName()).To(Equal("c"))
-				CfromD := D.GetRequires()[0]
+				CfromD, err := generalRecipe.GetDatabase().FindPackage(D.GetRequires()[0])
+				Expect(err).ToNot(HaveOccurred())
+
 				Expect(len(CfromD.GetRequires()) != 0).To(BeTrue())
 				Expect(CfromD.GetRequires()[0].GetName()).To(Equal("b"))
 
-				w, err := generalRecipe.Tree().World()
-				Expect(err).ToNot(HaveOccurred())
-
-				s := solver.NewSolver([]pkg.Package{}, w, db)
-				pack, err := generalRecipe.Tree().FindPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
+				s := solver.NewSolver(pkg.NewInMemoryDatabase(false), generalRecipe.GetDatabase(), db)
+				pack, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
 				Expect(err).ToNot(HaveOccurred())
 
 				solution, err := s.Install([]pkg.Package{pack})
@@ -72,19 +68,15 @@ var _ = Describe("Tree", func() {
 				solution = solution.Order(pack.GetFingerPrint())
 
 				Expect(solution[0].Package.GetName()).To(Equal("a"))
-				Expect(solution[0].Package.Flagged()).To(BeTrue())
 				Expect(solution[0].Value).To(BeFalse())
 
 				Expect(solution[1].Package.GetName()).To(Equal("b"))
-				Expect(solution[1].Package.Flagged()).To(BeTrue())
 				Expect(solution[1].Value).To(BeTrue())
 
 				Expect(solution[2].Package.GetName()).To(Equal("c"))
-				Expect(solution[2].Package.Flagged()).To(BeTrue())
 				Expect(solution[2].Value).To(BeTrue())
 
 				Expect(solution[3].Package.GetName()).To(Equal("d"))
-				Expect(solution[3].Package.Flagged()).To(BeTrue())
 				Expect(solution[3].Value).To(BeTrue())
 				Expect(len(solution)).To(Equal(4))
 
@@ -92,15 +84,12 @@ var _ = Describe("Tree", func() {
 				Expect(len(newsolution)).To(Equal(3))
 
 				Expect(newsolution[0].Package.GetName()).To(Equal("a"))
-				Expect(newsolution[0].Package.Flagged()).To(BeTrue())
 				Expect(newsolution[0].Value).To(BeFalse())
 
 				Expect(newsolution[1].Package.GetName()).To(Equal("b"))
-				Expect(newsolution[1].Package.Flagged()).To(BeTrue())
 				Expect(newsolution[1].Value).To(BeTrue())
 
 				Expect(newsolution[2].Package.GetName()).To(Equal("c"))
-				Expect(newsolution[2].Package.Flagged()).To(BeTrue())
 				Expect(newsolution[2].Value).To(BeTrue())
 
 			}

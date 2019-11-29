@@ -37,19 +37,13 @@ func NewGeneralRecipe(db pkg.PackageDatabase) Builder { return &Recipe{Database:
 
 // Recipe is the "general" reciper for Trees
 type Recipe struct {
-	PackageTree pkg.Tree
-	SourcePath  string
-	Database    pkg.PackageDatabase
+	SourcePath string
+	Database   pkg.PackageDatabase
 }
 
 func (r *Recipe) Save(path string) error {
 
-	for _, pid := range r.PackageTree.GetPackageSet().GetPackages() {
-
-		p, err := r.PackageTree.GetPackageSet().GetPackage(pid)
-		if err != nil {
-			return err
-		}
+	for _, p := range r.Database.World() {
 		dir := filepath.Join(path, p.GetCategory(), p.GetName(), p.GetVersion())
 		os.MkdirAll(dir, os.ModePerm)
 		data, err := p.Yaml()
@@ -67,16 +61,15 @@ func (r *Recipe) Save(path string) error {
 
 func (r *Recipe) Load(path string) error {
 
-	if r.Tree() == nil {
-		r.PackageTree = NewDefaultTree()
-	}
-
 	// tmpfile, err := ioutil.TempFile("", "luet")
 	// if err != nil {
 	// 	return err
 	// }
-	r.Tree().SetPackageSet(r.Database)
 	r.SourcePath = path
+
+	if r.Database == nil {
+		r.Database = pkg.NewInMemoryDatabase(false)
+	}
 
 	//r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
 	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
@@ -99,7 +92,7 @@ func (r *Recipe) Load(path string) error {
 
 		// Path is set only internally when tree is loaded from disk
 		pack.SetPath(filepath.Dir(currentpath))
-		_, err = r.Tree().GetPackageSet().CreatePackage(&pack)
+		_, err = r.Database.CreatePackage(&pack)
 		if err != nil {
 			return errors.Wrap(err, "Error creating package "+pack.GetName())
 		}
@@ -114,6 +107,6 @@ func (r *Recipe) Load(path string) error {
 	return nil
 }
 
-func (r *Recipe) Tree() pkg.Tree        { return r.PackageTree }
-func (r *Recipe) WithTree(t pkg.Tree)   { r.PackageTree = t }
-func (r *Recipe) GetSourcePath() string { return r.SourcePath }
+func (r *Recipe) GetDatabase() pkg.PackageDatabase   { return r.Database }
+func (r *Recipe) WithDatabase(d pkg.PackageDatabase) { r.Database = d }
+func (r *Recipe) GetSourcePath() string              { return r.SourcePath }

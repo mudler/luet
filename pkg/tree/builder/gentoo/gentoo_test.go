@@ -26,7 +26,7 @@ import (
 type FakeParser struct {
 }
 
-func (f *FakeParser) ScanEbuild(path string, t pkg.Tree) ([]pkg.Package, error) {
+func (f *FakeParser) ScanEbuild(path string) ([]pkg.Package, error) {
 	return []pkg.Package{&pkg.DefaultPackage{Name: path}}, nil
 }
 
@@ -38,10 +38,10 @@ var _ = Describe("GentooBuilder", func() {
 				gb := NewGentooBuilder(&FakeParser{}, 20, dbType)
 				tree, err := gb.Generate("../../../../tests/fixtures/overlay")
 				defer func() {
-					Expect(tree.GetPackageSet().Clean()).ToNot(HaveOccurred())
+					Expect(tree.Clean()).ToNot(HaveOccurred())
 				}()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(len(tree.GetPackageSet().GetPackages())).To(Equal(10))
+				Expect(len(tree.GetPackages())).To(Equal(10))
 			})
 		}
 	})

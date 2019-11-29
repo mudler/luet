@@ -45,16 +45,12 @@ type CompilerRecipe struct {
 
 func (r *CompilerRecipe) Load(path string) error {
 
-	if r.Tree() == nil {
-		r.PackageTree = NewDefaultTree()
-	}
 	r.SourcePath = path
 	//tmpfile, err := ioutil.TempFile("", "luet")
 	//if err != nil {
 	//	return err
 	//}
 
-	r.Tree().SetPackageSet(r.Database)
 	//r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
 	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
 	// the function that handles each file or dir
@@ -91,7 +87,7 @@ func (r *CompilerRecipe) Load(path string) error {
 			pack.Conflicts(packbuild.GetConflicts())
 		}
 
-		_, err = r.Tree().GetPackageSet().CreatePackage(&pack)
+		_, err = r.Database.CreatePackage(&pack)
 		if err != nil {
 			return errors.Wrap(err, "Error creating package "+pack.GetName())
 		}
@@ -106,6 +102,6 @@ func (r *CompilerRecipe) Load(path string) error {
 	return nil
 }
 
-func (r *CompilerRecipe) Tree() pkg.Tree        { return r.PackageTree }
-func (r *CompilerRecipe) WithTree(t pkg.Tree)   { r.PackageTree = t }
-func (r *CompilerRecipe) GetSourcePath() string { return r.SourcePath }
+func (r *CompilerRecipe) GetDatabase() pkg.PackageDatabase   { return r.Database }
+func (r *CompilerRecipe) WithDatabase(d pkg.PackageDatabase) { r.Database = d }
+func (r *CompilerRecipe) GetSourcePath() string              { return r.SourcePath }
