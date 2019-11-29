@@ -44,13 +44,10 @@ var _ = Describe("Installer", func() {
 
 			err = generalRecipe.Load("../../tests/fixtures/buildable")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
-			err = compiler.Prepare(1)
-			Expect(err).ToNot(HaveOccurred())
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -157,13 +154,10 @@ uri: "`+tmpdir+`"
 
 			err = generalRecipe.Load("../../tests/fixtures/buildable")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
-			err = compiler.Prepare(1)
-			Expect(err).ToNot(HaveOccurred())
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())

@@ -112,58 +112,15 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 	// First match packages against repositories by priority
 	//	matches := syncedRepos.PackageMatches(p)
 
-	// Get installed definition
-	installed, err := s.World()
-	if err != nil {
-		return errors.Wrap(err, "Failed generating installed world")
-	}
-
 	// compute a "big" world
-	allrepoWorld := syncedRepos.World()
+	allRepos := pkg.NewInMemoryDatabase(false)
+	syncedRepos.SyncDatabase(allRepos)
 
-	// If installed exists in the world, we need to use them to make the solver point to them
-	realInstalled := []pkg.Package{}
-	for _, i := range installed {
-		var found pkg.Package
-	I:
-		for _, p := range allrepoWorld {
-			if p.Matches(i) {
-				found = p
-				break I
-			}
-		}
-
-		if found != nil {
-			realInstalled = append(realInstalled, found)
-
-		} else {
-			realInstalled = append(realInstalled, i)
-		}
+	solv := solver.NewSolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false))
+	solution, err := solv.Install(p)
+	if err != nil {
+		return errors.Wrap(err, "Failed solving solution for package")
 	}
-
-	allwanted := []pkg.Package{}
-	for _, wanted := range p {
-		var found pkg.Package
-
-	W:
-		for _, p := range allrepoWorld {
-			if p.Matches(wanted) {
-				found = p
-				break W
-			}
-		}
-
-		if found != nil {
-			allwanted = append(allwanted, found)
-
-		} else {
-			return errors.New("Package requested to install not found")
-		}
-	}
-
-	solv := solver.NewSolver(realInstalled, allrepoWorld, pkg.NewInMemoryDatabase(false))
-	solution, err := solv.Install(allwanted)
-
 	// Gathers things to install
 	toInstall := map[string]ArtifactMatch{}
 	for _, assertion := range solution {
@@ -205,9 +162,9 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 	executedFinalizer := map[string]bool{}
 
 	// TODO: Lower those errors as warning
-	for _, w := range allwanted {
+	for _, w := range p {
 		// Finalizers needs to run in order and in sequence.
-		ordered := solution.Order(w.GetFingerPrint())
+		ordered := solution.Order(allRepos, w.GetFingerPrint())
 		for _, ass := range ordered {
 			if ass.Value {
 				// Annotate to the system that the package was installed
@@ -228,7 +185,7 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 					return errors.New("Couldn't find ArtifactMatch for " + ass.Package.GetFingerPrint())
 				}
 
-				treePackage, err := installed.Repository.GetTree().Tree().FindPackage(ass.Package)
+				treePackage, err := installed.Repository.GetTree().GetDatabase().FindPackage(ass.Package)
 				if err != nil {
 					return errors.Wrap(err, "Error getting package "+ass.Package.GetFingerPrint())
 				}
@@ -351,17 +308,11 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 	// compute uninstall from all world - remove packages in parallel - run uninstall finalizer (in order) - mark the uninstallation in db
 	// Get installed definition
 
-	selected, err := s.Database.FindPackage(p)
+	solv := solver.NewSolver(s.Database, s.Database, pkg.NewInMemoryDatabase(false))
+	solution, err := solv.Uninstall(p)
 	if err != nil {
-		return errors.Wrap(err, "Package not installed")
+		return errors.Wrap(err, "Uninstall failed")
 	}
-	installed, err := s.World()
-	if err != nil {
-		return errors.Wrap(err, "Failed generating installed world")
-	}
-
-	solv := solver.NewSolver(installed, installed, pkg.NewInMemoryDatabase(false))
-	solution, err := solv.Uninstall(selected)
 	for _, p := range solution {
 		Info("Uninstalling", p.GetFingerPrint())
 		err := l.uninstall(p, s)

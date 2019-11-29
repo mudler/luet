@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/mudler/luet/pkg/installer/client"
-	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/ghodss/yaml"
 	"github.com/mudler/luet/pkg/compiler"
@@ -269,12 +268,7 @@ func (r Repositories) World() []pkg.Package {
 	// Get Uniques. Walk in reverse so the definitions of most prio-repo overwrites lower ones
 	// In this way, when we will walk again later the deps sorting them by most higher prio we have better chance of success.
 	for i := len(r) - 1; i >= 0; i-- {
-		w, err := r[i].GetTree().Tree().World()
-		if err != nil {
-			Warning("Failed computing world for " + r[i].GetName())
-			continue
-		}
-		for _, p := range w {
+		for _, p := range r[i].GetTree().GetDatabase().World() {
 			cache[p.GetFingerPrint()] = p
 		}
 	}
@@ -284,6 +278,22 @@ func (r Repositories) World() []pkg.Package {
 	}
 
 	return world
+}
+
+func (r Repositories) SyncDatabase(d pkg.PackageDatabase) {
+	cache := map[string]bool{}
+
+	// Get Uniques. Walk in reverse so the definitions of most prio-repo overwrites lower ones
+	// In this way, when we will walk again later the deps sorting them by most higher prio we have better chance of success.
+	for i := len(r) - 1; i >= 0; i-- {
+		for _, p := range r[i].GetTree().GetDatabase().World() {
+			if _, ok := cache[p.GetFingerPrint()]; !ok {
+				cache[p.GetFingerPrint()] = true
+				d.CreatePackage(p)
+			}
+		}
+	}
+
 }
 
 type PackageMatch struct {
@@ -300,7 +310,7 @@ func (re Repositories) PackageMatches(p []pkg.Package) []PackageMatch {
 PACKAGE:
 	for _, pack := range p {
 		for _, r := range re {
-			c, err := r.GetTree().Tree().GetPackageSet().FindPackage(pack)
+			c, err := r.GetTree().GetDatabase().FindPackage(pack)
 			if err == nil {
 				matches = append(matches, PackageMatch{Package: c, Repo: r})
 				continue PACKAGE
@@ -318,10 +328,8 @@ func (re Repositories) Search(s string) []PackageMatch {
 	var matches []PackageMatch
 
 	for _, r := range re {
-		ps := r.GetTree().Tree().GetPackageSet()
-		for _, k := range ps.GetPackages() {
-			pack, err := ps.GetPackage(k)
-			if err == nil && term.MatchString(pack.GetName()) {
+		for _, pack := range r.GetTree().GetDatabase().World() {
+			if term.MatchString(pack.GetName()) {
 				matches = append(matches, PackageMatch{Package: pack, Repo: r})
 			}
 		}
