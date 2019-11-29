@@ -20,7 +20,7 @@ import (
 	"sort"
 
 	"github.com/crillab/gophersat/bf"
-	"github.com/hashicorp/go-version"
+	version "github.com/hashicorp/go-version"
 	pkg "github.com/mudler/luet/pkg/package"
 )
 
@@ -36,22 +36,22 @@ type PackageSolver interface {
 
 // Solver is the default solver for luet
 type Solver struct {
-	Database  pkg.PackageDatabase
-	Wanted    []pkg.Package
-	Installed []pkg.Package
-	World     []pkg.Package
+	SolverDatabase pkg.PackageDatabase
+	Wanted         []pkg.Package
+	Installed      []pkg.Package
+	World          []pkg.Package
 }
 
 // NewSolver accepts as argument two lists of packages, the first is the initial set,
 // the second represent all the known packages.
-func NewSolver(init []pkg.Package, w []pkg.Package, db pkg.PackageDatabase) PackageSolver {
+func NewSolver(init []pkg.Package, w []pkg.Package, solverdb pkg.PackageDatabase) PackageSolver {
 	for _, v := range init {
 		pkg.NormalizeFlagged(v)
 	}
 	for _, v := range w {
 		pkg.NormalizeFlagged(v)
 	}
-	return &Solver{Installed: init, World: w, Database: db}
+	return &Solver{Installed: init, World: w, SolverDatabase: solverdb}
 }
 
 // TODO: []pkg.Package should have its own type with this kind of methods in (+Unique, sort, etc.)
@@ -98,7 +98,7 @@ func (s *Solver) noRulesWorld() bool {
 func (s *Solver) BuildInstalled() (bf.Formula, error) {
 	var formulas []bf.Formula
 	for _, p := range s.Installed {
-		solvable, err := p.BuildFormula(s.Database)
+		solvable, err := p.BuildFormula(s.SolverDatabase)
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +125,7 @@ func (s *Solver) BuildWorld(includeInstalled bool) (bf.Formula, error) {
 	}
 
 	for _, p := range s.World {
-		solvable, err := p.BuildFormula(s.Database)
+		solvable, err := p.BuildFormula(s.SolverDatabase)
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +142,7 @@ func (s *Solver) ConflictsWith(p pkg.Package, ls []pkg.Package) (bool, error) {
 		return false, nil
 	}
 
-	encodedP, err := p.IsFlagged(true).Encode(s.Database)
+	encodedP, err := p.IsFlagged(true).Encode(s.SolverDatabase)
 	if err != nil {
 		return false, err
 	}
@@ -164,7 +164,7 @@ func (s *Solver) ConflictsWith(p pkg.Package, ls []pkg.Package) (bool, error) {
 		// 	continue
 		// }
 
-		encodedI, err := i.Encode(s.Database)
+		encodedI, err := i.Encode(s.SolverDatabase)
 		if err != nil {
 			return false, err
 		}
@@ -244,7 +244,7 @@ func (s *Solver) BuildFormula() (bf.Formula, error) {
 		return nil, err
 	}
 	for _, wanted := range s.Wanted {
-		encodedW, err := wanted.Encode(s.Database)
+		encodedW, err := wanted.Encode(s.SolverDatabase)
 		if err != nil {
 			return nil, err
 		}
@@ -256,7 +256,7 @@ func (s *Solver) BuildFormula() (bf.Formula, error) {
 		}
 
 		for _, installed := range s.Installed {
-			encodedI, err := installed.Encode(s.Database)
+			encodedI, err := installed.Encode(s.SolverDatabase)
 			if err != nil {
 				return nil, err
 			}
@@ -292,7 +292,7 @@ func (s *Solver) Solve() (PackagesAssertions, error) {
 		return nil, err
 	}
 
-	return DecodeModel(model, s.Database)
+	return DecodeModel(model, s.SolverDatabase)
 }
 
 // Install given a list of packages, returns package assertions to indicate the packages that must be installed in the system in order
