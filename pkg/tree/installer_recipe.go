@@ -35,26 +35,19 @@ const (
 )
 
 func NewInstallerRecipe(db pkg.PackageDatabase) Builder {
-	tree := NewDefaultTree()
-	tree.SetPackageSet(db)
-	return &InstallerRecipe{Database: db, PackageTree: tree}
+	return &InstallerRecipe{Database: db}
 }
 
 // InstallerRecipe is the "general" reciper for Trees
 type InstallerRecipe struct {
-	PackageTree pkg.Tree
-	SourcePath  string
-	Database    pkg.PackageDatabase
+	SourcePath string
+	Database   pkg.PackageDatabase
 }
 
 func (r *InstallerRecipe) Save(path string) error {
 
-	for _, pid := range r.PackageTree.GetPackageSet().GetPackages() {
+	for _, p := range r.Database.World() {
 
-		p, err := r.PackageTree.GetPackageSet().GetPackage(pid)
-		if err != nil {
-			return err
-		}
 		dir := filepath.Join(path, p.GetCategory(), p.GetName(), p.GetVersion())
 		os.MkdirAll(dir, os.ModePerm)
 		data, err := p.Yaml()
@@ -77,15 +70,10 @@ func (r *InstallerRecipe) Save(path string) error {
 
 func (r *InstallerRecipe) Load(path string) error {
 
-	if r.Tree() == nil {
-		r.PackageTree = NewDefaultTree()
-	}
-
 	// tmpfile, err := ioutil.TempFile("", "luet")
 	// if err != nil {
 	// 	return err
 	// }
-	r.Tree().SetPackageSet(r.Database)
 	r.SourcePath = path
 
 	//r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
@@ -109,7 +97,7 @@ func (r *InstallerRecipe) Load(path string) error {
 
 		// Path is set only internally when tree is loaded from disk
 		pack.SetPath(filepath.Dir(currentpath))
-		_, err = r.Tree().GetPackageSet().CreatePackage(&pack)
+		_, err = r.Database.CreatePackage(&pack)
 		if err != nil {
 			return errors.Wrap(err, "Error creating package "+pack.GetName())
 		}
@@ -124,6 +112,6 @@ func (r *InstallerRecipe) Load(path string) error {
 	return nil
 }
 
-func (r *InstallerRecipe) Tree() pkg.Tree        { return r.PackageTree }
-func (r *InstallerRecipe) WithTree(t pkg.Tree)   { r.PackageTree = t }
-func (r *InstallerRecipe) GetSourcePath() string { return r.SourcePath }
+func (r *InstallerRecipe) GetDatabase() pkg.PackageDatabase   { return r.Database }
+func (r *InstallerRecipe) WithDatabase(d pkg.PackageDatabase) { r.Database = d }
+func (r *InstallerRecipe) GetSourcePath() string              { return r.SourcePath }

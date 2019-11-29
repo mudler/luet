@@ -68,12 +68,14 @@ var buildCmd = &cobra.Command{
 		switch databaseType {
 		case "memory":
 			db = pkg.NewInMemoryDatabase(false)
+
 		case "boltdb":
 			tmpdir, err := ioutil.TempDir("", "package")
 			if err != nil {
 				Fatal(err)
 			}
 			db = pkg.NewBoltDatabase(tmpdir)
+
 		}
 		defer db.Clean()
 
@@ -86,12 +88,8 @@ var buildCmd = &cobra.Command{
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
-		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
+		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase())
 
-		err = luetCompiler.Prepare(concurrency)
-		if err != nil {
-			Fatal("Error: " + err.Error())
-		}
 		if !all {
 			for _, a := range args {
 				decodepackage, err := regexp.Compile(`^([<>]?\~?=?)((([^\/]+)\/)?(?U)(\S+))(-(\d+(\.\d+)*[a-z]?(_(alpha|beta|pre|rc|p)\d*)*(-r\d+)?))?$`)
@@ -112,10 +110,8 @@ var buildCmd = &cobra.Command{
 				compilerSpecs.Add(spec)
 			}
 		} else {
-			w, e := generalRecipe.Tree().World()
-			if e != nil {
-				Fatal("Error: " + err.Error())
-			}
+			w := generalRecipe.GetDatabase().World()
+
 			for _, p := range w {
 				spec, err := luetCompiler.FromPackage(p)
 				if err != nil {

@@ -40,6 +40,8 @@ type PackageSet interface {
 	GetPackageFiles(Package) ([]string, error)
 	SetPackageFiles(*PackageFile) error
 	RemovePackageFiles(Package) error
+
+	World() []Package
 }
 
 type PackageFile struct {

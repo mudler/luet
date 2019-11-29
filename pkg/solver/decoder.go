@@ -22,7 +22,7 @@ import (
 	"unicode"
 
 	pkg "github.com/mudler/luet/pkg/package"
-	"github.com/philopon/go-toposort"
+	toposort "github.com/philopon/go-toposort"
 	"github.com/stevenle/topsort"
 )
 
@@ -67,12 +67,12 @@ func (a *PackageAssert) String() string {
 
 func (a *PackageAssert) ToString() string {
 	var msg string
-	if a.Package.Flagged() {
+	if a.Value {
 		msg = "installed"
 	} else {
 		msg = "not installed"
 	}
-	return fmt.Sprintf("%s/%s %s %s: %t", a.Package.GetCategory(), a.Package.GetName(), a.Package.GetVersion(), msg, a.Value)
+	return fmt.Sprintf("%s/%s %s %s", a.Package.GetCategory(), a.Package.GetName(), a.Package.GetVersion(), msg)
 }
 
 func (assertions PackagesAssertions) EnsureOrder() PackagesAssertions {
@@ -88,7 +88,7 @@ func (assertions PackagesAssertions) EnsureOrder() PackagesAssertions {
 		fingerprints = append(fingerprints, a.Package.GetFingerPrint())
 		unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
 
-		if a.Package.Flagged() && a.Value {
+		if a.Value {
 			unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
 		} else {
 			orderedAssertions = append(orderedAssertions, a) // Keep last the ones which are not meant to be installed
@@ -122,7 +122,7 @@ func (assertions PackagesAssertions) EnsureOrder() PackagesAssertions {
 	return orderedAssertions
 }
 
-func (assertions PackagesAssertions) Order(fingerprint string) PackagesAssertions {
+func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fingerprint string) PackagesAssertions {
 
 	orderedAssertions := PackagesAssertions{}
 	unorderedAssertions := PackagesAssertions{}
@@ -137,7 +137,7 @@ func (assertions PackagesAssertions) Order(fingerprint string) PackagesAssertion
 		fingerprints = append(fingerprints, a.Package.GetFingerPrint())
 		unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
 
-		if a.Package.Flagged() && a.Value {
+		if a.Value {
 			unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
 		} else {
 			orderedAssertions = append(orderedAssertions, a) // Keep last the ones which are not meant to be installed
@@ -145,12 +145,28 @@ func (assertions PackagesAssertions) Order(fingerprint string) PackagesAssertion
 	}
 
 	sort.Sort(unorderedAssertions)
+	w := definitiondb.World() // FIXME: this is heavy
 
 	// Build a topological graph
 	//graph := toposort.NewGraph(len(unorderedAssertions))
 	//	graph.AddNodes(fingerprints...)
 	for _, a := range unorderedAssertions {
-		for _, req := range a.Package.GetRequires() {
+		for _, requiredDef := range a.Package.GetRequires() {
+			req, err := definitiondb.FindPackage(requiredDef)
+			if err != nil {
+				//	return nil, errors.Wrap(err, "Couldn't find required package in db definition")
+				packages, err := requiredDef.Expand(&w)
+				//	Info("Expanded", packages, err)
+				if err != nil || len(packages) == 0 {
+					req = requiredDef
+				} else {
+					req = pkg.Best(packages)
+
+				}
+				//required = &DefaultPackage{Name: "test"}
+			}
+
+			// Expand also here, as we need to order them (or instead the solver should give back the dep correctly?)
 			graph.AddEdge(a.Package.GetFingerPrint(), req.GetFingerPrint())
 		}
 	}
@@ -215,7 +231,7 @@ func (a PackagesAssertions) Less(i, j int) bool {
 func (assertions PackagesAssertions) AssertionHash() string {
 	var fingerprint string
 	for _, assertion := range assertions { // Note: Always order them first!
-		if assertion.Value && assertion.Package.Flagged() { // Tke into account only dependencies installed (get fingerprint of subgraph)
+		if assertion.Value { // Tke into account only dependencies installed (get fingerprint of subgraph)
 			fingerprint += assertion.ToString() + "\n"
 		}
 	}

@@ -43,13 +43,10 @@ var _ = Describe("Repository", func() {
 
 			err = generalRecipe.Load("../../tests/fixtures/buildable")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
-			err = compiler.Prepare(1)
-			Expect(err).ToNot(HaveOccurred())
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -101,10 +98,10 @@ var _ = Describe("Repository", func() {
 			builder1 := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
 			builder2 := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
 
-			_, err := builder1.Tree().GetPackageSet().CreatePackage(package1)
+			_, err := builder1.GetDatabase().CreatePackage(package1)
 			Expect(err).ToNot(HaveOccurred())
 
-			_, err = builder2.Tree().GetPackageSet().CreatePackage(package2)
+			_, err = builder2.GetDatabase().CreatePackage(package2)
 			Expect(err).ToNot(HaveOccurred())
 			repo1 := &LuetRepository{Name: "test1", Tree: builder1}
 			repo2 := &LuetRepository{Name: "test2", Tree: builder2}

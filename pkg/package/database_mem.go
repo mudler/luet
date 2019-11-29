@@ -94,7 +94,13 @@ func (db *InMemoryDatabase) GetPackage(ID string) (Package, error) {
 
 	p := &DefaultPackage{}
 
-	if err := json.Unmarshal(enc, &p); err != nil {
+	rawIn := json.RawMessage(enc)
+	bytes, err := rawIn.MarshalJSON()
+	if err != nil {
+		return &DefaultPackage{}, err
+	}
+
+	if err := json.Unmarshal(bytes, &p); err != nil {
 		return nil, err
 	}
 	return p, nil
@@ -120,7 +126,7 @@ func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {
 		return "", errors.New("InMemoryDatabase suports only DefaultPackage")
 	}
 
-	res, err := json.Marshal(pd)
+	res, err := pd.JSON()
 	if err != nil {
 		return "", err
 	}
@@ -138,7 +144,7 @@ func (db *InMemoryDatabase) encodePackage(p Package) (string, string, error) {
 		return "", "", errors.New("InMemoryDatabase suports only DefaultPackage")
 	}
 
-	res, err := json.Marshal(pd)
+	res, err := pd.JSON()
 	if err != nil {
 		return "", "", err
 	}
@@ -245,4 +251,15 @@ func (db *InMemoryDatabase) RemovePackage(p Package) error {
 		}
 	}
 	return errors.New("Package not found")
+}
+func (db *InMemoryDatabase) World() []Package {
+	var all []Package
+	// FIXME: This should all be locked in the db - for now forbid the solver to be run in threads.
+	for _, k := range db.GetPackages() {
+		pack, err := db.GetPackage(k)
+		if err == nil {
+			all = append(all, pack)
+		}
+	}
+	return all
 }

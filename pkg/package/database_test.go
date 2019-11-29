@@ -45,7 +45,7 @@ var _ = Describe("Database", func() {
 
 			ids := db.GetPackages()
 
-			Expect(ids).To(Equal([]string{"b536b2bd"}))
+			Expect(ids).To(Equal([]string{"bad96fcd"}))
 
 		})
 		It("Find packages", func() {

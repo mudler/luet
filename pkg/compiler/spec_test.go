@@ -58,11 +58,10 @@ var _ = Describe("Spec", func() {
 
 			err := generalRecipe.Load("../../tests/fixtures/buildtree")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(1))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			compiler := NewLuetCompiler(nil, generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
+			compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase())
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
 

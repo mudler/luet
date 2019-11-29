@@ -16,9 +16,13 @@
 package pkg
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"sort"
+
+	//	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/crillab/gophersat/bf"
 	version "github.com/hashicorp/go-version"
@@ -32,7 +36,7 @@ import (
 type Package interface {
 	Encode(PackageDatabase) (string, error)
 
-	BuildFormula(PackageDatabase) ([]bf.Formula, error)
+	BuildFormula(PackageDatabase, PackageDatabase) ([]bf.Formula, error)
 	IsFlagged(bool) Package
 	Flagged() bool
 	GetFingerPrint() string
@@ -49,7 +53,7 @@ type Package interface {
 	GetCategory() string
 
 	GetVersion() string
-	RequiresContains(Package) bool
+	RequiresContains(PackageDatabase, Package) (bool, error)
 	Matches(m Package) bool
 
 	AddUse(use string)
@@ -70,18 +74,37 @@ type Tree interface {
 	SetPackageSet(s PackageDatabase)
 	World() ([]Package, error)
 	FindPackage(Package) (Package, error)
-	ResolveDeps(int) error
 }
 
 // >> Unmarshallers
 // DefaultPackageFromYaml decodes a package from yaml bytes
-func DefaultPackageFromYaml(source []byte) (DefaultPackage, error) {
-	var pkg DefaultPackage
-	err := yaml.Unmarshal(source, &pkg)
+func DefaultPackageFromYaml(yml []byte) (DefaultPackage, error) {
+
+	var unescaped DefaultPackage
+	source, err := yaml.YAMLToJSON(yml)
 	if err != nil {
-		return pkg, err
+		return DefaultPackage{}, err
 	}
-	return pkg, nil
+
+	rawIn := json.RawMessage(source)
+	bytes, err := rawIn.MarshalJSON()
+	if err != nil {
+		return DefaultPackage{}, err
+	}
+	err = json.Unmarshal(bytes, &unescaped)
+	if err != nil {
+		return DefaultPackage{}, err
+	}
+	return unescaped, nil
+}
+
+// Major and minor gets escaped when marshalling in JSON, making compiler fails recognizing selectors for expansion
+func (t *DefaultPackage) JSON() ([]byte, error) {
+	buffer := &bytes.Buffer{}
+	encoder := json.NewEncoder(buffer)
+	encoder.SetEscapeHTML(false)
+	err := encoder.Encode(t)
+	return buffer.Bytes(), err
 }
 
 // DefaultPackage represent a standard package definition
@@ -111,7 +134,7 @@ func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*D
 }
 
 func (p *DefaultPackage) String() string {
-	b, err := json.Marshal(p)
+	b, err := p.JSON()
 	if err != nil {
 		return fmt.Sprintf("{ id: \"%d\", name: \"%s\" }", p.ID, p.Name)
 	}
@@ -165,7 +188,12 @@ func (p *DefaultPackage) Encode(db PackageDatabase) (string, error) {
 }
 
 func (p *DefaultPackage) Yaml() ([]byte, error) {
-	y, err := yaml.Marshal(p)
+	j, err := p.JSON()
+	if err != nil {
+
+		return []byte{}, err
+	}
+	y, err := yaml.JSONToYAML(j)
 	if err != nil {
 
 		return []byte{}, err
@@ -273,43 +301,87 @@ func DecodePackage(ID string, db PackageDatabase) (Package, error) {
 	return db.GetPackage(ID)
 }
 
-func NormalizeFlagged(p Package) {
-	for _, r := range p.GetRequires() {
-		r.IsFlagged(true)
-		NormalizeFlagged(r)
+func (pack *DefaultPackage) RequiresContains(definitiondb PackageDatabase, s Package) (bool, error) {
+	p, err := definitiondb.FindPackage(pack)
+	if err != nil {
+		p = pack //relax things
+		//return false, errors.Wrap(err, "Package not found in definition db")
 	}
-	for _, r := range p.GetConflicts() {
-		r.IsFlagged(true)
-		NormalizeFlagged(r)
-	}
-}
 
-func (p *DefaultPackage) RequiresContains(s Package) bool {
+	w := definitiondb.World()
 	for _, re := range p.GetRequires() {
 		if re.Matches(s) {
-			return true
+			return true, nil
 		}
 
-		if re.RequiresContains(s) {
-			return true
+		packages, _ := re.Expand(&w)
+		for _, pa := range packages {
+			if pa.Matches(s) {
+				return true, nil
+			}
+		}
+		if contains, err := re.RequiresContains(definitiondb, s); err == nil && contains {
+			return true, nil
 		}
 	}
 
-	return false
+	return false, nil
 }
 
-func (p *DefaultPackage) BuildFormula(db PackageDatabase) ([]bf.Formula, error) {
-	encodedA, err := p.IsFlagged(true).Encode(db)
+func Best(set []Package) Package {
+	var versionsMap map[string]Package = make(map[string]Package)
+	if len(set) == 0 {
+		panic("Best needs a list with elements")
+	}
+
+	versionsRaw := []string{}
+	for _, p := range set {
+		versionsRaw = append(versionsRaw, p.GetVersion())
+		versionsMap[p.GetVersion()] = p
+	}
+
+	versions := make([]*version.Version, len(versionsRaw))
+	for i, raw := range versionsRaw {
+		v, _ := version.NewVersion(raw)
+		versions[i] = v
+	}
+
+	// After this, the versions are properly sorted
+	sort.Sort(version.Collection(versions))
+
+	return versionsMap[versions[len(versions)-1].Original()]
+}
+
+func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db PackageDatabase) ([]bf.Formula, error) {
+	// TODO: Expansion needs to go here - and so we ditch Resolvedeps()
+	p, err := definitiondb.FindPackage(pack)
+	if err != nil {
+		p = pack // Relax failures and trust the def
+	}
+	encodedA, err := p.Encode(db)
 	if err != nil {
 		return nil, err
 	}
-	NormalizeFlagged(p)
 
 	A := bf.Var(encodedA)
 
 	var formulas []bf.Formula
+	w := definitiondb.World() // FIXME: this is heavy
+	for _, requiredDef := range p.GetRequires() {
+		required, err := definitiondb.FindPackage(requiredDef)
+		if err != nil {
+			//	return nil, errors.Wrap(err, "Couldn't find required package in db definition")
+			packages, err := requiredDef.Expand(&w)
+			//	Info("Expanded", packages, err)
+			if err != nil || len(packages) == 0 {
+				required = requiredDef
+			} else {
+				required = Best(packages)
 
-	for _, required := range p.PackageRequires {
+			}
+			//required = &DefaultPackage{Name: "test"}
+		}
+
 		encodedB, err := required.Encode(db)
 		if err != nil {
 			return nil, err
@@ -317,7 +389,7 @@ func (p *DefaultPackage) BuildFormula(db PackageDatabase) ([]bf.Formula, error) 
 		B := bf.Var(encodedB)
 		formulas = append(formulas, bf.Or(bf.Not(A), B))
 
-		f, err := required.BuildFormula(db)
+		f, err := required.BuildFormula(definitiondb, db)
 		if err != nil {
 			return nil, err
 		}
@@ -325,7 +397,32 @@ func (p *DefaultPackage) BuildFormula(db PackageDatabase) ([]bf.Formula, error) 
 
 	}
 
-	for _, required := range p.PackageConflicts {
+	for _, requiredDef := range p.GetConflicts() {
+		required, err := definitiondb.FindPackage(requiredDef)
+		if err != nil {
+			packages, err := requiredDef.Expand(&w)
+			if err != nil || len(packages) == 0 {
+				required = requiredDef
+			} else {
+				for _, p := range packages {
+					encodedB, err := p.Encode(db)
+					if err != nil {
+						return nil, err
+					}
+					B := bf.Var(encodedB)
+					formulas = append(formulas, bf.Or(bf.Not(A),
+						bf.Not(B)))
+
+					f, err := p.BuildFormula(definitiondb, db)
+					if err != nil {
+						return nil, err
+					}
+					formulas = append(formulas, f...)
+				}
+			}
+		}
+
+		//	return nil, errors.Wrap(err, "Couldn't find required package in db definition")
 		encodedB, err := required.Encode(db)
 		if err != nil {
 			return nil, err
@@ -334,11 +431,12 @@ func (p *DefaultPackage) BuildFormula(db PackageDatabase) ([]bf.Formula, error) 
 		formulas = append(formulas, bf.Or(bf.Not(A),
 			bf.Not(B)))
 
-		f, err := required.BuildFormula(db)
+		f, err := required.BuildFormula(definitiondb, db)
 		if err != nil {
 			return nil, err
 		}
 		formulas = append(formulas, f...)
+
 	}
 	return formulas, nil
 }

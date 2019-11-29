@@ -26,11 +26,22 @@ import (
 )
 
 var _ = Describe("Decoder", func() {
+	db := pkg.NewInMemoryDatabase(false)
+	dbInstalled := pkg.NewInMemoryDatabase(false)
+	dbDefinitions := pkg.NewInMemoryDatabase(false)
+	s := NewSolver(dbInstalled, dbDefinitions, db)
+
+	BeforeEach(func() {
+		db = pkg.NewInMemoryDatabase(false)
+		dbInstalled = pkg.NewInMemoryDatabase(false)
+		dbDefinitions = pkg.NewInMemoryDatabase(false)
+		s = NewSolver(dbInstalled, dbDefinitions, db)
+	})
+
 	Context("Assertion ordering", func() {
 		eq := 0
 		for index := 0; index < 300; index++ { // Just to make sure we don't have false positives
 			It("Orders them correctly #"+strconv.Itoa(index), func() {
-				db := pkg.NewInMemoryDatabase(false)
 
 				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 				E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -41,19 +52,27 @@ var _ = Describe("Decoder", func() {
 				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
 				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-				s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D, E, F, G}, db)
+				for _, p := range []pkg.Package{A, B, C, D, E, F, G} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{C} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
 
 				solution, err := s.Install([]pkg.Package{A})
-				Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: H.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: G.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: H, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: G, Value: true}))
 
 				Expect(len(solution)).To(Equal(6))
 				Expect(err).ToNot(HaveOccurred())
-				solution = solution.Order(A.GetFingerPrint())
+				solution = solution.Order(dbDefinitions, A.GetFingerPrint())
 				//	Expect(len(solution)).To(Equal(6))
 				Expect(solution[0].Package.GetName()).To(Equal("G"))
 				Expect(solution[1].Package.GetName()).To(Equal("H"))
@@ -73,7 +92,6 @@ var _ = Describe("Decoder", func() {
 		equality := 0
 		for index := 0; index < 300; index++ { // Just to make sure we don't have false positives
 			It("Doesn't order them correctly otherwise #"+strconv.Itoa(index), func() {
-				db := pkg.NewInMemoryDatabase(false)
 
 				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 				E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -84,15 +102,23 @@ var _ = Describe("Decoder", func() {
 				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
 				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-				s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D, E, F, G}, db)
+				for _, p := range []pkg.Package{A, B, C, D, E, F, G} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{C} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
 
 				solution, err := s.Install([]pkg.Package{A})
-				Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: H.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: G.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: H, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: G, Value: true}))
 
 				Expect(len(solution)).To(Equal(6))
 				Expect(err).ToNot(HaveOccurred())
@@ -132,7 +158,6 @@ var _ = Describe("Decoder", func() {
 
 	Context("Assertion hashing", func() {
 		It("Hashes them, and could be used for comparison", func() {
-			db := pkg.NewInMemoryDatabase(false)
 
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -143,19 +168,27 @@ var _ = Describe("Decoder", func() {
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D, E, F, G}, db)
+			for _, p := range []pkg.Package{A, B, C, D, E, F, G} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{C} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
 
 			solution, err := s.Install([]pkg.Package{A})
-			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: H.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: G.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: H, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: G, Value: true}))
 
 			Expect(len(solution)).To(Equal(6))
 			Expect(err).ToNot(HaveOccurred())
-			solution = solution.Order(A.GetFingerPrint())
+			solution = solution.Order(dbDefinitions, A.GetFingerPrint())
 			//	Expect(len(solution)).To(Equal(6))
 			Expect(solution[0].Package.GetName()).To(Equal("G"))
 			Expect(solution[1].Package.GetName()).To(Equal("H"))
@@ -165,15 +198,15 @@ var _ = Describe("Decoder", func() {
 			hash := solution.AssertionHash()
 
 			solution, err = s.Install([]pkg.Package{B})
-			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: H.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: G.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: H, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: G, Value: true}))
 
 			Expect(len(solution)).To(Equal(6))
 			Expect(err).ToNot(HaveOccurred())
-			solution = solution.Order(B.GetFingerPrint())
+			solution = solution.Order(dbDefinitions, B.GetFingerPrint())
 			hash2 := solution.AssertionHash()
 
 			//	Expect(len(solution)).To(Equal(6))
@@ -183,23 +216,34 @@ var _ = Describe("Decoder", func() {
 			Expect(solution[3].Package.GetName()).To(Equal("D"))
 			Expect(solution[4].Package.GetName()).To(Equal("B"))
 			Expect(solution[0].Value).ToNot(BeTrue())
-			Expect(solution[0].Package.Flagged()).To(BeTrue())
 
 			Expect(hash).ToNot(Equal(""))
 			Expect(hash2).ToNot(Equal(""))
 			Expect(hash != hash2).To(BeTrue())
-			db2 := pkg.NewInMemoryDatabase(false)
+
+		})
+		It("Hashes them, and could be used for comparison", func() {
 
 			X := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			Y := pkg.NewPackage("Y", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
 			Z := pkg.NewPackage("Z", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
-			s = NewSolver([]pkg.Package{}, []pkg.Package{X, Y, Z}, db2)
-			solution, err = s.Install([]pkg.Package{Y})
+
+			for _, p := range []pkg.Package{X, Y, Z} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			solution, err := s.Install([]pkg.Package{Y})
 			Expect(err).ToNot(HaveOccurred())
 
 			solution2, err := s.Install([]pkg.Package{Z})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(solution.Order(Y.GetFingerPrint()).Drop(Y).AssertionHash() == solution2.Order(Z.GetFingerPrint()).Drop(Z).AssertionHash()).To(BeTrue())
+			Expect(solution.Order(dbDefinitions, Y.GetFingerPrint()).Drop(Y).AssertionHash() == solution2.Order(dbDefinitions, Z.GetFingerPrint()).Drop(Z).AssertionHash()).To(BeTrue())
 		})
 
 	})

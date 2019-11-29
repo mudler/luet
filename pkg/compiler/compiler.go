@@ -39,12 +39,12 @@ type LuetCompiler struct {
 	Database pkg.PackageDatabase
 }
 
-func NewLuetCompiler(backend CompilerBackend, t pkg.Tree, db pkg.PackageDatabase) Compiler {
+func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase) Compiler {
 	// The CompilerRecipe will gives us a tree with only build deps listed.
 	return &LuetCompiler{
 		Backend: backend,
 		CompilerRecipe: &tree.CompilerRecipe{
-			tree.Recipe{PackageTree: t},
+			tree.Recipe{Database: db},
 		},
 		Database: db,
 	}
@@ -73,10 +73,8 @@ func (cs *LuetCompiler) CompileWithReverseDeps(concurrency int, keepPermissions 
 	Info(":ant: Resolving reverse dependencies")
 	toCompile := NewLuetCompilationspecs()
 	for _, a := range artifacts {
-		w, asserterr := cs.Tree().World()
-		if asserterr != nil {
-			return nil, append(err, asserterr)
-		}
+		w := cs.Database.World()
+
 		revdeps := a.GetCompileSpec().GetPackage().Revdeps(&w)
 		for _, r := range revdeps {
 			spec, asserterr := cs.FromPackage(r)
@@ -291,14 +289,6 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	return artifact, nil
 }
 
-func (cs *LuetCompiler) Prepare(concurrency int) error {
-
-	err := cs.Tree().ResolveDeps(concurrency) // FIXME: When done in parallel, this could be done on top before starting
-	if err != nil {
-		return errors.Wrap(err, "While resoolving tree world deps")
-	}
-	return nil
-}
 func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPermissions bool) (Artifact, error) {
 	pkgTag := ":package:  " + p.GetPackage().GetName()
 
@@ -353,37 +343,26 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 
 func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssertions, error) {
 
-	// Get build deps tree (ordered)
-	world, err := cs.Tree().World()
-	if err != nil {
-		return nil, errors.Wrap(err, "While computing tree world")
-	}
-	s := solver.NewSolver([]pkg.Package{}, world, cs.Database)
-	pack, err := cs.Tree().FindPackage(p.GetPackage())
+	s := solver.NewSolver(pkg.NewInMemoryDatabase(false), cs.Database, pkg.NewInMemoryDatabase(false))
+
+	solution, err := s.Install([]pkg.Package{p.GetPackage()})
 	if err != nil {
 		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
 	}
-	solution, err := s.Install([]pkg.Package{pack})
-	if err != nil {
-		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
-	}
-	dependencies := solution.Order(p.GetPackage().GetFingerPrint())
+
+	dependencies := solution.Order(cs.Database, p.GetPackage().GetFingerPrint())
 	assertions := solver.PackagesAssertions{}
 
 	for _, assertion := range dependencies { //highly dependent on the order
-		if assertion.Value && assertion.Package.Flagged() {
-			depPack, err := cs.Tree().FindPackage(assertion.Package)
-			if err != nil {
-				return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
-			}
-			nthsolution, err := s.Install([]pkg.Package{depPack})
+		if assertion.Value {
+			nthsolution, err := s.Install([]pkg.Package{assertion.Package})
 			if err != nil {
 				return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
 			}
 
 			assertion.Hash = solver.PackageHash{
-				BuildHash:   nthsolution.Order(depPack.GetFingerPrint()).Drop(depPack).AssertionHash(),
-				PackageHash: nthsolution.Order(depPack.GetFingerPrint()).AssertionHash(),
+				BuildHash:   nthsolution.Order(cs.Database, assertion.Package.GetFingerPrint()).Drop(assertion.Package).AssertionHash(),
+				PackageHash: nthsolution.Order(cs.Database, assertion.Package.GetFingerPrint()).AssertionHash(),
 			}
 			assertions = append(assertions, assertion)
 		}
@@ -503,7 +482,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 
 func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 
-	pack, err := cs.Tree().FindPackage(p)
+	pack, err := cs.Database.FindPackage(p)
 	if err != nil {
 		return nil, err
 	}

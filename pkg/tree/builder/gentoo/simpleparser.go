@@ -247,7 +247,7 @@ func SourceFile(ctx context.Context, path string, pkg *_gentoo.GentooPackage) (m
 }
 
 // ScanEbuild returns a list of packages (always one with SimpleEbuildParser) decoded from an ebuild.
-func (ep *SimpleEbuildParser) ScanEbuild(path string, tree pkg.Tree) ([]pkg.Package, error) {
+func (ep *SimpleEbuildParser) ScanEbuild(path string) ([]pkg.Package, error) {
 	Debug("Starting parsing of ebuild", path)
 
 	pkgstr := filepath.Base(path)

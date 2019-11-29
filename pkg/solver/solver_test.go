@@ -17,7 +17,6 @@ package solver_test
 
 import (
 	pkg "github.com/mudler/luet/pkg/package"
-	"github.com/mudler/luet/pkg/solver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -26,38 +25,66 @@ import (
 
 var _ = Describe("Solver", func() {
 
+	db := pkg.NewInMemoryDatabase(false)
+	dbInstalled := pkg.NewInMemoryDatabase(false)
+	dbDefinitions := pkg.NewInMemoryDatabase(false)
+	s := NewSolver(dbInstalled, dbDefinitions, db)
+
+	BeforeEach(func() {
+		db = pkg.NewInMemoryDatabase(false)
+		dbInstalled = pkg.NewInMemoryDatabase(false)
+		dbDefinitions = pkg.NewInMemoryDatabase(false)
+		s = NewSolver(dbInstalled, dbDefinitions, db)
+	})
 	Context("Simple set", func() {
 		It("Solves correctly if the selected package has no requirements or conflicts and we have nothing installed yet", func() {
-			db := pkg.NewInMemoryDatabase(false)
 
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{}, []pkg.Package{A, B, C}, db)
+			for _, p := range []pkg.Package{A, B, C} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
+
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
 			Expect(len(solution)).To(Equal(1))
 		})
 
 		It("Solves correctly if the selected package has no requirements or conflicts and we have installed one package", func() {
-			db := pkg.NewInMemoryDatabase(false)
 
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C}, db)
+			for _, p := range []pkg.Package{A, B, C} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{C} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
+
 			solution, err := s.Install([]pkg.Package{B})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
 			Expect(len(solution)).To(Equal(2))
 		})
 
 		It("Solves correctly if the selected package to install has no requirement or conflicts, but in the world there is one with a requirement", func() {
-			db := pkg.NewInMemoryDatabase(false)
 
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -65,72 +92,107 @@ var _ = Describe("Solver", func() {
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{E, C}, []pkg.Package{A, B, C, D, E}, db)
+			for _, p := range []pkg.Package{A, B, C, D, E} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{E, C} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
+
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: E.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true).(*pkg.DefaultPackage), Value: false}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true).(*pkg.DefaultPackage), Value: false}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: E, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: false}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: false}))
 
 			Expect(len(solution)).To(Equal(5))
 		})
 
 		It("Solves correctly if the selected package to install has requirements", func() {
-			db := pkg.NewInMemoryDatabase(false)
 
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D}, db)
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{C} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
+
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
 
 			Expect(len(solution)).To(Equal(3))
 		})
 
 		It("Solves correctly", func() {
-			db := pkg.NewInMemoryDatabase(false)
 
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C}, db)
+			for _, p := range []pkg.Package{A, B, C} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{C} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
+
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
 			Expect(len(solution)).To(Equal(3))
 		})
 		It("Solves correctly more complex ones", func() {
-			db := pkg.NewInMemoryDatabase(false)
 
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D}, db)
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{C} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A})
-			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
 			Expect(len(solution)).To(Equal(4))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("Solves correctly more complex ones", func() {
-			db := pkg.NewInMemoryDatabase(false)
 
 			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -138,37 +200,185 @@ var _ = Describe("Solver", func() {
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{}, []pkg.Package{A, B, C, D, E}, db)
+			for _, p := range []pkg.Package{A, B, C, D, E} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A})
-			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
 			Expect(len(solution)).To(Equal(3))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
+		It("Solves deps with expansion", func() {
+
+			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "1.1", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "B", Version: ">1.0"}}, []*pkg.DefaultPackage{})
+
+			for _, p := range []pkg.Package{A, B, C, D, E} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
+
+			solution, err := s.Install([]pkg.Package{A})
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
+			Expect(len(solution)).To(Equal(3))
+			Expect(err).ToNot(HaveOccurred())
+		})
+		It("Solves deps with more expansion", func() {
+
+			C := pkg.NewPackage("c", "", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "a", Version: ">=1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+			C.SetCategory("test")
+			B := pkg.NewPackage("b", "1.0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B.SetCategory("test")
+			A := pkg.NewPackage("a", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "b", Version: "1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+			A.SetCategory("test")
+
+			for _, p := range []pkg.Package{A, B, C} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
+
+			solution, err := s.Install([]pkg.Package{C})
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+			Expect(len(solution)).To(Equal(3))
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Solves deps with more expansion", func() {
+
+			C := pkg.NewPackage("c", "1.5", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "a", Version: ">=1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+			C.SetCategory("test")
+			B := pkg.NewPackage("b", "1.0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B.SetCategory("test")
+			A := pkg.NewPackage("a", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "b", Version: "1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+			A.SetCategory("test")
+
+			for _, p := range []pkg.Package{A, B, C} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
+
+			solution, err := s.Install([]pkg.Package{&pkg.DefaultPackage{Name: "c", Version: ">1.0", Category: "test"}})
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+			Expect(len(solution)).To(Equal(3))
+			Expect(err).ToNot(HaveOccurred())
+		})
+		It("Solves deps with more expansion", func() {
+
+			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "1.4", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "D", Version: ">=1.0"}}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "B", Version: ">=1.0"}}, []*pkg.DefaultPackage{})
+
+			for _, p := range []pkg.Package{A, B, C, D, E} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
+
+			solution, err := s.Install([]pkg.Package{A})
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
+			Expect(len(solution)).To(Equal(3))
+			Expect(err).ToNot(HaveOccurred())
+		})
 		It("Uninstalls simple package correctly", func() {
-			db := pkg.NewInMemoryDatabase(false)
 
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{A, B, C, D}, db)
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Uninstall(A)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(solution).To(ContainElement(A.IsFlagged(false)))
 
-			//	Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
+			//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
 			Expect(len(solution)).To(Equal(1))
 		})
+		It("Uninstalls simple package expanded correctly", func() {
 
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "1.2", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
+
+			solution, err := s.Uninstall(&pkg.DefaultPackage{Name: "A", Version: ">1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(solution).To(ContainElement(A.IsFlagged(false)))
+
+			//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+			Expect(len(solution)).To(Equal(1))
+		})
 		It("Find conflicts", func() {
-			db := pkg.NewInMemoryDatabase(false)
 
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -176,7 +386,16 @@ var _ = Describe("Solver", func() {
 
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{A}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{A, B, C, D}, db)
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
 			val, err := s.ConflictsWithInstalled(A)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(val).To(BeTrue())
@@ -184,7 +403,6 @@ var _ = Describe("Solver", func() {
 		})
 
 		It("Find nested conflicts", func() {
-			db := pkg.NewInMemoryDatabase(false)
 
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -192,14 +410,22 @@ var _ = Describe("Solver", func() {
 
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{A}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{A, B, C, D}, db)
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
 			val, err := s.ConflictsWithInstalled(D)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(val).To(BeTrue())
 		})
 
 		It("Doesn't find nested conflicts", func() {
-			db := pkg.NewInMemoryDatabase(false)
 
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -207,14 +433,22 @@ var _ = Describe("Solver", func() {
 
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{A}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{A, B, C, D}, db)
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
 			val, err := s.ConflictsWithInstalled(C)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(val).ToNot(BeTrue())
 		})
 
 		It("Doesn't find conflicts", func() {
-			db := pkg.NewInMemoryDatabase(false)
 
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -222,40 +456,59 @@ var _ = Describe("Solver", func() {
 
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{A, B, C, D}, db)
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
 			val, err := s.ConflictsWithInstalled(C)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(val).ToNot(BeTrue())
 		})
 		It("Uninstalls simple packages not in world correctly", func() {
-			db := pkg.NewInMemoryDatabase(false)
 
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{B, C, D}, db)
+			for _, p := range []pkg.Package{B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
 
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
 			solution, err := s.Uninstall(A)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(solution).To(ContainElement(A.IsFlagged(false)))
 
-			//	Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
+			//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
 			Expect(len(solution)).To(Equal(1))
 		})
 
 		It("Uninstalls complex packages not in world correctly", func() {
-			db := pkg.NewInMemoryDatabase(false)
-
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{B, C, D}, db)
+			for _, p := range []pkg.Package{B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
 
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
 			solution, err := s.Uninstall(A)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -265,15 +518,20 @@ var _ = Describe("Solver", func() {
 		})
 
 		It("Uninstalls complex packages correctly, even if shared deps are required by system packages", func() {
-			db := pkg.NewInMemoryDatabase(false)
-
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{A, B, C, D}, db)
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
 
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
 			solution, err := s.Uninstall(A)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -284,14 +542,20 @@ var _ = Describe("Solver", func() {
 		})
 
 		It("Uninstalls complex packages in world correctly", func() {
-			db := pkg.NewInMemoryDatabase(false)
-
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{C}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{A, C, D}, []pkg.Package{A, B, C, D}, db)
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
 
 			solution, err := s.Uninstall(A)
 			Expect(err).ToNot(HaveOccurred())
@@ -303,23 +567,30 @@ var _ = Describe("Solver", func() {
 		})
 
 		It("Uninstalls complex package correctly", func() {
-			db := pkg.NewInMemoryDatabase(false)
-
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
-			C.IsFlagged(true) // installed
+			//	C // installed
 
-			s := NewSolver([]pkg.Package{A, B, C, D}, []pkg.Package{A, B, C, D}, db)
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
 
 			solution, err := s.Uninstall(A)
+			Expect(err).ToNot(HaveOccurred())
+
 			Expect(solution).To(ContainElement(A.IsFlagged(false)))
 			Expect(solution).To(ContainElement(B.IsFlagged(false)))
 			Expect(solution).To(ContainElement(D.IsFlagged(false)))
 
 			Expect(len(solution)).To(Equal(3))
-			Expect(err).ToNot(HaveOccurred())
 
 		})
 
@@ -328,14 +599,20 @@ var _ = Describe("Solver", func() {
 	Context("Conflict set", func() {
 
 		It("is unsolvable - as we something we ask to install conflict with system stuff", func() {
-			db := pkg.NewInMemoryDatabase(false)
-
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			//	D := pkg.NewPackage("D", "", []pkg.Package{}, []pkg.Package{})
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{C})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C}, db)
+			for _, p := range []pkg.Package{A, B, C} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{C} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
 
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(len(solution)).To(Equal(0))
@@ -346,8 +623,6 @@ var _ = Describe("Solver", func() {
 
 	Context("Complex data sets", func() {
 		It("Solves them correctly", func() {
-			db := pkg.NewInMemoryDatabase(false)
-
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -357,18 +632,26 @@ var _ = Describe("Solver", func() {
 			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
 			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 
-			s := NewSolver([]pkg.Package{C}, []pkg.Package{A, B, C, D, E, F, G}, db)
+			for _, p := range []pkg.Package{A, B, C, D, E, F, G} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
 
+			for _, p := range []pkg.Package{C} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
 			solution, err := s.Install([]pkg.Package{A})
-			Expect(solution).To(ContainElement(PackageAssert{Package: A.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: D.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: H.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: G.IsFlagged(true).(*pkg.DefaultPackage), Value: true}))
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: H, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: G, Value: true}))
 
 			Expect(len(solution)).To(Equal(6))
-			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 
@@ -391,10 +674,43 @@ var _ = Describe("Solver", func() {
 			Expect(lst).To(ContainElement(a03))
 			Expect(lst).ToNot(ContainElement(old))
 			Expect(len(lst)).To(Equal(5))
-			s := solver.NewSolver([]pkg.Package{}, []pkg.Package{}, pkg.NewInMemoryDatabase(false))
-			p := s.Best(lst)
+			p := pkg.Best(lst)
 			Expect(p).To(Equal(a03))
 		})
 	})
+	Context("Upgrades", func() {
 
+		C := pkg.NewPackage("c", "1.5", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "a", Version: ">=1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+		C.SetCategory("test")
+		B := pkg.NewPackage("b", "1.0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+		B.SetCategory("test")
+		A := pkg.NewPackage("a", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "b", Version: "1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+		A.SetCategory("test")
+		A1 := pkg.NewPackage("a", "1.2", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "b", Version: "1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+		A1.SetCategory("test")
+
+		It("upgrades correctly", func() {
+			for _, p := range []pkg.Package{A1, B, C} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			uninstall, solution, err := s.Upgrade()
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(uninstall)).To(Equal(1))
+			Expect(uninstall[0].GetName()).To(Equal("a"))
+			Expect(uninstall[0].GetVersion()).To(Equal("1.1"))
+
+			Expect(solution).To(ContainElement(PackageAssert{Package: A1, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: false}))
+			Expect(len(solution)).To(Equal(3))
+
+		})
+	})
 })

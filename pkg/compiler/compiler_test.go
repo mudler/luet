@@ -35,13 +35,10 @@ var _ = Describe("Compiler", func() {
 
 			err := generalRecipe.Load("../../tests/fixtures/buildable")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
-			err = compiler.Prepare(1)
-			Expect(err).ToNot(HaveOccurred())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -80,13 +77,10 @@ var _ = Describe("Compiler", func() {
 
 			err := generalRecipe.Load("../../tests/fixtures/buildable")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
-			err = compiler.Prepare(1)
-			Expect(err).ToNot(HaveOccurred())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -120,14 +114,10 @@ var _ = Describe("Compiler", func() {
 
 			err = generalRecipe.Load("../../tests/fixtures/buildableseed")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(4))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
-
-			err = compiler.Prepare(1)
-			Expect(err).ToNot(HaveOccurred())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "c", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -180,13 +170,10 @@ var _ = Describe("Compiler", func() {
 
 			err = generalRecipe.Load("../../tests/fixtures/layers")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(2))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
-			err = compiler.Prepare(1)
-			Expect(err).ToNot(HaveOccurred())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "extra", Category: "layer", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -225,13 +212,10 @@ var _ = Describe("Compiler", func() {
 
 			err = generalRecipe.Load("../../tests/fixtures/include")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(1))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
-			err = compiler.Prepare(1)
-			Expect(err).ToNot(HaveOccurred())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -262,13 +246,10 @@ var _ = Describe("Compiler", func() {
 
 			err = generalRecipe.Load("../../tests/fixtures/layered")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
-			err = compiler.Prepare(1)
-			Expect(err).ToNot(HaveOccurred())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "pkgs-checker", Category: "package", Version: "9999"})
 			Expect(err).ToNot(HaveOccurred())
@@ -305,13 +286,10 @@ var _ = Describe("Compiler", func() {
 
 			err = generalRecipe.Load("../../tests/fixtures/layered")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
-			err = compiler.Prepare(1)
-			Expect(err).ToNot(HaveOccurred())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "extra", Category: "layer", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
@@ -346,13 +324,10 @@ var _ = Describe("Compiler", func() {
 
 			err = generalRecipe.Load("../../tests/fixtures/buildableseed")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(4))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
-			err = compiler.Prepare(1)
-			Expect(err).ToNot(HaveOccurred())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 
@@ -401,13 +376,10 @@ var _ = Describe("Compiler", func() {
 
 			err := generalRecipe.Load("../../tests/fixtures/expansion")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(3))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
-			err = compiler.Prepare(1)
-			Expect(err).ToNot(HaveOccurred())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "c", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -445,13 +417,10 @@ var _ = Describe("Compiler", func() {
 
 			err := generalRecipe.Load("../../tests/fixtures/packagelayers")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(generalRecipe.Tree()).ToNot(BeNil()) // It should be populated back at this point
 
-			Expect(len(generalRecipe.Tree().GetPackageSet().GetPackages())).To(Equal(2))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.Tree(), generalRecipe.Tree().GetPackageSet())
-			err = compiler.Prepare(1)
-			Expect(err).ToNot(HaveOccurred())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "runtime", Category: "layer", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
@@ -468,7 +437,7 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].GetDependencies())).To(Equal(1))
 			Expect(helpers.Untar(spec.Rel("runtime-layer-0.1.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(spec.Rel("bin/sh"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("bin/busybox"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("var"))).ToNot(BeTrue())
 		})
 	})
