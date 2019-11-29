@@ -16,13 +16,11 @@
 package solver
 
 import (
-	"sort"
 
 	//. "github.com/mudler/luet/pkg/logger"
 	"github.com/pkg/errors"
 
 	"github.com/crillab/gophersat/bf"
-	version "github.com/hashicorp/go-version"
 	pkg "github.com/mudler/luet/pkg/package"
 )
 
@@ -33,7 +31,6 @@ type PackageSolver interface {
 	Uninstall(candidate pkg.Package) ([]pkg.Package, error)
 	ConflictsWithInstalled(p pkg.Package) (bool, error)
 	ConflictsWith(p pkg.Package, ls []pkg.Package) (bool, error)
-	Best([]pkg.Package) pkg.Package
 	World() []pkg.Package
 }
 
@@ -81,31 +78,6 @@ func NewSolver(installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, 
 	return &Solver{InstalledDatabase: installed, DefinitionDatabase: definitiondb, SolverDatabase: solverdb}
 }
 
-// TODO: []pkg.Package should have its own type with this kind of methods in (+Unique, sort, etc.)
-func (s *Solver) Best(set []pkg.Package) pkg.Package {
-	var versionsMap map[string]pkg.Package = make(map[string]pkg.Package)
-	if len(set) == 0 {
-		panic("Best needs a list with elements")
-	}
-
-	versionsRaw := []string{}
-	for _, p := range set {
-		versionsRaw = append(versionsRaw, p.GetVersion())
-		versionsMap[p.GetVersion()] = p
-	}
-
-	versions := make([]*version.Version, len(versionsRaw))
-	for i, raw := range versionsRaw {
-		v, _ := version.NewVersion(raw)
-		versions[i] = v
-	}
-
-	// After this, the versions are properly sorted
-	sort.Sort(version.Collection(versions))
-
-	return versionsMap[versions[len(versions)-1].Original()]
-}
-
 // SetWorld is a setter for the list of all known packages to the solver
 
 func (s *Solver) SetDefinitionDatabase(db pkg.PackageDatabase) {
@@ -113,27 +85,12 @@ func (s *Solver) SetDefinitionDatabase(db pkg.PackageDatabase) {
 }
 
 func (s *Solver) World() []pkg.Package {
-	var all []pkg.Package
-	// FIXME: This should all be locked in the db - for now forbid the solver to be run in threads.
-	for _, k := range s.DefinitionDatabase.GetPackages() {
-		pack, err := s.DefinitionDatabase.GetPackage(k)
-		if err == nil {
-			all = append(all, pack)
-		}
-	}
-	return all
+	return s.DefinitionDatabase.World()
 }
 
 func (s *Solver) Installed() []pkg.Package {
-	var all []pkg.Package
-	// FIXME: This should all be locked in the db - for now forbid the solver to be run in threads.
-	for _, k := range s.InstalledDatabase.GetPackages() {
-		pack, err := s.InstalledDatabase.GetPackage(k)
-		if err == nil {
-			all = append(all, pack)
-		}
-	}
-	return all
+
+	return s.InstalledDatabase.World()
 }
 
 func (s *Solver) noRulesWorld() bool {

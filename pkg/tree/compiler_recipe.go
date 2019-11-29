@@ -68,7 +68,6 @@ func (r *CompilerRecipe) Load(path string) error {
 		if err != nil {
 			return errors.Wrap(err, "Error reading yaml "+currentpath)
 		}
-
 		// Path is set only internally when tree is loaded from disk
 		pack.SetPath(filepath.Dir(currentpath))
 
