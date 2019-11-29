@@ -92,6 +92,50 @@ func NewLuetInstaller(concurrency int) Installer {
 	return &LuetInstaller{Concurrency: concurrency}
 }
 
+func (l *LuetInstaller) Upgrade(s *System) error {
+	Spinner(32)
+	defer SpinnerStop()
+	syncedRepos := Repositories{}
+	for _, r := range l.PackageRepositories {
+		repo, err := r.Sync()
+		if err != nil {
+			return errors.Wrap(err, "Failed syncing repository: "+r.GetName())
+		}
+		syncedRepos = append(syncedRepos, repo)
+	}
+
+	// compute what to install and from where
+	sort.Sort(syncedRepos)
+
+	// First match packages against repositories by priority
+	//	matches := syncedRepos.PackageMatches(p)
+
+	// compute a "big" world
+	allRepos := pkg.NewInMemoryDatabase(false)
+	syncedRepos.SyncDatabase(allRepos)
+	solv := solver.NewSolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false))
+	uninstall, solution, err := solv.Upgrade()
+	if err != nil {
+		return errors.Wrap(err, "Failed solving solution for upgrade")
+	}
+
+	for _, u := range uninstall {
+		err := l.Uninstall(u, s)
+		if err != nil {
+			Warning("Failed uninstall for ", u.GetFingerPrint())
+		}
+	}
+
+	toInstall := []pkg.Package{}
+	for _, assertion := range solution {
+		if assertion.Value {
+			toInstall = append(toInstall, assertion.Package)
+		}
+	}
+
+	return l.Install(toInstall, s)
+}
+
 func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 	// First get metas from all repos (and decodes trees)
 
@@ -136,8 +180,10 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 
 				}
 				if matches[0].Package.Matches(artefact.GetCompileSpec().GetPackage()) {
-					// TODO: Filter out already installed?
-					toInstall[assertion.Package.GetFingerPrint()] = ArtifactMatch{Package: assertion.Package, Artifact: artefact, Repository: matches[0].Repo}
+					// Filter out already installed
+					if _, err := s.Database.FindPackage(assertion.Package); err != nil {
+						toInstall[assertion.Package.GetFingerPrint()] = ArtifactMatch{Package: assertion.Package, Artifact: artefact, Repository: matches[0].Repo}
+					}
 					break A
 				}
 			}

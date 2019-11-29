@@ -32,6 +32,7 @@ type PackageSolver interface {
 	ConflictsWithInstalled(p pkg.Package) (bool, error)
 	ConflictsWith(p pkg.Package, ls []pkg.Package) (bool, error)
 	World() []pkg.Package
+	Upgrade() ([]pkg.Package, PackagesAssertions, error)
 }
 
 // Solver is the default solver for luet
@@ -191,6 +192,55 @@ func (s *Solver) ConflictsWith(pack pkg.Package, lsp []pkg.Package) (bool, error
 
 func (s *Solver) ConflictsWithInstalled(p pkg.Package) (bool, error) {
 	return s.ConflictsWith(p, s.Installed())
+}
+
+func (s *Solver) Upgrade() ([]pkg.Package, PackagesAssertions, error) {
+
+	// First get candidates that needs to be upgraded..
+
+	toUninstall := []pkg.Package{}
+	toInstall := []pkg.Package{}
+
+	availableCache := map[string][]pkg.Package{}
+	for _, p := range s.DefinitionDatabase.World() {
+		// Each one, should be expanded
+		availableCache[p.GetName()+p.GetCategory()] = append(availableCache[p.GetName()+p.GetCategory()], p)
+	}
+
+	installedcopy := pkg.NewInMemoryDatabase(false)
+
+	for _, p := range s.InstalledDatabase.World() {
+		installedcopy.CreatePackage(p)
+		packages, ok := availableCache[p.GetName()+p.GetCategory()]
+		if ok && len(packages) != 0 {
+			best := pkg.Best(packages)
+			if best.GetVersion() != p.GetVersion() {
+				toUninstall = append(toUninstall, p)
+				toInstall = append(toInstall, best)
+			}
+		}
+	}
+
+	s2 := NewSolver(installedcopy, s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
+	// Then try to uninstall the versions in the system, and store that tree
+	for _, p := range toUninstall {
+		r, err := s.Uninstall(p)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't uninstall selected candidate "+p.GetFingerPrint())
+		}
+		for _, z := range r {
+			err = installedcopy.RemovePackage(z)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't remove copy of package targetted for removal")
+			}
+		}
+
+	}
+	r, e := s2.Install(toInstall)
+	return toUninstall, r, e
+	// To that tree, ask to install the versions that should be upgraded, and try to solve
+	// Return the solution
+
 }
 
 // Uninstall takes a candidate package and return a list of packages that would be removed

@@ -678,5 +678,39 @@ var _ = Describe("Solver", func() {
 			Expect(p).To(Equal(a03))
 		})
 	})
+	Context("Upgrades", func() {
 
+		C := pkg.NewPackage("c", "1.5", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "a", Version: ">=1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+		C.SetCategory("test")
+		B := pkg.NewPackage("b", "1.0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+		B.SetCategory("test")
+		A := pkg.NewPackage("a", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "b", Version: "1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+		A.SetCategory("test")
+		A1 := pkg.NewPackage("a", "1.2", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "b", Version: "1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+		A1.SetCategory("test")
+
+		It("upgrades correctly", func() {
+			for _, p := range []pkg.Package{A1, B, C} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			uninstall, solution, err := s.Upgrade()
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(uninstall)).To(Equal(1))
+			Expect(uninstall[0].GetName()).To(Equal("a"))
+			Expect(uninstall[0].GetVersion()).To(Equal("1.1"))
+
+			Expect(solution).To(ContainElement(PackageAssert{Package: A1, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: false}))
+			Expect(len(solution)).To(Equal(3))
+
+		})
+	})
 })
