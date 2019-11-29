@@ -76,13 +76,12 @@ var convertCmd = &cobra.Command{
 			Fatal("Error: " + err.Error())
 		}
 
-		defer packageTree.GetPackageSet().Clean()
+		defer packageTree.Clean()
 		Info("Tree generated")
 
-		generalRecipe := tree.NewGeneralRecipe(db)
+		generalRecipe := tree.NewGeneralRecipe(packageTree)
 		Info("Saving generated tree to " + output)
 
-		generalRecipe.WithTree(packageTree)
 		err = generalRecipe.Save(output)
 		if err != nil {
 			Fatal("Error: " + err.Error())
