@@ -223,8 +223,8 @@ func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLaye
 	}
 	defer os.RemoveAll(tmpdiffs) // clean up
 
-	diffargs := []string{"diff", fromImage, toImage, "--type=file", "-j", "-n", "-c", tmpdiffs}
-	out, err := exec.Command("container-diff", diffargs...).CombinedOutput()
+	diffargs := []string{"diff", fromImage, toImage, "-v", "error", "-q", "--type=file", "-j", "-n", "-c", tmpdiffs}
+	out, err := exec.Command("container-diff", diffargs...).Output()
 	if err != nil {
 		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed Resolving layer diffs: "+string(out))
 	}
