@@ -21,7 +21,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"strconv"
+	//"strconv"
 	"strings"
 	"sync"
 
@@ -156,18 +156,18 @@ func worker(i int, wg *sync.WaitGroup, s <-chan CopyJob) {
 	defer wg.Done()
 
 	for job := range s {
-		Info("#"+strconv.Itoa(i), "copying", job.Src, "to", job.Dst)
+		//Info("#"+strconv.Itoa(i), "copying", job.Src, "to", job.Dst)
 		if dir, err := helpers.IsDirectory(job.Src); err == nil && dir {
 			err = helpers.CopyDir(job.Src, job.Dst)
 			if err != nil {
-				Fatal("Error copying dir", job, err)
+				Warning("Error copying dir", job, err)
 			}
 			continue
 		}
 
 		if !helpers.Exists(job.Dst) {
 			if err := helpers.CopyFile(job.Src, job.Dst); err != nil {
-				Fatal("Error copying", job, err)
+				Warning("Error copying", job, err)
 			}
 		}
 	}
