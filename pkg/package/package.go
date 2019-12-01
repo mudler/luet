@@ -27,6 +27,7 @@ import (
 	"github.com/crillab/gophersat/bf"
 	version "github.com/hashicorp/go-version"
 	"github.com/jinzhu/copier"
+	"github.com/pkg/errors"
 
 	"github.com/ghodss/yaml"
 )
@@ -368,18 +369,9 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 	var formulas []bf.Formula
 	w := definitiondb.World() // FIXME: this is heavy
 	for _, requiredDef := range p.GetRequires() {
-		required, err := definitiondb.FindPackage(requiredDef)
+		required, err := definitiondb.FindPackageCandidate(requiredDef)
 		if err != nil {
-			//	return nil, errors.Wrap(err, "Couldn't find required package in db definition")
-			packages, err := requiredDef.Expand(&w)
-			//	Info("Expanded", packages, err)
-			if err != nil || len(packages) == 0 {
-				required = requiredDef
-			} else {
-				required = Best(packages)
-
-			}
-			//required = &DefaultPackage{Name: "test"}
+			return nil, errors.Wrap(err, "Couldn't find required package in db definition")
 		}
 
 		encodedB, err := required.Encode(db)

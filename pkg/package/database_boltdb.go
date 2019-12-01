@@ -276,3 +276,25 @@ func (db *BoltDatabase) World() []Package {
 	}
 	return all
 }
+
+func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
+
+	required, err := db.FindPackage(p)
+	if err != nil {
+		w := db.World()
+		//	return nil, errors.Wrap(err, "Couldn't find required package in db definition")
+		packages, err := p.Expand(&w)
+		//	Info("Expanded", packages, err)
+		if err != nil || len(packages) == 0 {
+			required = p
+		} else {
+			required = Best(packages)
+
+		}
+		return required, nil
+		//required = &DefaultPackage{Name: "test"}
+	}
+
+	return required, err
+
+}

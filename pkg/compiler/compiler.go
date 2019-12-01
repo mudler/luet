@@ -482,7 +482,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 
 func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 
-	pack, err := cs.Database.FindPackage(p)
+	pack, err := cs.Database.FindPackageCandidate(p)
 	if err != nil {
 		return nil, err
 	}

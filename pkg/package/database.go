@@ -42,6 +42,8 @@ type PackageSet interface {
 	RemovePackageFiles(Package) error
 
 	World() []Package
+
+	FindPackageCandidate(p Package) (Package, error)
 }
 
 type PackageFile struct {

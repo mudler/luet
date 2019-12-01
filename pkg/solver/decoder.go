@@ -145,25 +145,15 @@ func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fin
 	}
 
 	sort.Sort(unorderedAssertions)
-	w := definitiondb.World() // FIXME: this is heavy
 
 	// Build a topological graph
 	//graph := toposort.NewGraph(len(unorderedAssertions))
 	//	graph.AddNodes(fingerprints...)
 	for _, a := range unorderedAssertions {
 		for _, requiredDef := range a.Package.GetRequires() {
-			req, err := definitiondb.FindPackage(requiredDef)
+			req, err := definitiondb.FindPackageCandidate(requiredDef)
 			if err != nil {
-				//	return nil, errors.Wrap(err, "Couldn't find required package in db definition")
-				packages, err := requiredDef.Expand(&w)
-				//	Info("Expanded", packages, err)
-				if err != nil || len(packages) == 0 {
-					req = requiredDef
-				} else {
-					req = pkg.Best(packages)
-
-				}
-				//required = &DefaultPackage{Name: "test"}
+				req = requiredDef
 			}
 
 			// Expand also here, as we need to order them (or instead the solver should give back the dep correctly?)
