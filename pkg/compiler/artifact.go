@@ -157,13 +157,13 @@ func worker(i int, wg *sync.WaitGroup, s <-chan CopyJob) {
 
 	for job := range s {
 		//Info("#"+strconv.Itoa(i), "copying", job.Src, "to", job.Dst)
-		if dir, err := helpers.IsDirectory(job.Src); err == nil && dir {
-			err = helpers.CopyDir(job.Src, job.Dst)
-			if err != nil {
-				Warning("Error copying dir", job, err)
-			}
-			continue
-		}
+		// if dir, err := helpers.IsDirectory(job.Src); err == nil && dir {
+		// 	err = helpers.CopyDir(job.Src, job.Dst)
+		// 	if err != nil {
+		// 		Warning("Error copying dir", job, err)
+		// 	}
+		// 	continue
+		// }
 
 		if !helpers.Exists(job.Dst) {
 			if err := helpers.CopyFile(job.Src, job.Dst); err != nil {
