@@ -87,8 +87,7 @@ WORKDIR /luetbuild
 ENV PACKAGE_NAME=enman
 ENV PACKAGE_VERSION=1.4.0
 ENV PACKAGE_CATEGORY=app-admin
-ENV test=1
-`))
+ENV test=1`))
 
 			err = lspec.WriteStepImageDefinition(lspec.Image, filepath.Join(tmpdir, "Dockerfile"))
 			Expect(err).ToNot(HaveOccurred())

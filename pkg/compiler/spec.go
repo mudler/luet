@@ -172,8 +172,7 @@ COPY . /luetbuild
 WORKDIR /luetbuild
 ENV PACKAGE_NAME=` + cs.Package.GetName() + `
 ENV PACKAGE_VERSION=` + cs.Package.GetVersion() + `
-ENV PACKAGE_CATEGORY=` + cs.Package.GetCategory() + `
-`
+ENV PACKAGE_CATEGORY=` + cs.Package.GetCategory()
 
 	for _, s := range cs.Env {
 		spec = spec + `

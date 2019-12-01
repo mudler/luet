@@ -77,8 +77,7 @@ COPY . /luetbuild
 WORKDIR /luetbuild
 ENV PACKAGE_NAME=enman
 ENV PACKAGE_VERSION=1.4.0
-ENV PACKAGE_CATEGORY=app-admin
-`))
+ENV PACKAGE_CATEGORY=app-admin`))
 			b := NewSimpleDockerBackend()
 			opts := CompilerBackendOptions{
 				ImageName:      "luet/base",
