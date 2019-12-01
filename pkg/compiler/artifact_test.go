@@ -75,6 +75,9 @@ var _ = Describe("Artifact", func() {
 FROM alpine
 COPY . /luetbuild
 WORKDIR /luetbuild
+ENV PACKAGE_NAME=enman
+ENV PACKAGE_VERSION=1.4.0
+ENV PACKAGE_CATEGORY=app-admin
 `))
 			b := NewSimpleDockerBackend()
 			opts := CompilerBackendOptions{
@@ -93,6 +96,9 @@ WORKDIR /luetbuild
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dockerfile).To(Equal(`
 FROM luet/base
+ENV PACKAGE_NAME=enman
+ENV PACKAGE_VERSION=1.4.0
+ENV PACKAGE_CATEGORY=app-admin
 RUN echo foo > /test
 RUN echo bar > /test2`))
 			opts = CompilerBackendOptions{

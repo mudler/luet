@@ -75,6 +75,7 @@ var _ = Describe("Spec", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
+			lspec.Env = []string{"test=1"}
 			err = lspec.WriteBuildImageDefinition(filepath.Join(tmpdir, "Dockerfile"))
 			Expect(err).ToNot(HaveOccurred())
 			dockerfile, err := helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
@@ -83,6 +84,10 @@ var _ = Describe("Spec", func() {
 FROM alpine
 COPY . /luetbuild
 WORKDIR /luetbuild
+ENV PACKAGE_NAME=enman
+ENV PACKAGE_VERSION=1.4.0
+ENV PACKAGE_CATEGORY=app-admin
+ENV test=1
 `))
 
 			err = lspec.WriteStepImageDefinition(lspec.Image, filepath.Join(tmpdir, "Dockerfile"))
@@ -91,6 +96,10 @@ WORKDIR /luetbuild
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dockerfile).To(Equal(`
 FROM luet/base
+ENV PACKAGE_NAME=enman
+ENV PACKAGE_VERSION=1.4.0
+ENV PACKAGE_CATEGORY=app-admin
+ENV test=1
 RUN echo foo > /test
 RUN echo bar > /test2`))
 

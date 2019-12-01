@@ -87,7 +87,8 @@ func (specs *LuetCompilationspecs) Unique() CompilationSpecs {
 }
 
 type LuetCompilationSpec struct {
-	Steps           []string                  `json:"steps"`   // Are run inside a container and the result layer diff is saved
+	Steps           []string                  `json:"steps"` // Are run inside a container and the result layer diff is saved
+	Env             []string                  `json:"env"`
 	Prelude         []string                  `json:"prelude"` // Are run inside the image which will be our builder
 	Image           string                    `json:"image"`
 	Seed            string                    `json:"seed"`
@@ -169,7 +170,16 @@ func (cs *LuetCompilationSpec) RenderBuildImage() (string, error) {
 FROM ` + cs.GetSeedImage() + `
 COPY . /luetbuild
 WORKDIR /luetbuild
+ENV PACKAGE_NAME=` + cs.Package.GetName() + `
+ENV PACKAGE_VERSION=` + cs.Package.GetVersion() + `
+ENV PACKAGE_CATEGORY=` + cs.Package.GetCategory() + `
 `
+
+	for _, s := range cs.Env {
+		spec = spec + `
+ENV ` + s
+	}
+
 	for _, s := range cs.GetPreBuildSteps() {
 		spec = spec + `
 RUN ` + s
@@ -180,7 +190,15 @@ RUN ` + s
 // TODO: docker build image first. Then a backend can be used to actually spin up a container with it and run the steps within
 func (cs *LuetCompilationSpec) RenderStepImage(image string) (string, error) {
 	spec := `
-FROM ` + image
+FROM ` + image + `
+ENV PACKAGE_NAME=` + cs.Package.GetName() + `
+ENV PACKAGE_VERSION=` + cs.Package.GetVersion() + `
+ENV PACKAGE_CATEGORY=` + cs.Package.GetCategory()
+
+	for _, s := range cs.Env {
+		spec = spec + `
+ENV ` + s
+	}
 	for _, s := range cs.BuildSteps() {
 		spec = spec + `
 RUN ` + s
