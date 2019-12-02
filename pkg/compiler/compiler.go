@@ -35,8 +35,10 @@ const BuildFile = "build.yaml"
 
 type LuetCompiler struct {
 	*tree.CompilerRecipe
-	Backend  CompilerBackend
-	Database pkg.PackageDatabase
+	Backend            CompilerBackend
+	Database           pkg.PackageDatabase
+	ImageRepository    string
+	PullFirst, KeepImg bool
 }
 
 func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase) Compiler {
@@ -46,7 +48,10 @@ func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase) Compiler {
 		CompilerRecipe: &tree.CompilerRecipe{
 			tree.Recipe{Database: db},
 		},
-		Database: db,
+		Database:        db,
+		ImageRepository: "luet/cache",
+		PullFirst:       true,
+		KeepImg:         true,
 	}
 }
 
@@ -153,13 +158,12 @@ func (cs *LuetCompiler) CompileParallel(concurrency int, keepPermissions bool, p
 	return artifacts, allErrors
 }
 
-func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage string, concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
+func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage string, concurrency int, keepPermissions, keepImg bool, p CompilationSpec) (Artifact, error) {
 	pkgTag := ":package:  " + p.GetPackage().GetName()
 
 	p.SetSeedImage(image) // In this case, we ignore the build deps as we suppose that the image has them - otherwise we recompose the tree with a solver,
 	// and we build all the images first.
-	keepImg := true
-	keepPackageImg := true
+
 	err := os.MkdirAll(p.Rel("build"), os.ModePerm)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating tempdir for building")
@@ -177,12 +181,16 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 
 	}
 	if buildertaggedImage == "" {
-		keepImg = false
-		buildertaggedImage = "luet/" + p.GetPackage().GetFingerPrint() + "-builder"
+		buildertaggedImage = cs.ImageRepository + "-" + p.GetPackage().GetFingerPrint() + "-builder"
 	}
 	if packageImage == "" {
-		keepPackageImg = false
-		packageImage = "luet/" + p.GetPackage().GetFingerPrint()
+		packageImage = cs.ImageRepository + "-" + p.GetPackage().GetFingerPrint()
+	}
+
+	if cs.PullFirst {
+		//Best effort pull
+		cs.Backend.DownloadImage(CompilerBackendOptions{ImageName: buildertaggedImage})
+		cs.Backend.DownloadImage(CompilerBackendOptions{ImageName: packageImage})
 	}
 
 	Info(pkgTag, "Generating :whale: definition")
@@ -215,19 +223,19 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		Destination:    p.Rel(p.GetPackage().GetFingerPrint() + ".image.tar"),
 	}
 
-	if !keepPackageImg {
-		err = cs.Backend.ImageDefinitionToTar(runnerOpts)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not export image to tar")
-		}
-	} else {
-		if err := cs.Backend.BuildImage(runnerOpts); err != nil {
-			return nil, errors.Wrap(err, "Failed building image for "+runnerOpts.ImageName+" "+runnerOpts.DockerFileName)
-		}
-		if err := cs.Backend.ExportImage(runnerOpts); err != nil {
-			return nil, errors.Wrap(err, "Failed exporting image")
-		}
+	// if !keepPackageImg {
+	// 	err = cs.Backend.ImageDefinitionToTar(runnerOpts)
+	// 	if err != nil {
+	// 		return nil, errors.Wrap(err, "Could not export image to tar")
+	// 	}
+	// } else {
+	if err := cs.Backend.BuildImage(runnerOpts); err != nil {
+		return nil, errors.Wrap(err, "Failed building image for "+runnerOpts.ImageName+" "+runnerOpts.DockerFileName)
 	}
+	if err := cs.Backend.ExportImage(runnerOpts); err != nil {
+		return nil, errors.Wrap(err, "Failed exporting image")
+	}
+	//	}
 
 	var diffs []ArtifactLayer
 	var artifact Artifact
@@ -240,6 +248,20 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		}
 	}
 
+	rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not create tempdir")
+	}
+	defer os.RemoveAll(rootfs) // clean up
+
+	// TODO: Compression and such
+	err = cs.Backend.ExtractRootfs(CompilerBackendOptions{
+		ImageName:  packageImage,
+		SourcePath: runnerOpts.Destination, Destination: rootfs}, keepPermissions)
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not extract rootfs")
+	}
+
 	if !keepImg {
 		// We keep them around, so to not reload them from the tar (which should be the "correct way") and we automatically share the same layers
 		// TODO: Handle caching and optionally do not remove things
@@ -249,17 +271,12 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 			Warning("Could not remove image ", builderOpts.ImageName)
 			//	return nil, errors.Wrap(err, "Could not remove image")
 		}
-	}
-	rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
-	if err != nil {
-		return nil, errors.Wrap(err, "Could not create tempdir")
-	}
-	defer os.RemoveAll(rootfs) // clean up
-
-	// TODO: Compression and such
-	err = cs.Backend.ExtractRootfs(CompilerBackendOptions{SourcePath: runnerOpts.Destination, Destination: rootfs}, keepPermissions)
-	if err != nil {
-		return nil, errors.Wrap(err, "Could not extract rootfs")
+		err = cs.Backend.RemoveImage(runnerOpts)
+		if err != nil {
+			// TODO: Have a --fatal flag which enables Warnings to exit.
+			Warning("Could not remove image ", builderOpts.ImageName)
+			//	return nil, errors.Wrap(err, "Could not remove image")
+		}
 	}
 
 	if p.ImageUnpack() {
@@ -289,7 +306,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	return artifact, nil
 }
 
-func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPermissions bool) (Artifact, error) {
+func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPermissions, keepImg bool) (Artifact, error) {
 	pkgTag := ":package:  " + p.GetPackage().GetName()
 
 	Info(pkgTag, "   🍩 Build starts 🔨 🔨 🔨 ")
@@ -321,7 +338,9 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 	defer os.RemoveAll(rootfs) // clean up
 
 	// TODO: Compression and such
-	err = cs.Backend.ExtractRootfs(CompilerBackendOptions{SourcePath: builderOpts.Destination, Destination: rootfs}, keepPermissions)
+	err = cs.Backend.ExtractRootfs(CompilerBackendOptions{
+		ImageName:  p.GetImage(),
+		SourcePath: builderOpts.Destination, Destination: rootfs}, keepPermissions)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not extract rootfs")
 	}
@@ -329,6 +348,17 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 	err = helpers.Tar(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"))
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating package archive")
+	}
+
+	if !keepImg {
+		// We keep them around, so to not reload them from the tar (which should be the "correct way") and we automatically share the same layers
+		// TODO: Handle caching and optionally do not remove things
+		err = cs.Backend.RemoveImage(builderOpts)
+		if err != nil {
+			// TODO: Have a --fatal flag which enables Warnings to exit.
+			Warning("Could not remove image ", builderOpts.ImageName)
+			//	return nil, errors.Wrap(err, "Could not remove image")
+		}
 	}
 
 	Info(pkgTag, "   :white_check_mark: Done")
@@ -393,10 +423,10 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
 	if p.GetImage() != "" {
 		if p.ImageUnpack() { // If it is just an entire image, create a package from it
-			return cs.packageFromImage(p, "", keepPermissions)
+			return cs.packageFromImage(p, "", keepPermissions, cs.KeepImg)
 		}
 
-		return cs.compileWithImage(p.GetImage(), "", "", concurrency, keepPermissions, p)
+		return cs.compileWithImage(p.GetImage(), "", "", concurrency, keepPermissions, cs.KeepImg, p)
 	}
 
 	// - If image is not set, we read a base_image. Then we will build one image from it to kick-off our build based
@@ -427,8 +457,8 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 		}
 		compileSpec.SetOutputPath(p.GetOutputPath())
 
-		buildImageHash := "luet/cache:" + assertion.Hash.BuildHash
-		currentPackageImageHash := "luet/cache:" + assertion.Hash.PackageHash
+		buildImageHash := cs.ImageRepository + ":" + assertion.Hash.BuildHash
+		currentPackageImageHash := cs.ImageRepository + ":" + assertion.Hash.PackageHash
 		Debug(pkgTag, "    :arrow_right_hook: :whale: Builder image name", buildImageHash)
 		Debug(pkgTag, "    :arrow_right_hook: :whale: Package image name", currentPackageImageHash)
 
@@ -440,7 +470,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 					return nil, errors.New("No image defined for package: " + assertion.Package.GetName())
 				}
 				Info(pkgTag, ":whale: Sourcing package from image", compileSpec.GetImage())
-				artifact, err := cs.packageFromImage(compileSpec, currentPackageImageHash, keepPermissions)
+				artifact, err := cs.packageFromImage(compileSpec, currentPackageImageHash, keepPermissions, cs.KeepImg)
 				if err != nil {
 					return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().GetName())
 				}
@@ -449,7 +479,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 			}
 
 			Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().GetFingerPrint()+" from image")
-			artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, compileSpec)
+			artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec)
 			if err != nil {
 				return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().GetName())
 			}
@@ -459,7 +489,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 		}
 
 		Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().GetFingerPrint()+" from tree")
-		artifact, err := cs.compileWithImage(buildImageHash, "", currentPackageImageHash, concurrency, keepPermissions, compileSpec)
+		artifact, err := cs.compileWithImage(buildImageHash, "", currentPackageImageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().GetName())
 			//	deperrs = append(deperrs, err)
@@ -470,7 +500,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	}
 
 	Info(":package:", p.GetPackage().GetName(), ":cyclone:  Building package target from:", lastHash)
-	artifact, err := cs.compileWithImage(lastHash, "", "", concurrency, keepPermissions, p)
+	artifact, err := cs.compileWithImage(lastHash, "", "", concurrency, keepPermissions, cs.KeepImg, p)
 	if err != nil {
 		return artifact, err
 	}
