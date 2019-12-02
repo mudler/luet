@@ -16,6 +16,7 @@
 package backend
 
 import (
+	"os"
 	"os/exec"
 
 	"github.com/mudler/luet/pkg/compiler"
@@ -36,15 +37,18 @@ func (*SimpleImg) BuildImage(opts compiler.CompilerBackendOptions) error {
 	path := opts.SourcePath
 	dockerfileName := opts.DockerFileName
 
-	buildarg := []string{"build", "-t", name, path, "-f ", dockerfileName}
+	buildarg := []string{"build", "-f", dockerfileName, "-t", name, "."}
 	Spinner(22)
-	Debug("Building image "+name+" - running img with: ", buildarg)
-	out, err := exec.Command("img", buildarg...).CombinedOutput()
+	defer SpinnerStop()
+	Debug(":tea: Building image " + name)
+	cmd := exec.Command("img", buildarg...)
+	cmd.Dir = path
+	out, err := cmd.CombinedOutput()
+
 	if err != nil {
 		return errors.Wrap(err, "Failed building image: "+string(out))
 	}
-	SpinnerStop()
-	Info(out)
+	Info(":tea: Building image " + name + " done")
 	return nil
 }
 
@@ -52,12 +56,13 @@ func (*SimpleImg) RemoveImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	buildarg := []string{"rm", name}
 	Spinner(22)
+	defer SpinnerStop()
 	out, err := exec.Command("img", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed building image: "+string(out))
 	}
-	SpinnerStop()
-	Info(out)
+
+	Info(":tea: Image " + name + " removed")
 	return nil
 }
 
@@ -66,24 +71,29 @@ func (*SimpleImg) DownloadImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	buildarg := []string{"pull", name}
 
-	Debug("Downloading image "+name+" - running img with: ", buildarg)
+	Debug(":tea: Downloading image " + name)
 	cmd := exec.Command("img", buildarg...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed building image: "+string(out))
 	}
+
+	Info(":tea: Image " + name + " downloaded")
+
 	return nil
 }
 func (*SimpleImg) CopyImage(src, dst string) error {
 	Spinner(22)
 	defer SpinnerStop()
 
-	Debug("Tagging image - running img with: ", src, dst)
+	Debug(":tea: Tagging image", src, dst)
 	cmd := exec.Command("img", "tag", src, dst)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed tagging image: "+string(out))
 	}
+	Info(":tea: Image " + dst + " tagged")
+
 	return nil
 }
 
@@ -103,18 +113,31 @@ func (s *SimpleImg) ImageDefinitionToTar(opts compiler.CompilerBackendOptions) e
 func (*SimpleImg) ExportImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	path := opts.Destination
-	buildarg := []string{"save", name, "-o", path}
-	Debug("Saving image "+name+" - running img with: ", buildarg)
+	buildarg := []string{"save", "-o", path, name}
+	Debug(":tea: Saving image " + name)
 	out, err := exec.Command("img", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed building image: "+string(out))
 	}
+	Info(":tea: Image " + name + " saved")
 	return nil
 }
 
 // TODO: Dup in docker, refactor common code in helpers for shared parts
 func (*SimpleImg) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerms bool) error {
-	return NewSimpleDockerBackend().ExtractRootfs(opts, keepPerms)
+	name := opts.ImageName
+	path := opts.Destination
+
+	os.RemoveAll(path)
+	buildarg := []string{"unpack", "-o", path, name}
+	Debug(":tea: Extracting image " + name)
+	out, err := exec.Command("img", buildarg...).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed extracting image: "+string(out))
+	}
+	Info(":tea: Image " + name + " extracted")
+	return nil
+	//return NewSimpleDockerBackend().ExtractRootfs(opts, keepPerms)
 }
 
 // TODO: Use container-diff (https://github.com/GoogleContainerTools/container-diff) for checking out layer diffs
