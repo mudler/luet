@@ -238,6 +238,44 @@ var _ = Describe("Compiler", func() {
 			Expect(helpers.Exists(spec.Rel("test6"))).ToNot(BeTrue())
 		})
 
+		It("Compiles and includes ony wanted files also from unpacked packages", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+			tmpdir, err := ioutil.TempDir("", "package")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			err = generalRecipe.Load("../../tests/fixtures/includeimage")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
+
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			//		err = generalRecipe.Tree().ResolveDeps(3)
+			//		Expect(err).ToNot(HaveOccurred())
+
+			spec.SetOutputPath(tmpdir)
+
+			artifacts, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(1))
+
+			for _, artifact := range artifacts {
+				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			}
+			Expect(helpers.Exists(spec.Rel("var/lib/udhcpd"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("marvin"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("test5"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel("test6"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel("test"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel("test2"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel("lib/firmware"))).ToNot(BeTrue())
+		})
+
 		It("Compiles a more complex tree", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 			tmpdir, err := ioutil.TempDir("", "package")

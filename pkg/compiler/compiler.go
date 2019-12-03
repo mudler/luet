@@ -20,6 +20,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"sync"
 
 	. "github.com/mudler/luet/pkg/logger"
@@ -158,6 +160,60 @@ func (cs *LuetCompiler) CompileParallel(concurrency int, keepPermissions bool, p
 	return artifacts, allErrors
 }
 
+func (cs *LuetCompiler) stripIncludesFromRootfs(includes []string, rootfs string) error {
+	var includeRegexp []*regexp.Regexp
+	for _, i := range includes {
+		r, e := regexp.Compile(i)
+		if e != nil {
+			return errors.Wrap(e, "Could not compile regex in the include of the package")
+		}
+		includeRegexp = append(includeRegexp, r)
+	}
+
+	toRemove := []string{}
+
+	// the function that handles each file or dir
+	var ff = func(currentpath string, info os.FileInfo, err error) error {
+
+		// if info.Name() != DefinitionFile {
+		// 	return nil // Skip with no errors
+		// }
+		if currentpath == rootfs {
+			return nil
+		}
+
+		abspath := strings.ReplaceAll(currentpath, rootfs, "")
+
+		match := false
+
+		for _, i := range includeRegexp {
+			if i.MatchString(abspath) {
+				match = true
+			}
+		}
+
+		if !match {
+			toRemove = append(toRemove, currentpath)
+		}
+
+		return nil
+	}
+
+	err := filepath.Walk(rootfs, ff)
+	if err != nil {
+		return err
+	}
+
+	for _, s := range toRemove {
+		e := os.RemoveAll(s)
+		if e != nil {
+			Warning("Failed removing", s, e.Error())
+			return e
+		}
+	}
+	return nil
+}
+
 func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage string, concurrency int, keepPermissions, keepImg bool, p CompilationSpec) (Artifact, error) {
 	pkgTag := ":package:  " + p.GetPackage().GetName()
 
@@ -280,6 +336,12 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	}
 
 	if p.ImageUnpack() {
+
+		if len(p.GetIncludes()) > 0 {
+			// strip from includes
+			cs.stripIncludesFromRootfs(p.GetIncludes(), rootfs)
+		}
+
 		err = helpers.Tar(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"))
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while creating package archive")
