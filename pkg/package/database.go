@@ -23,7 +23,7 @@ type PackageDatabase interface {
 	Get(s string) (string, error)
 	Set(k, v string) error
 
-	Create([]byte) (string, error)
+	Create(string, []byte) (string, error)
 	Retrieve(ID string) ([]byte, error)
 }
 

@@ -17,8 +17,6 @@ package pkg
 
 import (
 	"encoding/base64"
-	"fmt"
-	"hash/crc32"
 	"os"
 	"strconv"
 	"sync"
@@ -66,13 +64,10 @@ func (db *BoltDatabase) Set(k, v string) error {
 	defer bolt.Close()
 	return bolt.Set("solver", k, v)
 }
-
-func (db *BoltDatabase) Create(v []byte) (string, error) {
+func (db *BoltDatabase) Create(id string, v []byte) (string, error) {
 	enc := base64.StdEncoding.EncodeToString(v)
-	crc32q := crc32.MakeTable(0xD5828281)
-	ID := fmt.Sprintf("%08x", crc32.Checksum([]byte(enc), crc32q)) // TODO: Replace with package fingerprint?
 
-	return ID, db.Set(ID, enc)
+	return id, db.Set(id, enc)
 }
 
 func (db *BoltDatabase) Retrieve(ID string) ([]byte, error) {

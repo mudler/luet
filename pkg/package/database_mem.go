@@ -19,8 +19,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"hash/crc32"
 	"sync"
 )
 
@@ -64,12 +62,10 @@ func (db *InMemoryDatabase) Set(k, v string) error {
 	return nil
 }
 
-func (db *InMemoryDatabase) Create(v []byte) (string, error) {
+func (db *InMemoryDatabase) Create(id string, v []byte) (string, error) {
 	enc := base64.StdEncoding.EncodeToString(v)
-	crc32q := crc32.MakeTable(0xD5828281)
-	ID := fmt.Sprintf("%08x", crc32.Checksum([]byte(enc), crc32q)) // TODO: Replace with package fingerprint?
 
-	return ID, db.Set(ID, enc)
+	return id, db.Set(id, enc)
 }
 
 func (db *InMemoryDatabase) Retrieve(ID string) ([]byte, error) {
@@ -131,7 +127,7 @@ func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {
 		return "", err
 	}
 
-	ID, err := db.Create(res)
+	ID, err := db.Create(pd.GetFingerPrint(), res)
 	if err != nil {
 		return "", err
 	}
@@ -149,51 +145,23 @@ func (db *InMemoryDatabase) encodePackage(p Package) (string, string, error) {
 		return "", "", err
 	}
 	enc := base64.StdEncoding.EncodeToString(res)
-	crc32q := crc32.MakeTable(0xD5828281)
-	ID := fmt.Sprintf("%08x", crc32.Checksum([]byte(enc), crc32q)) // TODO: Replace with package fingerprint?
 
-	return ID, enc, nil
+	return p.GetFingerPrint(), enc, nil
 }
 
 func (db *InMemoryDatabase) FindPackage(p Package) (Package, error) {
-
-	// TODO: Replace this piece, when IDs are fingerprint, findpackage becames O(1)
-
-	for _, k := range db.GetPackages() {
-		pack, err := db.GetPackage(k)
-		if err != nil {
-			return nil, err
-		}
-		if pack.Matches(p) {
-			return pack, nil
-		}
-	}
-	return nil, errors.New("Package not found")
+	return db.GetPackage(p.GetFingerPrint())
 }
 
 func (db *InMemoryDatabase) UpdatePackage(p Package) error {
-	var id string
-	found := false
-	for _, k := range db.GetPackages() {
-		pack, err := db.GetPackage(k)
-		if err != nil {
-			return err
-		}
-		if pack.Matches(p) {
-			id = k
-			found = true
-			break
-		}
-	}
-	if found {
 
-		_, enc, err := db.encodePackage(p)
-		if err != nil {
-			return err
-		}
-
-		return db.Set(id, enc)
+	_, enc, err := db.encodePackage(p)
+	if err != nil {
+		return err
 	}
+
+	return db.Set(p.GetFingerPrint(), enc)
+
 	return errors.New("Package not found")
 }
 
@@ -238,19 +206,11 @@ func (db *InMemoryDatabase) RemovePackageFiles(p Package) error {
 }
 
 func (db *InMemoryDatabase) RemovePackage(p Package) error {
-	for _, k := range db.GetPackages() {
-		pack, err := db.GetPackage(k)
-		if err != nil {
-			return err
-		}
-		if pack.Matches(p) {
-			db.Lock()
-			delete(db.Database, k)
-			db.Unlock()
-			return nil
-		}
-	}
-	return errors.New("Package not found")
+	db.Lock()
+	defer db.Unlock()
+
+	delete(db.Database, p.GetFingerPrint())
+	return nil
 }
 func (db *InMemoryDatabase) World() []Package {
 	var all []Package
