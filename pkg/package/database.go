@@ -33,6 +33,7 @@ type PackageSet interface {
 	GetPackage(ID string) (Package, error)
 	Clean() error
 	FindPackage(Package) (Package, error)
+	FindPackages(p Package) ([]Package, error)
 	UpdatePackage(p Package) error
 	GetAllPackages(packages chan Package) error
 	RemovePackage(Package) error

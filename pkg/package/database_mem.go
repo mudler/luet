@@ -18,28 +18,35 @@ package pkg
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"sync"
+
+	version "github.com/hashicorp/go-version"
+	"github.com/pkg/errors"
 )
 
 var DBInMemoryInstance = &InMemoryDatabase{
-	Mutex:        &sync.Mutex{},
-	FileDatabase: map[string][]string{},
-	Database:     map[string]string{}}
+	Mutex:          &sync.Mutex{},
+	FileDatabase:   map[string][]string{},
+	Database:       map[string]string{},
+	CacheNoVersion: map[string]map[string]interface{}{},
+}
 
 type InMemoryDatabase struct {
 	*sync.Mutex
-	Database     map[string]string
-	FileDatabase map[string][]string
+	Database       map[string]string
+	FileDatabase   map[string][]string
+	CacheNoVersion map[string]map[string]interface{}
 }
 
 func NewInMemoryDatabase(singleton bool) PackageDatabase {
 	// In memoryDB is a singleton
 	if !singleton {
 		return &InMemoryDatabase{
-			Mutex:        &sync.Mutex{},
-			FileDatabase: map[string][]string{},
-			Database:     map[string]string{}}
+			Mutex:          &sync.Mutex{},
+			FileDatabase:   map[string][]string{},
+			Database:       map[string]string{},
+			CacheNoVersion: map[string]map[string]interface{}{},
+		}
 	}
 	return DBInMemoryInstance
 }
@@ -131,6 +138,16 @@ func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	// Create extra cache between package -> []versions
+	db.Lock()
+	defer db.Unlock()
+	_, ok = db.CacheNoVersion[p.GetPackageName()]
+	if !ok {
+		db.CacheNoVersion[p.GetPackageName()] = make(map[string]interface{})
+	}
+	db.CacheNoVersion[p.GetPackageName()][p.GetVersion()] = nil
+
 	return ID, nil
 }
 
@@ -151,6 +168,33 @@ func (db *InMemoryDatabase) encodePackage(p Package) (string, string, error) {
 
 func (db *InMemoryDatabase) FindPackage(p Package) (Package, error) {
 	return db.GetPackage(p.GetFingerPrint())
+}
+
+// FindPackages return the list of the packages beloging to cat/name (any versions)
+func (db *InMemoryDatabase) FindPackages(p Package) ([]Package, error) {
+	versions, ok := db.CacheNoVersion[p.GetPackageName()]
+	if !ok {
+		return nil, errors.New("No versions found for package")
+	}
+	var versionsInWorld []Package
+	for ve, _ := range versions {
+		v, err := version.NewVersion(ve)
+		if err != nil {
+			return nil, err
+		}
+		constraints, err := version.NewConstraint(p.GetVersion())
+		if err != nil {
+			return nil, err
+		}
+		if constraints.Check(v) {
+			w, err := db.FindPackage(&DefaultPackage{Name: p.GetName(), Category: p.GetCategory(), Version: ve})
+			if err != nil {
+				return nil, errors.Wrap(err, "Cache mismatch - this shouldn't happen")
+			}
+			versionsInWorld = append(versionsInWorld, w)
+		}
+	}
+	return versionsInWorld, nil
 }
 
 func (db *InMemoryDatabase) UpdatePackage(p Package) error {

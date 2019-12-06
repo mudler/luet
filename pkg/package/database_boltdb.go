@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	version "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 
 	storm "github.com/asdine/storm"
@@ -292,4 +293,28 @@ func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
 
 	return required, err
 
+}
+
+// FindPackages return the list of the packages beloging to cat/name (any versions)
+// FIXME: Optimize, see inmemorydb
+func (db *BoltDatabase) FindPackages(p Package) ([]Package, error) {
+	var versionsInWorld []Package
+	for _, w := range db.World() {
+		if w.GetName() != p.GetName() || w.GetCategory() != p.GetCategory() {
+			continue
+		}
+
+		v, err := version.NewVersion(w.GetVersion())
+		if err != nil {
+			return nil, err
+		}
+		constraints, err := version.NewConstraint(p.GetVersion())
+		if err != nil {
+			return nil, err
+		}
+		if constraints.Check(v) {
+			versionsInWorld = append(versionsInWorld, w)
+		}
+	}
+	return versionsInWorld, nil
 }
