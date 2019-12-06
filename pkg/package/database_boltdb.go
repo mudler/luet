@@ -276,9 +276,9 @@ func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
 
 	required, err := db.FindPackage(p)
 	if err != nil {
-		w := db.World()
+
 		//	return nil, errors.Wrap(err, "Couldn't find required package in db definition")
-		packages, err := p.Expand(&w)
+		packages, err := p.Expand(db)
 		//	Info("Expanded", packages, err)
 		if err != nil || len(packages) == 0 {
 			required = p

@@ -24,9 +24,8 @@ import (
 	"strings"
 	"sync"
 
-	. "github.com/mudler/luet/pkg/logger"
-
 	"github.com/mudler/luet/pkg/helpers"
+	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 	"github.com/mudler/luet/pkg/tree"
@@ -80,9 +79,8 @@ func (cs *LuetCompiler) CompileWithReverseDeps(concurrency int, keepPermissions 
 	Info(":ant: Resolving reverse dependencies")
 	toCompile := NewLuetCompilationspecs()
 	for _, a := range artifacts {
-		w := cs.Database.World()
 
-		revdeps := a.GetCompileSpec().GetPackage().Revdeps(&w)
+		revdeps := a.GetCompileSpec().GetPackage().Revdeps(cs.Database)
 		for _, r := range revdeps {
 			spec, asserterr := cs.FromPackage(r)
 			if err != nil {
@@ -249,7 +247,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		cs.Backend.DownloadImage(CompilerBackendOptions{ImageName: packageImage})
 	}
 
-	Info(pkgTag, "Generating :whale: definition")
+	Info(pkgTag, "Generating :whale: definition for builder image from", image)
 
 	// First we create the builder image
 	p.WriteBuildImageDefinition(filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+"-builder.dockerfile"))
@@ -521,7 +519,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 
 		buildImageHash := cs.ImageRepository + ":" + assertion.Hash.BuildHash
 		currentPackageImageHash := cs.ImageRepository + ":" + assertion.Hash.PackageHash
-		Debug(pkgTag, "    :arrow_right_hook: :whale: Builder image name", buildImageHash)
+		Debug(pkgTag, "    :arrow_right_hook: :whale: Builder image from", buildImageHash)
 		Debug(pkgTag, "    :arrow_right_hook: :whale: Package image name", currentPackageImageHash)
 
 		lastHash = currentPackageImageHash

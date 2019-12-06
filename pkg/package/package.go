@@ -41,13 +41,14 @@ type Package interface {
 	IsFlagged(bool) Package
 	Flagged() bool
 	GetFingerPrint() string
+	GetPackageName() string
 	Requires([]*DefaultPackage) Package
 	Conflicts([]*DefaultPackage) Package
-	Revdeps(world *[]Package) []Package
+	Revdeps(PackageDatabase) []Package
 
 	GetRequires() []*DefaultPackage
 	GetConflicts() []*DefaultPackage
-	Expand(*[]Package) ([]Package, error)
+	Expand(PackageDatabase) ([]Package, error)
 	SetCategory(string)
 
 	GetName() string
@@ -146,6 +147,10 @@ func (p *DefaultPackage) String() string {
 // FIXME: this needs to be unique, now just name is generalized
 func (p *DefaultPackage) GetFingerPrint() string {
 	return fmt.Sprintf("%s-%s-%s", p.Name, p.Category, p.Version)
+}
+
+func (p *DefaultPackage) GetPackageName() string {
+	return fmt.Sprintf("%s-%s", p.Name, p.Category)
 }
 
 // GetPath returns the path where the definition file was found
@@ -257,14 +262,14 @@ func (p *DefaultPackage) Matches(m Package) bool {
 	return false
 }
 
-func (p *DefaultPackage) Expand(world *[]Package) ([]Package, error) {
-
+func (p *DefaultPackage) Expand(definitiondb PackageDatabase) ([]Package, error) {
 	var versionsInWorld []Package
-	for _, w := range *world {
-		if w.GetName() != p.GetName() || w.GetCategory() != p.GetCategory() {
-			continue
-		}
 
+	all, err := definitiondb.FindPackages(p)
+	if err != nil {
+		return nil, err
+	}
+	for _, w := range all {
 		v, err := version.NewVersion(w.GetVersion())
 		if err != nil {
 			return nil, err
@@ -281,16 +286,16 @@ func (p *DefaultPackage) Expand(world *[]Package) ([]Package, error) {
 	return versionsInWorld, nil
 }
 
-func (p *DefaultPackage) Revdeps(world *[]Package) []Package {
+func (p *DefaultPackage) Revdeps(definitiondb PackageDatabase) []Package {
 	var versionsInWorld []Package
-	for _, w := range *world {
+	for _, w := range definitiondb.World() {
 		if w.Matches(p) {
 			continue
 		}
 		for _, re := range w.GetRequires() {
 			if re.Matches(p) {
 				versionsInWorld = append(versionsInWorld, w)
-				versionsInWorld = append(versionsInWorld, w.Revdeps(world)...)
+				versionsInWorld = append(versionsInWorld, w.Revdeps(definitiondb)...)
 			}
 		}
 	}
@@ -309,13 +314,12 @@ func (pack *DefaultPackage) RequiresContains(definitiondb PackageDatabase, s Pac
 		//return false, errors.Wrap(err, "Package not found in definition db")
 	}
 
-	w := definitiondb.World()
 	for _, re := range p.GetRequires() {
 		if re.Matches(s) {
 			return true, nil
 		}
 
-		packages, _ := re.Expand(&w)
+		packages, _ := re.Expand(definitiondb)
 		for _, pa := range packages {
 			if pa.Matches(s) {
 				return true, nil
@@ -367,7 +371,6 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 	A := bf.Var(encodedA)
 
 	var formulas []bf.Formula
-	w := definitiondb.World() // FIXME: this is heavy
 	for _, requiredDef := range p.GetRequires() {
 		required, err := definitiondb.FindPackageCandidate(requiredDef)
 		if err != nil {
@@ -392,7 +395,7 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 	for _, requiredDef := range p.GetConflicts() {
 		required, err := definitiondb.FindPackage(requiredDef)
 		if err != nil {
-			packages, err := requiredDef.Expand(&w)
+			packages, err := requiredDef.Expand(definitiondb)
 			if err != nil || len(packages) == 0 {
 				required = requiredDef
 			} else {

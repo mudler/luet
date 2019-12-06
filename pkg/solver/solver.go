@@ -115,12 +115,11 @@ func (s *Solver) BuildWorld(includeInstalled bool) (bf.Formula, error) {
 
 func (s *Solver) getList(db pkg.PackageDatabase, lsp []pkg.Package) ([]pkg.Package, error) {
 	var ls []pkg.Package
-	w := db.World()
 
 	for _, pp := range lsp {
 		cp, err := db.FindPackage(pp)
 		if err != nil {
-			packages, err := pp.Expand(&w)
+			packages, err := pp.Expand(db)
 			// Expand, and relax search - if not found pick the same one
 			if err != nil || len(packages) == 0 {
 				cp = pp
@@ -249,10 +248,9 @@ func (s *Solver) Uninstall(c pkg.Package) ([]pkg.Package, error) {
 	var res []pkg.Package
 	candidate, err := s.InstalledDatabase.FindPackage(c)
 	if err != nil {
-		w := s.InstalledDatabase.World()
 
 		//	return nil, errors.Wrap(err, "Couldn't find required package in db definition")
-		packages, err := c.Expand(&w)
+		packages, err := c.Expand(s.InstalledDatabase)
 		//	Info("Expanded", packages, err)
 		if err != nil || len(packages) == 0 {
 			candidate = c

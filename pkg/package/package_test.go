@@ -29,7 +29,12 @@ var _ = Describe("Package", func() {
 		a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
 		a01 := NewPackage("A", "0.1", []*DefaultPackage{}, []*DefaultPackage{})
 		It("Expands correctly", func() {
-			lst, err := a.Expand(&[]Package{a1, a11, a01})
+			definitions := NewInMemoryDatabase(false)
+			for _, p := range []Package{a1, a11, a01} {
+				_, err := definitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			lst, err := a.Expand(definitions)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(lst).To(ContainElement(a11))
 			Expect(lst).To(ContainElement(a1))
@@ -46,7 +51,12 @@ var _ = Describe("Package", func() {
 		c := NewPackage("C", "1.1", []*DefaultPackage{b}, []*DefaultPackage{})
 		d := NewPackage("D", "0.1", []*DefaultPackage{}, []*DefaultPackage{})
 		It("Computes correctly", func() {
-			lst := a.Revdeps(&[]Package{a, b, c, d})
+			definitions := NewInMemoryDatabase(false)
+			for _, p := range []Package{a, b, c, d} {
+				_, err := definitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			lst := a.Revdeps(definitions)
 			Expect(lst).To(ContainElement(b))
 			Expect(lst).To(ContainElement(c))
 			Expect(len(lst)).To(Equal(2))
@@ -61,11 +71,16 @@ var _ = Describe("Package", func() {
 		e := NewPackage("E", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
 
 		It("Computes correctly", func() {
-			lst := b.Revdeps(&[]Package{a, b, c, d, e})
+			definitions := NewInMemoryDatabase(false)
+			for _, p := range []Package{a, b, c, d, e} {
+				_, err := definitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			lst := a.Revdeps(definitions)
 			Expect(lst).To(ContainElement(c))
 			Expect(lst).To(ContainElement(d))
 			Expect(lst).To(ContainElement(e))
-			Expect(len(lst)).To(Equal(3))
+			Expect(len(lst)).To(Equal(4))
 		})
 	})
 

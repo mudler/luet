@@ -665,7 +665,12 @@ var _ = Describe("Solver", func() {
 		old := pkg.NewPackage("A", "1.3.1", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
 		It("Expands correctly", func() {
-			lst, err := a.Expand(&[]pkg.Package{a1, a11, a01, a02, a03, old})
+			definitions := pkg.NewInMemoryDatabase(false)
+			for _, p := range []pkg.Package{a1, a11, a01, a02, a03, old} {
+				_, err := definitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			lst, err := a.Expand(definitions)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(lst).To(ContainElement(a11))
 			Expect(lst).To(ContainElement(a1))
