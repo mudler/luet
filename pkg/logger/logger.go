@@ -67,10 +67,10 @@ func msg(level string, msg ...interface{}) {
 
 	levelMsg = emoji.Sprint(levelMsg)
 
-	//if s.Active() {
-	//		SpinnerText(levelMsg, "")
-	//	return
-	//	}
+	if s.Active() {
+		SpinnerText(levelMsg, "")
+		return
+	}
 
 	cmd := []interface{}{}
 	for _, f := range msg {
