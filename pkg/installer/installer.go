@@ -60,7 +60,7 @@ func (f *LuetFinalizer) RunInstall() error {
 		if err != nil {
 			return errors.Wrap(err, "Failed running command: "+string(stdoutStderr))
 		}
-		Info(stdoutStderr)
+		Info(string(stdoutStderr))
 	}
 	return nil
 }
@@ -74,7 +74,7 @@ func (f *LuetFinalizer) RunUnInstall() error {
 		if err != nil {
 			return errors.Wrap(err, "Failed running command: "+string(stdoutStderr))
 		}
-		Info(stdoutStderr)
+		Info(string(stdoutStderr))
 	}
 	return nil
 }
