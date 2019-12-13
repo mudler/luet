@@ -27,7 +27,6 @@ import (
 	"github.com/crillab/gophersat/bf"
 	version "github.com/hashicorp/go-version"
 	"github.com/jinzhu/copier"
-	"github.com/pkg/errors"
 
 	"github.com/ghodss/yaml"
 )
