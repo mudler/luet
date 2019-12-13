@@ -326,6 +326,39 @@ var _ = Describe("Solver", func() {
 			Expect(len(solution)).To(Equal(3))
 			Expect(err).ToNot(HaveOccurred())
 		})
+		It("Selects one version", func() {
+
+			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D2 := pkg.NewPackage("D", "1.9", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "1.8", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D1 := pkg.NewPackage("D", "1.4", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "D", Version: "1.4"}}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "D", Version: ">=1.0"}}, []*pkg.DefaultPackage{})
+
+			for _, p := range []pkg.Package{A, B, C, D, D1, D2, E} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
+
+			solution, err := s.Install([]pkg.Package{A, B})
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D1, Value: true}))
+			Expect(solution).ToNot(ContainElement(PackageAssert{Package: D, Value: true}))
+			Expect(solution).ToNot(ContainElement(PackageAssert{Package: D2, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: false}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D2, Value: false}))
+
+			Expect(len(solution)).To(Equal(5))
+			Expect(err).ToNot(HaveOccurred())
+		})
 		It("Uninstalls simple package correctly", func() {
 
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})

@@ -401,9 +401,49 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 
 	var formulas []bf.Formula
 	for _, requiredDef := range p.GetRequires() {
-		required, err := definitiondb.FindPackageCandidate(requiredDef)
+		required, err := definitiondb.FindPackage(requiredDef)
 		if err != nil {
-			return nil, errors.Wrap(err, "Couldn't find required package in db definition")
+			packages, err := requiredDef.Expand(definitiondb)
+			if err != nil || len(packages) == 0 {
+				required = requiredDef
+			} else {
+				if len(packages) == 1 {
+					required = packages[0]
+				} else {
+
+					var bb []bf.Formula
+					for _, o := range packages {
+						encodedB, err := o.Encode(db)
+						if err != nil {
+							return nil, err
+						}
+						B := bf.Var(encodedB)
+						bb = append(bb, B)
+						for _, i := range packages {
+							encodedI, err := i.Encode(db)
+							if err != nil {
+								return nil, err
+							}
+							I := bf.Var(encodedI)
+							if !o.Matches(i) {
+								//	formulas = append(formulas, bf.Or(I, B))
+								formulas = append(formulas, bf.Or(bf.Not(I), bf.Not(B)))
+
+								f, err := i.BuildFormula(definitiondb, db)
+								if err != nil {
+									return nil, err
+								}
+								formulas = append(formulas, f...)
+							}
+
+						}
+
+					}
+					//	formulas = append(formulas, bf.Or(bb...))
+
+					continue
+				}
+			}
 		}
 
 		encodedB, err := required.Encode(db)
