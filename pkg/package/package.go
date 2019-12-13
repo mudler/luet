@@ -401,9 +401,6 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 
 	var formulas []bf.Formula
 	for _, requiredDef := range p.GetRequires() {
-		// TODO: Change, instead of selecting best, we should enforce a rule
-		// between all the versions of that package (there must be only one),
-		// and selection of one of those versions to match a requirement
 		required, err := definitiondb.FindPackageCandidate(requiredDef)
 		if err != nil {
 			return nil, errors.Wrap(err, "Couldn't find required package in db definition")
