@@ -410,7 +410,6 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 					required = packages[0]
 				} else {
 
-					var bb []bf.Formula
 					for _, o := range packages {
 						encodedB, err := o.Encode(db)
 						if err != nil {
@@ -423,7 +422,6 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 						// 	return nil, err
 						// }
 						// formulas = append(formulas, f...)
-						bb = append(bb, B)
 						for _, i := range packages {
 							encodedI, err := i.Encode(db)
 							if err != nil {
