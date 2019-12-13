@@ -294,6 +294,9 @@ uri: "`+tmpdir+`"
 			_, errs := c.CompileParallel(2, false, compiler.NewLuetCompilationspecs(spec, spec2, spec3))
 
 			Expect(errs).To(BeEmpty())
+			//	_, errs = c.CompileParallel(2, false, compiler.NewLuetCompilationspecs(spec2))
+
+			//	Expect(errs).To(BeEmpty())
 
 			repo, err := GenerateRepository("test", tmpdir, "local", 1, tmpdir, "../../tests/fixtures/upgrade", pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())

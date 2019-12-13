@@ -19,6 +19,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"sort"
+	"strings"
 	"unicode"
 
 	pkg "github.com/mudler/luet/pkg/package"
@@ -53,7 +54,23 @@ func DecodeModel(model map[string]bool, db pkg.PackageDatabase) (PackagesAsserti
 		}
 		ass = append(ass, PackageAssert{Package: a.(*pkg.DefaultPackage), Value: v})
 	}
-	return ass, nil
+
+	results := make(PackagesAssertions, 0)
+
+	// FIXME: This should go away when BuildFormula() in Packages will take into account different versions in range
+	// That is, it needs to select one of the versions in a requirment range ( >= 0.1 ) that mets the constraints
+	for _, a := range ass {
+		if !results.Contains(a.Package) {
+			results = append(results, a)
+			continue
+		}
+		if results.ContainsBigger(a.Package) {
+			//swap
+			results = results.DropPackageName(a.Package)
+			results = append(results, a)
+		}
+	}
+	return results, nil
 }
 
 func (a *PackageAssert) Explain() {
@@ -73,6 +90,37 @@ func (a *PackageAssert) ToString() string {
 		msg = "not installed"
 	}
 	return fmt.Sprintf("%s/%s %s %s", a.Package.GetCategory(), a.Package.GetName(), a.Package.GetVersion(), msg)
+}
+
+func (assertions PackagesAssertions) Contains(p pkg.Package) bool {
+	for _, a := range assertions {
+		if a.Package.GetPackageName() == p.GetPackageName() && a.Value == true {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (assertions PackagesAssertions) Search(f string) *PackageAssert {
+	for _, a := range assertions {
+		if strings.Contains(a.Package.GetFingerPrint(), f) {
+			return &a
+		}
+	}
+
+	return nil
+}
+
+func (assertions PackagesAssertions) ContainsBigger(p pkg.Package) bool {
+	for _, a := range assertions {
+		if a.Package.GetPackageName() == p.GetPackageName() && a.Value == true && a.Package.Bigger(p) {
+
+			return true
+		}
+	}
+
+	return false
 }
 
 func (assertions PackagesAssertions) EnsureOrder() PackagesAssertions {
@@ -127,13 +175,16 @@ func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fin
 	orderedAssertions := PackagesAssertions{}
 	unorderedAssertions := PackagesAssertions{}
 	fingerprints := []string{}
-
 	tmpMap := map[string]PackageAssert{}
+
 	graph := topsort.NewGraph()
+	assertionDb := pkg.NewInMemoryDatabase(false)
 
 	for _, a := range assertions {
 		graph.AddNode(a.Package.GetFingerPrint())
+		assertionDb.CreatePackage(a.Package)
 		tmpMap[a.Package.GetFingerPrint()] = a
+
 		fingerprints = append(fingerprints, a.Package.GetFingerPrint())
 		unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
 
@@ -151,13 +202,14 @@ func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fin
 	//	graph.AddNodes(fingerprints...)
 	for _, a := range unorderedAssertions {
 		for _, requiredDef := range a.Package.GetRequires() {
-			req, err := definitiondb.FindPackageCandidate(requiredDef)
-			if err != nil {
-				req = requiredDef
-			}
+			req := assertions.Search(requiredDef.GetPackageName())
 
+			//	if req == nil {
+			//		req = requiredDef
+			//	}
 			// Expand also here, as we need to order them (or instead the solver should give back the dep correctly?)
-			graph.AddEdge(a.Package.GetFingerPrint(), req.GetFingerPrint())
+
+			graph.AddEdge(a.Package.GetFingerPrint(), req.Package.GetFingerPrint())
 		}
 	}
 	result, err := graph.TopSort(fingerprint)
@@ -165,12 +217,17 @@ func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fin
 		panic(err)
 	}
 	for _, res := range result {
-		a, ok := tmpMap[res]
-		if !ok {
-			panic("fail")
-			//	continue
+		a := assertions.Search(res)
+		if a == nil {
+			ass, ok := tmpMap[res]
+			if !ok {
+				//panic("fail")
+				continue
+			}
+			a = &ass
 		}
-		orderedAssertions = append(orderedAssertions, a)
+
+		orderedAssertions = append(orderedAssertions, *a)
 		//	orderedAssertions = append(PackagesAssertions{a}, orderedAssertions...) // push upfront
 	}
 	//helpers.ReverseAny(orderedAssertions)
@@ -234,6 +291,17 @@ func (assertions PackagesAssertions) Drop(p pkg.Package) PackagesAssertions {
 
 	for _, a := range assertions {
 		if !a.Package.Matches(p) {
+			ass = append(ass, a)
+		}
+	}
+	return ass
+}
+
+func (assertions PackagesAssertions) DropPackageName(p pkg.Package) PackagesAssertions {
+	ass := PackagesAssertions{}
+
+	for _, a := range assertions {
+		if a.Package.GetPackageName() != p.GetPackageName() {
 			ass = append(ass, a)
 		}
 	}
