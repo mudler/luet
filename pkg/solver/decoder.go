@@ -19,6 +19,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"sort"
+	"strings"
 	"unicode"
 
 	pkg "github.com/mudler/luet/pkg/package"
@@ -122,6 +123,18 @@ func (assertions PackagesAssertions) EnsureOrder() PackagesAssertions {
 	return orderedAssertions
 }
 
+// XXX: Search assumes that a Package GetPackageName() is contained in GetFingerPrint()
+func (assertions PackagesAssertions) Search(f string) *PackageAssert {
+	for _, a := range assertions {
+		if a.Value {
+			if strings.Contains(a.Package.GetFingerPrint(), f) {
+				return &a
+			}
+		}
+	}
+
+	return nil
+}
 func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fingerprint string) PackagesAssertions {
 
 	orderedAssertions := PackagesAssertions{}
@@ -151,13 +164,15 @@ func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fin
 	//	graph.AddNodes(fingerprints...)
 	for _, a := range unorderedAssertions {
 		for _, requiredDef := range a.Package.GetRequires() {
-			req, err := definitiondb.FindPackageCandidate(requiredDef)
-			if err != nil {
-				req = requiredDef
+			// We cannot search for fingerprint, as we could have selector in versions.
+			// We know that the assertions are unique for packages
+			req := assertions.Search(requiredDef.GetPackageName())
+			if req != nil {
+				requiredDef = req.Package
 			}
 
 			// Expand also here, as we need to order them (or instead the solver should give back the dep correctly?)
-			graph.AddEdge(a.Package.GetFingerPrint(), req.GetFingerPrint())
+			graph.AddEdge(a.Package.GetFingerPrint(), requiredDef.GetFingerPrint())
 		}
 	}
 	result, err := graph.TopSort(fingerprint)
