@@ -295,7 +295,7 @@ func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
 
 }
 
-// FindPackages return the list of the packages beloging to cat/name (any versions)
+// FindPackages return the list of the packages beloging to cat/name  (any versions in requested range)
 // FIXME: Optimize, see inmemorydb
 func (db *BoltDatabase) FindPackages(p Package) ([]Package, error) {
 	var versionsInWorld []Package
@@ -315,6 +315,19 @@ func (db *BoltDatabase) FindPackages(p Package) ([]Package, error) {
 		if constraints.Check(v) {
 			versionsInWorld = append(versionsInWorld, w)
 		}
+	}
+	return versionsInWorld, nil
+}
+
+// FindPackageVersions return the list of the packages beloging to cat/name
+func (db *BoltDatabase) FindPackageVersions(p Package) ([]Package, error) {
+	var versionsInWorld []Package
+	for _, w := range db.World() {
+		if w.GetName() != p.GetName() || w.GetCategory() != p.GetCategory() {
+			continue
+		}
+
+		versionsInWorld = append(versionsInWorld, w)
 	}
 	return versionsInWorld, nil
 }

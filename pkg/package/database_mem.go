@@ -170,7 +170,24 @@ func (db *InMemoryDatabase) FindPackage(p Package) (Package, error) {
 	return db.GetPackage(p.GetFingerPrint())
 }
 
-// FindPackages return the list of the packages beloging to cat/name (any versions)
+// FindPackages return the list of the packages beloging to cat/name
+func (db *InMemoryDatabase) FindPackageVersions(p Package) ([]Package, error) {
+	versions, ok := db.CacheNoVersion[p.GetPackageName()]
+	if !ok {
+		return nil, errors.New("No versions found for package")
+	}
+	var versionsInWorld []Package
+	for ve, _ := range versions {
+		w, err := db.FindPackage(&DefaultPackage{Name: p.GetName(), Category: p.GetCategory(), Version: ve})
+		if err != nil {
+			return nil, errors.Wrap(err, "Cache mismatch - this shouldn't happen")
+		}
+		versionsInWorld = append(versionsInWorld, w)
+	}
+	return versionsInWorld, nil
+}
+
+// FindPackages return the list of the packages beloging to cat/name (any versions in requested range)
 func (db *InMemoryDatabase) FindPackages(p Package) ([]Package, error) {
 	versions, ok := db.CacheNoVersion[p.GetPackageName()]
 	if !ok {

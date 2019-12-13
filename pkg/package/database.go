@@ -41,7 +41,7 @@ type PackageSet interface {
 	GetPackageFiles(Package) ([]string, error)
 	SetPackageFiles(*PackageFile) error
 	RemovePackageFiles(Package) error
-
+	FindPackageVersions(p Package) ([]Package, error)
 	World() []Package
 
 	FindPackageCandidate(p Package) (Package, error)
