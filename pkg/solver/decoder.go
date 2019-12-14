@@ -19,7 +19,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"sort"
-	"strings"
 	"unicode"
 
 	pkg "github.com/mudler/luet/pkg/package"
@@ -123,11 +122,21 @@ func (assertions PackagesAssertions) EnsureOrder() PackagesAssertions {
 	return orderedAssertions
 }
 
-// XXX: Search assumes that a Package GetPackageName() is contained in GetFingerPrint()
+func (assertions PackagesAssertions) SearchByName(f string) *PackageAssert {
+	for _, a := range assertions {
+		if a.Value {
+			if a.Package.GetPackageName() == f {
+				return &a
+			}
+		}
+	}
+
+	return nil
+}
 func (assertions PackagesAssertions) Search(f string) *PackageAssert {
 	for _, a := range assertions {
 		if a.Value {
-			if strings.Contains(a.Package.GetFingerPrint(), f) {
+			if a.Package.GetFingerPrint() == f {
 				return &a
 			}
 		}
@@ -165,8 +174,8 @@ func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fin
 	for _, a := range unorderedAssertions {
 		for _, requiredDef := range a.Package.GetRequires() {
 			// We cannot search for fingerprint, as we could have selector in versions.
-			// We know that the assertions are unique for packages
-			req := assertions.Search(requiredDef.GetPackageName())
+			// We know that the assertions are unique for packages, so look for a package with such name in the assertions
+			req := assertions.SearchByName(requiredDef.GetPackageName())
 			if req != nil {
 				requiredDef = req.Package
 			}
