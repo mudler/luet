@@ -56,7 +56,7 @@ var installCmd = &cobra.Command{
 
 			category := packageInfo[0][4]
 			name := packageInfo[0][5]
-			version := packageInfo[0][7]
+			version := packageInfo[0][1] + packageInfo[0][7]
 			toInstall = append(toInstall, &pkg.DefaultPackage{Name: name, Category: category, Version: version})
 
 		}

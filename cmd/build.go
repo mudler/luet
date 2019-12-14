@@ -97,10 +97,9 @@ var buildCmd = &cobra.Command{
 					Fatal("Error: " + err.Error())
 				}
 				packageInfo := decodepackage.FindAllStringSubmatch(a, -1)
-
 				category := packageInfo[0][4]
 				name := packageInfo[0][5]
-				version := packageInfo[0][7]
+				version := packageInfo[0][1] + packageInfo[0][7]
 				spec, err := luetCompiler.FromPackage(&pkg.DefaultPackage{Name: name, Category: category, Version: version})
 				if err != nil {
 					Fatal("Error: " + err.Error())
