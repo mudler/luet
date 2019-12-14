@@ -400,6 +400,11 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 
 	var formulas []bf.Formula
 	for _, requiredDef := range p.GetRequires() {
+		// TODO: Stabilize this. We allow any of those version to be selected,
+		// at the price that they can't be selected alltogether.
+		// This have the downside that we cannot specify a preference (e.g. The best matching)
+		// unless we have a user-defined version. It means that the solver could
+		// give different output between calls, but they are all legit as they respect the constraints.
 		required, err := definitiondb.FindPackage(requiredDef)
 		if err != nil {
 			packages, err := definitiondb.FindPackages(requiredDef)

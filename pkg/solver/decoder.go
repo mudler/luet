@@ -144,6 +144,7 @@ func (assertions PackagesAssertions) Search(f string) *PackageAssert {
 
 	return nil
 }
+
 func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fingerprint string) PackagesAssertions {
 
 	orderedAssertions := PackagesAssertions{}
@@ -259,6 +260,21 @@ func (assertions PackagesAssertions) Drop(p pkg.Package) PackagesAssertions {
 	for _, a := range assertions {
 		if !a.Package.Matches(p) {
 			ass = append(ass, a)
+		}
+	}
+	return ass
+}
+
+// Cut returns an assertion list of installed (filter by Value) "cutted" until the package is found (included)
+func (assertions PackagesAssertions) Cut(p pkg.Package) PackagesAssertions {
+	ass := PackagesAssertions{}
+
+	for _, a := range assertions {
+		if a.Value {
+			ass = append(ass, a)
+			if a.Package.Matches(p) {
+				break
+			}
 		}
 	}
 	return ass

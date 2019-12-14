@@ -246,5 +246,31 @@ var _ = Describe("Decoder", func() {
 			Expect(solution.Order(dbDefinitions, Y.GetFingerPrint()).Drop(Y).AssertionHash() == solution2.Order(dbDefinitions, Z.GetFingerPrint()).Drop(Z).AssertionHash()).To(BeTrue())
 		})
 
+		It("Hashes them, Cuts them and could be used for comparison", func() {
+
+			X := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			Y := pkg.NewPackage("Y", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
+			Z := pkg.NewPackage("Z", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
+
+			for _, p := range []pkg.Package{X, Y, Z} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			solution, err := s.Install([]pkg.Package{Y})
+			Expect(err).ToNot(HaveOccurred())
+
+			solution2, err := s.Install([]pkg.Package{Z})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(solution.Order(dbDefinitions, Y.GetFingerPrint()).Cut(Y).Drop(Y)).To(Equal(solution2.Order(dbDefinitions, Z.GetFingerPrint()).Cut(Z).Drop(Z)))
+
+			Expect(solution.Order(dbDefinitions, Y.GetFingerPrint()).Cut(Y).Drop(Y).AssertionHash()).To(Equal(solution2.Order(dbDefinitions, Z.GetFingerPrint()).Cut(Z).Drop(Z).AssertionHash()))
+		})
+
 	})
 })

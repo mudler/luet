@@ -442,17 +442,13 @@ func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssert
 
 	dependencies := solution.Order(cs.Database, p.GetPackage().GetFingerPrint())
 	assertions := solver.PackagesAssertions{}
-
 	for _, assertion := range dependencies { //highly dependent on the order
 		if assertion.Value {
-			nthsolution, err := s.Install([]pkg.Package{assertion.Package})
-			if err != nil {
-				return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
-			}
+			nthsolution := dependencies.Cut(assertion.Package)
 
 			assertion.Hash = solver.PackageHash{
-				BuildHash:   nthsolution.Order(cs.Database, assertion.Package.GetFingerPrint()).Drop(assertion.Package).AssertionHash(),
-				PackageHash: nthsolution.Order(cs.Database, assertion.Package.GetFingerPrint()).AssertionHash(),
+				BuildHash:   nthsolution.Drop(assertion.Package).AssertionHash(),
+				PackageHash: nthsolution.AssertionHash(),
 			}
 			assertions = append(assertions, assertion)
 		}
