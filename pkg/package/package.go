@@ -68,6 +68,15 @@ type Package interface {
 	SetPath(string)
 	GetPath() string
 	Rel(string) string
+
+	GetDescription() string
+	SetDescription(string)
+
+	AddURI(string)
+	GetURI() []string
+
+	SetLicense(string)
+	GetLicense() string
 }
 
 type Tree interface {
@@ -125,6 +134,10 @@ type DefaultPackage struct {
 
 	// Path is set only internally when tree is loaded from disk
 	Path string `json:"path,omitempty"`
+
+	Description string   `json:"description"`
+	Uri         []string `json:"uri"`
+	License     string   `json:"license"`
 }
 
 // State represent the package state
@@ -223,11 +236,27 @@ func (p *DefaultPackage) GetName() string {
 func (p *DefaultPackage) GetVersion() string {
 	return p.Version
 }
-
+func (p *DefaultPackage) GetDescription() string {
+	return p.Description
+}
+func (p *DefaultPackage) SetDescription(s string) {
+	p.Description = s
+}
+func (p *DefaultPackage) GetLicense() string {
+	return p.License
+}
+func (p *DefaultPackage) SetLicense(s string) {
+	p.License = s
+}
+func (p *DefaultPackage) AddURI(s string) {
+	p.Uri = append(p.Uri, s)
+}
+func (p *DefaultPackage) GetURI() []string {
+	return p.Uri
+}
 func (p *DefaultPackage) GetCategory() string {
 	return p.Category
 }
-
 func (p *DefaultPackage) SetCategory(s string) {
 	p.Category = s
 }

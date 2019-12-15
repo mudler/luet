@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -31,9 +32,13 @@ import (
 
 	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	pkg "github.com/mudler/luet/pkg/package"
-	"mvdan.cc/sh/expand"
-	"mvdan.cc/sh/shell"
-	"mvdan.cc/sh/syntax"
+	"mvdan.cc/sh/v3/expand"
+	"mvdan.cc/sh/v3/shell"
+	"mvdan.cc/sh/v3/syntax"
+)
+
+const (
+	uriRegex = "(.*[.]tar[.].*|.*[.]zip|.*[.]run|.*[.]png|.*[.]rpm|.*[.]gz)"
 )
 
 // SimpleEbuildParser ignores USE flags and generates just 1-1 package
@@ -66,15 +71,15 @@ func NewGentooDependency(pkg, use string) (*GentooDependency, error) {
 
 	if pkg != "" {
 		ans.Dep, err = _gentoo.ParsePackageStr(pkg)
+		if err != nil {
+			return nil, err
+		}
 
 		// TODO: Fix this on parsing phase for handle correctly ${PV}
 		if strings.HasSuffix(ans.Dep.Name, "-") {
 			ans.Dep.Name = ans.Dep.Name[:len(ans.Dep.Name)-1]
 		}
 
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return ans, nil
@@ -143,6 +148,7 @@ func (r *GentooRDEPEND) GetDependencies() []*GentooDependency {
 func ParseRDEPEND(rdepend string) (*GentooRDEPEND, error) {
 	var lastdep []*GentooDependency = make([]*GentooDependency, 0)
 	var pendingDep = false
+	var orDep = false
 	var dep *GentooDependency
 	var err error
 
@@ -158,25 +164,44 @@ func ParseRDEPEND(rdepend string) (*GentooRDEPEND, error) {
 				continue
 			}
 
+			if strings.HasPrefix(rr, "|| (") {
+				orDep = true
+				continue
+			}
+
+			if orDep {
+				rr = strings.TrimSpace(rr)
+				if rr == ")" {
+					orDep = false
+				}
+				continue
+			}
+
 			if strings.Index(rr, "?") > 0 {
 				// use flag present
 
 				if pendingDep {
 					dep, err = lastdep[len(lastdep)-1].AddSubDependency("", rr[:strings.Index(rr, "?")])
 					if err != nil {
-						return nil, err
+						Debug("Ignoring subdependency ", rr[:strings.Index(rr, "?")])
 					}
 				} else {
 					dep, err = NewGentooDependency("", rr[:strings.Index(rr, "?")])
 					if err != nil {
-						return nil, err
+						Debug("Ignoring dep", rr)
+					} else {
+						ans.Dependencies = append(ans.Dependencies, dep)
 					}
-					ans.Dependencies = append(ans.Dependencies, dep)
 				}
 
 				if strings.Index(rr, ")") < 0 {
 					pendingDep = true
 					lastdep = append(lastdep, dep)
+				}
+
+				if strings.Index(rr, "|| (") >= 0 {
+					// Ignore dep in or
+					continue
 				}
 
 				fields := strings.Split(rr[strings.Index(rr, "?")+1:], " ")
@@ -188,7 +213,7 @@ func ParseRDEPEND(rdepend string) (*GentooRDEPEND, error) {
 
 					_, err = dep.AddSubDependency(f, "")
 					if err != nil {
-						return nil, err
+						Debug("Ignoring subdependency ", f)
 					}
 				}
 
@@ -213,11 +238,31 @@ func ParseRDEPEND(rdepend string) (*GentooRDEPEND, error) {
 				}
 
 			} else {
-				dep, err := NewGentooDependency(rr, "")
-				if err != nil {
-					return nil, err
+				rr = strings.TrimSpace(rr)
+				// Check if there multiple deps in single row
+
+				fields := strings.Split(rr, " ")
+				if len(fields) > 1 {
+					for _, rrr := range fields {
+						rrr = strings.TrimSpace(rrr)
+						if rrr == "" {
+							continue
+						}
+						dep, err := NewGentooDependency(rrr, "")
+						if err != nil {
+							Debug("Ignoring dep", rr)
+						} else {
+							ans.Dependencies = append(ans.Dependencies, dep)
+						}
+					}
+				} else {
+					dep, err := NewGentooDependency(rr, "")
+					if err != nil {
+						Debug("Ignoring dep", rr)
+					} else {
+						ans.Dependencies = append(ans.Dependencies, dep)
+					}
 				}
-				ans.Dependencies = append(ans.Dependencies, dep)
 			}
 
 		}
@@ -232,14 +277,45 @@ func SourceFile(ctx context.Context, path string, pkg *_gentoo.GentooPackage) (m
 	if err != nil {
 		return nil, fmt.Errorf("could not open: %v", err)
 	}
+	scontent := string(content)
+
 	// Add default Genoo Variables
 	ebuild := fmt.Sprintf("P=%s\n", pkg.GetP()) +
 		fmt.Sprintf("PN=%s\n", pkg.GetPN()) +
 		fmt.Sprintf("PV=%s\n", pkg.GetPV()) +
-		fmt.Sprintf("PVR=%s\n", pkg.GetPVR()) +
-		string(content)
+		fmt.Sprintf("PVR=%s\n", pkg.GetPVR())
 
-	file, err := syntax.NewParser(syntax.StopAt("src")).Parse(strings.NewReader(ebuild), path)
+	// Disable inherit
+	scontent = strings.ReplaceAll(scontent, "inherit", "#inherit")
+	// Disable function from eclass (TODO: check how fix better this)
+	scontent = strings.ReplaceAll(scontent, "need_apache", "#need_apache")
+	scontent = strings.ReplaceAll(scontent, "want_apache", "#want_apache")
+
+	regexFuncs := regexp.MustCompile(
+		"[a-zA-Z]+.*[_][a-z]+[(][)][\\s]{",
+	)
+	matches := regexFuncs.FindAllIndex([]byte(scontent), -1)
+	// Drop section after functions (src_*, *() {)
+	if len(matches) > 0 {
+		ebuild = ebuild + scontent[:matches[0][0]]
+	} else {
+		ebuild = ebuild + scontent
+	}
+
+	// [[ ${PV} == "9999" ]] is not supported. Workaround but we need a better solution.
+	regexDoubleBrakets := regexp.MustCompile(
+		//"[[][[].*",
+		"^[[][[].*",
+		//"^.*\[\[.*\]\]",
+	)
+	matchDB := regexDoubleBrakets.FindAllIndex([]byte(ebuild), -1)
+	if len(matchDB) > 0 {
+		ebuild = ebuild[:matchDB[0][0]] + "#" + ebuild[matchDB[0][0]:]
+	}
+
+	//fmt.Println("EBUILD ", ebuild)
+
+	file, err := syntax.NewParser().Parse(strings.NewReader(ebuild), path)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse: %v", err)
 	}
@@ -263,17 +339,18 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string) ([]pkg.Package, error) {
 		Name:     gp.Name,
 		Version:  fmt.Sprintf("%s%s", gp.Version, gp.VersionSuffix),
 		Category: gp.Category,
+		Uri:      make([]string, 0),
 	}
 
-	Debug("Prepare package ", pack)
+	Debug("Prepare package ", pack.Category+"/"+pack.Name+"-"+pack.Version)
 
 	// Adding a timeout of 60secs, as with some bash files it can hang indefinetly
 	timeout, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	vars, err := SourceFile(timeout, path, gp)
 	if err != nil {
-		return []pkg.Package{pack}, nil
-		//	return []pkg.Package{}, err
+		Error("Error on source file ", pack.Name, ": ", err)
+		return []pkg.Package{}, err
 	}
 
 	// TODO: Handle this a bit better
@@ -285,10 +362,49 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string) ([]pkg.Package, error) {
 		}
 	}
 
+	// Retrieve package description
+	descr, ok := vars["DESCRIPTION"]
+	if ok {
+		pack.SetDescription(descr.String())
+	}
+	// Retrieve package license
+	license, ok := vars["LICENSE"]
+	if ok {
+		pack.SetLicense(license.String())
+	}
+	uri, ok := vars["SRC_URI"]
+	if ok {
+		// TODO: handle mirror:
+		uris := strings.Split(uri.String(), "\n")
+		for _, u := range uris {
+			u = strings.TrimSpace(u)
+
+			if u == "" {
+				continue
+			}
+			if match, _ := regexp.Match(uriRegex, []byte(u)); match {
+				if strings.Index(u, "(") >= 0 {
+					regexUri := regexp.MustCompile("(http|ftp|mirror).*[ ]")
+					matches := regexUri.FindAllIndex([]byte(u), -1)
+					if len(matches) > 0 {
+						u = u[matches[0][0]:matches[0][1]]
+					} else {
+						continue
+					}
+				}
+				pack.AddURI(u)
+				Debug("Add uri ", u)
+			} else {
+				Debug("Skip uri ", u)
+			}
+		}
+	}
+
 	rdepend, ok := vars["RDEPEND"]
 	if ok {
 		gRDEPEND, err := ParseRDEPEND(rdepend.String())
 		if err != nil {
+			Warning("Error on parsing RDEPEND for package ", pack.Category+"/"+pack.Name, err)
 			return []pkg.Package{pack}, nil
 			//	return []pkg.Package{}, err
 		}
