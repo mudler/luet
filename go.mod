@@ -35,5 +35,6 @@ require (
 	golang.org/x/crypto v0.0.0-20191028145041-f83a4685e152 // indirect
 	golang.org/x/sys v0.0.0-20191110163157-d32e6e3b99c4 // indirect
 	gopkg.in/yaml.v2 v2.2.5
-	mvdan.cc/sh v2.6.4+incompatible
+	mvdan.cc/sh v2.6.4+incompatible // indirect
+	mvdan.cc/sh/v3 v3.0.0-beta1
 )
