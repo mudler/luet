@@ -386,7 +386,6 @@ func Best(set []Package) Package {
 }
 
 func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db PackageDatabase) ([]bf.Formula, error) {
-	// TODO: Expansion needs to go here - and so we ditch Resolvedeps()
 	p, err := definitiondb.FindPackage(pack)
 	if err != nil {
 		p = pack // Relax failures and trust the def
@@ -400,11 +399,6 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 
 	var formulas []bf.Formula
 	for _, requiredDef := range p.GetRequires() {
-		// TODO: Stabilize this. We allow any of those version to be selected,
-		// at the price that they can't be selected alltogether.
-		// This have the downside that we cannot specify a preference (e.g. The best matching)
-		// unless we have a user-defined version. It means that the solver could
-		// give different output between calls, but they are all legit as they respect the constraints.
 		required, err := definitiondb.FindPackage(requiredDef)
 		if err != nil {
 			packages, err := definitiondb.FindPackages(requiredDef)
@@ -414,19 +408,43 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 				if len(packages) == 1 {
 					required = packages[0]
 				} else {
-					var bb []bf.Formula
+					var ALO, priorityConstraints []bf.Formula
+
+					// Try to prio best match
+					// Force the solver to consider first our candidate (if does exists).
+					// Then builds ALO and AMO for the requires.
+					c, candidateErr := definitiondb.FindPackageCandidate(requiredDef)
+					var C bf.Formula
+					if candidateErr == nil {
+						// We have a desired candidate, try to look a solution with that included first
+						for _, o := range packages {
+							encodedB, err := o.Encode(db)
+							if err != nil {
+								return nil, err
+							}
+							B := bf.Var(encodedB)
+							if !o.Matches(c) {
+								priorityConstraints = append(priorityConstraints, bf.Not(B))
+							}
+						}
+						encodedC, err := c.Encode(db)
+						if err != nil {
+							return nil, err
+						}
+						C = bf.Var(encodedC)
+						// Or the Candidate is true, or all the others might be not true
+						// This forces the CDCL sat implementation to look first at a solution with C=true
+						formulas = append(formulas, bf.Or(C, bf.Or(priorityConstraints...)))
+					}
+
+					// AMO - At most one
 					for _, o := range packages {
 						encodedB, err := o.Encode(db)
 						if err != nil {
 							return nil, err
 						}
 						B := bf.Var(encodedB)
-						bb = append(bb, B)
-						// f, err := o.BuildFormula(definitiondb, db)
-						// if err != nil {
-						// 	return nil, err
-						// }
-						// formulas = append(formulas, f...)
+						ALO = append(ALO, B)
 						for _, i := range packages {
 							encodedI, err := i.Encode(db)
 							if err != nil {
@@ -434,16 +452,11 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 							}
 							I := bf.Var(encodedI)
 							if !o.Matches(i) {
-								//	formulas = append(formulas, bf.Or(I, B))
 								formulas = append(formulas, bf.Or(bf.Not(I), bf.Not(B)))
-
 							}
-
 						}
-
 					}
-					formulas = append(formulas, bf.Or(bb...))
-
+					formulas = append(formulas, bf.Or(ALO...)) // ALO - At least one
 					continue
 				}
 			}
@@ -489,7 +502,6 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 			}
 		}
 
-		//	return nil, errors.Wrap(err, "Couldn't find required package in db definition")
 		encodedB, err := required.Encode(db)
 		if err != nil {
 			return nil, err
