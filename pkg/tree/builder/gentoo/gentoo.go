@@ -124,7 +124,9 @@ func (gb *GentooBuilder) Generate(dir string) (pkg.PackageDatabase, error) {
 		if info.IsDir() {
 			return nil
 		}
-		if strings.Contains(info.Name(), "ebuild") {
+		// Ensure that only file with suffix .ebuild are elaborated.
+		// and ignore .swp files or files with string ebuild on name
+		if strings.HasSuffix(info.Name(), ".ebuild") {
 			toScan <- path
 		}
 		return nil

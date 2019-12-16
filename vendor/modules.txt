@@ -285,14 +285,18 @@ golang.org/x/text/runes
 golang.org/x/text/internal/language
 golang.org/x/text/internal/language/compact
 golang.org/x/text/internal/tag
+# golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
+golang.org/x/xerrors
+golang.org/x/xerrors/internal
 # gopkg.in/fsnotify.v1 v1.4.7
 gopkg.in/fsnotify.v1
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 gopkg.in/tomb.v1
 # gopkg.in/yaml.v2 v2.2.5
 gopkg.in/yaml.v2
-# mvdan.cc/sh v2.6.4+incompatible
-mvdan.cc/sh/expand
-mvdan.cc/sh/shell
-mvdan.cc/sh/syntax
-mvdan.cc/sh/interp
+# mvdan.cc/sh/v3 v3.0.0-beta1
+mvdan.cc/sh/v3/expand
+mvdan.cc/sh/v3/shell
+mvdan.cc/sh/v3/syntax
+mvdan.cc/sh/v3/pattern
+mvdan.cc/sh/v3/interp

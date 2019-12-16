@@ -45,6 +45,35 @@ var _ = Describe("Package", func() {
 		})
 	})
 
+	Context("Check description", func() {
+		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a.SetDescription("Description A")
+
+		It("Set and get correctly a description", func() {
+			Expect(a.GetDescription()).To(Equal("Description A"))
+		})
+	})
+
+	Context("Check licenses", func() {
+		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a.SetLicense("MIT")
+
+		It("Set and get correctly a license", func() {
+			Expect(a.GetLicense()).To(Equal("MIT"))
+		})
+	})
+
+	Context("Check URI", func() {
+		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a.AddURI("ftp://ftp.freeradius.org/pub/radius/freearadius-server-3.0.20.tar.gz")
+
+		It("Set and get correctly an uri", func() {
+			Expect(a.GetURI()).To(Equal([]string{
+				"ftp://ftp.freeradius.org/pub/radius/freearadius-server-3.0.20.tar.gz",
+			}))
+		})
+	})
+
 	Context("revdeps", func() {
 		a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
 		b := NewPackage("B", "1.0", []*DefaultPackage{a}, []*DefaultPackage{})
