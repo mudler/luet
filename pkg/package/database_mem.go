@@ -25,27 +25,30 @@ import (
 )
 
 var DBInMemoryInstance = &InMemoryDatabase{
-	Mutex:          &sync.Mutex{},
-	FileDatabase:   map[string][]string{},
-	Database:       map[string]string{},
-	CacheNoVersion: map[string]map[string]interface{}{},
+	Mutex:            &sync.Mutex{},
+	FileDatabase:     map[string][]string{},
+	Database:         map[string]string{},
+	CacheNoVersion:   map[string]map[string]interface{}{},
+	ProvidesDatabase: map[string]map[string]Package{},
 }
 
 type InMemoryDatabase struct {
 	*sync.Mutex
-	Database       map[string]string
-	FileDatabase   map[string][]string
-	CacheNoVersion map[string]map[string]interface{}
+	Database         map[string]string
+	FileDatabase     map[string][]string
+	CacheNoVersion   map[string]map[string]interface{}
+	ProvidesDatabase map[string]map[string]Package
 }
 
 func NewInMemoryDatabase(singleton bool) PackageDatabase {
 	// In memoryDB is a singleton
 	if !singleton {
 		return &InMemoryDatabase{
-			Mutex:          &sync.Mutex{},
-			FileDatabase:   map[string][]string{},
-			Database:       map[string]string{},
-			CacheNoVersion: map[string]map[string]interface{}{},
+			Mutex:            &sync.Mutex{},
+			FileDatabase:     map[string][]string{},
+			Database:         map[string]string{},
+			CacheNoVersion:   map[string]map[string]interface{}{},
+			ProvidesDatabase: map[string]map[string]Package{},
 		}
 	}
 	return DBInMemoryInstance
@@ -142,6 +145,17 @@ func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {
 	// Create extra cache between package -> []versions
 	db.Lock()
 	defer db.Unlock()
+
+	// Provides: Store package provides, we will reuse this when walking deps
+	for _, provide := range pd.Provides {
+		if _, ok := db.ProvidesDatabase[provide.GetPackageName()]; !ok {
+			db.ProvidesDatabase[provide.GetPackageName()] = make(map[string]Package)
+
+		}
+
+		db.ProvidesDatabase[provide.GetPackageName()][provide.GetVersion()] = p
+	}
+
 	_, ok = db.CacheNoVersion[p.GetPackageName()]
 	if !ok {
 		db.CacheNoVersion[p.GetPackageName()] = make(map[string]interface{})
@@ -149,6 +163,43 @@ func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {
 	db.CacheNoVersion[p.GetPackageName()][p.GetVersion()] = nil
 
 	return ID, nil
+}
+
+func (db *InMemoryDatabase) getProvide(p Package) (Package, error) {
+	db.Lock()
+	pa, ok := db.ProvidesDatabase[p.GetPackageName()][p.GetVersion()]
+	if !ok {
+		versions, ok := db.ProvidesDatabase[p.GetPackageName()]
+		db.Unlock()
+
+		if !ok {
+			return nil, errors.New("No versions found for package")
+		}
+
+		for ve, _ := range versions {
+
+			v, err := version.NewVersion(p.GetVersion())
+			if err != nil {
+				return nil, err
+			}
+			constraints, err := version.NewConstraint(ve)
+			if err != nil {
+				return nil, err
+			}
+
+			if constraints.Check(v) {
+				pa, ok := db.ProvidesDatabase[p.GetPackageName()][ve]
+				if !ok {
+					return nil, errors.New("No versions found for package")
+				}
+				return pa, nil
+			}
+		}
+
+		return nil, errors.New("No package provides this")
+	}
+	db.Unlock()
+	return db.FindPackage(pa)
 }
 
 func (db *InMemoryDatabase) encodePackage(p Package) (string, string, error) {
@@ -167,6 +218,12 @@ func (db *InMemoryDatabase) encodePackage(p Package) (string, string, error) {
 }
 
 func (db *InMemoryDatabase) FindPackage(p Package) (Package, error) {
+
+	// Provides: Return the replaced package here
+	if provided, err := db.getProvide(p); err == nil {
+		return provided, nil
+	}
+
 	return db.GetPackage(p.GetFingerPrint())
 }
 
@@ -189,6 +246,11 @@ func (db *InMemoryDatabase) FindPackageVersions(p Package) ([]Package, error) {
 
 // FindPackages return the list of the packages beloging to cat/name (any versions in requested range)
 func (db *InMemoryDatabase) FindPackages(p Package) ([]Package, error) {
+
+	// Provides: Treat as the replaced package here
+	if provided, err := db.getProvide(p); err == nil {
+		p = provided
+	}
 	versions, ok := db.CacheNoVersion[p.GetPackageName()]
 	if !ok {
 		return nil, errors.New("No versions found for package")

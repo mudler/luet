@@ -34,7 +34,8 @@ import (
 
 type BoltDatabase struct {
 	sync.Mutex
-	Path string
+	Path             string
+	ProvidesDatabase map[string]map[string]Package
 }
 
 func NewBoltDatabase(path string) PackageDatabase {
@@ -42,7 +43,7 @@ func NewBoltDatabase(path string) PackageDatabase {
 	// 	BoltInstance = &BoltDatabase{Path: path}
 	// }
 	//return BoltInstance, nil
-	return &BoltDatabase{Path: path}
+	return &BoltDatabase{Path: path, ProvidesDatabase: map[string]map[string]Package{}}
 }
 
 func (db *BoltDatabase) Get(s string) (string, error) {
@@ -85,6 +86,11 @@ func (db *BoltDatabase) Retrieve(ID string) ([]byte, error) {
 }
 
 func (db *BoltDatabase) FindPackage(tofind Package) (Package, error) {
+	// Provides: Return the replaced package here
+	if provided, err := db.getProvide(tofind); err == nil {
+		return provided, nil
+	}
+
 	p := &DefaultPackage{}
 	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
@@ -196,7 +202,60 @@ func (db *BoltDatabase) CreatePackage(p Package) (string, error) {
 		return "", errors.Wrap(err, "Error saving package to "+db.Path)
 	}
 
+	// Create extra cache between package -> []versions
+	db.Lock()
+	defer db.Unlock()
+	// TODO: Replace with a bolt implementation (and not in memory)
+	// Provides: Store package provides, we will reuse this when walking deps
+	for _, provide := range dp.Provides {
+		if _, ok := db.ProvidesDatabase[provide.GetPackageName()]; !ok {
+			db.ProvidesDatabase[provide.GetPackageName()] = make(map[string]Package)
+
+		}
+
+		db.ProvidesDatabase[provide.GetPackageName()][provide.GetVersion()] = p
+	}
+
 	return strconv.Itoa(dp.ID), err
+}
+
+// Dup from memory implementation
+func (db *BoltDatabase) getProvide(p Package) (Package, error) {
+	db.Lock()
+	pa, ok := db.ProvidesDatabase[p.GetPackageName()][p.GetVersion()]
+	if !ok {
+		versions, ok := db.ProvidesDatabase[p.GetPackageName()]
+		db.Unlock()
+
+		if !ok {
+			return nil, errors.New("No versions found for package")
+		}
+
+		for ve, _ := range versions {
+
+			v, err := version.NewVersion(p.GetVersion())
+			if err != nil {
+				return nil, err
+			}
+			constraints, err := version.NewConstraint(ve)
+			if err != nil {
+				return nil, err
+			}
+
+			if constraints.Check(v) {
+				pa, ok := db.ProvidesDatabase[p.GetPackageName()][ve]
+				if !ok {
+					return nil, errors.New("No versions found for package")
+				}
+				return pa, nil //pick the first (we shouldn't have providers that are conflicting)
+				// TODO: A find dbcall here would recurse, but would give chance to have providers of providers
+			}
+		}
+
+		return nil, errors.New("No package provides this")
+	}
+	db.Unlock()
+	return db.FindPackage(pa)
 }
 
 func (db *BoltDatabase) Clean() error {
@@ -298,6 +357,10 @@ func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
 // FindPackages return the list of the packages beloging to cat/name  (any versions in requested range)
 // FIXME: Optimize, see inmemorydb
 func (db *BoltDatabase) FindPackages(p Package) ([]Package, error) {
+	// Provides: Treat as the replaced package here
+	if provided, err := db.getProvide(p); err == nil {
+		p = provided
+	}
 	var versionsInWorld []Package
 	for _, w := range db.World() {
 		if w.GetName() != p.GetName() || w.GetCategory() != p.GetCategory() {

@@ -316,6 +316,90 @@ var _ = Describe("Compiler", func() {
 			Expect(helpers.Exists(spec.Rel("extra-layer-0.1.package.tar"))).To(BeTrue())
 		})
 
+		It("Compiles with provides support", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+			tmpdir, err := ioutil.TempDir("", "package")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			err = generalRecipe.Load("../../tests/fixtures/provides")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
+
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			//		err = generalRecipe.Tree().ResolveDeps(3)
+			//		Expect(err).ToNot(HaveOccurred())
+
+			spec.SetOutputPath(tmpdir)
+
+			artifacts, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(1))
+			Expect(len(artifacts[0].GetDependencies())).To(Equal(1))
+
+			for _, artifact := range artifacts {
+				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			}
+			Expect(helpers.Untar(spec.Rel("c-test-1.0.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
+
+			Expect(helpers.Exists(spec.Rel("d"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("dd"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("c"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("cd"))).To(BeTrue())
+
+			Expect(helpers.Exists(spec.Rel("d-test-1.0.metadata.yaml"))).To(BeTrue())
+
+			Expect(helpers.Exists(spec.Rel("c-test-1.0.metadata.yaml"))).To(BeTrue())
+		})
+
+		It("Compiles with provides and selectors support", func() {
+			// Same test as before, but fixtures differs
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+			tmpdir, err := ioutil.TempDir("", "package")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			err = generalRecipe.Load("../../tests/fixtures/provides_selector")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
+
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			//		err = generalRecipe.Tree().ResolveDeps(3)
+			//		Expect(err).ToNot(HaveOccurred())
+
+			spec.SetOutputPath(tmpdir)
+
+			artifacts, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(1))
+			Expect(len(artifacts[0].GetDependencies())).To(Equal(1))
+
+			for _, artifact := range artifacts {
+				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			}
+			Expect(helpers.Untar(spec.Rel("c-test-1.0.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
+
+			Expect(helpers.Exists(spec.Rel("d"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("dd"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("c"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("cd"))).To(BeTrue())
+
+			Expect(helpers.Exists(spec.Rel("d-test-1.0.metadata.yaml"))).To(BeTrue())
+
+			Expect(helpers.Exists(spec.Rel("c-test-1.0.metadata.yaml"))).To(BeTrue())
+		})
 		It("Compiles revdeps", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 			tmpdir, err := ioutil.TempDir("", "revdep")

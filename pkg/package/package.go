@@ -46,6 +46,9 @@ type Package interface {
 	Conflicts([]*DefaultPackage) Package
 	Revdeps(PackageDatabase) []Package
 
+	GetProvides() []*DefaultPackage
+	SetProvides([]*DefaultPackage) Package
+
 	GetRequires() []*DefaultPackage
 	GetConflicts() []*DefaultPackage
 	Expand(PackageDatabase) ([]Package, error)
@@ -132,6 +135,7 @@ type DefaultPackage struct {
 	PackageRequires  []*DefaultPackage `json:"requires"`  // Affects YAML field names too.
 	PackageConflicts []*DefaultPackage `json:"conflicts"` // Affects YAML field names too.
 	IsSet            bool              `json:"set"`       // Affects YAML field names too.
+	Provides         []*DefaultPackage `json:"provides"`  // Affects YAML field names too.
 
 	// TODO: Annotations?
 
@@ -270,7 +274,13 @@ func (p *DefaultPackage) SetCategory(s string) {
 func (p *DefaultPackage) GetUses() []string {
 	return p.UseFlags
 }
-
+func (p *DefaultPackage) GetProvides() []*DefaultPackage {
+	return p.Provides
+}
+func (p *DefaultPackage) SetProvides(req []*DefaultPackage) Package {
+	p.Provides = req
+	return p
+}
 func (p *DefaultPackage) GetRequires() []*DefaultPackage {
 	return p.PackageRequires
 }
@@ -436,7 +446,11 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 	var formulas []bf.Formula
 	for _, requiredDef := range p.GetRequires() {
 		required, err := definitiondb.FindPackage(requiredDef)
-		if err != nil {
+		if err != nil || requiredDef.IsSelector() {
+			if err == nil {
+				requiredDef = required.(*DefaultPackage)
+			}
+
 			packages, err := definitiondb.FindPackages(requiredDef)
 			if err != nil || len(packages) == 0 {
 				required = requiredDef
@@ -515,8 +529,11 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 
 	for _, requiredDef := range p.GetConflicts() {
 		required, err := definitiondb.FindPackage(requiredDef)
-		if err != nil {
-			packages, err := requiredDef.Expand(definitiondb)
+		if err != nil || requiredDef.IsSelector() {
+			if err == nil {
+				requiredDef = required.(*DefaultPackage)
+			}
+			packages, err := definitiondb.FindPackages(requiredDef)
 			if err != nil || len(packages) == 0 {
 				required = requiredDef
 			} else {

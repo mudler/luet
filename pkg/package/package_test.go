@@ -129,6 +129,9 @@ var _ = Describe("Package", func() {
 			Expect(a01.RequiresContains(definitions, a11)).To(BeTrue())
 			Expect(a01.RequiresContains(definitions, a)).To(BeTrue())
 			Expect(a.RequiresContains(definitions, a11)).ToNot(BeTrue())
+			Expect(a.IsSelector()).To(BeTrue())
+			Expect(a1.IsSelector()).To(BeFalse())
+
 		})
 	})
 

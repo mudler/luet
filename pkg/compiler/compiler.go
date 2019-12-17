@@ -441,6 +441,7 @@ func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssert
 	}
 
 	dependencies := solution.Order(cs.Database, p.GetPackage().GetFingerPrint())
+
 	assertions := solver.PackagesAssertions{}
 	for _, assertion := range dependencies { //highly dependent on the order
 		if assertion.Value {
