@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	//	. "github.com/mudler/luet/pkg/logger"
 
@@ -77,6 +78,8 @@ type Package interface {
 
 	SetLicense(string)
 	GetLicense() string
+
+	IsSelector() bool
 }
 
 type Tree interface {
@@ -177,6 +180,10 @@ func (p *DefaultPackage) Rel(s string) string {
 
 func (p *DefaultPackage) SetPath(s string) {
 	p.Path = s
+}
+
+func (p *DefaultPackage) IsSelector() bool {
+	return strings.ContainsAny(p.GetVersion(), "<>=")
 }
 
 // AddUse adds a use to a package
