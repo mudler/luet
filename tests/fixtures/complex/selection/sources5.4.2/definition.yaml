@@ -1,0 +1,8 @@
+category: sys-kernel
+description: Official Sabayon Linux Standard kernel sources
+license: ""
+name: sabayon-sources
+uri: []
+use_flags:
+- sources_standalone
+version: 5.4.2

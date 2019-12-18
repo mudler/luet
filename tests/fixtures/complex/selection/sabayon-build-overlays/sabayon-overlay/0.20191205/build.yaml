@@ -1,0 +1,7 @@
+requires:
+- category: "layer"
+  name: "build"
+  version: ">=0.1"
+- category: "layer"
+  name: "sabayon-build-portage"
+  version: ">=0.1"

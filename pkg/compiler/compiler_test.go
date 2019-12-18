@@ -438,6 +438,45 @@ var _ = Describe("Compiler", func() {
 			Expect(helpers.Exists(spec.Rel("extra-layer-0.1.package.tar"))).To(BeTrue())
 		})
 
+		It("Compiles complex dependencies trees with best matches", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+			tmpdir, err := ioutil.TempDir("", "complex")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			err = generalRecipe.Load("../../tests/fixtures/complex/selection")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(10))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
+
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "vhba", Category: "sys-fs-5.4.2", Version: "20190410"})
+			Expect(err).ToNot(HaveOccurred())
+
+			//		err = generalRecipe.Tree().ResolveDeps(3)
+			//		Expect(err).ToNot(HaveOccurred())
+
+			spec.SetOutputPath(tmpdir)
+
+			artifacts, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(1))
+			Expect(len(artifacts[0].GetDependencies())).To(Equal(6))
+			for _, artifact := range artifacts {
+				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			}
+			Expect(helpers.Untar(spec.Rel("vhba-sys-fs-5.4.2-20190410.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(spec.Rel("sabayon-build-portage-layer-0.20191126.package.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("build-layer-0.1.package.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("build-sabayon-overlay-layer-0.20191212.package.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("build-sabayon-overlays-layer-0.1.package.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("linux-sabayon-sys-kernel-5.4.2.package.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("sabayon-sources-sys-kernel-5.4.2.package.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("vhba"))).To(BeTrue())
+		})
+
 		It("Compiles revdeps with seeds", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 			tmpdir, err := ioutil.TempDir("", "package")

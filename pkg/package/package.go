@@ -458,7 +458,7 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 				if len(packages) == 1 {
 					required = packages[0]
 				} else {
-					var ALO, priorityConstraints []bf.Formula
+					var ALO, priorityConstraints, priorityALO []bf.Formula
 
 					// Try to prio best match
 					// Force the solver to consider first our candidate (if does exists).
@@ -475,6 +475,7 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 							B := bf.Var(encodedB)
 							if !o.Matches(c) {
 								priorityConstraints = append(priorityConstraints, bf.Not(B))
+								priorityALO = append(priorityALO, B)
 							}
 						}
 						encodedC, err := c.Encode(db)
@@ -484,7 +485,7 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 						C = bf.Var(encodedC)
 						// Or the Candidate is true, or all the others might be not true
 						// This forces the CDCL sat implementation to look first at a solution with C=true
-						formulas = append(formulas, bf.Or(C, bf.Or(priorityConstraints...)))
+						formulas = append(formulas, bf.Or(bf.Or(C, bf.Or(priorityConstraints...)), bf.Or(bf.Not(C), bf.Or(priorityALO...))))
 					}
 
 					// AMO - At most one

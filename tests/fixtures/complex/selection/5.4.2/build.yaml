@@ -1,0 +1,9 @@
+steps:
+- echo "vhba" > /vhba
+requires:
+- category: "sys-kernel"
+  version:  "5.4.2"
+  name:     "linux-sabayon"
+- category: "sys-kernel"
+  version:  "5.4.2"
+  name:     "sabayon-sources"
