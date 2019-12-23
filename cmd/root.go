@@ -30,7 +30,7 @@ import (
 var cfgFile string
 var Verbose bool
 
-const LuetCLIVersion = "0.3"
+const LuetCLIVersion = "0.4-dev"
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
