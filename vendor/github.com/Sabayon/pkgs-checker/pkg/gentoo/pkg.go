@@ -76,6 +76,30 @@ func (p *GentooPackage) String() string {
 		p.Version, p.VersionSuffix)
 }
 
+func (p PackageCond) String() (ans string) {
+	if p == PkgCondInvalid {
+		ans = ""
+	} else if p == PkgCondGreater {
+		ans = ">"
+	} else if p == PkgCondGreaterEqual {
+		ans = ">="
+	} else if p == PkgCondLess {
+		ans = "<"
+	} else if p == PkgCondLessEqual {
+		ans = "<="
+	} else if p == PkgCondEqual {
+		ans = "="
+	} else if p == PkgCondNot {
+		ans = "!"
+	} else if p == PkgCondAnyRevision {
+		ans = "~"
+	} else if p == PkgCondMatchVersion {
+		ans = "=*"
+	}
+
+	return ans
+}
+
 func sanitizeVersion(v string) string {
 	// https://devmanual.gentoo.org/ebuild-writing/file-format/index.html
 	ans := strings.ReplaceAll(v, "_alpha", "-alpha")
