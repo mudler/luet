@@ -1,0 +1,9 @@
+name: "test1"
+description: "Test1 Repository"
+type: "disk"
+urls:
+  - "tests/repos/test1"
+priority: 999
+enable: true
+# auth:
+#   token: "xxxxx"
