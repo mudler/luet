@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"sync"
 
-	version "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 )
 
@@ -178,16 +177,11 @@ func (db *InMemoryDatabase) getProvide(p Package) (Package, error) {
 
 		for ve, _ := range versions {
 
-			v, err := version.NewVersion(p.GetVersion())
+			match, err := p.VersionMatchSelector(ve)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "Error on match version")
 			}
-			constraints, err := version.NewConstraint(ve)
-			if err != nil {
-				return nil, err
-			}
-
-			if constraints.Check(v) {
+			if match {
 				pa, ok := db.ProvidesDatabase[p.GetPackageName()][ve]
 				if !ok {
 					return nil, errors.New("No versions found for package")
@@ -257,15 +251,12 @@ func (db *InMemoryDatabase) FindPackages(p Package) ([]Package, error) {
 	}
 	var versionsInWorld []Package
 	for ve, _ := range versions {
-		v, err := version.NewVersion(ve)
+		match, err := p.SelectorMatchVersion(ve)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Error on match selector")
 		}
-		constraints, err := version.NewConstraint(p.GetVersion())
-		if err != nil {
-			return nil, err
-		}
-		if constraints.Check(v) {
+
+		if match {
 			w, err := db.FindPackage(&DefaultPackage{Name: p.GetName(), Category: p.GetCategory(), Version: ve})
 			if err != nil {
 				return nil, errors.Wrap(err, "Cache mismatch - this shouldn't happen")
