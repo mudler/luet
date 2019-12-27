@@ -98,6 +98,11 @@ var buildCmd = &cobra.Command{
 					Fatal("Invalid package string ", a, ": ", err.Error())
 				}
 
+				if gp.Version == "" {
+					gp.Version = "0"
+					gp.Condition = _gentoo.PkgCondGreaterEqual
+				}
+
 				pack := &pkg.DefaultPackage{
 					Name:     gp.Name,
 					Version:  fmt.Sprintf("%s%s%s", gp.Condition.String(), gp.Version, gp.VersionSuffix),
