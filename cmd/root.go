@@ -17,11 +17,13 @@ package cmd
 
 import (
 	"os"
-	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/marcsauter/single"
+	config "github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
+	repo "github.com/mudler/luet/pkg/repository"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -30,7 +32,10 @@ import (
 var cfgFile string
 var Verbose bool
 
-const LuetCLIVersion = "0.4-dev"
+const (
+	LuetCLIVersion = "0.4-dev"
+	LuetEnvPrefix  = "LUET"
+)
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -38,6 +43,38 @@ var RootCmd = &cobra.Command{
 	Short:   "Package manager for the XXth century!",
 	Long:    `Package manager which uses containers to build packages`,
 	Version: LuetCLIVersion,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		err := LoadConfig(config.LuetCfg)
+		if err != nil {
+			Fatal("failed to load configuration:", err.Error())
+		}
+	},
+}
+
+func LoadConfig(c *config.LuetConfig) error {
+	// If a config file is found, read it in.
+	if err := c.Viper.ReadInConfig(); err == nil {
+		Info("Using config file:", c.Viper.ConfigFileUsed())
+	} else {
+		Warning(err)
+	}
+
+	err := c.Viper.Unmarshal(&config.LuetCfg)
+	if err != nil {
+		return err
+	}
+
+	if c.GetLogging().Path != "" {
+		// TODO: Init logrus, etc.
+	}
+
+	// Load repositories
+	err = repo.LoadRepositories(c)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
@@ -74,29 +111,23 @@ func initConfig() {
 		Error(err)
 		os.Exit(1)
 	}
+	viper.SetEnvPrefix(LuetEnvPrefix)
 	viper.SetConfigType("yaml")
 	viper.SetConfigName(".luet") // name of config file (without extension)
 	if cfgFile != "" {           // enable ability to specify config file via flag
 		Info(">>> cfgFile: ", cfgFile)
 		viper.SetConfigFile(cfgFile)
-		configDir := path.Dir(cfgFile)
-		if configDir != "." && configDir != dir {
-			viper.AddConfigPath(configDir)
-		}
+	} else {
+		viper.AddConfigPath(dir)
+		viper.AddConfigPath(".")
+		viper.AddConfigPath("$HOME")
+		viper.AddConfigPath("/etc/luet")
 	}
-
-	viper.AddConfigPath(dir)
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("$HOME")
-	viper.AddConfigPath("/etc/luet")
 
 	viper.AutomaticEnv() // read in environment variables that match
 
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		Info("Using config file:", viper.ConfigFileUsed())
-	} else {
-		Warning(err)
-	}
-
+	// Create EnvKey Replacer for handle complex structure
+	replacer := strings.NewReplacer(".", "__")
+	viper.SetEnvKeyReplacer(replacer)
+	viper.SetTypeByDefaultValue(true)
 }

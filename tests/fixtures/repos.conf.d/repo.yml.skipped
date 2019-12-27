@@ -1,0 +1,8 @@
+name: "test1-skipped"
+description: "Test1 Repository"
+type: "disk"
+path: "tests/repos/test1"
+priority: 1
+enable: true
+# auth:
+#   token: "xxxxx"

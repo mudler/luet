@@ -190,7 +190,7 @@ func (r *LuetRepository) Write(dst string) error {
 
 func (r *LuetRepository) Client() Client {
 	switch r.GetType() {
-	case "local":
+	case "disk":
 		return client.NewLocalClient(client.RepoData{Uri: r.GetUri()})
 	case "http":
 		return client.NewHttpClient(client.RepoData{Uri: r.GetUri()})
