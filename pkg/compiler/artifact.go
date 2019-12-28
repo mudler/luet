@@ -16,6 +16,8 @@
 package compiler
 
 import (
+	"archive/tar"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -146,6 +148,48 @@ func (a *PackageArtifact) GetPath() string {
 
 func (a *PackageArtifact) SetPath(p string) {
 	a.Path = p
+}
+
+// Compress Archives and compress (TODO) to the artifact path
+func (a *PackageArtifact) Compress(src string) error {
+	return helpers.Tar(src, a.Path)
+}
+
+// Unpack Untar and decompress (TODO) to the given path
+func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
+	return helpers.Untar(a.GetPath(), dst, keepPerms)
+}
+
+func (a *PackageArtifact) FileList() ([]string, error) {
+
+	tarFile, err := os.Open(a.GetPath())
+	if err != nil {
+		return []string{}, errors.Wrap(err, "Could not open package archive")
+	}
+	defer tarFile.Close()
+	tr := tar.NewReader(tarFile)
+
+	var files []string
+	// untar each segment
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return []string{}, err
+		}
+		// determine proper file path info
+		finfo := hdr.FileInfo()
+		fileName := hdr.Name
+		if finfo.Mode().IsDir() {
+			continue
+		}
+		files = append(files, fileName)
+
+		// if a dir, create it, then go to next segment
+	}
+	return files, nil
 }
 
 type CopyJob struct {

@@ -339,13 +339,12 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 			// strip from includes
 			cs.stripIncludesFromRootfs(p.GetIncludes(), rootfs)
 		}
-
-		err = helpers.Tar(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"))
+		artifact = NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
+		err = artifact.Compress(rootfs)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while creating package archive")
 		}
 
-		artifact = NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
 		artifact.SetCompileSpec(p)
 	} else {
 		Info(pkgTag, "Generating delta")
@@ -404,8 +403,10 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not extract rootfs")
 	}
+	artifact := NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
+	artifact.SetCompileSpec(p)
 
-	err = helpers.Tar(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"))
+	err = artifact.Compress(rootfs)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating package archive")
 	}
@@ -422,8 +423,7 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 	}
 
 	Info(pkgTag, "   :white_check_mark: Done")
-	artifact := NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
-	artifact.SetCompileSpec(p)
+
 	err = artifact.WriteYaml(p.GetOutputPath())
 	if err != nil {
 		return artifact, err

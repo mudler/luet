@@ -62,6 +62,9 @@ type Artifact interface {
 	SetCompileSpec(as CompilationSpec)
 	GetCompileSpec() CompilationSpec
 	WriteYaml(dst string) error
+	Unpack(dst string, keepPerms bool) error
+	Compress(src string) error
+	FileList() ([]string, error)
 }
 
 type ArtifactNode struct {
