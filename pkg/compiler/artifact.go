@@ -60,7 +60,7 @@ type PackageArtifact struct {
 }
 
 func NewPackageArtifact(path string) Artifact {
-	return &PackageArtifact{Path: path, Dependencies: []*PackageArtifact{}}
+	return &PackageArtifact{Path: path, Dependencies: []*PackageArtifact{}, Checksums: Checksums{}}
 }
 
 func NewPackageArtifactFromYaml(data []byte) (Artifact, error) {
