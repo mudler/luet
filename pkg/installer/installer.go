@@ -265,6 +265,11 @@ func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
 	artifact, err := a.Repository.Client().DownloadArtifact(a.Artifact)
 	defer os.Remove(artifact.GetPath())
 
+	err = artifact.Verify()
+	if err != nil {
+		return errors.Wrap(err, "Artifact integrity check failure")
+	}
+
 	files, err := artifact.FileList()
 	if err != nil {
 		return errors.Wrap(err, "Could not open package archive")
