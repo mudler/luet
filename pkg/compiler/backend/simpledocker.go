@@ -26,6 +26,7 @@ import (
 	capi "github.com/mudler/docker-companion/api"
 
 	"github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 
@@ -54,7 +55,12 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	}
 	Info(":whale: Building image " + name + " done")
 
-	//Info(string(out))
+	if config.LuetCfg.GetGeneral().ShowBuildOutput {
+		Info(string(out))
+	} else {
+		Debug(string(out))
+	}
+
 	return nil
 }
 
@@ -227,6 +233,12 @@ func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLaye
 	out, err := exec.Command("container-diff", diffargs...).Output()
 	if err != nil {
 		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed Resolving layer diffs: "+string(out))
+	}
+
+	if config.LuetCfg.GetGeneral().ShowBuildOutput {
+		Info(string(out))
+	} else {
+		Debug(string(out))
 	}
 
 	var diffs []compiler.ArtifactLayer
