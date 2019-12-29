@@ -18,6 +18,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/marcsauter/single"
@@ -101,8 +102,13 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.luet.yaml)")
-	RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
+	pflags := RootCmd.PersistentFlags()
+	pflags.StringVar(&cfgFile, "config", "", "config file (default is $HOME/.luet.yaml)")
+	pflags.BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
+	pflags.Int("concurrency", runtime.NumCPU(), "Concurrency")
+
+	config.LuetCfg.Viper.BindPFlag("general.debug", pflags.Lookup("verbose"))
+	config.LuetCfg.Viper.BindPFlag("general.concurrency", pflags.Lookup("concurrency"))
 }
 
 // initConfig reads in config file and ENV variables if set.

@@ -16,8 +16,8 @@ package cmd
 
 import (
 	"io/ioutil"
-	"runtime"
 
+	. "github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	tree "github.com/mudler/luet/pkg/tree"
@@ -33,13 +33,11 @@ var convertCmd = &cobra.Command{
 	Long:  `Parses external PM and produces a luet parsable tree`,
 	PreRun: func(cmd *cobra.Command, args []string) {
 		viper.BindPFlag("type", cmd.Flags().Lookup("type"))
-		viper.BindPFlag("concurrency", cmd.Flags().Lookup("concurrency"))
 		viper.BindPFlag("database", cmd.Flags().Lookup("database"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
 		t := viper.GetString("type")
-		c := viper.GetInt("concurrency")
 		databaseType := viper.GetString("database")
 		var db pkg.PackageDatabase
 
@@ -54,9 +52,15 @@ var convertCmd = &cobra.Command{
 		var builder tree.Parser
 		switch t {
 		case "gentoo":
-			builder = gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, c, gentoo.InMemory)
+			builder = gentoo.NewGentooBuilder(
+				&gentoo.SimpleEbuildParser{},
+				LuetCfg.GetGeneral().Concurrency,
+				gentoo.InMemory)
 		default: // dup
-			builder = gentoo.NewGentooBuilder(&gentoo.SimpleEbuildParser{}, c, gentoo.InMemory)
+			builder = gentoo.NewGentooBuilder(
+				&gentoo.SimpleEbuildParser{},
+				LuetCfg.GetGeneral().Concurrency,
+				gentoo.InMemory)
 		}
 
 		switch databaseType {
@@ -91,7 +95,6 @@ var convertCmd = &cobra.Command{
 
 func init() {
 	convertCmd.Flags().String("type", "gentoo", "source type")
-	convertCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
 	convertCmd.Flags().String("database", "memory", "database used for solving (memory,boltdb)")
 
 	RootCmd.AddCommand(convertCmd)

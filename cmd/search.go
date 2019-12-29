@@ -18,7 +18,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 
 	installer "github.com/mudler/luet/pkg/installer"
 
@@ -36,7 +35,6 @@ var searchCmd = &cobra.Command{
 	PreRun: func(cmd *cobra.Command, args []string) {
 		viper.BindPFlag("system-dbpath", cmd.Flags().Lookup("system-dbpath"))
 		viper.BindPFlag("system-target", cmd.Flags().Lookup("system-target"))
-		viper.BindPFlag("concurrency", cmd.Flags().Lookup("concurrency"))
 		viper.BindPFlag("installed", cmd.Flags().Lookup("installed"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -91,7 +89,6 @@ func init() {
 	}
 	searchCmd.Flags().String("system-dbpath", path, "System db path")
 	searchCmd.Flags().String("system-target", path, "System rootpath")
-	searchCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
 	searchCmd.Flags().Bool("installed", false, "Search between system packages")
 	RootCmd.AddCommand(searchCmd)
 }

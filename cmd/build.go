@@ -18,15 +18,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"runtime"
 
-	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
+	. "github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	tree "github.com/mudler/luet/pkg/tree"
 
+	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -39,7 +39,6 @@ var buildCmd = &cobra.Command{
 		viper.BindPFlag("tree", cmd.Flags().Lookup("tree"))
 		viper.BindPFlag("destination", cmd.Flags().Lookup("destination"))
 		viper.BindPFlag("backend", cmd.Flags().Lookup("backend"))
-		viper.BindPFlag("concurrency", cmd.Flags().Lookup("concurrency"))
 		viper.BindPFlag("privileged", cmd.Flags().Lookup("privileged"))
 		viper.BindPFlag("database", cmd.Flags().Lookup("database"))
 		viper.BindPFlag("revdeps", cmd.Flags().Lookup("revdeps"))
@@ -50,7 +49,7 @@ var buildCmd = &cobra.Command{
 
 		src := viper.GetString("tree")
 		dst := viper.GetString("destination")
-		concurrency := viper.GetInt("concurrency")
+		concurrency := LuetCfg.GetGeneral().Concurrency
 		backendType := viper.GetString("backend")
 		privileged := viper.GetBool("privileged")
 		revdeps := viper.GetBool("revdeps")
@@ -162,7 +161,6 @@ func init() {
 	}
 	buildCmd.Flags().String("tree", path, "Source luet tree")
 	buildCmd.Flags().String("backend", "docker", "backend used (docker,img)")
-	buildCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
 	buildCmd.Flags().Bool("privileged", false, "Privileged (Keep permissions)")
 	buildCmd.Flags().String("database", "memory", "database used for solving (memory,boltdb)")
 	buildCmd.Flags().Bool("revdeps", false, "Build with revdeps")
