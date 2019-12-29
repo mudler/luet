@@ -36,6 +36,10 @@ var _ = Describe("Checksum", func() {
 			definitionsum := Checksums{}
 			definitionsum2 := Checksums{}
 
+			Expect(len(buildsum)).To(Equal(0))
+			Expect(len(definitionsum)).To(Equal(0))
+			Expect(len(definitionsum2)).To(Equal(0))
+
 			err = buildsum.Generate(NewPackageArtifact("../../tests/fixtures/layers/alpine/build.yaml"))
 			Expect(err).ToNot(HaveOccurred())
 
@@ -45,9 +49,12 @@ var _ = Describe("Checksum", func() {
 			err = definitionsum2.Generate(NewPackageArtifact("../../tests/fixtures/layers/alpine/definition.yaml"))
 			Expect(err).ToNot(HaveOccurred())
 
+			Expect(len(buildsum)).To(Equal(1))
+			Expect(len(definitionsum)).To(Equal(1))
+			Expect(len(definitionsum2)).To(Equal(1))
+
 			Expect(definitionsum.Compare(buildsum)).To(HaveOccurred())
 			Expect(definitionsum.Compare(definitionsum2)).ToNot(HaveOccurred())
-
 		})
 	})
 
