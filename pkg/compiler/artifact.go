@@ -52,10 +52,10 @@ func (i ArtifactIndex) CleanPath() ArtifactIndex {
 // which will consist in just of an repository.yaml which is just the repository structure with the list of package artifact.
 // In this way a generic client can fetch the packages and, after unpacking the tree, performing queries to install packages.
 type PackageArtifact struct {
-	Path         string               `json:"path"`
-	Dependencies []*PackageArtifact   `json:"dependencies"`
-	CompileSpec  *LuetCompilationSpec `json:"compilationspec"`
-
+	Path            string                    `json:"path"`
+	Dependencies    []*PackageArtifact        `json:"dependencies"`
+	CompileSpec     *LuetCompilationSpec      `json:"compilationspec"`
+	Checksums       Checksums                 `json:"checksums"`
 	SourceAssertion solver.PackagesAssertions `json:"-"`
 }
 
@@ -64,7 +64,7 @@ func NewPackageArtifact(path string) Artifact {
 }
 
 func NewPackageArtifactFromYaml(data []byte) (Artifact, error) {
-	p := &PackageArtifact{}
+	p := &PackageArtifact{Checksums: Checksums{}}
 	err := yaml.Unmarshal(data, &p)
 	if err != nil {
 		return p, err
@@ -73,7 +73,30 @@ func NewPackageArtifactFromYaml(data []byte) (Artifact, error) {
 	return p, err
 }
 
+func (a *PackageArtifact) Hash() error {
+	return a.Checksums.Generate(a)
+}
+
+func (a *PackageArtifact) Verify() error {
+	sum := Checksums{}
+	err := sum.Generate(a)
+	if err != nil {
+		return err
+	}
+	err = sum.Compare(a.Checksums)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (a *PackageArtifact) WriteYaml(dst string) error {
+	// First compute checksum of artifact. When we write the yaml we want to write up-to-date informations.
+	err := a.Hash()
+	if err != nil {
+		return errors.Wrap(err, "Failed generating checksums for artifact")
+	}
+
 	//p := a.CompileSpec.GetPackage().GetPath()
 
 	//a.CompileSpec.GetPackage().SetPath("")

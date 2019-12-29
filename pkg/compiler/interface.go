@@ -65,6 +65,8 @@ type Artifact interface {
 	Unpack(dst string, keepPerms bool) error
 	Compress(src string) error
 	FileList() ([]string, error)
+	Hash() error
+	Verify() error
 }
 
 type ArtifactNode struct {
