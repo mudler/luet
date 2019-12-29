@@ -32,7 +32,7 @@ import (
 
 var _ = Describe("Artifact", func() {
 	Context("Simple package build definition", func() {
-		It("Generates a delta", func() {
+		It("Generates a verified delta", func() {
 
 			generalRecipe := tree.NewGeneralRecipe(pkg.NewInMemoryDatabase(false))
 
@@ -138,6 +138,15 @@ RUN echo bar > /test2`))
 			content2, err := helpers.Read(filepath.Join(unpacked, "test2"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(content2).To(Equal("bar\n"))
+
+			err = artifact.Hash()
+			Expect(err).ToNot(HaveOccurred())
+			err = artifact.Verify()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(helpers.CopyFile(filepath.Join(tmpdir, "output2.tar"), filepath.Join(tmpdir, "package.tar"))).ToNot(HaveOccurred())
+
+			err = artifact.Verify()
+			Expect(err).To(HaveOccurred())
 		})
 
 	})
