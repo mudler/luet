@@ -17,10 +17,10 @@ package cmd
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 
 	installer "github.com/mudler/luet/pkg/installer"
 
+	. "github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
@@ -34,7 +34,6 @@ var upgradeCmd = &cobra.Command{
 	PreRun: func(cmd *cobra.Command, args []string) {
 		viper.BindPFlag("system-dbpath", cmd.Flags().Lookup("system-dbpath"))
 		viper.BindPFlag("system-target", cmd.Flags().Lookup("system-target"))
-		viper.BindPFlag("concurrency", cmd.Flags().Lookup("concurrency"))
 	},
 	Long: `Upgrades packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -54,7 +53,7 @@ var upgradeCmd = &cobra.Command{
 			synced = append(synced, s)
 		}
 
-		inst := installer.NewLuetInstaller(viper.GetInt("concurrency"))
+		inst := installer.NewLuetInstaller(LuetCfg.GetGeneral().Concurrency)
 
 		inst.Repositories(synced)
 
@@ -75,7 +74,6 @@ func init() {
 	}
 	upgradeCmd.Flags().String("system-dbpath", path, "System db path")
 	upgradeCmd.Flags().String("system-target", path, "System rootpath")
-	upgradeCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
 
 	RootCmd.AddCommand(upgradeCmd)
 }
