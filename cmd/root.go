@@ -64,6 +64,8 @@ func LoadConfig(c *config.LuetConfig) error {
 		return err
 	}
 
+	NewSpinner()
+
 	if c.GetLogging().Path != "" {
 		// TODO: Init logrus, etc.
 	}

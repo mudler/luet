@@ -18,11 +18,15 @@ package gentoo_test
 import (
 	"testing"
 
+	. "github.com/mudler/luet/cmd"
+	config "github.com/mudler/luet/pkg/config"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 func TestGentooBuilder(t *testing.T) {
 	RegisterFailHandler(Fail)
+	LoadConfig(config.LuetCfg)
 	RunSpecs(t, "Gentoo Suite")
 }
