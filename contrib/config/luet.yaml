@@ -1,0 +1,73 @@
+# Luet Configuration File
+#
+# ---------------------------------------------
+# Logging configuration section:
+# ---------------------------------------------
+# logging:
+#   Leave empty to skip logging to file.
+#   path: ""
+#
+#   Set logging level: error|warning|info|debug
+#   level: "info"
+#
+# ---------------------------------------------
+# General configuration section:
+# ---------------------------------------------
+# general:
+#   Define max concurrency processes. Default is based of arch: runtime.NumCPU()
+#   concurrency: 1
+#
+#   Enable Debug. If debug is active spinner is disabled.
+#   debug: false
+#
+#   Show output of build execution (docker, img, etc.)
+#   show_build_output: false
+#
+#   Define spinner ms
+#   spinner_ms: 200
+#
+#   Define spinner charset. See https://github.com/briandowns/spinner
+#   spinner_charset: 22
+#
+# ---------------------------------------------
+# System configuration section:
+# ---------------------------------------------
+# system:
+#
+#   Rootfs path of the luet system. Default is /.
+#   A specific path could be used for test installation to
+#   a chroot environment.
+#   rootfs: "/"
+#
+#   Choice database engine used for luet database.
+#   Supported values: boltdb|memory
+#   database_engine: boltdb
+#
+#   Database path directory where store luet database.
+#   The path is append to rootfs option path.
+#   database_path: "/var/cache/luet"
+#
+# ---------------------------------------------
+# Repositories configurations directories.
+# ---------------------------------------------
+# Define the list of directories where luet
+# try for files with .yml extension that define
+# luet repository.
+# repos_confdir:
+#   - /etc/luet/repos.conf.d
+#
+#
+# ---------------------------------------------
+# System repositories
+# ---------------------------------------------
+# In alternative to define repositories files
+# through repos_confdir option is possible
+# define directly the list of the repositories.
+#
+# system_repositories:
+#   - name: "Local Repos"
+#     type: "dir"
+#     priority: 1
+#     enable: true
+#     path: "/var/cache/luet/repos/local"
+#
