@@ -65,6 +65,10 @@ func (cs *LuetCompiler) SetConcurrency(i int) {
 	cs.Concurrency = i
 }
 
+func (cs *LuetCompiler) SetCompressionType(t CompressionImplementation) {
+	cs.CompressionType = t
+}
+
 func (cs *LuetCompiler) compilerWorker(i int, wg *sync.WaitGroup, cspecs chan CompilationSpec, a *[]Artifact, m *sync.Mutex, concurrency int, keepPermissions bool, errors chan error) {
 	defer wg.Done()
 

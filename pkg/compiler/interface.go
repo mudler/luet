@@ -30,6 +30,7 @@ type Compiler interface {
 
 	SetBackend(CompilerBackend)
 	GetBackend() CompilerBackend
+	SetCompressionType(t CompressionImplementation)
 }
 
 type CompilerBackendOptions struct {
