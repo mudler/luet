@@ -39,6 +39,12 @@ type LuetGeneralConfig struct {
 	SpinnerCharset  int  `mapstructure:"spinner_charset"`
 }
 
+type LuetSystemConfig struct {
+	DatabaseEngine string `yaml:"database_engine" mapstructure:"database_engine"`
+	DatabasePath   string `yaml:"database_path" mapstructure:"database_path"`
+	Rootfs         string `yaml:"rootfs" mapstructure:"rootfs"`
+}
+
 type LuetRepository struct {
 	Name           string            `yaml:"name" mapstructure:"name"`
 	Description    string            `yaml:"description,omitempty" mapstructure:"description"`
@@ -46,6 +52,7 @@ type LuetRepository struct {
 	Type           string            `yaml:"type" mapstructure:"type"`
 	Mode           string            `yaml:"mode,omitempty" mapstructure:"mode"`
 	Priority       int               `yaml:"priority,omitempty" mapstructure:"priority"`
+	Enable         bool              `yaml:"enable" mapstructure:"enable"`
 	Authentication map[string]string `yaml:"auth,omitempty" mapstructure:"auth"`
 }
 
@@ -54,6 +61,7 @@ type LuetConfig struct {
 
 	Logging LuetLoggingConfig `mapstructure:"logging"`
 	General LuetGeneralConfig `mapstructure:"general"`
+	System  LuetSystemConfig  `mapstructure:"system"`
 
 	RepositoriesConfDir []string         `mapstructure:"repos_confdir"`
 	CacheRepositories   []LuetRepository `mapstructure:"cache_repositories"`
@@ -61,7 +69,7 @@ type LuetConfig struct {
 }
 
 func (r *LuetRepository) String() string {
-	return fmt.Sprintf("[%s] prio: %d, type: %s", r.Name, r.Priority, r.Type)
+	return fmt.Sprintf("[%s] prio: %d, type: %s, enable: %t", r.Name, r.Priority, r.Type, r.Enable)
 }
 
 func NewLuetConfig(viper *v.Viper) *LuetConfig {
@@ -84,6 +92,10 @@ func GenDefault(viper *v.Viper) {
 	viper.SetDefault("general.spinner_ms", 100)
 	viper.SetDefault("general.spinner_charset", 22)
 
+	viper.SetDefault("system.database_engine", "boltdb")
+	viper.SetDefault("system.database_path", "/var/cache/luet")
+	viper.SetDefault("system.rootfs", "/")
+
 	viper.SetDefault("repos_confdir", []string{"/etc/luet/repos.conf.d"})
 	viper.SetDefault("cache_repositories", []string{})
 	viper.SetDefault("system_repositories", []string{})
@@ -101,6 +113,10 @@ func (c *LuetConfig) GetGeneral() *LuetGeneralConfig {
 	return &c.General
 }
 
+func (c *LuetConfig) GetSystem() *LuetSystemConfig {
+	return &c.System
+}
+
 func (c *LuetGeneralConfig) String() string {
 	ans := fmt.Sprintf(`
 general:
@@ -108,8 +124,7 @@ general:
   debug: %t
   show_build_output: %t
   spinner_ms: %d
-  spinner_charset: %d
-`, c.Concurrency, c.Debug, c.ShowBuildOutput,
+  spinner_charset: %d`, c.Concurrency, c.Debug, c.ShowBuildOutput,
 		c.SpinnerMs, c.SpinnerCharset)
 
 	return ans
@@ -127,8 +142,18 @@ func (c *LuetLoggingConfig) String() string {
 	ans := fmt.Sprintf(`
 logging:
   path: %s
-  level: %s
-`, c.Path, c.Level)
+  level: %s`, c.Path, c.Level)
+
+	return ans
+}
+
+func (c *LuetSystemConfig) String() string {
+	ans := fmt.Sprintf(`
+system:
+  database_engine: %s
+  database_path: %s
+  rootfs: %s`,
+		c.DatabaseEngine, c.DatabasePath, c.Rootfs)
 
 	return ans
 }

@@ -30,6 +30,7 @@ var configCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(config.LuetCfg.GetLogging())
 		fmt.Println(config.LuetCfg.GetGeneral())
+		fmt.Println(config.LuetCfg.GetSystem())
 		if len(config.LuetCfg.CacheRepositories) > 0 {
 			fmt.Println("cache_repositories:")
 			for _, r := range config.LuetCfg.CacheRepositories {
