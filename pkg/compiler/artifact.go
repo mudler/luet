@@ -69,14 +69,13 @@ func (i ArtifactIndex) CleanPath() ArtifactIndex {
 // which will consist in just of an repository.yaml which is just the repository structure with the list of package artifact.
 // In this way a generic client can fetch the packages and, after unpacking the tree, performing queries to install packages.
 type PackageArtifact struct {
-	Path           string `json:"path"`
-	CompressedPath string `json:"compressedpath"`
+	Path string `json:"path"`
 
 	Dependencies    []*PackageArtifact        `json:"dependencies"`
 	CompileSpec     *LuetCompilationSpec      `json:"compilationspec"`
 	Checksums       Checksums                 `json:"checksums"`
 	SourceAssertion solver.PackagesAssertions `json:"-"`
-	CompressionType CompressionImplementation `json:"compression"`
+	CompressionType CompressionImplementation `json:"compressiontype"`
 }
 
 func NewPackageArtifact(path string) Artifact {
@@ -233,7 +232,8 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 		}
 		w.Close()
 		os.RemoveAll(a.Path) // Remove original
-		a.CompressedPath = gzipfile
+		//	a.CompressedPath = gzipfile
+		a.Path = gzipfile
 		return nil
 		//a.Path = gzipfile
 	}
@@ -248,15 +248,16 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 
 	case GZip:
 		// Create the uncompressed archive
-		archive, err := os.Create(a.GetPath())
+		archive, err := os.Create(a.GetPath() + ".uncompressed")
 		if err != nil {
 			return err
 		}
-		defer os.RemoveAll(a.GetPath())
+		defer os.RemoveAll(a.GetPath() + ".uncompressed")
+		defer archive.Close()
 
-		original, err := os.Open(a.CompressedPath)
+		original, err := os.Open(a.Path)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "Cannot open "+a.Path)
 		}
 		defer original.Close()
 
@@ -269,10 +270,10 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 
 		_, err = io.Copy(archive, r)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "Cannot copy to "+a.GetPath()+".uncompressed")
 		}
 
-		err = helpers.Untar(a.GetPath(), dst, keepPerms)
+		err = helpers.Untar(a.GetPath()+".uncompressed", dst, keepPerms)
 		if err != nil {
 			return err
 		}
@@ -283,13 +284,41 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 }
 
 func (a *PackageArtifact) FileList() ([]string, error) {
+	var tr *tar.Reader
+	switch a.CompressionType {
+	case None:
 
-	tarFile, err := os.Open(a.GetPath())
-	if err != nil {
-		return []string{}, errors.Wrap(err, "Could not open package archive")
+		tarFile, err := os.Open(a.GetPath())
+		if err != nil {
+			return []string{}, errors.Wrap(err, "Could not open package archive")
+		}
+		defer tarFile.Close()
+		tr = tar.NewReader(tarFile)
+
+	case GZip:
+		// Create the uncompressed archive
+		archive, err := os.Create(a.GetPath() + ".uncompressed")
+		if err != nil {
+			return []string{}, err
+		}
+		defer os.RemoveAll(a.GetPath() + ".uncompressed")
+		defer archive.Close()
+
+		original, err := os.Open(a.Path)
+		if err != nil {
+			return []string{}, errors.Wrap(err, "Cannot open "+a.Path)
+		}
+		defer original.Close()
+
+		bufferedReader := bufio.NewReader(original)
+		r, err := gzip.NewReader(bufferedReader)
+		if err != nil {
+			return []string{}, err
+		}
+		defer r.Close()
+		tr = tar.NewReader(r)
+
 	}
-	defer tarFile.Close()
-	tr := tar.NewReader(tarFile)
 
 	var files []string
 	// untar each segment
