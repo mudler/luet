@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -40,6 +41,8 @@ type LuetCompiler struct {
 	Database           pkg.PackageDatabase
 	ImageRepository    string
 	PullFirst, KeepImg bool
+	Concurrency        int
+	CompressionType    CompressionImplementation
 }
 
 func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase) Compiler {
@@ -52,8 +55,14 @@ func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase) Compiler {
 		Database:        db,
 		ImageRepository: "luet/cache",
 		PullFirst:       true,
+		CompressionType: None,
 		KeepImg:         true,
+		Concurrency:     runtime.NumCPU(),
 	}
+}
+
+func (cs *LuetCompiler) SetConcurrency(i int) {
+	cs.Concurrency = i
 }
 
 func (cs *LuetCompiler) compilerWorker(i int, wg *sync.WaitGroup, cspecs chan CompilationSpec, a *[]Artifact, m *sync.Mutex, concurrency int, keepPermissions bool, errors chan error) {
@@ -70,6 +79,7 @@ func (cs *LuetCompiler) compilerWorker(i int, wg *sync.WaitGroup, cspecs chan Co
 		m.Unlock()
 	}
 }
+
 func (cs *LuetCompiler) CompileWithReverseDeps(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error) {
 	artifacts, err := cs.CompileParallel(concurrency, keepPermissions, ps)
 	if len(err) != 0 {
@@ -340,7 +350,8 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 			cs.stripIncludesFromRootfs(p.GetIncludes(), rootfs)
 		}
 		artifact = NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
-		err = artifact.Compress(rootfs)
+		artifact.SetCompressionType(cs.CompressionType)
+		err = artifact.Compress(rootfs, concurrency)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while creating package archive")
 		}
@@ -349,10 +360,11 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	} else {
 		Info(pkgTag, "Generating delta")
 
-		artifact, err = ExtractArtifactFromDelta(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions, p.GetIncludes())
+		artifact, err = ExtractArtifactFromDelta(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions, p.GetIncludes(), cs.CompressionType)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not generate deltas")
 		}
+
 		artifact.SetCompileSpec(p)
 	}
 
@@ -365,7 +377,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	return artifact, nil
 }
 
-func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPermissions, keepImg bool) (Artifact, error) {
+func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPermissions, keepImg bool, concurrency int) (Artifact, error) {
 	pkgTag := ":package:  " + p.GetPackage().GetName()
 
 	Info(pkgTag, "   🍩 Build starts 🔨 🔨 🔨 ")
@@ -405,8 +417,9 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 	}
 	artifact := NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
 	artifact.SetCompileSpec(p)
+	artifact.SetCompressionType(cs.CompressionType)
 
-	err = artifact.Compress(rootfs)
+	err = artifact.Compress(rootfs, concurrency)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating package archive")
 	}
@@ -480,7 +493,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
 	if p.GetImage() != "" {
 		if p.ImageUnpack() { // If it is just an entire image, create a package from it
-			return cs.packageFromImage(p, "", keepPermissions, cs.KeepImg)
+			return cs.packageFromImage(p, "", keepPermissions, cs.KeepImg, concurrency)
 		}
 
 		return cs.compileWithImage(p.GetImage(), "", "", concurrency, keepPermissions, cs.KeepImg, p)
@@ -527,7 +540,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 					return nil, errors.New("No image defined for package: " + assertion.Package.GetName())
 				}
 				Info(pkgTag, ":whale: Sourcing package from image", compileSpec.GetImage())
-				artifact, err := cs.packageFromImage(compileSpec, currentPackageImageHash, keepPermissions, cs.KeepImg)
+				artifact, err := cs.packageFromImage(compileSpec, currentPackageImageHash, keepPermissions, cs.KeepImg, concurrency)
 				if err != nil {
 					return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().GetName())
 				}

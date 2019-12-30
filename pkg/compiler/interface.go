@@ -25,7 +25,7 @@ type Compiler interface {
 	CompileParallel(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
 	CompileWithReverseDeps(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
 	ComputeDepTree(p CompilationSpec) (solver.PackagesAssertions, error)
-
+	SetConcurrency(i int)
 	FromPackage(pkg.Package) (CompilationSpec, error)
 
 	SetBackend(CompilerBackend)
@@ -63,7 +63,8 @@ type Artifact interface {
 	GetCompileSpec() CompilationSpec
 	WriteYaml(dst string) error
 	Unpack(dst string, keepPerms bool) error
-	Compress(src string) error
+	Compress(src string, concurrency int) error
+	SetCompressionType(t CompressionImplementation)
 	FileList() ([]string, error)
 	Hash() error
 	Verify() error
