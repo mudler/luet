@@ -226,6 +226,7 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 		w.Close()
 		os.RemoveAll(a.Path) // Remove original
 		a.CompressedPath = gzipfile
+		return nil
 		//a.Path = gzipfile
 	}
 	return errors.New("Compression type must be supplied")
@@ -267,6 +268,7 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 		if err != nil {
 			return err
 		}
+		return nil
 
 	}
 	return errors.New("Compression type must be supplied")
