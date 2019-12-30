@@ -45,8 +45,9 @@ func (c *LocalClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Art
 	//defer os.Remove(file.Name())
 
 	err = helpers.CopyFile(filepath.Join(c.RepoData.Uri, artifactName), file.Name())
-
-	return compiler.NewPackageArtifact(file.Name()), nil
+	newart := artifact
+	newart.SetPath(file.Name())
+	return newart, nil
 }
 func (c *LocalClient) DownloadFile(name string) (string, error) {
 	Info("Downloading file", name, "from", c.RepoData.Uri)

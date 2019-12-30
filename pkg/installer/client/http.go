@@ -64,8 +64,9 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 	}
 
 	err = helpers.CopyFile(filepath.Join(temp, artifactName), file.Name())
-
-	return compiler.NewPackageArtifact(file.Name()), nil
+	newart := artifact
+	newart.SetPath(file.Name())
+	return newart, nil
 }
 
 func (c *HttpClient) DownloadFile(name string) (string, error) {
