@@ -39,7 +39,7 @@ var _ = Describe("Local client", func() {
 			err = ioutil.WriteFile(filepath.Join(tmpdir, "test.txt"), []byte(`test`), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())
 
-			c := NewLocalClient(RepoData{Uri: tmpdir})
+			c := NewLocalClient(RepoData{Urls: []string{tmpdir}})
 			path, err := c.DownloadFile("test.txt")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Read(path)).To(Equal("test"))
@@ -55,7 +55,7 @@ var _ = Describe("Local client", func() {
 			err = ioutil.WriteFile(filepath.Join(tmpdir, "test.txt"), []byte(`test`), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())
 
-			c := NewLocalClient(RepoData{Uri: tmpdir})
+			c := NewLocalClient(RepoData{Urls: []string{tmpdir}})
 			path, err := c.DownloadArtifact(&compiler.PackageArtifact{Path: "test.txt"})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Read(path.GetPath())).To(Equal("test"))

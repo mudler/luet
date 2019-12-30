@@ -35,7 +35,7 @@ import (
 
 type LuetRepository struct {
 	Name     string                 `json:"name"`
-	Uri      string                 `json:"uri"`
+	Urls     []string               `json:"urls"`
 	Priority int                    `json:"priority"`
 	Index    compiler.ArtifactIndex `json:"index"`
 	Tree     tree.Builder           `json:"-"`
@@ -45,7 +45,7 @@ type LuetRepository struct {
 
 type LuetRepositorySerialized struct {
 	Name     string                      `json:"name"`
-	Uri      string                      `json:"uri"`
+	Urls     []string                    `json:"urls"`
 	Priority int                         `json:"priority"`
 	Index    []*compiler.PackageArtifact `json:"index"`
 	Type     string                      `json:"type"`
@@ -67,7 +67,7 @@ func GenerateRepository(name, uri, t string, priority int, src, treeDir string, 
 }
 
 func NewLuetRepository(name, uri, t string, priority int, art []compiler.Artifact, builder tree.Builder) Repository {
-	return &LuetRepository{Index: art, Type: t, Tree: builder, Name: name, Uri: uri, Priority: priority}
+	return &LuetRepository{Index: art, Type: t, Tree: builder, Name: name, Urls: []string{uri}, Priority: priority}
 }
 
 func NewLuetRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (Repository, error) {
@@ -78,7 +78,7 @@ func NewLuetRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (Repository,
 		return nil, err
 	}
 	r.Name = p.Name
-	r.Uri = p.Uri
+	r.Urls = p.Urls
 	r.Priority = p.Priority
 	r.Type = p.Type
 	i := compiler.ArtifactIndex{}
@@ -143,11 +143,14 @@ func (r *LuetRepository) SetType(p string) {
 	r.Type = p
 }
 
-func (r *LuetRepository) SetUri(p string) {
-	r.Uri = p
+func (r *LuetRepository) AddUrl(p string) {
+	r.Urls = append(r.Urls, p)
 }
-func (r *LuetRepository) GetUri() string {
-	return r.Uri
+func (r *LuetRepository) GetUrls() []string {
+	return r.Urls
+}
+func (r *LuetRepository) SetUrls(urls []string) {
+	r.Urls = urls
 }
 func (r *LuetRepository) GetPriority() int {
 	return r.Priority
@@ -191,9 +194,9 @@ func (r *LuetRepository) Write(dst string) error {
 func (r *LuetRepository) Client() Client {
 	switch r.GetType() {
 	case "disk":
-		return client.NewLocalClient(client.RepoData{Uri: r.GetUri()})
+		return client.NewLocalClient(client.RepoData{Urls: r.GetUrls()})
 	case "http":
-		return client.NewHttpClient(client.RepoData{Uri: r.GetUri()})
+		return client.NewHttpClient(client.RepoData{Urls: r.GetUrls()})
 	}
 
 	return nil
@@ -205,7 +208,7 @@ func (r *LuetRepository) Sync() (Repository, error) {
 	}
 	file, err := c.DownloadFile("repository.yaml")
 	if err != nil {
-		return nil, errors.Wrap(err, "While downloading repository.yaml from "+r.GetUri())
+		return nil, errors.Wrap(err, "While downloading repository.yaml")
 	}
 	dat, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -222,7 +225,7 @@ func (r *LuetRepository) Sync() (Repository, error) {
 
 	archivetree, err := c.DownloadFile("tree.tar")
 	if err != nil {
-		return nil, errors.Wrap(err, "While downloading repository.yaml from "+r.GetUri())
+		return nil, errors.Wrap(err, "While downloading repository.yaml")
 	}
 	defer os.RemoveAll(archivetree) // clean up
 
@@ -251,7 +254,7 @@ func (r *LuetRepository) Sync() (Repository, error) {
 	}
 	repo.SetTree(reciper)
 	repo.SetTreePath(treefs)
-	repo.SetUri(r.GetUri())
+	repo.SetUrls(r.GetUrls())
 
 	return repo, nil
 }

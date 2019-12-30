@@ -38,8 +38,9 @@ type Repositories []Repository
 
 type Repository interface {
 	GetName() string
-	GetUri() string
-	SetUri(string)
+	GetUrls() []string
+	SetUrls([]string)
+	AddUrl(string)
 	GetPriority() int
 	GetIndex() compiler.ArtifactIndex
 	GetTree() tree.Builder

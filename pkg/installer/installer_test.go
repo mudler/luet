@@ -16,6 +16,7 @@
 package installer_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -92,7 +93,7 @@ var _ = Describe("Installer", func() {
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("tree.tar"))).To(BeTrue())
-			Expect(repo.GetUri()).To(Equal(tmpdir))
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
 			fakeroot, err := ioutil.TempDir("", "fakeroot")
@@ -103,16 +104,18 @@ var _ = Describe("Installer", func() {
 			repo2, err := NewLuetRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
-uri: "`+tmpdir+`"
+urls:
+  - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
 			inst.Repositories(Repositories{repo2})
-			Expect(repo.GetUri()).To(Equal(tmpdir))
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 			systemDB := pkg.NewInMemoryDatabase(false)
 			system := &System{Database: systemDB, Target: fakeroot}
 			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system)
+			fmt.Println("ERR ", err)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())
@@ -204,7 +207,7 @@ uri: "`+tmpdir+`"
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("tree.tar"))).To(BeTrue())
-			Expect(repo.GetUri()).To(Equal(tmpdir))
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
 			fakeroot, err := ioutil.TempDir("", "fakeroot")
@@ -215,12 +218,13 @@ uri: "`+tmpdir+`"
 			repo2, err := NewLuetRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
-uri: "`+tmpdir+`"
+urls:
+  - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
 			inst.Repositories(Repositories{repo2})
-			Expect(repo.GetUri()).To(Equal(tmpdir))
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
 			bolt, err := ioutil.TempDir("", "db")
@@ -311,7 +315,7 @@ uri: "`+tmpdir+`"
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("tree.tar"))).To(BeTrue())
-			Expect(repo.GetUri()).To(Equal(tmpdir))
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
 			fakeroot, err := ioutil.TempDir("", "fakeroot")
@@ -322,12 +326,13 @@ uri: "`+tmpdir+`"
 			repo2, err := NewLuetRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
-uri: "`+tmpdir+`"
+urls:
+  - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
 			inst.Repositories(Repositories{repo2})
-			Expect(repo.GetUri()).To(Equal(tmpdir))
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
 			bolt, err := ioutil.TempDir("", "db")
@@ -425,7 +430,7 @@ uri: "`+tmpdir+`"
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("tree.tar"))).To(BeTrue())
-			Expect(repo.GetUri()).To(Equal(tmpdir))
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
 			fakeroot, err := ioutil.TempDir("", "fakeroot")
@@ -436,12 +441,13 @@ uri: "`+tmpdir+`"
 			repo2, err := NewLuetRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
-uri: "`+tmpdir+`"
+urls:
+  - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
 			inst.Repositories(Repositories{repo2})
-			Expect(repo.GetUri()).To(Equal(tmpdir))
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
 			bolt, err := ioutil.TempDir("", "db")

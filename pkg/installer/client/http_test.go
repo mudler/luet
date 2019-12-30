@@ -44,7 +44,7 @@ var _ = Describe("Http client", func() {
 			err = ioutil.WriteFile(filepath.Join(tmpdir, "test.txt"), []byte(`test`), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())
 
-			c := NewHttpClient(RepoData{Uri: ts.URL})
+			c := NewHttpClient(RepoData{Urls: []string{ts.URL}})
 			path, err := c.DownloadFile("test.txt")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Read(path)).To(Equal("test"))
@@ -62,7 +62,7 @@ var _ = Describe("Http client", func() {
 			err = ioutil.WriteFile(filepath.Join(tmpdir, "test.txt"), []byte(`test`), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())
 
-			c := NewHttpClient(RepoData{Uri: ts.URL})
+			c := NewHttpClient(RepoData{Urls: []string{ts.URL}})
 			path, err := c.DownloadArtifact(&compiler.PackageArtifact{Path: "test.txt"})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Read(path.GetPath())).To(Equal("test"))

@@ -16,5 +16,5 @@
 package client
 
 type RepoData struct {
-	Uri string
+	Urls []string
 }
