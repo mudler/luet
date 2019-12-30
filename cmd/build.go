@@ -43,6 +43,7 @@ var buildCmd = &cobra.Command{
 		viper.BindPFlag("database", cmd.Flags().Lookup("database"))
 		viper.BindPFlag("revdeps", cmd.Flags().Lookup("revdeps"))
 		viper.BindPFlag("all", cmd.Flags().Lookup("all"))
+		viper.BindPFlag("compression", cmd.Flags().Lookup("compression"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -54,6 +55,7 @@ var buildCmd = &cobra.Command{
 		revdeps := viper.GetBool("revdeps")
 		all := viper.GetBool("all")
 		databaseType := viper.GetString("database")
+		compressionType := viper.GetString("compression")
 
 		compilerSpecs := compiler.NewLuetCompilationspecs()
 		var compilerBackend compiler.CompilerBackend
@@ -89,7 +91,8 @@ var buildCmd = &cobra.Command{
 			Fatal("Error: " + err.Error())
 		}
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase())
-
+		luetCompiler.SetConcurrency(concurrency)
+		luetCompiler.SetCompressionType(compiler.CompressionImplementation(compressionType))
 		if !all {
 			for _, a := range args {
 				gp, err := _gentoo.ParsePackageStr(a)
@@ -133,10 +136,10 @@ var buildCmd = &cobra.Command{
 		var artifact []compiler.Artifact
 		var errs []error
 		if revdeps {
-			artifact, errs = luetCompiler.CompileWithReverseDeps(concurrency, privileged, compilerSpecs)
+			artifact, errs = luetCompiler.CompileWithReverseDeps(privileged, compilerSpecs)
 
 		} else {
-			artifact, errs = luetCompiler.CompileParallel(concurrency, privileged, compilerSpecs)
+			artifact, errs = luetCompiler.CompileParallel(privileged, compilerSpecs)
 
 		}
 		if len(errs) != 0 {
@@ -163,6 +166,7 @@ func init() {
 	buildCmd.Flags().Bool("revdeps", false, "Build with revdeps")
 	buildCmd.Flags().Bool("all", false, "Build all packages in the tree")
 	buildCmd.Flags().String("destination", path, "Destination folder")
+	buildCmd.Flags().String("compression", "none", "Compression alg: none, gzip")
 
 	RootCmd.AddCommand(buildCmd)
 }

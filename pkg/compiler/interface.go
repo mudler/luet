@@ -21,15 +21,16 @@ import (
 )
 
 type Compiler interface {
-	Compile(int, bool, CompilationSpec) (Artifact, error)
-	CompileParallel(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
-	CompileWithReverseDeps(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
+	Compile(bool, CompilationSpec) (Artifact, error)
+	CompileParallel(keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
+	CompileWithReverseDeps(keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
 	ComputeDepTree(p CompilationSpec) (solver.PackagesAssertions, error)
-
+	SetConcurrency(i int)
 	FromPackage(pkg.Package) (CompilationSpec, error)
 
 	SetBackend(CompilerBackend)
 	GetBackend() CompilerBackend
+	SetCompressionType(t CompressionImplementation)
 }
 
 type CompilerBackendOptions struct {
@@ -63,7 +64,8 @@ type Artifact interface {
 	GetCompileSpec() CompilationSpec
 	WriteYaml(dst string) error
 	Unpack(dst string, keepPerms bool) error
-	Compress(src string) error
+	Compress(src string, concurrency int) error
+	SetCompressionType(t CompressionImplementation)
 	FileList() ([]string, error)
 	Hash() error
 	Verify() error

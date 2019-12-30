@@ -262,6 +262,8 @@ func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
 
 func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
 
+	Info("Installing", a.Package.GetName())
+
 	artifact, err := a.Repository.Client().DownloadArtifact(a.Artifact)
 	defer os.Remove(artifact.GetPath())
 
@@ -272,7 +274,7 @@ func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
 
 	files, err := artifact.FileList()
 	if err != nil {
-		return errors.Wrap(err, "Could not open package archive")
+		return errors.Wrap(err, "Could not get file list")
 	}
 
 	err = artifact.Unpack(s.Target, true)

@@ -61,7 +61,9 @@ var _ = Describe("Repository", func() {
 			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2", "chmod +x generate.sh"}))
 
 			spec.SetOutputPath(tmpdir)
-			artifact, err := compiler.Compile(2, false, spec)
+			compiler.SetConcurrency(1)
+
+			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
 			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())

@@ -17,6 +17,7 @@ package compiler
 
 import (
 	"archive/tar"
+	"bufio"
 	"io"
 	"io/ioutil"
 	"os"
@@ -24,16 +25,24 @@ import (
 	"path/filepath"
 	"regexp"
 
+	gzip "github.com/klauspost/pgzip"
+
 	//"strconv"
 	"strings"
 	"sync"
 
+	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	"github.com/mudler/luet/pkg/solver"
-	yaml "gopkg.in/yaml.v2"
-
-	"github.com/mudler/luet/pkg/helpers"
 	"github.com/pkg/errors"
+	yaml "gopkg.in/yaml.v2"
+)
+
+type CompressionImplementation string
+
+const (
+	None CompressionImplementation = "none" // e.g. tar for standard packages
+	GZip CompressionImplementation = "gzip"
 )
 
 type ArtifactIndex []Artifact
@@ -42,7 +51,15 @@ func (i ArtifactIndex) CleanPath() ArtifactIndex {
 	newIndex := ArtifactIndex{}
 	for _, n := range i {
 		art := n.(*PackageArtifact)
-		newIndex = append(newIndex, &PackageArtifact{Path: path.Base(n.GetPath()), SourceAssertion: art.SourceAssertion, CompileSpec: art.CompileSpec, Dependencies: art.Dependencies})
+		// FIXME: This is a dup and makes difficult to add attributes to artifacts
+		newIndex = append(newIndex, &PackageArtifact{
+			Path:            path.Base(n.GetPath()),
+			SourceAssertion: art.SourceAssertion,
+			CompileSpec:     art.CompileSpec,
+			Dependencies:    art.Dependencies,
+			CompressionType: art.CompressionType,
+			Checksums:       art.Checksums,
+		})
 	}
 	return newIndex
 	//Update if exists, otherwise just create
@@ -52,15 +69,17 @@ func (i ArtifactIndex) CleanPath() ArtifactIndex {
 // which will consist in just of an repository.yaml which is just the repository structure with the list of package artifact.
 // In this way a generic client can fetch the packages and, after unpacking the tree, performing queries to install packages.
 type PackageArtifact struct {
-	Path            string                    `json:"path"`
+	Path string `json:"path"`
+
 	Dependencies    []*PackageArtifact        `json:"dependencies"`
 	CompileSpec     *LuetCompilationSpec      `json:"compilationspec"`
 	Checksums       Checksums                 `json:"checksums"`
 	SourceAssertion solver.PackagesAssertions `json:"-"`
+	CompressionType CompressionImplementation `json:"compressiontype"`
 }
 
 func NewPackageArtifact(path string) Artifact {
-	return &PackageArtifact{Path: path, Dependencies: []*PackageArtifact{}, Checksums: Checksums{}}
+	return &PackageArtifact{Path: path, Dependencies: []*PackageArtifact{}, Checksums: Checksums{}, CompressionType: None}
 }
 
 func NewPackageArtifactFromYaml(data []byte) (Artifact, error) {
@@ -71,6 +90,10 @@ func NewPackageArtifactFromYaml(data []byte) (Artifact, error) {
 	}
 
 	return p, err
+}
+
+func (a *PackageArtifact) SetCompressionType(t CompressionImplementation) {
+	a.CompressionType = t
 }
 
 func (a *PackageArtifact) Hash() error {
@@ -174,23 +197,128 @@ func (a *PackageArtifact) SetPath(p string) {
 }
 
 // Compress Archives and compress (TODO) to the artifact path
-func (a *PackageArtifact) Compress(src string) error {
-	return helpers.Tar(src, a.Path)
+func (a *PackageArtifact) Compress(src string, concurrency int) error {
+	switch a.CompressionType {
+	case None:
+		return helpers.Tar(src, a.Path)
+
+	case GZip:
+		err := helpers.Tar(src, a.Path)
+		if err != nil {
+			return err
+		}
+		original, err := os.Open(a.Path)
+		if err != nil {
+			return err
+		}
+		defer original.Close()
+
+		gzipfile := a.Path + ".gz"
+		bufferedReader := bufio.NewReader(original)
+
+		// Open a file for writing.
+		dst, err := os.Create(gzipfile)
+		if err != nil {
+			return err
+		}
+		// Create gzip writer.
+		w := gzip.NewWriter(dst)
+		w.SetConcurrency(concurrency, 10)
+		defer w.Close()
+		defer dst.Close()
+		_, err = io.Copy(w, bufferedReader)
+		if err != nil {
+			return err
+		}
+		w.Close()
+		os.RemoveAll(a.Path) // Remove original
+		//	a.CompressedPath = gzipfile
+		a.Path = gzipfile
+		return nil
+		//a.Path = gzipfile
+	}
+	return errors.New("Compression type must be supplied")
 }
 
 // Unpack Untar and decompress (TODO) to the given path
 func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
-	return helpers.Untar(a.GetPath(), dst, keepPerms)
+	switch a.CompressionType {
+	case None:
+		return helpers.Untar(a.GetPath(), dst, keepPerms)
+
+	case GZip:
+		// Create the uncompressed archive
+		archive, err := os.Create(a.GetPath() + ".uncompressed")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(a.GetPath() + ".uncompressed")
+		defer archive.Close()
+
+		original, err := os.Open(a.Path)
+		if err != nil {
+			return errors.Wrap(err, "Cannot open "+a.Path)
+		}
+		defer original.Close()
+
+		bufferedReader := bufio.NewReader(original)
+		r, err := gzip.NewReader(bufferedReader)
+		if err != nil {
+			return err
+		}
+		defer r.Close()
+
+		_, err = io.Copy(archive, r)
+		if err != nil {
+			return errors.Wrap(err, "Cannot copy to "+a.GetPath()+".uncompressed")
+		}
+
+		err = helpers.Untar(a.GetPath()+".uncompressed", dst, keepPerms)
+		if err != nil {
+			return err
+		}
+		return nil
+
+	}
+	return errors.New("Compression type must be supplied")
 }
 
 func (a *PackageArtifact) FileList() ([]string, error) {
+	var tr *tar.Reader
+	switch a.CompressionType {
+	case None:
 
-	tarFile, err := os.Open(a.GetPath())
-	if err != nil {
-		return []string{}, errors.Wrap(err, "Could not open package archive")
+		tarFile, err := os.Open(a.GetPath())
+		if err != nil {
+			return []string{}, errors.Wrap(err, "Could not open package archive")
+		}
+		defer tarFile.Close()
+		tr = tar.NewReader(tarFile)
+
+	case GZip:
+		// Create the uncompressed archive
+		archive, err := os.Create(a.GetPath() + ".uncompressed")
+		if err != nil {
+			return []string{}, err
+		}
+		defer os.RemoveAll(a.GetPath() + ".uncompressed")
+		defer archive.Close()
+
+		original, err := os.Open(a.Path)
+		if err != nil {
+			return []string{}, errors.Wrap(err, "Cannot open "+a.Path)
+		}
+		defer original.Close()
+
+		bufferedReader := bufio.NewReader(original)
+		r, err := gzip.NewReader(bufferedReader)
+		if err != nil {
+			return []string{}, err
+		}
+		defer r.Close()
+		tr = tar.NewReader(r)
+
 	}
-	defer tarFile.Close()
-	tr := tar.NewReader(tarFile)
 
 	var files []string
 	// untar each segment
@@ -242,7 +370,7 @@ func worker(i int, wg *sync.WaitGroup, s <-chan CopyJob) {
 }
 
 // ExtractArtifactFromDelta extracts deltas from ArtifactLayer from an image in tar format
-func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurrency int, keepPerms bool, includes []string) (Artifact, error) {
+func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurrency int, keepPerms bool, includes []string, t CompressionImplementation) (Artifact, error) {
 
 	archive, err := ioutil.TempDir(os.TempDir(), "archive")
 	if err != nil {
@@ -306,10 +434,11 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 
 	close(toCopy)
 	wg.Wait()
-
-	err = helpers.Tar(archive, dst)
+	a := NewPackageArtifact(dst)
+	a.SetCompressionType(t)
+	err = a.Compress(archive, concurrency)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating package archive")
 	}
-	return NewPackageArtifact(dst), nil
+	return a, nil
 }
