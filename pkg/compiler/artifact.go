@@ -61,7 +61,9 @@ func (i ArtifactIndex) CleanPath() ArtifactIndex {
 // which will consist in just of an repository.yaml which is just the repository structure with the list of package artifact.
 // In this way a generic client can fetch the packages and, after unpacking the tree, performing queries to install packages.
 type PackageArtifact struct {
-	Path            string                    `json:"path"`
+	Path           string `json:"path"`
+	CompressedPath string `json:"compressedpath"`
+
 	Dependencies    []*PackageArtifact        `json:"dependencies"`
 	CompileSpec     *LuetCompilationSpec      `json:"compilationspec"`
 	Checksums       Checksums                 `json:"checksums"`
@@ -223,7 +225,8 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 		}
 		w.Close()
 		os.RemoveAll(a.Path) // Remove original
-		a.Path = gzipfile
+		a.CompressedPath = gzipfile
+		//a.Path = gzipfile
 	}
 	return errors.New("Compression type must be supplied")
 }
@@ -236,13 +239,13 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 
 	case GZip:
 		// Create the uncompressed archive
-		archive, err := os.Create(a.GetPath() + ".tar")
+		archive, err := os.Create(a.GetPath())
 		if err != nil {
 			return err
 		}
-		defer os.RemoveAll(a.GetPath() + ".tar")
+		defer os.RemoveAll(a.GetPath())
 
-		original, err := os.Open(a.Path)
+		original, err := os.Open(a.CompressedPath)
 		if err != nil {
 			return err
 		}
@@ -260,7 +263,7 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 			return err
 		}
 
-		err = helpers.Untar(a.GetPath()+".tar", dst, keepPerms)
+		err = helpers.Untar(a.GetPath(), dst, keepPerms)
 		if err != nil {
 			return err
 		}
