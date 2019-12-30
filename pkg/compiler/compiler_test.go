@@ -614,4 +614,40 @@ var _ = Describe("Compiler", func() {
 			Expect(helpers.Exists(spec.Rel("var"))).ToNot(BeTrue())
 		})
 	})
+
+	Context("Compression", func() {
+		It("Builds packages in gzip", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err := generalRecipe.Load("../../tests/fixtures/packagelayers")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
+
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "runtime", Category: "layer", Version: "0.1"})
+			Expect(err).ToNot(HaveOccurred())
+			compiler.SetCompressionType(GZip)
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			spec.SetOutputPath(tmpdir)
+			compiler.SetConcurrency(1)
+
+			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(1))
+			Expect(len(artifacts[0].GetDependencies())).To(Equal(1))
+			Expect(helpers.Exists(spec.Rel("runtime-layer-0.1.package.tar.gz"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("runtime-layer-0.1.package.tar"))).To(BeFalse())
+			Expect(artifacts[0].Unpack(tmpdir, false)).ToNot(HaveOccurred())
+			//	Expect(helpers.Untar(spec.Rel("runtime-layer-0.1.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(spec.Rel("bin/busybox"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("var"))).ToNot(BeTrue())
+		})
+	})
 })
