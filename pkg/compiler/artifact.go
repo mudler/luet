@@ -51,7 +51,15 @@ func (i ArtifactIndex) CleanPath() ArtifactIndex {
 	newIndex := ArtifactIndex{}
 	for _, n := range i {
 		art := n.(*PackageArtifact)
-		newIndex = append(newIndex, &PackageArtifact{Path: path.Base(n.GetPath()), SourceAssertion: art.SourceAssertion, CompileSpec: art.CompileSpec, Dependencies: art.Dependencies})
+		// FIXME: This is a dup and makes difficult to add attributes to artifacts
+		newIndex = append(newIndex, &PackageArtifact{
+			Path:            path.Base(n.GetPath()),
+			SourceAssertion: art.SourceAssertion,
+			CompileSpec:     art.CompileSpec,
+			Dependencies:    art.Dependencies,
+			CompressionType: art.CompressionType,
+			Checksums:       art.Checksums,
+		})
 	}
 	return newIndex
 	//Update if exists, otherwise just create
