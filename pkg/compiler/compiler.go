@@ -80,8 +80,8 @@ func (cs *LuetCompiler) compilerWorker(i int, wg *sync.WaitGroup, cspecs chan Co
 	}
 }
 
-func (cs *LuetCompiler) CompileWithReverseDeps(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error) {
-	artifacts, err := cs.CompileParallel(concurrency, keepPermissions, ps)
+func (cs *LuetCompiler) CompileWithReverseDeps(keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error) {
+	artifacts, err := cs.CompileParallel(keepPermissions, ps)
 	if len(err) != 0 {
 		return artifacts, err
 	}
@@ -129,11 +129,11 @@ func (cs *LuetCompiler) CompileWithReverseDeps(concurrency int, keepPermissions 
 		Info(" :arrow_right_hook:", u.GetPackage().GetName(), ":leaves:", u.GetPackage().GetVersion(), "(", u.GetPackage().GetCategory(), ")")
 	}
 
-	artifacts2, err := cs.CompileParallel(concurrency, keepPermissions, uniques)
+	artifacts2, err := cs.CompileParallel(keepPermissions, uniques)
 	return append(artifacts, artifacts2...), err
 }
 
-func (cs *LuetCompiler) CompileParallel(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error) {
+func (cs *LuetCompiler) CompileParallel(keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error) {
 	Spinner(22)
 	defer SpinnerStop()
 	all := make(chan CompilationSpec)
@@ -141,9 +141,9 @@ func (cs *LuetCompiler) CompileParallel(concurrency int, keepPermissions bool, p
 	mutex := &sync.Mutex{}
 	errors := make(chan error, ps.Len())
 	var wg = new(sync.WaitGroup)
-	for i := 0; i < concurrency; i++ {
+	for i := 0; i < cs.Concurrency; i++ {
 		wg.Add(1)
-		go cs.compilerWorker(i, wg, all, &artifacts, mutex, concurrency, keepPermissions, errors)
+		go cs.compilerWorker(i, wg, all, &artifacts, mutex, cs.Concurrency, keepPermissions, errors)
 	}
 
 	for _, p := range ps.All() {
@@ -472,13 +472,13 @@ func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssert
 }
 
 // Compile is non-parallel
-func (cs *LuetCompiler) Compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
+func (cs *LuetCompiler) Compile(keepPermissions bool, p CompilationSpec) (Artifact, error) {
 	asserts, err := cs.ComputeDepTree(p)
 	if err != nil {
 		panic(err)
 	}
 	p.SetSourceAssertion(asserts)
-	return cs.compile(concurrency, keepPermissions, p)
+	return cs.compile(cs.Concurrency, keepPermissions, p)
 }
 
 func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {

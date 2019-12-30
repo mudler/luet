@@ -21,9 +21,9 @@ import (
 )
 
 type Compiler interface {
-	Compile(int, bool, CompilationSpec) (Artifact, error)
-	CompileParallel(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
-	CompileWithReverseDeps(concurrency int, keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
+	Compile(bool, CompilationSpec) (Artifact, error)
+	CompileParallel(keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
+	CompileWithReverseDeps(keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
 	ComputeDepTree(p CompilationSpec) (solver.PackagesAssertions, error)
 	SetConcurrency(i int)
 	FromPackage(pkg.Package) (CompilationSpec, error)

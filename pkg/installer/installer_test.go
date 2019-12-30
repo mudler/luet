@@ -62,7 +62,9 @@ var _ = Describe("Installer", func() {
 			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2", "chmod +x generate.sh"}))
 
 			spec.SetOutputPath(tmpdir)
-			artifact, err := compiler.Compile(2, false, spec)
+			compiler.SetConcurrency(2)
+
+			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
 			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
@@ -172,7 +174,9 @@ uri: "`+tmpdir+`"
 			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2", "chmod +x generate.sh"}))
 
 			spec.SetOutputPath(tmpdir)
-			artifact, err := compiler.Compile(2, false, spec)
+			compiler.SetConcurrency(2)
+
+			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
 			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
@@ -291,7 +295,9 @@ uri: "`+tmpdir+`"
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
 			spec3.SetOutputPath(tmpdir)
-			_, errs := c.CompileParallel(2, false, compiler.NewLuetCompilationspecs(spec, spec2, spec3))
+			c.SetConcurrency(2)
+
+			_, errs := c.CompileParallel(false, compiler.NewLuetCompilationspecs(spec, spec2, spec3))
 
 			Expect(errs).To(BeEmpty())
 

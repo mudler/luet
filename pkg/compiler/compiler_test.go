@@ -53,7 +53,9 @@ var _ = Describe("Compiler", func() {
 			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2", "chmod +x generate.sh"}))
 
 			spec.SetOutputPath(tmpdir)
-			artifact, err := compiler.Compile(2, false, spec)
+			compiler.SetConcurrency(2)
+
+			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
 			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
@@ -95,7 +97,8 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
-			artifacts, errs := compiler.CompileParallel(2, false, NewLuetCompilationspecs(spec, spec2))
+			compiler.SetConcurrency(2)
+			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec, spec2))
 			Expect(errs).To(BeNil())
 			for _, artifact := range artifacts {
 				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
@@ -134,8 +137,9 @@ var _ = Describe("Compiler", func() {
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
 			spec3.SetOutputPath(tmpdir)
+			compiler.SetConcurrency(2)
 
-			artifacts, errs := compiler.CompileParallel(2, false, NewLuetCompilationspecs(spec, spec2, spec3))
+			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec, spec2, spec3))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(3))
 
@@ -181,12 +185,12 @@ var _ = Describe("Compiler", func() {
 			Expect(err).ToNot(HaveOccurred())
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
-
-			artifacts, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec))
+			compiler.SetConcurrency(1)
+			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
-			artifacts2, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec2))
+			artifacts2, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec2))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts2)).To(Equal(1))
 
@@ -224,8 +228,9 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
+			compiler.SetConcurrency(1)
 
-			artifacts, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
@@ -258,8 +263,8 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
-
-			artifacts, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec))
+			compiler.SetConcurrency(1)
+			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
@@ -296,8 +301,9 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
+			compiler.SetConcurrency(1)
 
-			artifacts, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
@@ -336,8 +342,9 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
+			compiler.SetConcurrency(1)
 
-			artifacts, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].GetDependencies())).To(Equal(1))
@@ -379,8 +386,9 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
+			compiler.SetConcurrency(1)
 
-			artifacts, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].GetDependencies())).To(Equal(1))
@@ -421,7 +429,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileWithReverseDeps(1, false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileWithReverseDeps(false, NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(2))
 
@@ -459,7 +467,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(1, false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].GetDependencies())).To(Equal(6))
@@ -494,7 +502,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileWithReverseDeps(1, false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileWithReverseDeps(false, NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(4))
 
@@ -552,7 +560,9 @@ var _ = Describe("Compiler", func() {
 			defer os.RemoveAll(tmpdir) // clean up
 
 			spec.SetOutputPath(tmpdir)
-			artifacts, errs := compiler.CompileParallel(2, false, NewLuetCompilationspecs(spec))
+			compiler.SetConcurrency(2)
+
+			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			for _, artifact := range artifacts {
 				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
@@ -593,7 +603,9 @@ var _ = Describe("Compiler", func() {
 			defer os.RemoveAll(tmpdir) // clean up
 
 			spec.SetOutputPath(tmpdir)
-			artifacts, errs := compiler.CompileParallel(2, false, NewLuetCompilationspecs(spec))
+			compiler.SetConcurrency(1)
+
+			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].GetDependencies())).To(Equal(1))
