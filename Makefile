@@ -21,6 +21,10 @@ test:
 	GO111MODULE=off go get github.com/onsi/gomega/...
 	ginkgo -race -r ./...
 
+.PHONY: test-integration
+test-integration:
+	tests/integration/run.sh
+
 .PHONY: coverage
 coverage:
 	go test ./... -race -coverprofile=coverage.txt -covermode=atomic
@@ -36,6 +40,8 @@ help:
 .PHONY: clean
 clean:
 	rm -rf release/
+	rm -rf tests/integration/shunit2
+	rm -rf tests/integration/bin
 
 .PHONY: deps
 deps:
