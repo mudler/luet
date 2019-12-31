@@ -199,9 +199,6 @@ func (a *PackageArtifact) SetPath(p string) {
 // Compress Archives and compress (TODO) to the artifact path
 func (a *PackageArtifact) Compress(src string, concurrency int) error {
 	switch a.CompressionType {
-	case None:
-		return helpers.Tar(src, a.Path)
-
 	case GZip:
 		err := helpers.Tar(src, a.Path)
 		if err != nil {
@@ -236,6 +233,11 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 		a.Path = gzipfile
 		return nil
 		//a.Path = gzipfile
+
+	// Defaults to tar only (covers when "none" is supplied)
+	default:
+		return helpers.Tar(src, a.Path)
+
 	}
 	return errors.New("Compression type must be supplied")
 }
@@ -243,9 +245,6 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 // Unpack Untar and decompress (TODO) to the given path
 func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 	switch a.CompressionType {
-	case None:
-		return helpers.Untar(a.GetPath(), dst, keepPerms)
-
 	case GZip:
 		// Create the uncompressed archive
 		archive, err := os.Create(a.GetPath() + ".uncompressed")
@@ -278,7 +277,9 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 			return err
 		}
 		return nil
-
+	// Defaults to tar only (covers when "none" is supplied)
+	default:
+		return helpers.Untar(a.GetPath(), dst, keepPerms)
 	}
 	return errors.New("Compression type must be supplied")
 }
@@ -286,15 +287,6 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 func (a *PackageArtifact) FileList() ([]string, error) {
 	var tr *tar.Reader
 	switch a.CompressionType {
-	case None:
-
-		tarFile, err := os.Open(a.GetPath())
-		if err != nil {
-			return []string{}, errors.Wrap(err, "Could not open package archive")
-		}
-		defer tarFile.Close()
-		tr = tar.NewReader(tarFile)
-
 	case GZip:
 		// Create the uncompressed archive
 		archive, err := os.Create(a.GetPath() + ".uncompressed")
@@ -317,6 +309,15 @@ func (a *PackageArtifact) FileList() ([]string, error) {
 		}
 		defer r.Close()
 		tr = tar.NewReader(r)
+
+	// Defaults to tar only (covers when "none" is supplied)
+	default:
+		tarFile, err := os.Open(a.GetPath())
+		if err != nil {
+			return []string{}, errors.Wrap(err, "Could not open package archive")
+		}
+		defer tarFile.Close()
+		tr = tar.NewReader(tarFile)
 
 	}
 
