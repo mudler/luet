@@ -233,15 +233,8 @@ func (r *LuetSystemRepository) Sync() (Repository, error) {
 
 	var repo Repository
 	if config.LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-		os.MkdirAll(
-			filepath.Join(config.LuetCfg.GetSystem().Rootfs, config.LuetCfg.GetSystem().DatabasePath),
-			os.ModePerm,
-		)
-		repo, err = NewLuetSystemRepositoryFromYaml(
-			dat,
-			pkg.NewBoltDatabase(
-				filepath.Join(config.LuetCfg.GetSystem().Rootfs,
-					filepath.Join(config.LuetCfg.GetSystem().DatabasePath, "luet.db"))),
+		repo, err = NewLuetSystemRepositoryFromYaml(dat,
+			pkg.NewBoltDatabase(filepath.Join(helpers.GetRepoDatabaseDirPath(r.Name), "luet.db")),
 		)
 	} else {
 		repo, err = NewLuetSystemRepositoryFromYaml(dat, pkg.NewInMemoryDatabase(false))
@@ -277,13 +270,7 @@ func (r *LuetSystemRepository) Sync() (Repository, error) {
 
 	var systemDB pkg.PackageDatabase = nil
 	if config.LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-		os.MkdirAll(
-			filepath.Join(config.LuetCfg.GetSystem().Rootfs, config.LuetCfg.GetSystem().DatabasePath),
-			os.ModePerm,
-		)
-		systemDB = pkg.NewBoltDatabase(
-			filepath.Join(config.LuetCfg.GetSystem().Rootfs,
-				filepath.Join(config.LuetCfg.GetSystem().DatabasePath, "luet.db")))
+		systemDB = pkg.NewBoltDatabase(filepath.Join(helpers.GetSystemRepoDatabaseDirPath(), "luet.db"))
 	} else {
 		systemDB = pkg.NewInMemoryDatabase(false)
 	}

@@ -22,6 +22,7 @@ import (
 	installer "github.com/mudler/luet/pkg/installer"
 
 	. "github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
@@ -62,31 +63,22 @@ var installCmd = &cobra.Command{
 		}
 
 		// This shouldn't be necessary, but we need to unmarshal the repositories to a concrete struct, thus we need to port them back to the Repositories type
-		synced := installer.Repositories{}
+		repos := installer.Repositories{}
 		for _, repo := range LuetCfg.SystemRepositories {
 			if !repo.Enable {
 				continue
 			}
-
-			toSync := installer.NewSystemRepository(&repo)
-			s, err := toSync.Sync()
-			if err != nil {
-				Fatal("Error: " + err.Error())
-			}
-			synced = append(synced, s)
+			repo := installer.NewSystemRepository(&repo)
+			repos = append(repos, repo)
 		}
 
 		inst := installer.NewLuetInstaller(LuetCfg.GetGeneral().Concurrency)
-		inst.Repositories(synced)
+		inst.Repositories(repos)
+		inst.SyncRepositories()
 
 		if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-			os.MkdirAll(
-				filepath.Join(LuetCfg.GetSystem().Rootfs, LuetCfg.GetSystem().DatabasePath),
-				os.ModePerm,
-			)
 			systemDB = pkg.NewBoltDatabase(
-				filepath.Join(LuetCfg.GetSystem().Rootfs,
-					filepath.Join(LuetCfg.GetSystem().DatabasePath, "luet.db")))
+				filepath.Join(helpers.GetSystemRepoDatabaseDirPath(), "luet.db"))
 		} else {
 			systemDB = pkg.NewInMemoryDatabase(true)
 		}

@@ -69,6 +69,7 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 			continue
 		}
 
+		Debug("Copying file ", filepath.Join(temp, artifactName), "to", file.Name())
 		err = helpers.CopyFile(filepath.Join(temp, artifactName), file.Name())
 		if err != nil {
 			continue
