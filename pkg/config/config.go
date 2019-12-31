@@ -46,15 +46,15 @@ type LuetSystemConfig struct {
 }
 
 type LuetRepository struct {
-	Name           string            `yaml:"name" mapstructure:"name"`
-	Description    string            `yaml:"description,omitempty" mapstructure:"description"`
-	Urls           []string          `yaml:"urls" mapstructure:"urls"`
-	Type           string            `yaml:"type" mapstructure:"type"`
-	Mode           string            `yaml:"mode,omitempty" mapstructure:"mode"`
-	Priority       int               `yaml:"priority,omitempty" mapstructure:"priority"`
-	Enable         bool              `yaml:"enable" mapstructure:"enable"`
-	Authentication map[string]string `yaml:"auth,omitempty" mapstructure:"auth"`
-	TreePath       string            `yaml::"tree_path,omitempty" mapstructure:"tree_path"`
+	Name           string            `json:"name" yaml:"name" mapstructure:"name"`
+	Description    string            `json:"description,omitempty" yaml:"description,omitempty" mapstructure:"description"`
+	Urls           []string          `json:"urls" yaml:"urls" mapstructure:"urls"`
+	Type           string            `json:"type" yaml:"type" mapstructure:"type"`
+	Mode           string            `json:"mode,omitempty" yaml:"mode,omitempty" mapstructure:"mode,omitempty"`
+	Priority       int               `json:"priority,omitempty" yaml:"priority,omitempty" mapstructure:"priority"`
+	Enable         bool              `json:"enable" yaml:"enable" mapstructure:"enable"`
+	Authentication map[string]string `json:"auth,omitempty" yaml:"auth,omitempty" mapstructure:"auth,omitempty"`
+	TreePath       string            `json:"tree_path,omitempty" yaml::"tree_path,omitempty" mapstructure:"tree_path"`
 }
 
 func NewLuetRepository(name, t, descr string, urls []string, priority int, enable bool) *LuetRepository {

@@ -74,7 +74,6 @@ var installCmd = &cobra.Command{
 
 		inst := installer.NewLuetInstaller(LuetCfg.GetGeneral().Concurrency)
 		inst.Repositories(repos)
-		inst.SyncRepositories()
 
 		if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
 			systemDB = pkg.NewBoltDatabase(

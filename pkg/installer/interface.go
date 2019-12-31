@@ -27,7 +27,7 @@ type Installer interface {
 	Uninstall(pkg.Package, *System) error
 	Upgrade(s *System) error
 	Repositories([]Repository)
-	SyncRepositories() error
+	SyncRepositories(bool) (Repositories, error)
 }
 
 type Client interface {

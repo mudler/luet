@@ -123,14 +123,14 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	return l.Install(toInstall, s)
 }
 
-func (l *LuetInstaller) SyncRepositories() error {
+func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
 	Spinner(32)
 	defer SpinnerStop()
 	syncedRepos := Repositories{}
 	for _, r := range l.PackageRepositories {
 		repo, err := r.Sync()
 		if err != nil {
-			return errors.Wrap(err, "Failed syncing repository: "+r.GetName())
+			return nil, errors.Wrap(err, "Failed syncing repository: "+r.GetName())
 		}
 		syncedRepos = append(syncedRepos, repo)
 	}
@@ -138,9 +138,11 @@ func (l *LuetInstaller) SyncRepositories() error {
 	// compute what to install and from where
 	sort.Sort(syncedRepos)
 
-	l.PackageRepositories = syncedRepos
+	if !inMemory {
+		l.PackageRepositories = syncedRepos
+	}
 
-	return nil
+	return syncedRepos, nil
 }
 
 func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
@@ -166,23 +168,28 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 	}
 	// First get metas from all repos (and decodes trees)
 
+	syncedRepos, err := l.SyncRepositories(true)
+	if err != nil {
+		return err
+	}
 	// First match packages against repositories by priority
 	//	matches := syncedRepos.PackageMatches(p)
 
 	// compute a "big" world
 	allRepos := pkg.NewInMemoryDatabase(false)
-	l.PackageRepositories.SyncDatabase(allRepos)
+	syncedRepos.SyncDatabase(allRepos)
 
 	solv := solver.NewSolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false))
 	solution, err := solv.Install(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed solving solution for package")
 	}
+
 	// Gathers things to install
 	toInstall := map[string]ArtifactMatch{}
 	for _, assertion := range solution {
 		if assertion.Value {
-			matches := l.PackageRepositories.PackageMatches([]pkg.Package{assertion.Package})
+			matches := syncedRepos.PackageMatches([]pkg.Package{assertion.Package})
 			if len(matches) != 1 {
 				return errors.New("Failed matching solutions against repository - where are definitions coming from?!")
 			}
