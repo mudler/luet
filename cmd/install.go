@@ -27,25 +27,19 @@ import (
 
 	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var installCmd = &cobra.Command{
 	Use:   "install <pkg1> <pkg2> ...",
 	Short: "Install a package",
 	PreRun: func(cmd *cobra.Command, args []string) {
-		viper.BindPFlag("system-dbpath", cmd.Flags().Lookup("system-dbpath"))
-		viper.BindPFlag("system-target", cmd.Flags().Lookup("system-target"))
+		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
+		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
 	},
 	Long: `Install packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
-		c := []*installer.LuetRepository{}
-		err := viper.UnmarshalKey("system-repositories", &c)
-		if err != nil {
-			Fatal("Error: " + err.Error())
-		}
-
 		var toInstall []pkg.Package
+		var systemDB pkg.PackageDatabase
 
 		for _, a := range args {
 			gp, err := _gentoo.ParsePackageStr(a)
@@ -69,7 +63,12 @@ var installCmd = &cobra.Command{
 
 		// This shouldn't be necessary, but we need to unmarshal the repositories to a concrete struct, thus we need to port them back to the Repositories type
 		synced := installer.Repositories{}
-		for _, toSync := range c {
+		for _, repo := range LuetCfg.SystemRepositories {
+			if !repo.Enable {
+				continue
+			}
+
+			toSync := installer.NewSystemRepository(&repo)
 			s, err := toSync.Sync()
 			if err != nil {
 				Fatal("Error: " + err.Error())
@@ -78,13 +77,21 @@ var installCmd = &cobra.Command{
 		}
 
 		inst := installer.NewLuetInstaller(LuetCfg.GetGeneral().Concurrency)
-
 		inst.Repositories(synced)
 
-		os.MkdirAll(viper.GetString("system-dbpath"), os.ModePerm)
-		systemDB := pkg.NewBoltDatabase(filepath.Join(viper.GetString("system-dbpath"), "luet.db"))
-		system := &installer.System{Database: systemDB, Target: viper.GetString("system-target")}
-		err = inst.Install(toInstall, system)
+		if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
+			os.MkdirAll(
+				filepath.Join(LuetCfg.GetSystem().Rootfs, LuetCfg.GetSystem().DatabasePath),
+				os.ModePerm,
+			)
+			systemDB = pkg.NewBoltDatabase(
+				filepath.Join(LuetCfg.GetSystem().Rootfs,
+					filepath.Join(LuetCfg.GetSystem().DatabasePath, "luet.db")))
+		} else {
+			systemDB = pkg.NewInMemoryDatabase(true)
+		}
+		system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
+		err := inst.Install(toInstall, system)
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}

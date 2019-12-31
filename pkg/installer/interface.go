@@ -38,6 +38,7 @@ type Repositories []Repository
 
 type Repository interface {
 	GetName() string
+	GetDescription() string
 	GetUrls() []string
 	SetUrls([]string)
 	AddUrl(string)

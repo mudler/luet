@@ -54,6 +54,26 @@ type LuetRepository struct {
 	Priority       int               `yaml:"priority,omitempty" mapstructure:"priority"`
 	Enable         bool              `yaml:"enable" mapstructure:"enable"`
 	Authentication map[string]string `yaml:"auth,omitempty" mapstructure:"auth"`
+	TreePath       string            `yaml::"tree_path,omitempty" mapstructure:"tree_path"`
+}
+
+func NewLuetRepository(name, t, descr string, urls []string, priority int, enable bool) *LuetRepository {
+	return &LuetRepository{
+		Name:        name,
+		Description: descr,
+		Urls:        urls,
+		Type:        t,
+		// Used in cached repositories
+		Mode:           "",
+		Priority:       priority,
+		Enable:         enable,
+		Authentication: make(map[string]string, 0),
+		TreePath:       "",
+	}
+}
+
+func (r *LuetRepository) String() string {
+	return fmt.Sprintf("[%s] prio: %d, type: %s, enable: %t", r.Name, r.Priority, r.Type, r.Enable)
 }
 
 type LuetConfig struct {
@@ -64,12 +84,8 @@ type LuetConfig struct {
 	System  LuetSystemConfig  `mapstructure:"system"`
 
 	RepositoriesConfDir []string         `mapstructure:"repos_confdir"`
-	CacheRepositories   []LuetRepository `mapstructure:"cache_repositories"`
-	SystemRepositories  []LuetRepository `mapstructure:"system_repositories"`
-}
-
-func (r *LuetRepository) String() string {
-	return fmt.Sprintf("[%s] prio: %d, type: %s, enable: %t", r.Name, r.Priority, r.Type, r.Enable)
+	CacheRepositories   []LuetRepository `mapstructure:"repetitors"`
+	SystemRepositories  []LuetRepository `mapstructure:"repositories"`
 }
 
 func NewLuetConfig(viper *v.Viper) *LuetConfig {

@@ -35,7 +35,7 @@ import (
 var _ = Describe("Installer", func() {
 	Context("Writes a repository definition", func() {
 		It("Writes a repo and can install packages from it", func() {
-			//repo:=NewLuetRepository()
+			//repo:=NewLuetSystemRepository()
 
 			tmpdir, err := ioutil.TempDir("", "tree")
 			Expect(err).ToNot(HaveOccurred())
@@ -83,7 +83,7 @@ var _ = Describe("Installer", func() {
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
 
-			repo, err := GenerateRepository("test", tmpdir, "disk", 1, tmpdir, "../../tests/fixtures/buildable", pkg.NewInMemoryDatabase(false))
+			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, "../../tests/fixtures/buildable", pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
@@ -101,7 +101,7 @@ var _ = Describe("Installer", func() {
 			defer os.RemoveAll(fakeroot) // clean up
 
 			inst := NewLuetInstaller(1)
-			repo2, err := NewLuetRepositoryFromYaml([]byte(`
+			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
 urls:
@@ -149,7 +149,7 @@ urls:
 
 	Context("Installation", func() {
 		It("Installs in a system with a persistent db", func() {
-			//repo:=NewLuetRepository()
+			//repo:=NewLuetSystemRepository()
 
 			tmpdir, err := ioutil.TempDir("", "tree")
 			Expect(err).ToNot(HaveOccurred())
@@ -197,7 +197,7 @@ urls:
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
 
-			repo, err := GenerateRepository("test", tmpdir, "disk", 1, tmpdir, "../../tests/fixtures/buildable", pkg.NewInMemoryDatabase(false))
+			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, "../../tests/fixtures/buildable", pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
@@ -215,7 +215,7 @@ urls:
 			defer os.RemoveAll(fakeroot) // clean up
 
 			inst := NewLuetInstaller(1)
-			repo2, err := NewLuetRepositoryFromYaml([]byte(`
+			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
 urls:
@@ -268,7 +268,7 @@ urls:
 
 	Context("Simple upgrades", func() {
 		It("Installs packages and Upgrades a system with a persistent db", func() {
-			//repo:=NewLuetRepository()
+			//repo:=NewLuetSystemRepository()
 
 			tmpdir, err := ioutil.TempDir("", "tree")
 			Expect(err).ToNot(HaveOccurred())
@@ -305,7 +305,7 @@ urls:
 
 			Expect(errs).To(BeEmpty())
 
-			repo, err := GenerateRepository("test", tmpdir, "disk", 1, tmpdir, "../../tests/fixtures/upgrade", pkg.NewInMemoryDatabase(false))
+			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, "../../tests/fixtures/upgrade", pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
@@ -323,7 +323,7 @@ urls:
 			defer os.RemoveAll(fakeroot) // clean up
 
 			inst := NewLuetInstaller(1)
-			repo2, err := NewLuetRepositoryFromYaml([]byte(`
+			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
 urls:
@@ -382,7 +382,7 @@ urls:
 
 	Context("Compressed packages", func() {
 		It("Installs", func() {
-			//repo:=NewLuetRepository()
+			//repo:=NewLuetSystemRepository()
 
 			tmpdir, err := ioutil.TempDir("", "tree")
 			Expect(err).ToNot(HaveOccurred())
@@ -418,7 +418,7 @@ urls:
 
 			Expect(errs).To(BeEmpty())
 
-			repo, err := GenerateRepository("test", tmpdir, "disk", 1, tmpdir, "../../tests/fixtures/upgrade", pkg.NewInMemoryDatabase(false))
+			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, "../../tests/fixtures/upgrade", pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
@@ -438,7 +438,7 @@ urls:
 			defer os.RemoveAll(fakeroot) // clean up
 
 			inst := NewLuetInstaller(1)
-			repo2, err := NewLuetRepositoryFromYaml([]byte(`
+			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
 urls:

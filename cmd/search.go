@@ -21,6 +21,7 @@ import (
 
 	installer "github.com/mudler/luet/pkg/installer"
 
+	. "github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
@@ -33,16 +34,12 @@ var searchCmd = &cobra.Command{
 	Short: "Search packages",
 	Long:  `Search for installed and available packages`,
 	PreRun: func(cmd *cobra.Command, args []string) {
-		viper.BindPFlag("system-dbpath", cmd.Flags().Lookup("system-dbpath"))
-		viper.BindPFlag("system-target", cmd.Flags().Lookup("system-target"))
+		LuetCfg.Viper.BindPFlag("system.database_path", installCmd.Flags().Lookup("system-dbpath"))
+		LuetCfg.Viper.BindPFlag("system.rootfs", installCmd.Flags().Lookup("system-target"))
 		viper.BindPFlag("installed", cmd.Flags().Lookup("installed"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		c := []*installer.LuetRepository{}
-		err := viper.UnmarshalKey("system-repositories", &c)
-		if err != nil {
-			Fatal("Error: " + err.Error())
-		}
+		var systemDB pkg.PackageDatabase
 
 		if len(args) != 1 {
 			Fatal("Wrong number of arguments (expected 1)")
@@ -52,7 +49,12 @@ var searchCmd = &cobra.Command{
 		if !installed {
 			synced := installer.Repositories{}
 
-			for _, toSync := range c {
+			for _, repo := range LuetCfg.SystemRepositories {
+				if !repo.Enable {
+					continue
+				}
+
+				toSync := installer.NewSystemRepository(&repo)
 				s, err := toSync.Sync()
 				if err != nil {
 					Fatal("Error: " + err.Error())
@@ -63,12 +65,22 @@ var searchCmd = &cobra.Command{
 
 			matches := synced.Search(args[0])
 			for _, m := range matches {
-				Info(":package:", m.Package.GetCategory(), m.Package.GetName(), m.Package.GetVersion(), "repository:", m.Repo.GetName())
+				Info(":package:", m.Package.GetCategory(), m.Package.GetName(),
+					m.Package.GetVersion(), "repository:", m.Repo.GetName())
 			}
 		} else {
-			os.MkdirAll(viper.GetString("system-dbpath"), os.ModePerm)
-			systemDB := pkg.NewBoltDatabase(filepath.Join(viper.GetString("system-dbpath"), "luet.db"))
-			system := &installer.System{Database: systemDB, Target: viper.GetString("system-target")}
+			if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
+				os.MkdirAll(
+					filepath.Join(LuetCfg.GetSystem().Rootfs, LuetCfg.GetSystem().DatabasePath),
+					os.ModePerm,
+				)
+				systemDB = pkg.NewBoltDatabase(
+					filepath.Join(LuetCfg.GetSystem().Rootfs,
+						filepath.Join(LuetCfg.GetSystem().DatabasePath, "luet.db")))
+			} else {
+				systemDB = pkg.NewInMemoryDatabase(true)
+			}
+			system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
 			var term = regexp.MustCompile(args[0])
 
 			for _, k := range system.Database.GetPackages() {

@@ -27,31 +27,30 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
 	tree "github.com/mudler/luet/pkg/tree"
 	"github.com/pkg/errors"
 )
 
-type LuetRepository struct {
-	Name     string                 `json:"name"`
-	Urls     []string               `json:"urls"`
-	Priority int                    `json:"priority"`
-	Index    compiler.ArtifactIndex `json:"index"`
-	Tree     tree.Builder           `json:"-"`
-	TreePath string                 `json:"-"`
-	Type     string                 `json:"type"`
+type LuetSystemRepository struct {
+	*config.LuetRepository
+
+	Index compiler.ArtifactIndex `json:"index"`
+	Tree  tree.Builder           `json:"-"`
 }
 
-type LuetRepositorySerialized struct {
-	Name     string                      `json:"name"`
-	Urls     []string                    `json:"urls"`
-	Priority int                         `json:"priority"`
-	Index    []*compiler.PackageArtifact `json:"index"`
-	Type     string                      `json:"type"`
+type LuetSystemRepositorySerialized struct {
+	Name        string                      `json:"name"`
+	Description string                      `json:"description,omitempty"`
+	Urls        []string                    `json:"urls"`
+	Priority    int                         `json:"priority"`
+	Index       []*compiler.PackageArtifact `json:"index"`
+	Type        string                      `json:"type"`
 }
 
-func GenerateRepository(name, uri, t string, priority int, src, treeDir string, db pkg.PackageDatabase) (Repository, error) {
+func GenerateRepository(name, descr, t string, urls []string, priority int, src, treeDir string, db pkg.PackageDatabase) (Repository, error) {
 
 	art, err := buildPackageIndex(src)
 	if err != nil {
@@ -63,24 +62,41 @@ func GenerateRepository(name, uri, t string, priority int, src, treeDir string, 
 		return nil, err
 	}
 
-	return NewLuetRepository(name, uri, t, priority, art, tr), nil
+	return NewLuetSystemRepository(
+		config.NewLuetRepository(name, t, descr, urls, priority, true),
+		art, tr), nil
 }
 
-func NewLuetRepository(name, uri, t string, priority int, art []compiler.Artifact, builder tree.Builder) Repository {
-	return &LuetRepository{Index: art, Type: t, Tree: builder, Name: name, Urls: []string{uri}, Priority: priority}
+func NewSystemRepository(repo *config.LuetRepository) Repository {
+	return &LuetSystemRepository{
+		LuetRepository: repo,
+	}
 }
 
-func NewLuetRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (Repository, error) {
-	var p *LuetRepositorySerialized
-	r := &LuetRepository{}
+func NewLuetSystemRepository(repo *config.LuetRepository, art []compiler.Artifact, builder tree.Builder) Repository {
+	return &LuetSystemRepository{
+		LuetRepository: repo,
+		Index:          art,
+		Tree:           builder,
+	}
+}
+
+func NewLuetSystemRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (Repository, error) {
+	var p *LuetSystemRepositorySerialized
 	err := yaml.Unmarshal(data, &p)
 	if err != nil {
 		return nil, err
 	}
-	r.Name = p.Name
-	r.Urls = p.Urls
-	r.Priority = p.Priority
-	r.Type = p.Type
+	r := &LuetSystemRepository{
+		LuetRepository: config.NewLuetRepository(
+			p.Name,
+			p.Type,
+			p.Description,
+			p.Urls,
+			p.Priority,
+			true,
+		),
+	}
 	i := compiler.ArtifactIndex{}
 	for _, ii := range p.Index {
 		i = append(i, ii)
@@ -122,47 +138,46 @@ func buildPackageIndex(path string) ([]compiler.Artifact, error) {
 	return art, nil
 }
 
-func (r *LuetRepository) GetName() string {
-	return r.Name
+func (r *LuetSystemRepository) GetName() string {
+	return r.LuetRepository.Name
 }
-func (r *LuetRepository) GetTreePath() string {
+func (r *LuetSystemRepository) GetDescription() string {
+	return r.LuetRepository.Description
+}
+func (r *LuetSystemRepository) GetType() string {
+	return r.LuetRepository.Type
+}
+func (r *LuetSystemRepository) SetType(p string) {
+	r.LuetRepository.Type = p
+}
+func (r *LuetSystemRepository) AddUrl(p string) {
+	r.LuetRepository.Urls = append(r.LuetRepository.Urls, p)
+}
+func (r *LuetSystemRepository) GetUrls() []string {
+	return r.LuetRepository.Urls
+}
+func (r *LuetSystemRepository) SetUrls(urls []string) {
+	r.LuetRepository.Urls = urls
+}
+func (r *LuetSystemRepository) GetPriority() int {
+	return r.LuetRepository.Priority
+}
+func (r *LuetSystemRepository) GetTreePath() string {
 	return r.TreePath
 }
-func (r *LuetRepository) SetTreePath(p string) {
+func (r *LuetSystemRepository) SetTreePath(p string) {
 	r.TreePath = p
 }
-
-func (r *LuetRepository) SetTree(b tree.Builder) {
+func (r *LuetSystemRepository) SetTree(b tree.Builder) {
 	r.Tree = b
 }
-
-func (r *LuetRepository) GetType() string {
-	return r.Type
-}
-func (r *LuetRepository) SetType(p string) {
-	r.Type = p
-}
-
-func (r *LuetRepository) AddUrl(p string) {
-	r.Urls = append(r.Urls, p)
-}
-func (r *LuetRepository) GetUrls() []string {
-	return r.Urls
-}
-func (r *LuetRepository) SetUrls(urls []string) {
-	r.Urls = urls
-}
-func (r *LuetRepository) GetPriority() int {
-	return r.Priority
-}
-func (r *LuetRepository) GetIndex() compiler.ArtifactIndex {
+func (r *LuetSystemRepository) GetIndex() compiler.ArtifactIndex {
 	return r.Index
 }
-func (r *LuetRepository) GetTree() tree.Builder {
+func (r *LuetSystemRepository) GetTree() tree.Builder {
 	return r.Tree
 }
-
-func (r *LuetRepository) Write(dst string) error {
+func (r *LuetSystemRepository) Write(dst string) error {
 
 	os.MkdirAll(dst, os.ModePerm)
 	r.Index = r.Index.CleanPath()
@@ -191,7 +206,7 @@ func (r *LuetRepository) Write(dst string) error {
 	return nil
 }
 
-func (r *LuetRepository) Client() Client {
+func (r *LuetSystemRepository) Client() Client {
 	switch r.GetType() {
 	case "disk":
 		return client.NewLocalClient(client.RepoData{Urls: r.GetUrls()})
@@ -201,7 +216,7 @@ func (r *LuetRepository) Client() Client {
 
 	return nil
 }
-func (r *LuetRepository) Sync() (Repository, error) {
+func (r *LuetSystemRepository) Sync() (Repository, error) {
 	c := r.Client()
 	if c == nil {
 		return nil, errors.New("No client could be generated from repository.")
@@ -216,8 +231,21 @@ func (r *LuetRepository) Sync() (Repository, error) {
 	}
 	defer os.Remove(file)
 
-	// TODO: make it swappable
-	repo, err := NewLuetRepositoryFromYaml(dat, pkg.NewInMemoryDatabase(false))
+	var repo Repository
+	if config.LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
+		os.MkdirAll(
+			filepath.Join(config.LuetCfg.GetSystem().Rootfs, config.LuetCfg.GetSystem().DatabasePath),
+			os.ModePerm,
+		)
+		repo, err = NewLuetSystemRepositoryFromYaml(
+			dat,
+			pkg.NewBoltDatabase(
+				filepath.Join(config.LuetCfg.GetSystem().Rootfs,
+					filepath.Join(config.LuetCfg.GetSystem().DatabasePath, "luet.db"))),
+		)
+	} else {
+		repo, err = NewLuetSystemRepositoryFromYaml(dat, pkg.NewInMemoryDatabase(false))
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading repository from file "+file)
 
@@ -247,7 +275,20 @@ func (r *LuetRepository) Sync() (Repository, error) {
 		return nil, errors.Wrap(err, "Error met while unpacking rootfs")
 	}
 
-	reciper := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
+	var systemDB pkg.PackageDatabase = nil
+	if config.LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
+		os.MkdirAll(
+			filepath.Join(config.LuetCfg.GetSystem().Rootfs, config.LuetCfg.GetSystem().DatabasePath),
+			os.ModePerm,
+		)
+		systemDB = pkg.NewBoltDatabase(
+			filepath.Join(config.LuetCfg.GetSystem().Rootfs,
+				filepath.Join(config.LuetCfg.GetSystem().DatabasePath, "luet.db")))
+	} else {
+		systemDB = pkg.NewInMemoryDatabase(false)
+	}
+
+	reciper := tree.NewInstallerRecipe(systemDB)
 	err = reciper.Load(treefs)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while unpacking rootfs")

@@ -25,27 +25,26 @@ import (
 	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var upgradeCmd = &cobra.Command{
 	Use:   "upgrade",
 	Short: "Upgrades the system",
 	PreRun: func(cmd *cobra.Command, args []string) {
-		viper.BindPFlag("system-dbpath", cmd.Flags().Lookup("system-dbpath"))
-		viper.BindPFlag("system-target", cmd.Flags().Lookup("system-target"))
+		LuetCfg.Viper.BindPFlag("system.database_path", installCmd.Flags().Lookup("system-dbpath"))
+		LuetCfg.Viper.BindPFlag("system.rootfs", installCmd.Flags().Lookup("system-target"))
 	},
 	Long: `Upgrades packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
-		c := []*installer.LuetRepository{}
-		err := viper.UnmarshalKey("system-repositories", &c)
-		if err != nil {
-			Fatal("Error: " + err.Error())
-		}
+		var systemDB pkg.PackageDatabase
 
-		// This shouldn't be necessary, but we need to unmarshal the repositories to a concrete struct, thus we need to port them back to the Repositories type
 		synced := installer.Repositories{}
-		for _, toSync := range c {
+		for _, repo := range LuetCfg.SystemRepositories {
+			if !repo.Enable {
+				continue
+			}
+
+			toSync := installer.NewSystemRepository(&repo)
 			s, err := toSync.Sync()
 			if err != nil {
 				Fatal("Error: " + err.Error())
@@ -57,10 +56,19 @@ var upgradeCmd = &cobra.Command{
 
 		inst.Repositories(synced)
 
-		os.MkdirAll(viper.GetString("system-dbpath"), os.ModePerm)
-		systemDB := pkg.NewBoltDatabase(filepath.Join(viper.GetString("system-dbpath"), "luet.db"))
-		system := &installer.System{Database: systemDB, Target: viper.GetString("system-target")}
-		err = inst.Upgrade(system)
+		if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
+			os.MkdirAll(
+				filepath.Join(LuetCfg.GetSystem().Rootfs, LuetCfg.GetSystem().DatabasePath),
+				os.ModePerm,
+			)
+			systemDB = pkg.NewBoltDatabase(
+				filepath.Join(LuetCfg.GetSystem().Rootfs,
+					filepath.Join(LuetCfg.GetSystem().DatabasePath, "luet.db")))
+		} else {
+			systemDB = pkg.NewInMemoryDatabase(true)
+		}
+		system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
+		err := inst.Upgrade(system)
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
