@@ -106,8 +106,12 @@ var buildCmd = &cobra.Command{
 				}
 
 				pack := &pkg.DefaultPackage{
-					Name:     gp.Name,
-					Version:  fmt.Sprintf("%s%s%s", gp.Condition.String(), gp.Version, gp.VersionSuffix),
+					Name: gp.Name,
+					Version: fmt.Sprintf("%s%s%s",
+						pkg.PkgSelectorConditionFromInt(gp.Condition.Int()).String(),
+						gp.Version,
+						gp.VersionSuffix,
+					),
 					Category: gp.Category,
 					Uri:      make([]string, 0),
 				}

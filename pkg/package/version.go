@@ -55,6 +55,77 @@ const (
 	PkgCondMatchVersion = 8
 )
 
+func PkgSelectorConditionFromInt(c int) (ans PkgSelectorCondition) {
+	if c == PkgCondGreater {
+		ans = PkgCondGreater
+	} else if c == PkgCondGreaterEqual {
+		ans = PkgCondGreaterEqual
+	} else if c == PkgCondLess {
+		ans = PkgCondLess
+	} else if c == PkgCondLessEqual {
+		ans = PkgCondLessEqual
+	} else if c == PkgCondNot {
+		ans = PkgCondNot
+	} else if c == PkgCondAnyRevision {
+		ans = PkgCondAnyRevision
+	} else if c == PkgCondMatchVersion {
+		ans = PkgCondMatchVersion
+	} else {
+		ans = PkgCondInvalid
+	}
+	return
+}
+
+func (p PkgSelectorCondition) String() (ans string) {
+	if p == PkgCondInvalid {
+		ans = ""
+	} else if p == PkgCondGreater {
+		ans = ">"
+	} else if p == PkgCondGreaterEqual {
+		ans = ">="
+	} else if p == PkgCondLess {
+		ans = "<"
+	} else if p == PkgCondLessEqual {
+		ans = "<="
+	} else if p == PkgCondEqual {
+		// To permit correct matching on database
+		// we currently use directly package version without =
+		ans = ""
+	} else if p == PkgCondNot {
+		ans = "!"
+	} else if p == PkgCondAnyRevision {
+		ans = "~"
+	} else if p == PkgCondMatchVersion {
+		ans = "=*"
+	}
+	return
+}
+
+func (p PkgSelectorCondition) Int() (ans int) {
+	if p == PkgCondInvalid {
+		ans = PkgCondInvalid
+	} else if p == PkgCondGreater {
+		ans = PkgCondGreater
+	} else if p == PkgCondGreaterEqual {
+		ans = PkgCondGreaterEqual
+	} else if p == PkgCondLess {
+		ans = PkgCondLess
+	} else if p == PkgCondLessEqual {
+		ans = PkgCondLessEqual
+	} else if p == PkgCondEqual {
+		// To permit correct matching on database
+		// we currently use directly package version without =
+		ans = PkgCondEqual
+	} else if p == PkgCondNot {
+		ans = PkgCondNot
+	} else if p == PkgCondAnyRevision {
+		ans = PkgCondAnyRevision
+	} else if p == PkgCondMatchVersion {
+		ans = PkgCondMatchVersion
+	}
+	return
+}
+
 func ParseVersion(v string) (PkgVersionSelector, error) {
 	var ans PkgVersionSelector = PkgVersionSelector{
 		Version:       "",

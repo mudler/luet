@@ -17,6 +17,8 @@
 package pkg_test
 
 import (
+	gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
+
 	. "github.com/mudler/luet/pkg/package"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -181,4 +183,15 @@ var _ = Describe("Versions", func() {
 			Expect(match).Should(Equal(true))
 		})
 	})
+
+	Context("Condition Converter 1", func() {
+		gp, err := gentoo.ParsePackageStr("=layer/build-1.0")
+		var cond gentoo.PackageCond = gentoo.PkgCondEqual
+		It("Converter1", func() {
+			Expect(err).Should(BeNil())
+			Expect((*gp).Condition).Should(Equal(cond))
+			Expect(PkgSelectorConditionFromInt((*gp).Condition.Int()).String()).Should(Equal(""))
+		})
+	})
+
 })
