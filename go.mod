@@ -5,7 +5,7 @@ go 1.12
 require (
 	github.com/DataDog/zstd v1.4.4 // indirect
 	github.com/MottainaiCI/simplestreams-builder v0.0.0-20190710131531-efb382161f56 // indirect
-	github.com/Sabayon/pkgs-checker v0.4.2-0.20191225230938-5ebdcd474e55
+	github.com/Sabayon/pkgs-checker v0.4.2-0.20200101193228-1d500105afb7
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 	github.com/briandowns/spinner v1.7.0
 	github.com/cavaliercoder/grab v2.0.0+incompatible
