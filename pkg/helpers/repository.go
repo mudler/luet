@@ -26,12 +26,18 @@ import (
 func GetRepoDatabaseDirPath(name string) string {
 	dbpath := filepath.Join(config.LuetCfg.GetSystem().Rootfs, config.LuetCfg.GetSystem().DatabasePath)
 	dbpath = filepath.Join(dbpath, "repos/"+name)
-	os.MkdirAll(dbpath, os.ModePerm)
+	err := os.MkdirAll(dbpath, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
 	return dbpath
 }
 
 func GetSystemRepoDatabaseDirPath() string {
 	dbpath := filepath.Join(config.LuetCfg.GetSystem().Rootfs, config.LuetCfg.GetSystem().DatabasePath)
-	os.MkdirAll(dbpath, os.ModePerm)
+	err := os.MkdirAll(dbpath, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
 	return dbpath
 }
