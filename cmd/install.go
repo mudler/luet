@@ -48,6 +48,10 @@ var installCmd = &cobra.Command{
 				Fatal("Invalid package string ", a, ": ", err.Error())
 			}
 
+			cond := gp.Condition.String()
+			if cond == "=" {
+				cond = ""
+			}
 			if gp.Version == "" {
 				gp.Version = "0"
 				gp.Condition = _gentoo.PkgCondGreaterEqual
@@ -55,7 +59,7 @@ var installCmd = &cobra.Command{
 
 			pack := &pkg.DefaultPackage{
 				Name:     gp.Name,
-				Version:  fmt.Sprintf("%s%s%s", gp.Condition.String(), gp.Version, gp.VersionSuffix),
+				Version:  fmt.Sprintf("%s%s%s", cond, gp.Version, gp.VersionSuffix),
 				Category: gp.Category,
 				Uri:      make([]string, 0),
 			}
