@@ -196,7 +196,7 @@ func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fin
 	for _, res := range result {
 		a, ok := tmpMap[res]
 		if !ok {
-			panic("fail")
+			panic("fail looking for " + res)
 			//	continue
 		}
 		orderedAssertions = append(orderedAssertions, a)

@@ -134,7 +134,29 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	return l.Install(toInstall, s)
 }
 
-func (l *LuetInstaller) Install(p []pkg.Package, s *System) error {
+func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
+
+	var p []pkg.Package
+
+	// Check if the package is installed first
+	for _, pi := range cp {
+
+		vers, _ := s.Database.FindPackageVersions(pi)
+
+		if len(vers) >= 1 {
+			Warning("Filtering out package " + pi.GetFingerPrint() + ", it has other versions already installed. Uninstall one of them first ")
+			continue
+			//return errors.New("Package " + pi.GetFingerPrint() + " has other versions already installed. Uninstall one of them first: " + strings.Join(vers, " "))
+
+		}
+		p = append(p, pi)
+	}
+
+	if len(p) == 0 {
+		Warning("No package to install, bailing out with no errors")
+		return nil
+	}
+
 	// First get metas from all repos (and decodes trees)
 
 	Spinner(32)
