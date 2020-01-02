@@ -64,7 +64,7 @@ testInstall() {
 }
 
 testReInstall() {
-    output=$(luet install --config $tmpdir/luet.yaml --system-dbpath $tmpdir/testrootfs --system-target $tmpdir/testrootfs test/c-1.0)
+    output=$(luet install --config $tmpdir/luet.yaml  test/c-1.0)
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertContains 'contains warning' "$output" 'Filtering out'
@@ -79,7 +79,7 @@ testUnInstall() {
 
 testInstallAgain() {
     assertTrue 'package uninstalled' "[ ! -e '$tmpdir/testrootfs/c' ]"
-    output=$(luet install --config $tmpdir/luet.yaml --system-dbpath $tmpdir/testrootfs --system-target $tmpdir/testrootfs test/c-1.0)
+    output=$(luet install --config $tmpdir/luet.yaml test/c-1.0)
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertNotContains 'contains warning' "$output" 'Filtering out'
