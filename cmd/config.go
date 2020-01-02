@@ -32,13 +32,13 @@ var configCmd = &cobra.Command{
 		fmt.Println(config.LuetCfg.GetGeneral())
 		fmt.Println(config.LuetCfg.GetSystem())
 		if len(config.LuetCfg.CacheRepositories) > 0 {
-			fmt.Println("cache_repositories:")
+			fmt.Println("repetitors:")
 			for _, r := range config.LuetCfg.CacheRepositories {
 				fmt.Println("  - ", r.String())
 			}
 		}
 		if len(config.LuetCfg.SystemRepositories) > 0 {
-			fmt.Println("system_repositories:")
+			fmt.Println("repositories:")
 			for _, r := range config.LuetCfg.SystemRepositories {
 				fmt.Println("  - ", r.String())
 			}
