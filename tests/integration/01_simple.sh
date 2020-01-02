@@ -42,7 +42,7 @@ general:
 system:
   rootfs: $tmpdir/testrootfs
   database_path: "/"
-  database_engine: "memory"
+  database_engine: "boltdb"
 repositories:
    - name: "main"
      type: "disk"
@@ -71,7 +71,7 @@ testReInstall() {
 }
 
 testUnInstall() {
-    luet uninstall --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
+    luet uninstall --config $tmpdir/luet.yaml test/c-1.0
     installst=$?
     assertEquals 'uninstall test successfully' "$installst" "0"
     assertTrue 'package uninstalled' "[ ! -e '$tmpdir/testrootfs/c' ]"
