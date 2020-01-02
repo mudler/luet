@@ -29,6 +29,7 @@ import (
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
+	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	tree "github.com/mudler/luet/pkg/tree"
 	"github.com/pkg/errors"
@@ -67,9 +68,9 @@ func GenerateRepository(name, descr, t string, urls []string, priority int, src,
 		art, tr), nil
 }
 
-func NewSystemRepository(repo *config.LuetRepository) Repository {
+func NewSystemRepository(repo config.LuetRepository) Repository {
 	return &LuetSystemRepository{
-		LuetRepository: repo,
+		LuetRepository: &repo,
 	}
 }
 
@@ -179,7 +180,10 @@ func (r *LuetSystemRepository) GetTree() tree.Builder {
 }
 func (r *LuetSystemRepository) Write(dst string) error {
 
-	os.MkdirAll(dst, os.ModePerm)
+	err := os.MkdirAll(dst, os.ModePerm)
+	if err != nil {
+		return err
+	}
 	r.Index = r.Index.CleanPath()
 
 	data, err := yaml.Marshal(r)
@@ -217,6 +221,7 @@ func (r *LuetSystemRepository) Client() Client {
 	return nil
 }
 func (r *LuetSystemRepository) Sync() (Repository, error) {
+	Debug("Sync of the repository", r.Name, "in progress..")
 	c := r.Client()
 	if c == nil {
 		return nil, errors.New("No client could be generated from repository.")
@@ -232,13 +237,13 @@ func (r *LuetSystemRepository) Sync() (Repository, error) {
 	defer os.Remove(file)
 
 	var repo Repository
-	if config.LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-		repo, err = NewLuetSystemRepositoryFromYaml(dat,
-			pkg.NewBoltDatabase(filepath.Join(helpers.GetRepoDatabaseDirPath(r.Name), "luet.db")),
-		)
-	} else {
-		repo, err = NewLuetSystemRepositoryFromYaml(dat, pkg.NewInMemoryDatabase(false))
-	}
+	//	if config.LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
+	//		repo, err = NewLuetSystemRepositoryFromYaml(dat,
+	//			pkg.NewBoltDatabase(filepath.Join(helpers.GetRepoDatabaseDirPath(r.Name), "luet.db")),
+	//		)
+	//	} else {
+	repo, err = NewLuetSystemRepositoryFromYaml(dat, pkg.NewInMemoryDatabase(false))
+	//	}
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading repository from file "+file)
 
@@ -268,14 +273,7 @@ func (r *LuetSystemRepository) Sync() (Repository, error) {
 		return nil, errors.Wrap(err, "Error met while unpacking rootfs")
 	}
 
-	var systemDB pkg.PackageDatabase = nil
-	if config.LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-		systemDB = pkg.NewBoltDatabase(filepath.Join(helpers.GetSystemRepoDatabaseDirPath(), "luet.db"))
-	} else {
-		systemDB = pkg.NewInMemoryDatabase(false)
-	}
-
-	reciper := tree.NewInstallerRecipe(systemDB)
+	reciper := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
 	err = reciper.Load(treefs)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while unpacking rootfs")

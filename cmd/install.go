@@ -72,8 +72,8 @@ var installCmd = &cobra.Command{
 			if !repo.Enable {
 				continue
 			}
-			repo := installer.NewSystemRepository(&repo)
-			repos = append(repos, repo)
+			r := installer.NewSystemRepository(repo)
+			repos = append(repos, r)
 		}
 
 		inst := installer.NewLuetInstaller(LuetCfg.GetGeneral().Concurrency)

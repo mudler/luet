@@ -16,7 +16,6 @@
 package installer_test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -115,7 +114,6 @@ urls:
 			systemDB := pkg.NewInMemoryDatabase(false)
 			system := &System{Database: systemDB, Target: fakeroot}
 			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system)
-			fmt.Println("ERR ", err)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())

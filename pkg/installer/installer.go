@@ -91,14 +91,14 @@ func NewLuetInstaller(concurrency int) Installer {
 }
 
 func (l *LuetInstaller) Upgrade(s *System) error {
-	// compute what to install and from where
-	sort.Sort(l.PackageRepositories)
-
+	syncedRepos, err := l.SyncRepositories(true)
+	if err != nil {
+		return err
+	}
 	// First match packages against repositories by priority
 	//	matches := syncedRepos.PackageMatches(p)
 	allRepos := pkg.NewInMemoryDatabase(false)
-	l.PackageRepositories.SyncDatabase(allRepos)
-
+	syncedRepos.SyncDatabase(allRepos)
 	// compute a "big" world
 	solv := solver.NewSolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false))
 	uninstall, solution, err := solv.Upgrade()

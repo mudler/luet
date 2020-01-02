@@ -19,9 +19,9 @@ import (
 	"path/filepath"
 	"regexp"
 
-	installer "github.com/mudler/luet/pkg/installer"
-
 	. "github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/pkg/helpers"
+	installer "github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
@@ -34,8 +34,8 @@ var searchCmd = &cobra.Command{
 	Short: "Search packages",
 	Long:  `Search for installed and available packages`,
 	PreRun: func(cmd *cobra.Command, args []string) {
-		LuetCfg.Viper.BindPFlag("system.database_path", installCmd.Flags().Lookup("system-dbpath"))
-		LuetCfg.Viper.BindPFlag("system.rootfs", installCmd.Flags().Lookup("system-target"))
+		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
+		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
 		viper.BindPFlag("installed", cmd.Flags().Lookup("installed"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -47,20 +47,23 @@ var searchCmd = &cobra.Command{
 		installed := viper.GetBool("installed")
 
 		if !installed {
-			synced := installer.Repositories{}
 
+			repos := installer.Repositories{}
 			for _, repo := range LuetCfg.SystemRepositories {
 				if !repo.Enable {
 					continue
 				}
-
-				toSync := installer.NewSystemRepository(&repo)
-				s, err := toSync.Sync()
-				if err != nil {
-					Fatal("Error: " + err.Error())
-				}
-				synced = append(synced, s)
+				r := installer.NewSystemRepository(repo)
+				repos = append(repos, r)
 			}
+
+			inst := installer.NewLuetInstaller(LuetCfg.GetGeneral().Concurrency)
+			inst.Repositories(repos)
+			synced, err := inst.SyncRepositories(false)
+			if err != nil {
+				Fatal("Error: " + err.Error())
+			}
+
 			Info("--- Search results: ---")
 
 			matches := synced.Search(args[0])
@@ -69,14 +72,10 @@ var searchCmd = &cobra.Command{
 					m.Package.GetVersion(), "repository:", m.Repo.GetName())
 			}
 		} else {
+
 			if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-				os.MkdirAll(
-					filepath.Join(LuetCfg.GetSystem().Rootfs, LuetCfg.GetSystem().DatabasePath),
-					os.ModePerm,
-				)
 				systemDB = pkg.NewBoltDatabase(
-					filepath.Join(LuetCfg.GetSystem().Rootfs,
-						filepath.Join(LuetCfg.GetSystem().DatabasePath, "luet.db")))
+					filepath.Join(helpers.GetSystemRepoDatabaseDirPath(), "luet.db"))
 			} else {
 				systemDB = pkg.NewInMemoryDatabase(true)
 			}

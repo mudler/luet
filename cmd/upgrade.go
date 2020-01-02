@@ -18,9 +18,9 @@ import (
 	"os"
 	"path/filepath"
 
-	installer "github.com/mudler/luet/pkg/installer"
-
 	. "github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/pkg/helpers"
+	installer "github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
@@ -38,37 +38,31 @@ var upgradeCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var systemDB pkg.PackageDatabase
 
-		synced := installer.Repositories{}
+		repos := installer.Repositories{}
 		for _, repo := range LuetCfg.SystemRepositories {
 			if !repo.Enable {
 				continue
 			}
 
-			toSync := installer.NewSystemRepository(&repo)
-			s, err := toSync.Sync()
-			if err != nil {
-				Fatal("Error: " + err.Error())
-			}
-			synced = append(synced, s)
+			r := installer.NewSystemRepository(repo)
+			repos = append(repos, r)
 		}
 
 		inst := installer.NewLuetInstaller(LuetCfg.GetGeneral().Concurrency)
-
-		inst.Repositories(synced)
+		inst.Repositories(repos)
+		_, err := inst.SyncRepositories(false)
+		if err != nil {
+			Fatal("Error: " + err.Error())
+		}
 
 		if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-			os.MkdirAll(
-				filepath.Join(LuetCfg.GetSystem().Rootfs, LuetCfg.GetSystem().DatabasePath),
-				os.ModePerm,
-			)
 			systemDB = pkg.NewBoltDatabase(
-				filepath.Join(LuetCfg.GetSystem().Rootfs,
-					filepath.Join(LuetCfg.GetSystem().DatabasePath, "luet.db")))
+				filepath.Join(helpers.GetSystemRepoDatabaseDirPath(), "luet.db"))
 		} else {
 			systemDB = pkg.NewInMemoryDatabase(true)
 		}
 		system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
-		err := inst.Upgrade(system)
+		err = inst.Upgrade(system)
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
