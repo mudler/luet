@@ -27,8 +27,9 @@ import (
 var LuetCfg = NewLuetConfig(v.GetViper())
 
 type LuetLoggingConfig struct {
-	Path  string `mapstructure:"path"`
-	Level string `mapstructure:"level"`
+	Path       string `mapstructure:"path"`
+	JsonFormat bool   `mapstructure:"json_format"`
+	Level      string `mapstructure:"level"`
 }
 
 type LuetGeneralConfig struct {
@@ -101,6 +102,7 @@ func GenDefault(viper *v.Viper) {
 
 	viper.SetDefault("logging.level", "info")
 	viper.SetDefault("logging.path", "")
+	viper.SetDefault("logging.json_format", false)
 
 	viper.SetDefault("general.concurrency", runtime.NumCPU())
 	viper.SetDefault("general.debug", false)
@@ -158,7 +160,8 @@ func (c *LuetLoggingConfig) String() string {
 	ans := fmt.Sprintf(`
 logging:
   path: %s
-  level: %s`, c.Path, c.Level)
+  json_format: %t
+  level: %s`, c.Path, c.JsonFormat, c.Level)
 
 	return ans
 }

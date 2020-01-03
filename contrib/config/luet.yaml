@@ -10,6 +10,9 @@
 #   Set logging level: error|warning|info|debug
 #   level: "info"
 #
+#   Enable JSON log format instead of console mode.
+#   json_format: false.
+#
 # ---------------------------------------------
 # General configuration section:
 # ---------------------------------------------
