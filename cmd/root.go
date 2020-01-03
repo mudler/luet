@@ -68,7 +68,11 @@ func LoadConfig(c *config.LuetConfig) error {
 	NewSpinner()
 
 	if c.GetLogging().Path != "" {
-		// TODO: Init logrus, etc.
+		// Init zap logger
+		err = ZapLogger()
+		if err != nil {
+			return err
+		}
 	}
 
 	// Load repositories

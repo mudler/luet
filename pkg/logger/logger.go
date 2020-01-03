@@ -9,9 +9,12 @@ import (
 	"github.com/briandowns/spinner"
 	"github.com/kyokomi/emoji"
 	. "github.com/logrusorgru/aurora"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var s *spinner.Spinner = nil
+var z *zap.Logger = nil
 
 func NewSpinner() {
 	if s == nil {
@@ -19,6 +22,34 @@ func NewSpinner() {
 			spinner.CharSets[LuetCfg.GetGeneral().SpinnerCharset],
 			LuetCfg.GetGeneral().GetSpinnerMs())
 	}
+}
+
+func ZapLogger() error {
+	var err error
+	if z == nil {
+		// TODO: test permission for open logfile.
+		cfg := zap.NewProductionConfig()
+		cfg.OutputPaths = []string{LuetCfg.GetLogging().Path}
+		cfg.Level = level2AtomicLevel(LuetCfg.GetLogging().Level)
+		cfg.ErrorOutputPaths = []string{}
+		if LuetCfg.GetLogging().JsonFormat {
+			cfg.Encoding = "json"
+		} else {
+			cfg.Encoding = "console"
+		}
+		cfg.DisableCaller = true
+		cfg.DisableStacktrace = true
+		cfg.EncoderConfig.TimeKey = "time"
+		cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+
+		z, err = cfg.Build()
+		if err != nil {
+			fmt.Fprint(os.Stderr, "Error on initialize file logger: "+err.Error()+"\n")
+			return err
+		}
+	}
+
+	return nil
 }
 
 func Spinner(i int) {
@@ -66,6 +97,32 @@ func level2Number(level string) int {
 	}
 }
 
+func log2File(level, msg string) {
+	switch level {
+	case "error":
+		z.Error(msg)
+	case "warning":
+		z.Warn(msg)
+	case "info":
+		z.Info(msg)
+	default:
+		z.Debug(msg)
+	}
+}
+
+func level2AtomicLevel(level string) zap.AtomicLevel {
+	switch level {
+	case "error":
+		return zap.NewAtomicLevelAt(zap.ErrorLevel)
+	case "warning":
+		return zap.NewAtomicLevelAt(zap.WarnLevel)
+	case "info":
+		return zap.NewAtomicLevelAt(zap.InfoLevel)
+	default:
+		return zap.NewAtomicLevelAt(zap.DebugLevel)
+	}
+}
+
 func msg(level string, msg ...interface{}) {
 	var message string
 	var confLevel, msgLevel int
@@ -98,18 +155,11 @@ func msg(level string, msg ...interface{}) {
 
 	levelMsg = emoji.Sprint(levelMsg)
 
-	// if s.Active() {
-	// 	SpinnerText(levelMsg, "")
-	// 	return
-	// }
-
-	cmd := []interface{}{}
-	for _, f := range msg {
-		cmd = append(cmd, f)
+	if z != nil {
+		log2File(level, message)
 	}
 
 	fmt.Println(levelMsg)
-	//fmt.Println(cmd...)
 }
 
 func Warning(mess ...interface{}) {
