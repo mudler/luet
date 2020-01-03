@@ -16,6 +16,7 @@
 package installer
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -35,6 +36,10 @@ import (
 	pkg "github.com/mudler/luet/pkg/package"
 	tree "github.com/mudler/luet/pkg/tree"
 	"github.com/pkg/errors"
+)
+
+const (
+	REPOSITORY_SPECFILE = "repository.yaml"
 )
 
 type LuetSystemRepository struct {
@@ -188,21 +193,71 @@ func (r *LuetSystemRepository) GetIndex() compiler.ArtifactIndex {
 func (r *LuetSystemRepository) GetTree() tree.Builder {
 	return r.Tree
 }
-func (r *LuetSystemRepository) Write(dst string) error {
+func (r *LuetSystemRepository) GetRevision() int {
+	return r.Revision
+}
+func (r *LuetSystemRepository) GetLastUpdate() string {
+	return r.LastUpdate
+}
+func (r *LuetSystemRepository) SetLastUpdate(u string) {
+	r.LastUpdate = u
+}
+func (r *LuetSystemRepository) IncrementRevision() {
+	r.Revision++
+}
 
+func (r *LuetSystemRepository) ReadSpecFile(file string, removeFile bool) (Repository, error) {
+	dat, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error reading file "+file)
+	}
+	if removeFile {
+		defer os.Remove(file)
+	}
+
+	var repo Repository
+	repo, err = NewLuetSystemRepositoryFromYaml(dat, pkg.NewInMemoryDatabase(false))
+	if err != nil {
+		return nil, errors.Wrap(err, "Error reading repository from file "+file)
+	}
+
+	return repo, err
+}
+
+func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
 	err := os.MkdirAll(dst, os.ModePerm)
 	if err != nil {
 		return err
 	}
 	r.Index = r.Index.CleanPath()
 	r.LastUpdate = strconv.FormatInt(time.Now().Unix(), 10)
+
+	repospec := filepath.Join(dst, REPOSITORY_SPECFILE)
+	if resetRevision {
+		r.Revision = 0
+	} else {
+		if _, err := os.Stat(repospec); !os.IsNotExist(err) {
+			// Read existing file for retrieve revision
+			spec, err := r.ReadSpecFile(repospec, false)
+			if err != nil {
+				return err
+			}
+			r.Revision = spec.GetRevision()
+		}
+	}
 	r.Revision++
 
 	data, err := yaml.Marshal(r)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(filepath.Join(dst, "repository.yaml"), data, os.ModePerm)
+
+	Info(fmt.Sprintf(
+		"For repository %s creating revision %d and last update %s...",
+		r.Name, r.Revision, r.LastUpdate,
+	))
+
+	err = ioutil.WriteFile(repospec, data, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -238,32 +293,18 @@ func (r *LuetSystemRepository) Sync() (Repository, error) {
 	if c == nil {
 		return nil, errors.New("No client could be generated from repository.")
 	}
-	file, err := c.DownloadFile("repository.yaml")
+	file, err := c.DownloadFile(REPOSITORY_SPECFILE)
 	if err != nil {
-		return nil, errors.Wrap(err, "While downloading repository.yaml")
+		return nil, errors.Wrap(err, "While downloading "+REPOSITORY_SPECFILE)
 	}
-	dat, err := ioutil.ReadFile(file)
+	repo, err := r.ReadSpecFile(file, true)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error reading file "+file)
-	}
-	defer os.Remove(file)
-
-	var repo Repository
-	//	if config.LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-	//		repo, err = NewLuetSystemRepositoryFromYaml(dat,
-	//			pkg.NewBoltDatabase(filepath.Join(helpers.GetRepoDatabaseDirPath(r.Name), "luet.db")),
-	//		)
-	//	} else {
-	repo, err = NewLuetSystemRepositoryFromYaml(dat, pkg.NewInMemoryDatabase(false))
-	//	}
-	if err != nil {
-		return nil, errors.Wrap(err, "Error reading repository from file "+file)
-
+		return nil, err
 	}
 
 	archivetree, err := c.DownloadFile("tree.tar")
 	if err != nil {
-		return nil, errors.Wrap(err, "While downloading repository.yaml")
+		return nil, errors.Wrap(err, "While downloading "+REPOSITORY_SPECFILE)
 	}
 	defer os.RemoveAll(archivetree) // clean up
 

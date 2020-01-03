@@ -38,6 +38,7 @@ var createrepoCmd = &cobra.Command{
 		viper.BindPFlag("descr", cmd.Flags().Lookup("descr"))
 		viper.BindPFlag("urls", cmd.Flags().Lookup("urls"))
 		viper.BindPFlag("type", cmd.Flags().Lookup("type"))
+		viper.BindPFlag("reset-revision", cmd.Flags().Lookup("reset-revision"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -48,12 +49,13 @@ var createrepoCmd = &cobra.Command{
 		descr := viper.GetString("descr")
 		urls := viper.GetStringSlice("urls")
 		t := viper.GetString("type")
+		reset := viper.GetBool("reset-revision")
 
 		repo, err := installer.GenerateRepository(name, descr, t, urls, 1, packages, tree, pkg.NewInMemoryDatabase(false))
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
-		err = repo.Write(dst)
+		err = repo.Write(dst, reset)
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
@@ -72,6 +74,7 @@ func init() {
 	createrepoCmd.Flags().String("descr", "luet", "Repository description")
 	createrepoCmd.Flags().StringSlice("urls", []string{}, "Repository URLs")
 	createrepoCmd.Flags().String("type", "disk", "Repository type (disk)")
+	createrepoCmd.Flags().Bool("reset-revision", false, "Reset repository revision.")
 
 	RootCmd.AddCommand(createrepoCmd)
 }

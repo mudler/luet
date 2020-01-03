@@ -47,11 +47,15 @@ type Repository interface {
 	GetIndex() compiler.ArtifactIndex
 	GetTree() tree.Builder
 	SetTree(tree.Builder)
-	Write(path string) error
+	Write(path string, resetRevision bool) error
 	Sync() (Repository, error)
 	GetTreePath() string
 	SetTreePath(string)
 	GetType() string
 	SetType(string)
+	GetRevision() int
+	IncrementRevision()
+	GetLastUpdate() string
+	SetLastUpdate(string)
 	Client() Client
 }
