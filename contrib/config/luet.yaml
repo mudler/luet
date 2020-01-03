@@ -32,6 +32,9 @@
 #   Define spinner charset. See https://github.com/briandowns/spinner
 #   spinner_charset: 22
 #
+#   Enable warnings to exit
+#   fatal_warnings: false
+#
 # ---------------------------------------------
 # System configuration section:
 # ---------------------------------------------

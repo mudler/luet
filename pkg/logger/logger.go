@@ -164,6 +164,9 @@ func msg(level string, msg ...interface{}) {
 
 func Warning(mess ...interface{}) {
 	msg("warning", mess...)
+	if LuetCfg.GetGeneral().FatalWarns {
+		os.Exit(2)
+	}
 }
 
 func Debug(mess ...interface{}) {

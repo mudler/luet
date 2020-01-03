@@ -38,6 +38,7 @@ type LuetGeneralConfig struct {
 	ShowBuildOutput bool `mapstructure:"show_build_output"`
 	SpinnerMs       int  `mapstructure:"spinner_ms"`
 	SpinnerCharset  int  `mapstructure:"spinner_charset"`
+	FatalWarns      bool `mapstructure:"fatal_warnings"`
 }
 
 type LuetSystemConfig struct {
@@ -109,6 +110,7 @@ func GenDefault(viper *v.Viper) {
 	viper.SetDefault("general.show_build_output", false)
 	viper.SetDefault("general.spinner_ms", 100)
 	viper.SetDefault("general.spinner_charset", 22)
+	viper.SetDefault("general.fatal_warnings", false)
 
 	viper.SetDefault("system.database_engine", "boltdb")
 	viper.SetDefault("system.database_path", "/var/cache/luet")
@@ -140,9 +142,10 @@ func (c *LuetGeneralConfig) String() string {
 general:
   concurrency: %d
   debug: %t
+  fatal_warnings: %t
   show_build_output: %t
   spinner_ms: %d
-  spinner_charset: %d`, c.Concurrency, c.Debug, c.ShowBuildOutput,
+  spinner_charset: %d`, c.Concurrency, c.Debug, c.FatalWarns, c.ShowBuildOutput,
 		c.SpinnerMs, c.SpinnerCharset)
 
 	return ans

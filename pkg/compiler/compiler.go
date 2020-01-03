@@ -335,13 +335,11 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		// TODO: Handle caching and optionally do not remove things
 		err = cs.Backend.RemoveImage(builderOpts)
 		if err != nil {
-			// TODO: Have a --fatal flag which enables Warnings to exit.
 			Warning("Could not remove image ", builderOpts.ImageName)
 			//	return nil, errors.Wrap(err, "Could not remove image")
 		}
 		err = cs.Backend.RemoveImage(runnerOpts)
 		if err != nil {
-			// TODO: Have a --fatal flag which enables Warnings to exit.
 			Warning("Could not remove image ", builderOpts.ImageName)
 			//	return nil, errors.Wrap(err, "Could not remove image")
 		}
@@ -433,7 +431,6 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 		// TODO: Handle caching and optionally do not remove things
 		err = cs.Backend.RemoveImage(builderOpts)
 		if err != nil {
-			// TODO: Have a --fatal flag which enables Warnings to exit.
 			Warning("Could not remove image ", builderOpts.ImageName)
 			//	return nil, errors.Wrap(err, "Could not remove image")
 		}
