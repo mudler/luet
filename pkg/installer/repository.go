@@ -21,7 +21,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mudler/luet/pkg/installer/client"
 
@@ -49,6 +51,8 @@ type LuetSystemRepositorySerialized struct {
 	Priority    int                         `json:"priority"`
 	Index       []*compiler.PackageArtifact `json:"index"`
 	Type        string                      `json:"type"`
+	Revision    int                         `json:"revision,omitempty"`
+	LastUpdate  string                      `json:"last_update,omitempty"`
 }
 
 func GenerateRepository(name, descr, t string, urls []string, priority int, src, treeDir string, db pkg.PackageDatabase) (Repository, error) {
@@ -97,6 +101,12 @@ func NewLuetSystemRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (Repos
 			p.Priority,
 			true,
 		),
+	}
+	if p.Revision > 0 {
+		r.Revision = p.Revision
+	}
+	if p.LastUpdate != "" {
+		r.LastUpdate = p.LastUpdate
 	}
 	i := compiler.ArtifactIndex{}
 	for _, ii := range p.Index {
@@ -185,6 +195,8 @@ func (r *LuetSystemRepository) Write(dst string) error {
 		return err
 	}
 	r.Index = r.Index.CleanPath()
+	r.LastUpdate = strconv.FormatInt(time.Now().Unix(), 10)
+	r.Revision++
 
 	data, err := yaml.Marshal(r)
 	if err != nil {

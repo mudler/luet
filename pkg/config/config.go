@@ -56,7 +56,14 @@ type LuetRepository struct {
 	Priority       int               `json:"priority,omitempty" yaml:"priority,omitempty" mapstructure:"priority"`
 	Enable         bool              `json:"enable" yaml:"enable" mapstructure:"enable"`
 	Authentication map[string]string `json:"auth,omitempty" yaml:"auth,omitempty" mapstructure:"auth,omitempty"`
-	TreePath       string            `json:"tree_path,omitempty" yaml::"tree_path,omitempty" mapstructure:"tree_path"`
+	TreePath       string            `json:"tree_path,omitempty" yaml:"tree_path,omitempty" mapstructure:"tree_path"`
+
+	// Serialized options not used in repository configuration
+
+	// Incremented value that identify revision of the repository in a user-friendly way.
+	Revision int `json:"revision,omitempty" yaml:"-,omitempty" mapstructure:"-,omitempty"`
+	// Epoch time in seconds
+	LastUpdate string `json:"last_update,omitempty" yaml:"-,omitempty" mapstructure:"-,omitempty"`
 }
 
 func NewLuetRepository(name, t, descr string, urls []string, priority int, enable bool) *LuetRepository {
