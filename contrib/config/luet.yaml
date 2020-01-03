@@ -64,7 +64,7 @@
 # through repos_confdir option is possible
 # define directly the list of the repositories.
 #
-# system_repositories:
+# repositories:
 #   - name: "Local Repos"
 #     type: "dir"
 #     priority: 1
