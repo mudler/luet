@@ -76,7 +76,7 @@ func LoadRepositories(c *LuetConfig) error {
 }
 
 func LoadRepository(data []byte) (*LuetRepository, error) {
-	ans := &LuetRepository{Enable: false}
+	ans := NewEmptyLuetRepository()
 	err := yaml.Unmarshal(data, &ans)
 	if err != nil {
 		return nil, err

@@ -74,6 +74,19 @@ func NewLuetRepository(name, t, descr string, urls []string, priority int, enabl
 	}
 }
 
+func NewEmptyLuetRepository() *LuetRepository {
+	return &LuetRepository{
+		Name:           "",
+		Description:    "",
+		Urls:           []string{},
+		Type:           "",
+		Priority:       9999,
+		TreePath:       "",
+		Enable:         false,
+		Authentication: make(map[string]string, 0),
+	}
+}
+
 func (r *LuetRepository) String() string {
 	return fmt.Sprintf("[%s] prio: %d, type: %s, enable: %t", r.Name, r.Priority, r.Type, r.Enable)
 }
