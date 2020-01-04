@@ -54,9 +54,7 @@ var RootCmd = &cobra.Command{
 
 func LoadConfig(c *config.LuetConfig) error {
 	// If a config file is found, read it in.
-	if err := c.Viper.ReadInConfig(); err == nil {
-		Info("Using config file:", c.Viper.ConfigFileUsed())
-	} else {
+	if err := c.Viper.ReadInConfig(); err != nil {
 		Warning(err)
 	}
 
@@ -64,6 +62,8 @@ func LoadConfig(c *config.LuetConfig) error {
 	if err != nil {
 		return err
 	}
+
+	Debug("Using config file:", c.Viper.ConfigFileUsed())
 
 	NewSpinner()
 
