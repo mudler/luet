@@ -40,6 +40,7 @@ import (
 
 const (
 	REPOSITORY_SPECFILE = "repository.yaml"
+	TREE_TARBALL        = "tree.tar"
 )
 
 type LuetSystemRepository struct {
@@ -270,7 +271,7 @@ func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
 	if err != nil {
 		return errors.Wrap(err, "Error met while saving the tree")
 	}
-	err = helpers.Tar(archive, filepath.Join(dst, "tree.tar"))
+	err = helpers.Tar(archive, filepath.Join(dst, TREE_TARBALL))
 	if err != nil {
 		return errors.Wrap(err, "Error met while creating package archive")
 	}
@@ -302,9 +303,9 @@ func (r *LuetSystemRepository) Sync() (Repository, error) {
 		return nil, err
 	}
 
-	archivetree, err := c.DownloadFile("tree.tar")
+	archivetree, err := c.DownloadFile(TREE_TARBALL)
 	if err != nil {
-		return nil, errors.Wrap(err, "While downloading "+REPOSITORY_SPECFILE)
+		return nil, errors.Wrap(err, "While downloading "+TREE_TARBALL)
 	}
 	defer os.RemoveAll(archivetree) // clean up
 

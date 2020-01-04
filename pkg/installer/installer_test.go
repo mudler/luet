@@ -86,12 +86,12 @@ var _ = Describe("Installer", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).ToNot(BeTrue())
 			err = repo.Write(tmpdir, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).To(BeTrue())
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
@@ -199,12 +199,12 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).ToNot(BeTrue())
 			err = repo.Write(tmpdir, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).To(BeTrue())
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
@@ -307,12 +307,12 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).ToNot(BeTrue())
 			err = repo.Write(tmpdir, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).To(BeTrue())
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
@@ -420,14 +420,14 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).ToNot(BeTrue())
 			err = repo.Write(tmpdir, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Exists(spec.Rel("b-test-1.1.package.tar.gz"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("b-test-1.1.package.tar"))).ToNot(BeTrue())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).To(BeTrue())
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
