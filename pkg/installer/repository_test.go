@@ -87,7 +87,7 @@ var _ = Describe("Repository", func() {
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel("tree.tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir)
+			err = repo.Write(tmpdir, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
