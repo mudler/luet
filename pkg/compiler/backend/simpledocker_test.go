@@ -40,7 +40,7 @@ var _ = Describe("Docker backend", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase())
+			compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase(), NewDefaultCompilerOptions())
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
 

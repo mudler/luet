@@ -92,6 +92,22 @@ func NewPackageArtifactFromYaml(data []byte) (Artifact, error) {
 	return p, err
 }
 
+func LoadArtifactFromYaml(spec CompilationSpec) (Artifact, error) {
+
+	metaFile := spec.GetPackage().GetFingerPrint() + ".metadata.yaml"
+	dat, err := ioutil.ReadFile(spec.Rel(metaFile))
+	if err != nil {
+		return nil, errors.Wrap(err, "Error reading file "+metaFile)
+	}
+	art, err := NewPackageArtifactFromYaml(dat)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error writing file "+metaFile)
+	}
+	// It is relative, set it back to abs
+	art.SetPath(spec.Rel(art.GetPath()))
+	return art, nil
+}
+
 func (a *PackageArtifact) SetCompressionType(t CompressionImplementation) {
 	a.CompressionType = t
 }

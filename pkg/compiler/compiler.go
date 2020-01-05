@@ -21,7 +21,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 	"sync"
 
@@ -37,15 +36,15 @@ const BuildFile = "build.yaml"
 
 type LuetCompiler struct {
 	*tree.CompilerRecipe
-	Backend            CompilerBackend
-	Database           pkg.PackageDatabase
-	ImageRepository    string
-	PullFirst, KeepImg bool
-	Concurrency        int
-	CompressionType    CompressionImplementation
+	Backend                   CompilerBackend
+	Database                  pkg.PackageDatabase
+	ImageRepository           string
+	PullFirst, KeepImg, Clean bool
+	Concurrency               int
+	CompressionType           CompressionImplementation
 }
 
-func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase) Compiler {
+func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase, opt *CompilerOptions) Compiler {
 	// The CompilerRecipe will gives us a tree with only build deps listed.
 	return &LuetCompiler{
 		Backend: backend,
@@ -53,11 +52,12 @@ func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase) Compiler {
 			tree.Recipe{Database: db},
 		},
 		Database:        db,
-		ImageRepository: "luet/cache",
-		PullFirst:       true,
-		CompressionType: None,
-		KeepImg:         true,
-		Concurrency:     runtime.NumCPU(),
+		ImageRepository: opt.ImageRepository,
+		PullFirst:       opt.PullFirst,
+		CompressionType: opt.CompressionType,
+		KeepImg:         opt.KeepImg,
+		Concurrency:     opt.Concurrency,
+		Clean:           opt.Clean,
 	}
 }
 
@@ -227,6 +227,12 @@ func (cs *LuetCompiler) stripIncludesFromRootfs(includes []string, rootfs string
 }
 
 func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage string, concurrency int, keepPermissions, keepImg bool, p CompilationSpec) (Artifact, error) {
+	if !cs.Clean {
+		if art, err := LoadArtifactFromYaml(p); err == nil {
+			Debug("Artifact reloaded. Skipping build")
+			return art, err
+		}
+	}
 	pkgTag := ":package:  " + p.GetPackage().GetName()
 
 	p.SetSeedImage(image) // In this case, we ignore the build deps as we suppose that the image has them - otherwise we recompose the tree with a solver,
@@ -380,6 +386,12 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 }
 
 func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPermissions, keepImg bool, concurrency int) (Artifact, error) {
+	if !cs.Clean {
+		if art, err := LoadArtifactFromYaml(p); err == nil {
+			Debug("Artifact reloaded. Skipping build")
+			return art, err
+		}
+	}
 	pkgTag := ":package:  " + p.GetPackage().GetName()
 
 	Info(pkgTag, "   🍩 Build starts 🔨 🔨 🔨 ")
