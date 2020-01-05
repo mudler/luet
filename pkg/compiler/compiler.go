@@ -227,6 +227,11 @@ func (cs *LuetCompiler) stripIncludesFromRootfs(includes []string, rootfs string
 }
 
 func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage string, concurrency int, keepPermissions, keepImg bool, p CompilationSpec) (Artifact, error) {
+	if !cs.Clean {
+		if art, err := LoadArtifactFromYaml(p); err == nil {
+			return art, err
+		}
+	}
 	pkgTag := ":package:  " + p.GetPackage().GetName()
 
 	p.SetSeedImage(image) // In this case, we ignore the build deps as we suppose that the image has them - otherwise we recompose the tree with a solver,
@@ -382,6 +387,11 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 }
 
 func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPermissions, keepImg bool, concurrency int) (Artifact, error) {
+	if !cs.Clean {
+		if art, err := LoadArtifactFromYaml(p); err == nil {
+			return art, err
+		}
+	}
 	pkgTag := ":package:  " + p.GetPackage().GetName()
 
 	Info(pkgTag, "   🍩 Build starts 🔨 🔨 🔨 ")
