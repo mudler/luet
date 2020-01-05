@@ -99,8 +99,13 @@ func LoadArtifactFromYaml(spec CompilationSpec) (Artifact, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading file "+metaFile)
 	}
-
-	return NewPackageArtifactFromYaml(dat)
+	art, err := NewPackageArtifactFromYaml(dat)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error writing file "+metaFile)
+	}
+	// It is relative, set it back to abs
+	art.SetPath(spec.Rel(art.GetPath()))
+	return art, nil
 }
 
 func (a *PackageArtifact) SetCompressionType(t CompressionImplementation) {
