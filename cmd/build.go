@@ -47,6 +47,7 @@ var buildCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
+		clean := viper.GetBool("clean")
 		src := viper.GetString("tree")
 		dst := viper.GetString("destination")
 		concurrency := viper.GetInt("concurrency")
@@ -90,7 +91,9 @@ var buildCmd = &cobra.Command{
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
-		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+		opts := compiler.NewDefaultCompilerOptions()
+		opts.Clean = clean
+		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), opts)
 		luetCompiler.SetConcurrency(concurrency)
 		luetCompiler.SetCompressionType(compiler.CompressionImplementation(compressionType))
 		if !all {
@@ -151,6 +154,7 @@ func init() {
 	if err != nil {
 		Fatal(err)
 	}
+	buildCmd.Flags().Bool("clean", true, "Build all packages without considering the packages present in the build directory")
 	buildCmd.Flags().String("tree", path, "Source luet tree")
 	buildCmd.Flags().String("backend", "docker", "backend used (docker,img)")
 	buildCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
