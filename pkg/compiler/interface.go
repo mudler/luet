@@ -50,8 +50,8 @@ type CompilerOptions struct {
 	Clean              bool
 }
 
-func NewDefaultCompilerOptions() CompilerOptions {
-	return CompilerOptions{
+func NewDefaultCompilerOptions() *CompilerOptions {
+	return &CompilerOptions{
 		ImageRepository: "luet/cache",
 		PullFirst:       true,
 		CompressionType: None,

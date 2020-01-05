@@ -35,6 +35,7 @@ var buildCmd = &cobra.Command{
 	Short: "build a package or a tree",
 	Long:  `build packages or trees from luet tree definitions. Packages are in [category]/[name]-[version] form`,
 	PreRun: func(cmd *cobra.Command, args []string) {
+		viper.BindPFlag("clean", cmd.Flags().Lookup("clean"))
 		viper.BindPFlag("tree", cmd.Flags().Lookup("tree"))
 		viper.BindPFlag("destination", cmd.Flags().Lookup("destination"))
 		viper.BindPFlag("backend", cmd.Flags().Lookup("backend"))
