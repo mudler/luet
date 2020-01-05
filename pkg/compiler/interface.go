@@ -106,6 +106,19 @@ type ArtifactLayer struct {
 	ToImage   string        `json:"Image2"`
 	Diffs     ArtifactDiffs `json:"Diff"`
 }
+type ArtifactLayerSummary struct {
+	FromImage   string `json:"image1"`
+	ToImage     string `json:"image2"`
+	AddFiles    int    `json:"add_files"`
+	AddSizes    int64  `json:"add_sizes"`
+	DelFiles    int    `json:"del_files"`
+	DelSizes    int64  `json:"del_sizes"`
+	ChangeFiles int    `json:"change_files"`
+	ChangeSizes int64  `json:"change_sizes"`
+}
+type ArtifactLayersSummary struct {
+	Layers []ArtifactLayerSummary `json:"summary"`
+}
 
 // CompilationSpec represent a compilation specification derived from a package
 type CompilationSpec interface {

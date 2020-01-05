@@ -459,3 +459,38 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 	}
 	return a, nil
 }
+
+func ComputeArtifactLayerSummary(diffs []ArtifactLayer) ArtifactLayersSummary {
+
+	ans := ArtifactLayersSummary{
+		Layers: make([]ArtifactLayerSummary, 0),
+	}
+
+	for _, layer := range diffs {
+		sum := ArtifactLayerSummary{
+			FromImage:   layer.FromImage,
+			ToImage:     layer.ToImage,
+			AddFiles:    0,
+			AddSizes:    0,
+			DelFiles:    0,
+			DelSizes:    0,
+			ChangeFiles: 0,
+			ChangeSizes: 0,
+		}
+		for _, a := range layer.Diffs.Additions {
+			sum.AddFiles++
+			sum.AddSizes += int64(a.Size)
+		}
+		for _, d := range layer.Diffs.Deletions {
+			sum.DelFiles++
+			sum.DelSizes += int64(d.Size)
+		}
+		for _, c := range layer.Diffs.Changes {
+			sum.ChangeFiles++
+			sum.ChangeSizes += int64(c.Size)
+		}
+		ans.Layers = append(ans.Layers, sum)
+	}
+
+	return ans
+}

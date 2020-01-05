@@ -17,6 +17,7 @@ package backend
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -237,8 +238,6 @@ func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLaye
 
 	if config.LuetCfg.GetGeneral().ShowBuildOutput {
 		Info(string(out))
-	} else {
-		Debug(string(out))
 	}
 
 	var diffs []compiler.ArtifactLayer
@@ -247,5 +246,17 @@ func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLaye
 	if err != nil {
 		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed unmarshalling json response: "+string(out))
 	}
+
+	if config.LuetCfg.GetLogging().Level == "debug" {
+		summary := compiler.ComputeArtifactLayerSummary(diffs)
+		for _, l := range summary.Layers {
+			Debug(fmt.Sprintf("Diff %s -> %s: add %d (%d bytes), del %d (%d bytes), change %d (%d bytes)",
+				l.FromImage, l.ToImage,
+				l.AddFiles, l.AddSizes,
+				l.DelFiles, l.DelSizes,
+				l.ChangeFiles, l.ChangeSizes))
+		}
+	}
+
 	return diffs, nil
 }
