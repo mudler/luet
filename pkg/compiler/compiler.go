@@ -21,7 +21,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 	"sync"
 
@@ -37,15 +36,15 @@ const BuildFile = "build.yaml"
 
 type LuetCompiler struct {
 	*tree.CompilerRecipe
-	Backend            CompilerBackend
-	Database           pkg.PackageDatabase
-	ImageRepository    string
-	PullFirst, KeepImg bool
-	Concurrency        int
-	CompressionType    CompressionImplementation
+	Backend                   CompilerBackend
+	Database                  pkg.PackageDatabase
+	ImageRepository           string
+	PullFirst, KeepImg, Clean bool
+	Concurrency               int
+	CompressionType           CompressionImplementation
 }
 
-func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase) Compiler {
+func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase, opt CompilerOptions) Compiler {
 	// The CompilerRecipe will gives us a tree with only build deps listed.
 	return &LuetCompiler{
 		Backend: backend,
@@ -53,11 +52,12 @@ func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase) Compiler {
 			tree.Recipe{Database: db},
 		},
 		Database:        db,
-		ImageRepository: "luet/cache",
-		PullFirst:       true,
-		CompressionType: None,
-		KeepImg:         true,
-		Concurrency:     runtime.NumCPU(),
+		ImageRepository: opt.ImageRepository,
+		PullFirst:       opt.PullFirst,
+		CompressionType: opt.CompressionType,
+		KeepImg:         opt.KeepImg,
+		Concurrency:     opt.Concurrency,
+		Clean:           opt.Clean,
 	}
 }
 

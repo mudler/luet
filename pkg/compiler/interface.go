@@ -16,6 +16,8 @@
 package compiler
 
 import (
+	"runtime"
+
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 )
@@ -38,6 +40,24 @@ type CompilerBackendOptions struct {
 	SourcePath     string
 	DockerFileName string
 	Destination    string
+}
+
+type CompilerOptions struct {
+	ImageRepository    string
+	PullFirst, KeepImg bool
+	Concurrency        int
+	CompressionType    CompressionImplementation
+	Clean              bool
+}
+
+func NewDefaultCompilerOptions() CompilerOptions {
+	return CompilerOptions{
+		ImageRepository: "luet/cache",
+		PullFirst:       true,
+		CompressionType: None,
+		KeepImg:         true,
+		Concurrency:     runtime.NumCPU(),
+	}
 }
 
 type CompilerBackend interface {

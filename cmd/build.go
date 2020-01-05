@@ -90,7 +90,7 @@ var buildCmd = &cobra.Command{
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
-		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase())
+		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
 		luetCompiler.SetConcurrency(concurrency)
 		luetCompiler.SetCompressionType(compiler.CompressionImplementation(compressionType))
 		if !all {
