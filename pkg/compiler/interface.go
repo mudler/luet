@@ -57,6 +57,7 @@ func NewDefaultCompilerOptions() CompilerOptions {
 		CompressionType: None,
 		KeepImg:         true,
 		Concurrency:     runtime.NumCPU(),
+		Clean:           true,
 	}
 }
 
