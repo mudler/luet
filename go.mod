@@ -5,10 +5,11 @@ go 1.12
 require (
 	github.com/DataDog/zstd v1.4.4 // indirect
 	github.com/MottainaiCI/simplestreams-builder v0.0.0-20190710131531-efb382161f56 // indirect
-	github.com/Sabayon/pkgs-checker v0.4.1
+	github.com/Sabayon/pkgs-checker v0.4.2-0.20200101193228-1d500105afb7
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 	github.com/briandowns/spinner v1.7.0
 	github.com/cavaliercoder/grab v2.0.0+incompatible
+	github.com/creack/pty v1.1.9 // indirect
 	github.com/crillab/gophersat v1.1.7
 	github.com/docker/docker v0.7.3-0.20180827131323-0c5f8d2b9b23
 	github.com/ghodss/yaml v1.0.0
@@ -16,6 +17,7 @@ require (
 	github.com/hashicorp/go-version v1.2.0
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
 	github.com/klauspost/pgzip v1.2.1
+	github.com/kr/pretty v0.2.0 // indirect
 	github.com/kyokomi/emoji v2.1.0+incompatible
 	github.com/logrusorgru/aurora v0.0.0-20190417123914-21d75270181e
 	github.com/marcsauter/single v0.0.0-20181104081128-f8bf46f26ec0
@@ -27,15 +29,23 @@ require (
 	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/philopon/go-toposort v0.0.0-20170620085441-9be86dbd762f
 	github.com/pkg/errors v0.8.1
+	github.com/rogpeppe/go-internal v1.5.1 // indirect
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.5.0
 	github.com/stevenle/topsort v0.0.0-20130922064739-8130c1d7596b
 	go.etcd.io/bbolt v1.3.3
-	golang.org/x/crypto v0.0.0-20191028145041-f83a4685e152 // indirect
-	golang.org/x/sys v0.0.0-20191110163157-d32e6e3b99c4 // indirect
-	gopkg.in/yaml.v2 v2.2.5
+	go.uber.org/atomic v1.5.1 // indirect
+	go.uber.org/multierr v1.4.0 // indirect
+	go.uber.org/zap v1.13.0
+	golang.org/x/crypto v0.0.0-20191227163750-53104e6ec876 // indirect
+	golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f // indirect
+	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553 // indirect
+	golang.org/x/sys v0.0.0-20200102141924-c96a22e43c9c // indirect
+	golang.org/x/tools v0.0.0-20200102200121-6de373a2766c // indirect
+	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
+	gopkg.in/yaml.v2 v2.2.7
 	mvdan.cc/sh v2.6.4+incompatible // indirect
 	mvdan.cc/sh/v3 v3.0.0-beta1
 )

@@ -91,26 +91,15 @@ func NewLuetInstaller(concurrency int) Installer {
 }
 
 func (l *LuetInstaller) Upgrade(s *System) error {
-	Spinner(32)
-	defer SpinnerStop()
-	syncedRepos := Repositories{}
-	for _, r := range l.PackageRepositories {
-		repo, err := r.Sync()
-		if err != nil {
-			return errors.Wrap(err, "Failed syncing repository: "+r.GetName())
-		}
-		syncedRepos = append(syncedRepos, repo)
+	syncedRepos, err := l.SyncRepositories(true)
+	if err != nil {
+		return err
 	}
-
-	// compute what to install and from where
-	sort.Sort(syncedRepos)
-
 	// First match packages against repositories by priority
 	//	matches := syncedRepos.PackageMatches(p)
-
-	// compute a "big" world
 	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
+	// compute a "big" world
 	solv := solver.NewSolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false))
 	uninstall, solution, err := solv.Upgrade()
 	if err != nil {
@@ -134,8 +123,29 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	return l.Install(toInstall, s)
 }
 
-func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
+func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
+	Spinner(32)
+	defer SpinnerStop()
+	syncedRepos := Repositories{}
+	for _, r := range l.PackageRepositories {
+		repo, err := r.Sync()
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed syncing repository: "+r.GetName())
+		}
+		syncedRepos = append(syncedRepos, repo)
+	}
 
+	// compute what to install and from where
+	sort.Sort(syncedRepos)
+
+	if !inMemory {
+		l.PackageRepositories = syncedRepos
+	}
+
+	return syncedRepos, nil
+}
+
+func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 	var p []pkg.Package
 
 	// Check if the package is installed first
@@ -156,23 +166,12 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 		Warning("No package to install, bailing out with no errors")
 		return nil
 	}
-
 	// First get metas from all repos (and decodes trees)
 
-	Spinner(32)
-	defer SpinnerStop()
-	syncedRepos := Repositories{}
-	for _, r := range l.PackageRepositories {
-		repo, err := r.Sync()
-		if err != nil {
-			return errors.Wrap(err, "Failed syncing repository: "+r.GetName())
-		}
-		syncedRepos = append(syncedRepos, repo)
+	syncedRepos, err := l.SyncRepositories(true)
+	if err != nil {
+		return err
 	}
-
-	// compute what to install and from where
-	sort.Sort(syncedRepos)
-
 	// First match packages against repositories by priority
 	//	matches := syncedRepos.PackageMatches(p)
 
@@ -185,6 +184,7 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed solving solution for package")
 	}
+
 	// Gathers things to install
 	toInstall := map[string]ArtifactMatch{}
 	for _, assertion := range solution {
@@ -284,8 +284,6 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 
 func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
 
-	Info("Installing", a.Package.GetName())
-
 	artifact, err := a.Repository.Client().DownloadArtifact(a.Artifact)
 	defer os.Remove(artifact.GetPath())
 
@@ -296,7 +294,7 @@ func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
 
 	files, err := artifact.FileList()
 	if err != nil {
-		return errors.Wrap(err, "Could not get file list")
+		return errors.Wrap(err, "Could not open package archive")
 	}
 
 	err = artifact.Unpack(s.Target, true)

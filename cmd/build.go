@@ -15,17 +15,18 @@
 package cmd
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
-	"regexp"
-	"runtime"
 
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
+	. "github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	tree "github.com/mudler/luet/pkg/tree"
 
+	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -39,7 +40,6 @@ var buildCmd = &cobra.Command{
 		viper.BindPFlag("tree", cmd.Flags().Lookup("tree"))
 		viper.BindPFlag("destination", cmd.Flags().Lookup("destination"))
 		viper.BindPFlag("backend", cmd.Flags().Lookup("backend"))
-		viper.BindPFlag("concurrency", cmd.Flags().Lookup("concurrency"))
 		viper.BindPFlag("privileged", cmd.Flags().Lookup("privileged"))
 		viper.BindPFlag("database", cmd.Flags().Lookup("database"))
 		viper.BindPFlag("revdeps", cmd.Flags().Lookup("revdeps"))
@@ -51,7 +51,7 @@ var buildCmd = &cobra.Command{
 		clean := viper.GetBool("clean")
 		src := viper.GetString("tree")
 		dst := viper.GetString("destination")
-		concurrency := viper.GetInt("concurrency")
+		concurrency := LuetCfg.GetGeneral().Concurrency
 		backendType := viper.GetString("backend")
 		privileged := viper.GetBool("privileged")
 		revdeps := viper.GetBool("revdeps")
@@ -99,15 +99,27 @@ var buildCmd = &cobra.Command{
 		luetCompiler.SetCompressionType(compiler.CompressionImplementation(compressionType))
 		if !all {
 			for _, a := range args {
-				decodepackage, err := regexp.Compile(`^([<>]?\~?=?)((([^\/]+)\/)?(?U)(\S+))(-(\d+(\.\d+)*[a-z]?(_(alpha|beta|pre|rc|p)\d*)*(-r\d+)?))?$`)
+				gp, err := _gentoo.ParsePackageStr(a)
 				if err != nil {
-					Fatal("Error: " + err.Error())
+					Fatal("Invalid package string ", a, ": ", err.Error())
 				}
-				packageInfo := decodepackage.FindAllStringSubmatch(a, -1)
-				category := packageInfo[0][4]
-				name := packageInfo[0][5]
-				version := packageInfo[0][1] + packageInfo[0][7]
-				spec, err := luetCompiler.FromPackage(&pkg.DefaultPackage{Name: name, Category: category, Version: version})
+
+				if gp.Version == "" {
+					gp.Version = "0"
+					gp.Condition = _gentoo.PkgCondGreaterEqual
+				}
+
+				pack := &pkg.DefaultPackage{
+					Name: gp.Name,
+					Version: fmt.Sprintf("%s%s%s",
+						pkg.PkgSelectorConditionFromInt(gp.Condition.Int()).String(),
+						gp.Version,
+						gp.VersionSuffix,
+					),
+					Category: gp.Category,
+					Uri:      make([]string, 0),
+				}
+				spec, err := luetCompiler.FromPackage(pack)
 				if err != nil {
 					Fatal("Error: " + err.Error())
 				}
@@ -158,7 +170,6 @@ func init() {
 	buildCmd.Flags().Bool("clean", true, "Build all packages without considering the packages present in the build directory")
 	buildCmd.Flags().String("tree", path, "Source luet tree")
 	buildCmd.Flags().String("backend", "docker", "backend used (docker,img)")
-	buildCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
 	buildCmd.Flags().Bool("privileged", false, "Privileged (Keep permissions)")
 	buildCmd.Flags().String("database", "memory", "database used for solving (memory,boltdb)")
 	buildCmd.Flags().Bool("revdeps", false, "Build with revdeps")

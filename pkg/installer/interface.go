@@ -27,6 +27,7 @@ type Installer interface {
 	Uninstall(pkg.Package, *System) error
 	Upgrade(s *System) error
 	Repositories([]Repository)
+	SyncRepositories(bool) (Repositories, error)
 }
 
 type Client interface {
@@ -38,17 +39,23 @@ type Repositories []Repository
 
 type Repository interface {
 	GetName() string
-	GetUri() string
-	SetUri(string)
+	GetDescription() string
+	GetUrls() []string
+	SetUrls([]string)
+	AddUrl(string)
 	GetPriority() int
 	GetIndex() compiler.ArtifactIndex
 	GetTree() tree.Builder
 	SetTree(tree.Builder)
-	Write(path string) error
+	Write(path string, resetRevision bool) error
 	Sync() (Repository, error)
 	GetTreePath() string
 	SetTreePath(string)
 	GetType() string
 	SetType(string)
+	GetRevision() int
+	IncrementRevision()
+	GetLastUpdate() string
+	SetLastUpdate(string)
 	Client() Client
 }

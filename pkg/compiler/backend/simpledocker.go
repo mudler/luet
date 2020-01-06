@@ -17,6 +17,7 @@ package backend
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -26,6 +27,7 @@ import (
 	capi "github.com/mudler/docker-companion/api"
 
 	"github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 
@@ -54,7 +56,12 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	}
 	Info(":whale: Building image " + name + " done")
 
-	//Info(string(out))
+	if config.LuetCfg.GetGeneral().ShowBuildOutput {
+		Info(string(out))
+	} else {
+		Debug(string(out))
+	}
+
 	return nil
 }
 
@@ -229,11 +236,27 @@ func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLaye
 		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed Resolving layer diffs: "+string(out))
 	}
 
+	if config.LuetCfg.GetGeneral().ShowBuildOutput {
+		Info(string(out))
+	}
+
 	var diffs []compiler.ArtifactLayer
 
 	err = json.Unmarshal(out, &diffs)
 	if err != nil {
 		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed unmarshalling json response: "+string(out))
 	}
+
+	if config.LuetCfg.GetLogging().Level == "debug" {
+		summary := compiler.ComputeArtifactLayerSummary(diffs)
+		for _, l := range summary.Layers {
+			Debug(fmt.Sprintf("Diff %s -> %s: add %d (%d bytes), del %d (%d bytes), change %d (%d bytes)",
+				l.FromImage, l.ToImage,
+				l.AddFiles, l.AddSizes,
+				l.DelFiles, l.DelSizes,
+				l.ChangeFiles, l.ChangeSizes))
+		}
+	}
+
 	return diffs, nil
 }

@@ -83,6 +83,8 @@ type Package interface {
 	GetLicense() string
 
 	IsSelector() bool
+	VersionMatchSelector(string) (bool, error)
+	SelectorMatchVersion(string) (bool, error)
 }
 
 type Tree interface {
@@ -322,15 +324,11 @@ func (p *DefaultPackage) Expand(definitiondb PackageDatabase) ([]Package, error)
 		return nil, err
 	}
 	for _, w := range all {
-		v, err := version.NewVersion(w.GetVersion())
+		match, err := p.SelectorMatchVersion(w.GetVersion())
 		if err != nil {
 			return nil, err
 		}
-		constraints, err := version.NewConstraint(p.GetVersion())
-		if err != nil {
-			return nil, err
-		}
-		if constraints.Check(v) {
+		if match {
 			versionsInWorld = append(versionsInWorld, w)
 		}
 	}

@@ -36,29 +36,58 @@ func NewLocalClient(r RepoData) *LocalClient {
 }
 
 func (c *LocalClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Artifact, error) {
+	var err error
+	var file *os.File = nil
+
 	artifactName := path.Base(artifact.GetPath())
-	Info("Downloading artifact", artifactName, "from", c.RepoData.Uri)
-	file, err := ioutil.TempFile(os.TempDir(), "localclient")
-	if err != nil {
+	ok := false
+	for _, uri := range c.RepoData.Urls {
+		Info("Downloading artifact", artifactName, "from", uri)
+		file, err = ioutil.TempFile(os.TempDir(), "localclient")
+		if err != nil {
+			continue
+		}
+		//defer os.Remove(file.Name())
+		err = helpers.CopyFile(filepath.Join(uri, artifactName), file.Name())
+		if err != nil {
+			continue
+		}
+		ok = true
+		break
+	}
+
+	if !ok {
 		return nil, err
 	}
-	//defer os.Remove(file.Name())
 
-	err = helpers.CopyFile(filepath.Join(c.RepoData.Uri, artifactName), file.Name())
 	newart := artifact
 	newart.SetPath(file.Name())
 	return newart, nil
 }
 func (c *LocalClient) DownloadFile(name string) (string, error) {
-	Info("Downloading file", name, "from", c.RepoData.Uri)
+	var err error
+	var file *os.File = nil
 
-	file, err := ioutil.TempFile(os.TempDir(), "localclient")
-	if err != nil {
-		return "", err
+	ok := false
+	for _, uri := range c.RepoData.Urls {
+		Info("Downloading file", name, "from", uri)
+		file, err = ioutil.TempFile(os.TempDir(), "localclient")
+		if err != nil {
+			continue
+		}
+		//defer os.Remove(file.Name())
+
+		err = helpers.CopyFile(filepath.Join(uri, name), file.Name())
+		if err != nil {
+			continue
+		}
+		ok = true
+		break
 	}
-	//defer os.Remove(file.Name())
 
-	err = helpers.CopyFile(filepath.Join(c.RepoData.Uri, name), file.Name())
+	if ok {
+		return file.Name(), nil
+	}
 
-	return file.Name(), err
+	return "", err
 }

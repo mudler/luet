@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	version "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 
 	storm "github.com/asdine/storm"
@@ -233,16 +232,11 @@ func (db *BoltDatabase) getProvide(p Package) (Package, error) {
 
 		for ve, _ := range versions {
 
-			v, err := version.NewVersion(p.GetVersion())
+			match, err := p.VersionMatchSelector(ve)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "Error on match version")
 			}
-			constraints, err := version.NewConstraint(ve)
-			if err != nil {
-				return nil, err
-			}
-
-			if constraints.Check(v) {
+			if match {
 				pa, ok := db.ProvidesDatabase[p.GetPackageName()][ve]
 				if !ok {
 					return nil, errors.New("No versions found for package")
@@ -367,15 +361,11 @@ func (db *BoltDatabase) FindPackages(p Package) ([]Package, error) {
 			continue
 		}
 
-		v, err := version.NewVersion(w.GetVersion())
+		match, err := p.SelectorMatchVersion(w.GetVersion())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Error on match selector")
 		}
-		constraints, err := version.NewConstraint(p.GetVersion())
-		if err != nil {
-			return nil, err
-		}
-		if constraints.Check(v) {
+		if match {
 			versionsInWorld = append(versionsInWorld, w)
 		}
 	}

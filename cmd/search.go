@@ -18,10 +18,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 
+	. "github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/pkg/helpers"
 	installer "github.com/mudler/luet/pkg/installer"
-
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
@@ -34,17 +34,12 @@ var searchCmd = &cobra.Command{
 	Short: "Search packages",
 	Long:  `Search for installed and available packages`,
 	PreRun: func(cmd *cobra.Command, args []string) {
-		viper.BindPFlag("system-dbpath", cmd.Flags().Lookup("system-dbpath"))
-		viper.BindPFlag("system-target", cmd.Flags().Lookup("system-target"))
-		viper.BindPFlag("concurrency", cmd.Flags().Lookup("concurrency"))
+		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
+		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
 		viper.BindPFlag("installed", cmd.Flags().Lookup("installed"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		c := []*installer.LuetRepository{}
-		err := viper.UnmarshalKey("system-repositories", &c)
-		if err != nil {
-			Fatal("Error: " + err.Error())
-		}
+		var systemDB pkg.PackageDatabase
 
 		if len(args) != 1 {
 			Fatal("Wrong number of arguments (expected 1)")
@@ -52,25 +47,39 @@ var searchCmd = &cobra.Command{
 		installed := viper.GetBool("installed")
 
 		if !installed {
-			synced := installer.Repositories{}
 
-			for _, toSync := range c {
-				s, err := toSync.Sync()
-				if err != nil {
-					Fatal("Error: " + err.Error())
+			repos := installer.Repositories{}
+			for _, repo := range LuetCfg.SystemRepositories {
+				if !repo.Enable {
+					continue
 				}
-				synced = append(synced, s)
+				r := installer.NewSystemRepository(repo)
+				repos = append(repos, r)
 			}
+
+			inst := installer.NewLuetInstaller(LuetCfg.GetGeneral().Concurrency)
+			inst.Repositories(repos)
+			synced, err := inst.SyncRepositories(false)
+			if err != nil {
+				Fatal("Error: " + err.Error())
+			}
+
 			Info("--- Search results: ---")
 
 			matches := synced.Search(args[0])
 			for _, m := range matches {
-				Info(":package:", m.Package.GetCategory(), m.Package.GetName(), m.Package.GetVersion(), "repository:", m.Repo.GetName())
+				Info(":package:", m.Package.GetCategory(), m.Package.GetName(),
+					m.Package.GetVersion(), "repository:", m.Repo.GetName())
 			}
 		} else {
-			os.MkdirAll(viper.GetString("system-dbpath"), os.ModePerm)
-			systemDB := pkg.NewBoltDatabase(filepath.Join(viper.GetString("system-dbpath"), "luet.db"))
-			system := &installer.System{Database: systemDB, Target: viper.GetString("system-target")}
+
+			if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
+				systemDB = pkg.NewBoltDatabase(
+					filepath.Join(helpers.GetSystemRepoDatabaseDirPath(), "luet.db"))
+			} else {
+				systemDB = pkg.NewInMemoryDatabase(true)
+			}
+			system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
 			var term = regexp.MustCompile(args[0])
 
 			for _, k := range system.Database.GetPackages() {
@@ -91,7 +100,6 @@ func init() {
 	}
 	searchCmd.Flags().String("system-dbpath", path, "System db path")
 	searchCmd.Flags().String("system-target", path, "System rootpath")
-	searchCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
 	searchCmd.Flags().Bool("installed", false, "Search between system packages")
 	RootCmd.AddCommand(searchCmd)
 }

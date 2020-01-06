@@ -23,6 +23,7 @@ import (
 
 	"github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
+	config "github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/installer"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -81,16 +82,16 @@ var _ = Describe("Repository", func() {
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
 
-			repo, err := GenerateRepository("test", tmpdir, "local", 1, tmpdir, "../../tests/fixtures/buildable", pkg.NewInMemoryDatabase(false))
+			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, "../../tests/fixtures/buildable", pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
-			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir)
+			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).ToNot(BeTrue())
+			err = repo.Write(tmpdir, false)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).To(BeTrue())
 		})
 	})
 	Context("Matching packages", func() {
@@ -105,8 +106,8 @@ var _ = Describe("Repository", func() {
 
 			_, err = builder2.GetDatabase().CreatePackage(package2)
 			Expect(err).ToNot(HaveOccurred())
-			repo1 := &LuetRepository{Name: "test1", Tree: builder1}
-			repo2 := &LuetRepository{Name: "test2", Tree: builder2}
+			repo1 := &LuetSystemRepository{LuetRepository: &config.LuetRepository{Name: "test1"}, Tree: builder1}
+			repo2 := &LuetSystemRepository{LuetRepository: &config.LuetRepository{Name: "test2"}, Tree: builder2}
 			repositories := Repositories{repo1, repo2}
 			matches := repositories.PackageMatches([]pkg.Package{package1})
 			Expect(matches).To(Equal([]PackageMatch{{Repo: repo1, Package: package1}}))

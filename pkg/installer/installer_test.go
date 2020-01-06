@@ -34,7 +34,7 @@ import (
 var _ = Describe("Installer", func() {
 	Context("Writes a repository definition", func() {
 		It("Writes a repo and can install packages from it", func() {
-			//repo:=NewLuetRepository()
+			//repo:=NewLuetSystemRepository()
 
 			tmpdir, err := ioutil.TempDir("", "tree")
 			Expect(err).ToNot(HaveOccurred())
@@ -82,34 +82,35 @@ var _ = Describe("Installer", func() {
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
 
-			repo, err := GenerateRepository("test", tmpdir, "local", 1, tmpdir, "../../tests/fixtures/buildable", pkg.NewInMemoryDatabase(false))
+			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, "../../tests/fixtures/buildable", pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir)
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).ToNot(BeTrue())
+			err = repo.Write(tmpdir, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).To(BeTrue())
-			Expect(repo.GetUri()).To(Equal(tmpdir))
-			Expect(repo.GetType()).To(Equal("local"))
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).To(BeTrue())
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
+			Expect(repo.GetType()).To(Equal("disk"))
 
 			fakeroot, err := ioutil.TempDir("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
 			inst := NewLuetInstaller(1)
-			repo2, err := NewLuetRepositoryFromYaml([]byte(`
+			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
-type: "local"
-uri: "`+tmpdir+`"
+type: "disk"
+urls:
+  - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
 			inst.Repositories(Repositories{repo2})
-			Expect(repo.GetUri()).To(Equal(tmpdir))
-			Expect(repo.GetType()).To(Equal("local"))
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
+			Expect(repo.GetType()).To(Equal("disk"))
 			systemDB := pkg.NewInMemoryDatabase(false)
 			system := &System{Database: systemDB, Target: fakeroot}
 			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system)
@@ -146,7 +147,7 @@ uri: "`+tmpdir+`"
 
 	Context("Installation", func() {
 		It("Installs in a system with a persistent db", func() {
-			//repo:=NewLuetRepository()
+			//repo:=NewLuetSystemRepository()
 
 			tmpdir, err := ioutil.TempDir("", "tree")
 			Expect(err).ToNot(HaveOccurred())
@@ -194,34 +195,35 @@ uri: "`+tmpdir+`"
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
 
-			repo, err := GenerateRepository("test", tmpdir, "local", 1, tmpdir, "../../tests/fixtures/buildable", pkg.NewInMemoryDatabase(false))
+			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, "../../tests/fixtures/buildable", pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir)
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).ToNot(BeTrue())
+			err = repo.Write(tmpdir, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).To(BeTrue())
-			Expect(repo.GetUri()).To(Equal(tmpdir))
-			Expect(repo.GetType()).To(Equal("local"))
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).To(BeTrue())
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
+			Expect(repo.GetType()).To(Equal("disk"))
 
 			fakeroot, err := ioutil.TempDir("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
 			inst := NewLuetInstaller(1)
-			repo2, err := NewLuetRepositoryFromYaml([]byte(`
+			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
-type: "local"
-uri: "`+tmpdir+`"
+type: "disk"
+urls:
+  - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
 			inst.Repositories(Repositories{repo2})
-			Expect(repo.GetUri()).To(Equal(tmpdir))
-			Expect(repo.GetType()).To(Equal("local"))
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
+			Expect(repo.GetType()).To(Equal("disk"))
 
 			bolt, err := ioutil.TempDir("", "db")
 			Expect(err).ToNot(HaveOccurred())
@@ -264,7 +266,7 @@ uri: "`+tmpdir+`"
 
 	Context("Simple upgrades", func() {
 		It("Installs packages and Upgrades a system with a persistent db", func() {
-			//repo:=NewLuetRepository()
+			//repo:=NewLuetSystemRepository()
 
 			tmpdir, err := ioutil.TempDir("", "tree")
 			Expect(err).ToNot(HaveOccurred())
@@ -301,34 +303,35 @@ uri: "`+tmpdir+`"
 
 			Expect(errs).To(BeEmpty())
 
-			repo, err := GenerateRepository("test", tmpdir, "local", 1, tmpdir, "../../tests/fixtures/upgrade", pkg.NewInMemoryDatabase(false))
+			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, "../../tests/fixtures/upgrade", pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir)
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).ToNot(BeTrue())
+			err = repo.Write(tmpdir, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).To(BeTrue())
-			Expect(repo.GetUri()).To(Equal(tmpdir))
-			Expect(repo.GetType()).To(Equal("local"))
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).To(BeTrue())
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
+			Expect(repo.GetType()).To(Equal("disk"))
 
 			fakeroot, err := ioutil.TempDir("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
 			inst := NewLuetInstaller(1)
-			repo2, err := NewLuetRepositoryFromYaml([]byte(`
+			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
-type: "local"
-uri: "`+tmpdir+`"
+type: "disk"
+urls:
+  - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
 			inst.Repositories(Repositories{repo2})
-			Expect(repo.GetUri()).To(Equal(tmpdir))
-			Expect(repo.GetType()).To(Equal("local"))
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
+			Expect(repo.GetType()).To(Equal("disk"))
 
 			bolt, err := ioutil.TempDir("", "db")
 			Expect(err).ToNot(HaveOccurred())
@@ -377,7 +380,7 @@ uri: "`+tmpdir+`"
 
 	Context("Compressed packages", func() {
 		It("Installs", func() {
-			//repo:=NewLuetRepository()
+			//repo:=NewLuetSystemRepository()
 
 			tmpdir, err := ioutil.TempDir("", "tree")
 			Expect(err).ToNot(HaveOccurred())
@@ -413,36 +416,37 @@ uri: "`+tmpdir+`"
 
 			Expect(errs).To(BeEmpty())
 
-			repo, err := GenerateRepository("test", tmpdir, "local", 1, tmpdir, "../../tests/fixtures/upgrade", pkg.NewInMemoryDatabase(false))
+			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, "../../tests/fixtures/upgrade", pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir)
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).ToNot(BeTrue())
+			err = repo.Write(tmpdir, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Exists(spec.Rel("b-test-1.1.package.tar.gz"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("b-test-1.1.package.tar"))).ToNot(BeTrue())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("tree.tar"))).To(BeTrue())
-			Expect(repo.GetUri()).To(Equal(tmpdir))
-			Expect(repo.GetType()).To(Equal("local"))
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).To(BeTrue())
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
+			Expect(repo.GetType()).To(Equal("disk"))
 
 			fakeroot, err := ioutil.TempDir("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
 			inst := NewLuetInstaller(1)
-			repo2, err := NewLuetRepositoryFromYaml([]byte(`
+			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
-type: "local"
-uri: "`+tmpdir+`"
+type: "disk"
+urls:
+  - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
 			inst.Repositories(Repositories{repo2})
-			Expect(repo.GetUri()).To(Equal(tmpdir))
-			Expect(repo.GetType()).To(Equal("local"))
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
+			Expect(repo.GetType()).To(Equal("disk"))
 
 			bolt, err := ioutil.TempDir("", "db")
 			Expect(err).ToNot(HaveOccurred())

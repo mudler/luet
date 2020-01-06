@@ -17,50 +17,51 @@ package cmd
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 
+	. "github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/pkg/helpers"
 	installer "github.com/mudler/luet/pkg/installer"
-
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var upgradeCmd = &cobra.Command{
 	Use:   "upgrade",
 	Short: "Upgrades the system",
 	PreRun: func(cmd *cobra.Command, args []string) {
-		viper.BindPFlag("system-dbpath", cmd.Flags().Lookup("system-dbpath"))
-		viper.BindPFlag("system-target", cmd.Flags().Lookup("system-target"))
-		viper.BindPFlag("concurrency", cmd.Flags().Lookup("concurrency"))
+		LuetCfg.Viper.BindPFlag("system.database_path", installCmd.Flags().Lookup("system-dbpath"))
+		LuetCfg.Viper.BindPFlag("system.rootfs", installCmd.Flags().Lookup("system-target"))
 	},
 	Long: `Upgrades packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
-		c := []*installer.LuetRepository{}
-		err := viper.UnmarshalKey("system-repositories", &c)
+		var systemDB pkg.PackageDatabase
+
+		repos := installer.Repositories{}
+		for _, repo := range LuetCfg.SystemRepositories {
+			if !repo.Enable {
+				continue
+			}
+
+			r := installer.NewSystemRepository(repo)
+			repos = append(repos, r)
+		}
+
+		inst := installer.NewLuetInstaller(LuetCfg.GetGeneral().Concurrency)
+		inst.Repositories(repos)
+		_, err := inst.SyncRepositories(false)
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
 
-		// This shouldn't be necessary, but we need to unmarshal the repositories to a concrete struct, thus we need to port them back to the Repositories type
-		synced := installer.Repositories{}
-		for _, toSync := range c {
-			s, err := toSync.Sync()
-			if err != nil {
-				Fatal("Error: " + err.Error())
-			}
-			synced = append(synced, s)
+		if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
+			systemDB = pkg.NewBoltDatabase(
+				filepath.Join(helpers.GetSystemRepoDatabaseDirPath(), "luet.db"))
+		} else {
+			systemDB = pkg.NewInMemoryDatabase(true)
 		}
-
-		inst := installer.NewLuetInstaller(viper.GetInt("concurrency"))
-
-		inst.Repositories(synced)
-
-		os.MkdirAll(viper.GetString("system-dbpath"), os.ModePerm)
-		systemDB := pkg.NewBoltDatabase(filepath.Join(viper.GetString("system-dbpath"), "luet.db"))
-		system := &installer.System{Database: systemDB, Target: viper.GetString("system-target")}
+		system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
 		err = inst.Upgrade(system)
 		if err != nil {
 			Fatal("Error: " + err.Error())
@@ -75,7 +76,6 @@ func init() {
 	}
 	upgradeCmd.Flags().String("system-dbpath", path, "System db path")
 	upgradeCmd.Flags().String("system-target", path, "System rootpath")
-	upgradeCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
 
 	RootCmd.AddCommand(upgradeCmd)
 }

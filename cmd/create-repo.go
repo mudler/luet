@@ -35,8 +35,10 @@ var createrepoCmd = &cobra.Command{
 		viper.BindPFlag("tree", cmd.Flags().Lookup("tree"))
 		viper.BindPFlag("output", cmd.Flags().Lookup("output"))
 		viper.BindPFlag("name", cmd.Flags().Lookup("name"))
-		viper.BindPFlag("uri", cmd.Flags().Lookup("uri"))
+		viper.BindPFlag("descr", cmd.Flags().Lookup("descr"))
+		viper.BindPFlag("urls", cmd.Flags().Lookup("urls"))
 		viper.BindPFlag("type", cmd.Flags().Lookup("type"))
+		viper.BindPFlag("reset-revision", cmd.Flags().Lookup("reset-revision"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -44,14 +46,16 @@ var createrepoCmd = &cobra.Command{
 		dst := viper.GetString("output")
 		packages := viper.GetString("packages")
 		name := viper.GetString("name")
-		uri := viper.GetString("uri")
+		descr := viper.GetString("descr")
+		urls := viper.GetStringSlice("urls")
 		t := viper.GetString("type")
+		reset := viper.GetBool("reset-revision")
 
-		repo, err := installer.GenerateRepository(name, uri, t, 1, packages, tree, pkg.NewInMemoryDatabase(false))
+		repo, err := installer.GenerateRepository(name, descr, t, urls, 1, packages, tree, pkg.NewInMemoryDatabase(false))
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
-		err = repo.Write(dst)
+		err = repo.Write(dst, reset)
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
@@ -67,8 +71,10 @@ func init() {
 	createrepoCmd.Flags().String("tree", path, "Source luet tree")
 	createrepoCmd.Flags().String("output", path, "Destination folder")
 	createrepoCmd.Flags().String("name", "luet", "Repository name")
-	createrepoCmd.Flags().String("uri", path, "Repository uri")
-	createrepoCmd.Flags().String("type", "local", "Repository type (local)")
+	createrepoCmd.Flags().String("descr", "luet", "Repository description")
+	createrepoCmd.Flags().StringSlice("urls", []string{}, "Repository URLs")
+	createrepoCmd.Flags().String("type", "disk", "Repository type (disk)")
+	createrepoCmd.Flags().Bool("reset-revision", false, "Reset repository revision.")
 
 	RootCmd.AddCommand(createrepoCmd)
 }

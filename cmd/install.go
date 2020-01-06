@@ -15,70 +15,78 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
-	"runtime"
 
 	installer "github.com/mudler/luet/pkg/installer"
 
+	. "github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
+	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var installCmd = &cobra.Command{
 	Use:   "install <pkg1> <pkg2> ...",
 	Short: "Install a package",
 	PreRun: func(cmd *cobra.Command, args []string) {
-		viper.BindPFlag("system-dbpath", cmd.Flags().Lookup("system-dbpath"))
-		viper.BindPFlag("system-target", cmd.Flags().Lookup("system-target"))
-		viper.BindPFlag("concurrency", cmd.Flags().Lookup("concurrency"))
+		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
+		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
 	},
 	Long: `Install packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
-		c := []*installer.LuetRepository{}
-		err := viper.UnmarshalKey("system-repositories", &c)
-		if err != nil {
-			Fatal("Error: " + err.Error())
-		}
-
 		var toInstall []pkg.Package
+		var systemDB pkg.PackageDatabase
 
 		for _, a := range args {
-			decodepackage, err := regexp.Compile(`^([<>]?\~?=?)((([^\/]+)\/)?(?U)(\S+))(-(\d+(\.\d+)*[a-z]?(_(alpha|beta|pre|rc|p)\d*)*(-r\d+)?))?$`)
+			gp, err := _gentoo.ParsePackageStr(a)
 			if err != nil {
-				Fatal("Error: " + err.Error())
+				Fatal("Invalid package string ", a, ": ", err.Error())
 			}
-			packageInfo := decodepackage.FindAllStringSubmatch(a, -1)
 
-			category := packageInfo[0][4]
-			name := packageInfo[0][5]
-			version := packageInfo[0][1] + packageInfo[0][7]
-			toInstall = append(toInstall, &pkg.DefaultPackage{Name: name, Category: category, Version: version})
+			if gp.Version == "" {
+				gp.Version = "0"
+				gp.Condition = _gentoo.PkgCondGreaterEqual
+			}
 
+			pack := &pkg.DefaultPackage{
+				Name: gp.Name,
+				Version: fmt.Sprintf("%s%s%s",
+					pkg.PkgSelectorConditionFromInt(gp.Condition.Int()).String(),
+					gp.Version,
+					gp.VersionSuffix,
+				),
+				Category: gp.Category,
+				Uri:      make([]string, 0),
+			}
+			toInstall = append(toInstall, pack)
 		}
 
 		// This shouldn't be necessary, but we need to unmarshal the repositories to a concrete struct, thus we need to port them back to the Repositories type
-		synced := installer.Repositories{}
-		for _, toSync := range c {
-			s, err := toSync.Sync()
-			if err != nil {
-				Fatal("Error: " + err.Error())
+		repos := installer.Repositories{}
+		for _, repo := range LuetCfg.SystemRepositories {
+			if !repo.Enable {
+				continue
 			}
-			synced = append(synced, s)
+			r := installer.NewSystemRepository(repo)
+			repos = append(repos, r)
 		}
 
-		inst := installer.NewLuetInstaller(viper.GetInt("concurrency"))
+		inst := installer.NewLuetInstaller(LuetCfg.GetGeneral().Concurrency)
+		inst.Repositories(repos)
 
-		inst.Repositories(synced)
-
-		os.MkdirAll(viper.GetString("system-dbpath"), os.ModePerm)
-		systemDB := pkg.NewBoltDatabase(filepath.Join(viper.GetString("system-dbpath"), "luet.db"))
-		system := &installer.System{Database: systemDB, Target: viper.GetString("system-target")}
-		err = inst.Install(toInstall, system)
+		if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
+			systemDB = pkg.NewBoltDatabase(
+				filepath.Join(helpers.GetSystemRepoDatabaseDirPath(), "luet.db"))
+		} else {
+			systemDB = pkg.NewInMemoryDatabase(true)
+		}
+		system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
+		err := inst.Install(toInstall, system)
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
@@ -92,7 +100,6 @@ func init() {
 	}
 	installCmd.Flags().String("system-dbpath", path, "System db path")
 	installCmd.Flags().String("system-target", path, "System rootpath")
-	installCmd.Flags().Int("concurrency", runtime.NumCPU(), "Concurrency")
 
 	RootCmd.AddCommand(installCmd)
 }
