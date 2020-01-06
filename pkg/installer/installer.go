@@ -190,7 +190,7 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 	for _, assertion := range solution {
 		if assertion.Value {
 			matches := syncedRepos.PackageMatches([]pkg.Package{assertion.Package})
-			if len(matches) != 1 {
+			if len(matches) == 0 {
 				return errors.New("Failed matching solutions against repository - where are definitions coming from?!")
 			}
 		A:
