@@ -128,7 +128,7 @@ func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
 	defer SpinnerStop()
 	syncedRepos := Repositories{}
 	for _, r := range l.PackageRepositories {
-		repo, err := r.Sync()
+		repo, err := r.Sync(false)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed syncing repository: "+r.GetName())
 		}

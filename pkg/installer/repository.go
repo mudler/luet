@@ -26,15 +26,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mudler/luet/pkg/installer/client"
-
-	"github.com/ghodss/yaml"
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
+	"github.com/mudler/luet/pkg/installer/client"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	tree "github.com/mudler/luet/pkg/tree"
+
+	"github.com/ghodss/yaml"
+	. "github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 )
 
@@ -74,7 +75,7 @@ func GenerateRepository(name, descr, t string, urls []string, priority int, src,
 	}
 
 	return NewLuetSystemRepository(
-		config.NewLuetRepository(name, t, descr, urls, priority, true),
+		config.NewLuetRepository(name, t, descr, urls, priority, true, false),
 		art, tr), nil
 }
 
@@ -106,6 +107,7 @@ func NewLuetSystemRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (Repos
 			p.Urls,
 			p.Priority,
 			true,
+			false,
 		),
 	}
 	if p.Revision > 0 {
@@ -288,43 +290,88 @@ func (r *LuetSystemRepository) Client() Client {
 
 	return nil
 }
-func (r *LuetSystemRepository) Sync() (Repository, error) {
-	Debug("Sync of the repository", r.Name, "in progress..")
+func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
+	var repoUpdated bool = false
+	var treefs string
+
+	Debug("Sync of the repository", r.Name, "in progress...")
 	c := r.Client()
 	if c == nil {
 		return nil, errors.New("No client could be generated from repository.")
 	}
+
+	// Retrieve remote repository.yaml for retrieve revision and date
 	file, err := c.DownloadFile(REPOSITORY_SPECFILE)
 	if err != nil {
 		return nil, errors.Wrap(err, "While downloading "+REPOSITORY_SPECFILE)
 	}
-	repo, err := r.ReadSpecFile(file, true)
+
+	repobasedir := helpers.GetRepoDatabaseDirPath(r.GetName())
+	repo, err := r.ReadSpecFile(file, false)
 	if err != nil {
 		return nil, err
 	}
+	// Remove temporary file that contains repository.html.
+	// Example: /tmp/HttpClient236052003
+	defer os.RemoveAll(file)
 
-	archivetree, err := c.DownloadFile(TREE_TARBALL)
-	if err != nil {
-		return nil, errors.Wrap(err, "While downloading "+TREE_TARBALL)
+	if r.Cached {
+		if !force {
+			localRepo, _ := r.ReadSpecFile(filepath.Join(repobasedir, REPOSITORY_SPECFILE), false)
+			if localRepo != nil {
+				if localRepo.GetRevision() == repo.GetRevision() &&
+					localRepo.GetLastUpdate() == repo.GetLastUpdate() {
+					repoUpdated = true
+				}
+			}
+		}
+		if r.GetTreePath() == "" {
+			treefs = filepath.Join(repobasedir, "treefs")
+		} else {
+			treefs = r.GetTreePath()
+		}
+
+	} else {
+		treefs, err = ioutil.TempDir(os.TempDir(), "treefs")
+		if err != nil {
+			return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
+		}
 	}
-	defer os.RemoveAll(archivetree) // clean up
 
-	treefs, err := ioutil.TempDir(os.TempDir(), "treefs")
-	if err != nil {
-		return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
-	}
-	//defer os.RemoveAll(treefs) // clean up
+	if !repoUpdated {
+		archivetree, err := c.DownloadFile(TREE_TARBALL)
+		if err != nil {
+			return nil, errors.Wrap(err, "While downloading "+TREE_TARBALL)
+		}
+		defer os.RemoveAll(archivetree) // clean up
 
-	// TODO: Following as option if archive as output?
-	// archive, err := ioutil.TempDir(os.TempDir(), "archive")
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
-	// }
-	// defer os.RemoveAll(archive) // clean up
+		Debug("Tree tarball for the repository " + r.GetName() + " downloaded correctly.")
 
-	err = helpers.Untar(archivetree, treefs, false)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error met while unpacking rootfs")
+		if r.Cached {
+			// Copy updated repository.yaml file to repo dir now that the tree is synced.
+			err = helpers.CopyFile(file, filepath.Join(repobasedir, REPOSITORY_SPECFILE))
+			if err != nil {
+				return nil, errors.Wrap(err, "Error on update "+REPOSITORY_SPECFILE)
+			}
+			// Remove previous tree
+			os.RemoveAll(treefs)
+		}
+		Debug("Untar tree of the repository " + r.Name + "...")
+		err = helpers.Untar(archivetree, treefs, true)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error met while unpacking rootfs")
+		}
+
+		tsec, _ := strconv.ParseInt(repo.GetLastUpdate(), 10, 64)
+
+		InfoC(
+			Bold(Red(":house: Repository "+r.GetName()+" revision: ")).String() +
+				Bold(Green(repo.GetRevision())).String() + " - " +
+				Bold(Green(time.Unix(tsec, 0).String())).String(),
+		)
+
+	} else {
+		Info("Repository", r.GetName(), "is already up to date.")
 	}
 
 	reciper := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
@@ -332,6 +379,7 @@ func (r *LuetSystemRepository) Sync() (Repository, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while unpacking rootfs")
 	}
+
 	repo.SetTree(reciper)
 	repo.SetTreePath(treefs)
 	repo.SetUrls(r.GetUrls())

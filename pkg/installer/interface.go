@@ -48,7 +48,7 @@ type Repository interface {
 	GetTree() tree.Builder
 	SetTree(tree.Builder)
 	Write(path string, resetRevision bool) error
-	Sync() (Repository, error)
+	Sync(bool) (Repository, error)
 	GetTreePath() string
 	SetTreePath(string)
 	GetType() string

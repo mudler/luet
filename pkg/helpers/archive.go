@@ -18,8 +18,11 @@ package helpers
 import (
 	"io"
 	"os"
+	//"os/user"
+	//"strconv"
 
 	"github.com/docker/docker/pkg/archive"
+	//"github.com/docker/docker/pkg/idtools"
 )
 
 func Tar(src, dest string) error {
@@ -55,8 +58,25 @@ func Untar(src, dest string, sameOwner bool) error {
 	}
 	defer in.Close()
 
-	return archive.Untar(in, dest, &archive.TarOptions{
-		NoLchown:        !sameOwner,
+	opts := &archive.TarOptions{
+		// NOTE: NoLchown boolean is used for chmod of the symlink
+		// Probably it's needed set this always to true.
+		NoLchown:        true,
 		ExcludePatterns: []string{"dev/"}, // prevent 'operation not permitted'
-	})
+	}
+
+	/*
+	u, err := user.Current()
+	if err != nil {
+		return err
+	}
+	// TODO: This seems not sufficient for untar with normal user.
+	if u.Uid != "0" {
+		uid, _ := strconv.Atoi(u.Uid)
+		gid, _ := strconv.Atoi(u.Gid)
+		opts.ChownOpts = &idtools.Identity{UID: uid, GID: gid}
+	}
+	*/
+
+	return archive.Untar(in, dest, opts)
 }
