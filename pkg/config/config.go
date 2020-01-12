@@ -17,6 +17,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"time"
@@ -55,6 +56,7 @@ type LuetRepository struct {
 	Mode           string            `json:"mode,omitempty" yaml:"mode,omitempty" mapstructure:"mode,omitempty"`
 	Priority       int               `json:"priority,omitempty" yaml:"priority,omitempty" mapstructure:"priority"`
 	Enable         bool              `json:"enable" yaml:"enable" mapstructure:"enable"`
+	Cached         bool              `json:"cached,omitempty" yaml:"cached,omitempty" mapstructure:"cached,omitempty"`
 	Authentication map[string]string `json:"auth,omitempty" yaml:"auth,omitempty" mapstructure:"auth,omitempty"`
 	TreePath       string            `json:"tree_path,omitempty" yaml:"tree_path,omitempty" mapstructure:"tree_path"`
 
@@ -66,7 +68,7 @@ type LuetRepository struct {
 	LastUpdate string `json:"last_update,omitempty" yaml:"-,omitempty" mapstructure:"-,omitempty"`
 }
 
-func NewLuetRepository(name, t, descr string, urls []string, priority int, enable bool) *LuetRepository {
+func NewLuetRepository(name, t, descr string, urls []string, priority int, enable, cached bool) *LuetRepository {
 	return &LuetRepository{
 		Name:        name,
 		Description: descr,
@@ -76,6 +78,7 @@ func NewLuetRepository(name, t, descr string, urls []string, priority int, enabl
 		Mode:           "",
 		Priority:       priority,
 		Enable:         enable,
+		Cached:         cached,
 		Authentication: make(map[string]string, 0),
 		TreePath:       "",
 	}
@@ -90,12 +93,14 @@ func NewEmptyLuetRepository() *LuetRepository {
 		Priority:       9999,
 		TreePath:       "",
 		Enable:         false,
+		Cached:         false,
 		Authentication: make(map[string]string, 0),
 	}
 }
 
 func (r *LuetRepository) String() string {
-	return fmt.Sprintf("[%s] prio: %d, type: %s, enable: %t", r.Name, r.Priority, r.Type, r.Enable)
+	return fmt.Sprintf("[%s] prio: %d, type: %s, enable: %t, cached: %t",
+		r.Name, r.Priority, r.Type, r.Enable, r.Cached)
 }
 
 type LuetConfig struct {
@@ -155,6 +160,22 @@ func (c *LuetConfig) GetGeneral() *LuetGeneralConfig {
 
 func (c *LuetConfig) GetSystem() *LuetSystemConfig {
 	return &c.System
+}
+
+func (c *LuetConfig) GetSystemRepository(name string) (*LuetRepository, error) {
+	var ans *LuetRepository = nil
+
+	for idx, repo := range c.SystemRepositories {
+		if repo.Name == name {
+			ans = &c.SystemRepositories[idx]
+			break
+		}
+	}
+	if ans == nil {
+		return nil, errors.New("Repository " + name + " not found")
+	}
+
+	return ans, nil
 }
 
 func (c *LuetGeneralConfig) String() string {
