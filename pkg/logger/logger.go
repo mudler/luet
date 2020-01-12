@@ -123,7 +123,7 @@ func level2AtomicLevel(level string) zap.AtomicLevel {
 	}
 }
 
-func msg(level string, msg ...interface{}) {
+func msg(level string, withoutColor bool, msg ...interface{}) {
 	var message string
 	var confLevel, msgLevel int
 
@@ -142,15 +142,20 @@ func msg(level string, msg ...interface{}) {
 	}
 
 	var levelMsg string
-	switch level {
-	case "warning":
-		levelMsg = Bold(Yellow(":construction: " + message)).BgBlack().String()
-	case "debug":
-		levelMsg = White(message).BgBlack().String()
-	case "info":
-		levelMsg = Bold(White(message)).BgBlack().String()
-	case "error":
-		levelMsg = Bold(Red(":bomb: " + message + ":fire:")).BgBlack().String()
+
+	if withoutColor {
+		levelMsg = message
+	} else {
+		switch level {
+		case "warning":
+			levelMsg = Bold(Yellow(":construction: " + message)).BgBlack().String()
+		case "debug":
+			levelMsg = White(message).BgBlack().String()
+		case "info":
+			levelMsg = Bold(White(message)).BgBlack().String()
+		case "error":
+			levelMsg = Bold(Red(":bomb: " + message + ":fire:")).BgBlack().String()
+		}
 	}
 
 	levelMsg = emoji.Sprint(levelMsg)
@@ -163,22 +168,30 @@ func msg(level string, msg ...interface{}) {
 }
 
 func Warning(mess ...interface{}) {
-	msg("warning", mess...)
+	msg("warning", false, mess...)
 	if LuetCfg.GetGeneral().FatalWarns {
 		os.Exit(2)
 	}
 }
 
 func Debug(mess ...interface{}) {
-	msg("debug", mess...)
+	msg("debug", false, mess...)
+}
+
+func DebugC(mess ...interface{}) {
+	msg("debug", true, mess...)
 }
 
 func Info(mess ...interface{}) {
-	msg("info", mess...)
+	msg("info", false, mess...)
+}
+
+func InfoC(mess ...interface{}) {
+	msg("info", true, mess...)
 }
 
 func Error(mess ...interface{}) {
-	msg("error", mess...)
+	msg("error", false, mess...)
 }
 
 func Fatal(mess ...interface{}) {
