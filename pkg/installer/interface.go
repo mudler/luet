@@ -58,4 +58,9 @@ type Repository interface {
 	GetLastUpdate() string
 	SetLastUpdate(string)
 	Client() Client
+
+	GetTreeChecksums() compiler.Checksums
+	GetTreeCompressionType() compiler.CompressionImplementation
+	SetTreeCompressionType(c compiler.CompressionImplementation)
+	SetTreeChecksums(c compiler.Checksums)
 }

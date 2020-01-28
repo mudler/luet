@@ -112,6 +112,12 @@ func (a *PackageArtifact) SetCompressionType(t CompressionImplementation) {
 	a.CompressionType = t
 }
 
+func (a *PackageArtifact) GetChecksums() Checksums {
+	return a.Checksums
+}
+func (a *PackageArtifact) SetChecksums(c Checksums) {
+	a.Checksums = c
+}
 func (a *PackageArtifact) Hash() error {
 	return a.Checksums.Generate(a)
 }

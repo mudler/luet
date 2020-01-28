@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -47,19 +48,25 @@ const (
 type LuetSystemRepository struct {
 	*config.LuetRepository
 
-	Index compiler.ArtifactIndex `json:"index"`
-	Tree  tree.Builder           `json:"-"`
+	Index               compiler.ArtifactIndex             `json:"index"`
+	Tree                tree.Builder                       `json:"-"`
+	TreePath            string                             `json:"treepath"`
+	TreeCompressionType compiler.CompressionImplementation `json:"treecompressiontype"`
+	TreeChecksums       compiler.Checksums                 `json:"treechecksums"`
 }
 
 type LuetSystemRepositorySerialized struct {
-	Name        string                      `json:"name"`
-	Description string                      `json:"description,omitempty"`
-	Urls        []string                    `json:"urls"`
-	Priority    int                         `json:"priority"`
-	Index       []*compiler.PackageArtifact `json:"index"`
-	Type        string                      `json:"type"`
-	Revision    int                         `json:"revision,omitempty"`
-	LastUpdate  string                      `json:"last_update,omitempty"`
+	Name                string                             `json:"name"`
+	Description         string                             `json:"description,omitempty"`
+	Urls                []string                           `json:"urls"`
+	Priority            int                                `json:"priority"`
+	Index               []*compiler.PackageArtifact        `json:"index"`
+	Type                string                             `json:"type"`
+	Revision            int                                `json:"revision,omitempty"`
+	LastUpdate          string                             `json:"last_update,omitempty"`
+	TreePath            string                             `json:"treepath"`
+	TreeCompressionType compiler.CompressionImplementation `json:"treecompressiontype"`
+	TreeChecksums       compiler.Checksums                 `json:"treechecksums"`
 }
 
 func GenerateRepository(name, descr, t string, urls []string, priority int, src, treeDir string, db pkg.PackageDatabase) (Repository, error) {
@@ -109,6 +116,9 @@ func NewLuetSystemRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (Repos
 			true,
 			false,
 		),
+		TreeCompressionType: p.TreeCompressionType,
+		TreeChecksums:       p.TreeChecksums,
+		TreePath:            p.TreePath,
 	}
 	if p.Revision > 0 {
 		r.Revision = p.Revision
@@ -163,6 +173,23 @@ func (r *LuetSystemRepository) GetName() string {
 func (r *LuetSystemRepository) GetDescription() string {
 	return r.LuetRepository.Description
 }
+
+func (r *LuetSystemRepository) GetTreeCompressionType() compiler.CompressionImplementation {
+	return r.TreeCompressionType
+}
+
+func (r *LuetSystemRepository) GetTreeChecksums() compiler.Checksums {
+	return r.TreeChecksums
+}
+
+func (r *LuetSystemRepository) SetTreeCompressionType(c compiler.CompressionImplementation) {
+	r.TreeCompressionType = c
+}
+
+func (r *LuetSystemRepository) SetTreeChecksums(c compiler.Checksums) {
+	r.TreeChecksums = c
+}
+
 func (r *LuetSystemRepository) GetType() string {
 	return r.LuetRepository.Type
 }
@@ -250,20 +277,11 @@ func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
 	}
 	r.Revision++
 
-	data, err := yaml.Marshal(r)
-	if err != nil {
-		return err
-	}
-
 	Info(fmt.Sprintf(
 		"For repository %s creating revision %d and last update %s...",
 		r.Name, r.Revision, r.LastUpdate,
 	))
 
-	err = ioutil.WriteFile(repospec, data, os.ModePerm)
-	if err != nil {
-		return err
-	}
 	archive, err := ioutil.TempDir(os.TempDir(), "archive")
 	if err != nil {
 		return errors.Wrap(err, "Error met while creating tempdir for archive")
@@ -273,10 +291,34 @@ func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
 	if err != nil {
 		return errors.Wrap(err, "Error met while saving the tree")
 	}
-	err = helpers.Tar(archive, filepath.Join(dst, TREE_TARBALL))
+	tpath := r.GetTreePath()
+	if tpath == "" {
+		tpath = TREE_TARBALL
+	}
+
+	a := compiler.NewPackageArtifact(filepath.Join(dst, tpath))
+	a.SetCompressionType(r.TreeCompressionType)
+	err = a.Compress(archive, 1)
 	if err != nil {
 		return errors.Wrap(err, "Error met while creating package archive")
 	}
+
+	r.TreePath = path.Base(a.GetPath())
+	err = a.Hash()
+	if err != nil {
+		return errors.Wrap(err, "Failed generating checksums for tree")
+	}
+	r.TreeChecksums = a.GetChecksums()
+
+	data, err := yaml.Marshal(r)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(repospec, data, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -339,11 +381,25 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	}
 
 	if !repoUpdated {
-		archivetree, err := c.DownloadFile(TREE_TARBALL)
-		if err != nil {
-			return nil, errors.Wrap(err, "While downloading "+TREE_TARBALL)
+		tpath := repo.GetTreePath()
+		if tpath == "" {
+			tpath = TREE_TARBALL
 		}
-		defer os.RemoveAll(archivetree) // clean up
+		a := compiler.NewPackageArtifact(tpath)
+
+		artifact, err := c.DownloadArtifact(a)
+		if err != nil {
+			return nil, errors.Wrap(err, "While downloading "+tpath)
+		}
+		defer os.Remove(artifact.GetPath())
+
+		artifact.SetChecksums(repo.GetTreeChecksums())
+		artifact.SetCompressionType(repo.GetTreeCompressionType())
+
+		err = artifact.Verify()
+		if err != nil {
+			return nil, errors.Wrap(err, "Tree integrity check failure")
+		}
 
 		Debug("Tree tarball for the repository " + r.GetName() + " downloaded correctly.")
 
@@ -356,10 +412,11 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 			// Remove previous tree
 			os.RemoveAll(treefs)
 		}
-		Debug("Untar tree of the repository " + r.Name + "...")
-		err = helpers.Untar(archivetree, treefs, true)
+		Debug("Decompress tree of the repository " + r.Name + "...")
+
+		err = artifact.Unpack(treefs, true)
 		if err != nil {
-			return nil, errors.Wrap(err, "Error met while unpacking rootfs")
+			return nil, errors.Wrap(err, "Error met while unpacking tree")
 		}
 
 		tsec, _ := strconv.ParseInt(repo.GetLastUpdate(), 10, 64)

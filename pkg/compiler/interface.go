@@ -90,6 +90,9 @@ type Artifact interface {
 	FileList() ([]string, error)
 	Hash() error
 	Verify() error
+
+	GetChecksums() Checksums
+	SetChecksums(c Checksums)
 }
 
 type ArtifactNode struct {
