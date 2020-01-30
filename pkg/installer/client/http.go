@@ -49,7 +49,6 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(temp)
 
 	file, err = ioutil.TempFile(temp, "HttpClient")
 	if err != nil {
@@ -75,6 +74,8 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 		if err != nil {
 			continue
 		}
+		defer os.RemoveAll(filepath.Join(temp, artifactName))
+
 		ok = true
 		break
 	}
