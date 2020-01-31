@@ -536,20 +536,25 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 			if err != nil || len(packages) == 0 {
 				required = requiredDef
 			} else {
-				for _, p := range packages {
-					encodedB, err := p.Encode(db)
-					if err != nil {
-						return nil, err
-					}
-					B := bf.Var(encodedB)
-					formulas = append(formulas, bf.Or(bf.Not(A),
-						bf.Not(B)))
+				if len(packages) == 1 {
+					required = packages[0]
+				} else {
+					for _, p := range packages {
+						encodedB, err := p.Encode(db)
+						if err != nil {
+							return nil, err
+						}
+						B := bf.Var(encodedB)
+						formulas = append(formulas, bf.Or(bf.Not(A),
+							bf.Not(B)))
 
-					f, err := p.BuildFormula(definitiondb, db)
-					if err != nil {
-						return nil, err
+						f, err := p.BuildFormula(definitiondb, db)
+						if err != nil {
+							return nil, err
+						}
+						formulas = append(formulas, f...)
 					}
-					formulas = append(formulas, f...)
+					continue
 				}
 			}
 		}
