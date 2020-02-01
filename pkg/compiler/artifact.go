@@ -31,6 +31,7 @@ import (
 	"strings"
 	"sync"
 
+	. "github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	"github.com/mudler/luet/pkg/solver"
@@ -294,14 +295,15 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 			return errors.Wrap(err, "Cannot copy to "+a.GetPath()+".uncompressed")
 		}
 
-		err = helpers.Untar(a.GetPath()+".uncompressed", dst, keepPerms)
+		err = helpers.Untar(a.GetPath()+".uncompressed", dst,
+			LuetCfg.GetGeneral().SameOwner)
 		if err != nil {
 			return err
 		}
 		return nil
 	// Defaults to tar only (covers when "none" is supplied)
 	default:
-		return helpers.Untar(a.GetPath(), dst, keepPerms)
+		return helpers.Untar(a.GetPath(), dst, LuetCfg.GetGeneral().SameOwner)
 	}
 	return errors.New("Compression type must be supplied")
 }

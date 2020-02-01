@@ -19,6 +19,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"os/user"
 	"runtime"
 	"time"
 
@@ -34,6 +35,7 @@ type LuetLoggingConfig struct {
 }
 
 type LuetGeneralConfig struct {
+	SameOwner       bool `mapstructure:"same_owner"`
 	Concurrency     int  `mapstructure:"concurrency"`
 	Debug           bool `mapstructure:"debug"`
 	ShowBuildOutput bool `mapstructure:"show_build_output"`
@@ -125,7 +127,6 @@ func NewLuetConfig(viper *v.Viper) *LuetConfig {
 }
 
 func GenDefault(viper *v.Viper) {
-
 	viper.SetDefault("logging.level", "info")
 	viper.SetDefault("logging.path", "")
 	viper.SetDefault("logging.json_format", false)
@@ -136,6 +137,13 @@ func GenDefault(viper *v.Viper) {
 	viper.SetDefault("general.spinner_ms", 100)
 	viper.SetDefault("general.spinner_charset", 22)
 	viper.SetDefault("general.fatal_warnings", false)
+
+	u, _ := user.Current()
+	if u.Uid == "0" {
+		viper.SetDefault("general.same_owner", true)
+	} else {
+		viper.SetDefault("general.same_owner", false)
+	}
 
 	viper.SetDefault("system.database_engine", "boltdb")
 	viper.SetDefault("system.database_path", "/var/cache/luet")
@@ -182,11 +190,13 @@ func (c *LuetGeneralConfig) String() string {
 	ans := fmt.Sprintf(`
 general:
   concurrency: %d
+  same_owner: %t
   debug: %t
   fatal_warnings: %t
   show_build_output: %t
   spinner_ms: %d
-  spinner_charset: %d`, c.Concurrency, c.Debug, c.FatalWarns, c.ShowBuildOutput,
+  spinner_charset: %d`, c.Concurrency, c.SameOwner, c.Debug,
+		c.FatalWarns, c.ShowBuildOutput,
 		c.SpinnerMs, c.SpinnerCharset)
 
 	return ans

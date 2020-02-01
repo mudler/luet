@@ -35,6 +35,9 @@
 #   Enable warnings to exit
 #   fatal_warnings: false
 #
+#   Try extracting tree/packages with the same ownership as exists in the archive (default for superuser).
+#   same_owner: false
+#
 # ---------------------------------------------
 # System configuration section:
 # ---------------------------------------------
