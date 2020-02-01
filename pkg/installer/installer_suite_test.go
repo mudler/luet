@@ -28,5 +28,9 @@ import (
 func TestInstaller(t *testing.T) {
 	RegisterFailHandler(Fail)
 	LoadConfig(config.LuetCfg)
+	// Set temporary directory for rootfs
+	config.LuetCfg.GetSystem().Rootfs = "/tmp/luet-root"
+	// Force dynamic path for packages cache
+	config.LuetCfg.GetSystem().PkgsCachePath = ""
 	RunSpecs(t, "Installer Suite")
 }

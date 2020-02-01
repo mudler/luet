@@ -17,6 +17,7 @@
 package helpers
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -44,9 +45,12 @@ func GetSystemRepoDatabaseDirPath() string {
 }
 
 func GetSystemPkgsCacheDirPath() (ans string) {
-	cachepath := "packages"
+	var cachepath string
 	if config.LuetCfg.GetSystem().PkgsCachePath != "" {
 		cachepath = config.LuetCfg.GetSystem().PkgsCachePath
+	} else {
+		// Create dynamic cache for test suites
+		cachepath, _ = ioutil.TempDir(os.TempDir(), "cachepkgs")
 	}
 
 	if filepath.IsAbs(cachepath) {
