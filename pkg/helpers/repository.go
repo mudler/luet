@@ -42,3 +42,18 @@ func GetSystemRepoDatabaseDirPath() string {
 	}
 	return dbpath
 }
+
+func GetSystemPkgsCacheDirPath() (ans string) {
+	cachepath := "packages"
+	if config.LuetCfg.GetSystem().PkgsCachePath != "" {
+		cachepath = config.LuetCfg.GetSystem().PkgsCachePath
+	}
+
+	if filepath.IsAbs(cachepath) {
+		ans = cachepath
+	} else {
+		ans = filepath.Join(GetSystemRepoDatabaseDirPath(), cachepath)
+	}
+
+	return
+}

@@ -39,53 +39,54 @@ func NewHttpClient(r RepoData) *HttpClient {
 }
 
 func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Artifact, error) {
-	var file *os.File = nil
 	var u *url.URL = nil
 
 	artifactName := path.Base(artifact.GetPath())
+	cacheFile := filepath.Join(helpers.GetSystemPkgsCacheDirPath(), artifactName)
 	ok := false
 
-	temp, err := ioutil.TempDir(os.TempDir(), "tree")
-	if err != nil {
-		return nil, err
-	}
+	// Check if file is already in cache
+	if helpers.Exists(cacheFile) {
+		Info("Use artifact", artifactName, "from cache.")
+	} else {
 
-	file, err = ioutil.TempFile(temp, "HttpClient")
-	if err != nil {
-		return nil, err
-	}
-
-	for _, uri := range c.RepoData.Urls {
-		Info("Downloading artifact", artifactName, "from", uri)
-
-		u, err = url.Parse(uri)
+		temp, err := ioutil.TempDir(os.TempDir(), "tree")
 		if err != nil {
-			continue
+			return nil, err
 		}
-		u.Path = path.Join(u.Path, artifactName)
+		defer os.RemoveAll(temp)
 
-		_, err = grab.Get(temp, u.String())
-		if err != nil {
-			continue
+		for _, uri := range c.RepoData.Urls {
+			Info("Downloading artifact", artifactName, "from", uri)
+
+			u, err = url.Parse(uri)
+			if err != nil {
+				continue
+			}
+			u.Path = path.Join(u.Path, artifactName)
+
+			_, err = grab.Get(temp, u.String())
+			if err != nil {
+				continue
+			}
+
+			Debug("Copying file ", filepath.Join(temp, artifactName), "to", cacheFile)
+			err = helpers.CopyFile(filepath.Join(temp, artifactName), cacheFile)
+			if err != nil {
+				continue
+			}
+
+			ok = true
+			break
 		}
 
-		Debug("Copying file ", filepath.Join(temp, artifactName), "to", file.Name())
-		err = helpers.CopyFile(filepath.Join(temp, artifactName), file.Name())
-		if err != nil {
-			continue
+		if !ok {
+			return nil, err
 		}
-		defer os.RemoveAll(filepath.Join(temp, artifactName))
-
-		ok = true
-		break
-	}
-
-	if !ok {
-		return nil, err
 	}
 
 	newart := artifact
-	newart.SetPath(file.Name())
+	newart.SetPath(cacheFile)
 	return newart, nil
 }
 

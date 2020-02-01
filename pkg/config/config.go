@@ -48,6 +48,7 @@ type LuetSystemConfig struct {
 	DatabaseEngine string `yaml:"database_engine" mapstructure:"database_engine"`
 	DatabasePath   string `yaml:"database_path" mapstructure:"database_path"`
 	Rootfs         string `yaml:"rootfs" mapstructure:"rootfs"`
+	PkgsCachePath  string `yaml:"pkgs_cache_path" mapstructure:"pkgs_cache_path"`
 }
 
 type LuetRepository struct {
@@ -148,6 +149,7 @@ func GenDefault(viper *v.Viper) {
 	viper.SetDefault("system.database_engine", "boltdb")
 	viper.SetDefault("system.database_path", "/var/cache/luet")
 	viper.SetDefault("system.rootfs", "/")
+	viper.SetDefault("system.pkgs_cache_path", "packages")
 
 	viper.SetDefault("repos_confdir", []string{"/etc/luet/repos.conf.d"})
 	viper.SetDefault("cache_repositories", []string{})
@@ -225,8 +227,9 @@ func (c *LuetSystemConfig) String() string {
 system:
   database_engine: %s
   database_path: %s
+  pkgs_cache_path: %s
   rootfs: %s`,
-		c.DatabaseEngine, c.DatabasePath, c.Rootfs)
+		c.DatabaseEngine, c.DatabasePath, c.PkgsCachePath, c.Rootfs)
 
 	return ans
 }
