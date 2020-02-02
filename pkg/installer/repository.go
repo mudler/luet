@@ -174,6 +174,10 @@ func (r *LuetSystemRepository) GetDescription() string {
 	return r.LuetRepository.Description
 }
 
+func (r *LuetSystemRepository) GetAuthentication() map[string]string {
+	return r.LuetRepository.Authentication
+}
+
 func (r *LuetSystemRepository) GetTreeCompressionType() compiler.CompressionImplementation {
 	return r.TreeCompressionType
 }
@@ -224,16 +228,20 @@ func (r *LuetSystemRepository) GetTree() tree.Builder {
 	return r.Tree
 }
 func (r *LuetSystemRepository) GetRevision() int {
-	return r.Revision
+	return r.LuetRepository.Revision
 }
 func (r *LuetSystemRepository) GetLastUpdate() string {
-	return r.LastUpdate
+	return r.LuetRepository.LastUpdate
 }
 func (r *LuetSystemRepository) SetLastUpdate(u string) {
-	r.LastUpdate = u
+	r.LuetRepository.LastUpdate = u
 }
 func (r *LuetSystemRepository) IncrementRevision() {
-	r.Revision++
+	r.LuetRepository.Revision++
+}
+
+func (r *LuetSystemRepository) SetAuthentication(auth map[string]string) {
+	r.LuetRepository.Authentication = auth
 }
 
 func (r *LuetSystemRepository) ReadSpecFile(file string, removeFile bool) (Repository, error) {
@@ -327,7 +335,11 @@ func (r *LuetSystemRepository) Client() Client {
 	case "disk":
 		return client.NewLocalClient(client.RepoData{Urls: r.GetUrls()})
 	case "http":
-		return client.NewHttpClient(client.RepoData{Urls: r.GetUrls()})
+		return client.NewHttpClient(
+			client.RepoData{
+				Urls:           r.GetUrls(),
+				Authentication: r.GetAuthentication(),
+			})
 	}
 
 	return nil
@@ -440,6 +452,7 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	repo.SetTree(reciper)
 	repo.SetTreePath(treefs)
 	repo.SetUrls(r.GetUrls())
+	repo.SetAuthentication(r.GetAuthentication())
 
 	return repo, nil
 }

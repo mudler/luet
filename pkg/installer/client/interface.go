@@ -16,5 +16,6 @@
 package client
 
 type RepoData struct {
-	Urls []string
+	Urls           []string
+	Authentication map[string]string
 }

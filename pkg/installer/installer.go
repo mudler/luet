@@ -285,6 +285,9 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
 
 	artifact, err := a.Repository.Client().DownloadArtifact(a.Artifact)
+	if err != nil {
+		return errors.Wrap(err, "Error on download artifact")
+	}
 
 	err = artifact.Verify()
 	if err != nil {

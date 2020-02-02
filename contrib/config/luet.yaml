@@ -103,7 +103,7 @@
 #     urls:
 #        - https://mydomain.local/luet/repo1
 #
-#     authentication:
+#     auth:
 #        Define Basic authentication header
 #        basic: "mybasicauth"
 #        Define token authentication header

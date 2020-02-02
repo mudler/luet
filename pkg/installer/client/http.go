@@ -16,7 +16,9 @@
 package client
 
 import (
+	"fmt"
 	"io/ioutil"
+	"math"
 	"net/url"
 	"os"
 	"path"
@@ -38,8 +40,34 @@ func NewHttpClient(r RepoData) *HttpClient {
 	return &HttpClient{RepoData: r}
 }
 
+func (c *HttpClient) PrepareReq(dst, url string) (*grab.Request, error) {
+
+	req, err := grab.NewRequest(dst, url)
+	if err != nil {
+		return nil, err
+	}
+
+	if val, ok := c.RepoData.Authentication["token"]; ok {
+		req.HTTPRequest.Header.Set("Authorization", "token "+val)
+	} else if val, ok := c.RepoData.Authentication["basic"]; ok {
+		req.HTTPRequest.Header.Set("Authorization", "Basic "+val)
+	}
+
+	return req, err
+}
+
+func Round(input float64) float64 {
+	if input < 0 {
+		return math.Ceil(input - 0.5)
+	}
+	return math.Floor(input + 0.5)
+}
+
 func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Artifact, error) {
 	var u *url.URL = nil
+	var err error
+	var req *grab.Request
+	var temp string
 
 	artifactName := path.Base(artifact.GetPath())
 	cacheFile := filepath.Join(helpers.GetSystemPkgsCacheDirPath(), artifactName)
@@ -50,11 +78,13 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 		Info("Use artifact", artifactName, "from cache.")
 	} else {
 
-		temp, err := ioutil.TempDir(os.TempDir(), "tree")
+		temp, err = ioutil.TempDir(os.TempDir(), "tree")
 		if err != nil {
 			return nil, err
 		}
 		defer os.RemoveAll(temp)
+
+		client := grab.NewClient()
 
 		for _, uri := range c.RepoData.Urls {
 			Info("Downloading artifact", artifactName, "from", uri)
@@ -65,10 +95,19 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 			}
 			u.Path = path.Join(u.Path, artifactName)
 
-			_, err = grab.Get(temp, u.String())
+			req, err = c.PrepareReq(temp, u.String())
 			if err != nil {
 				continue
 			}
+
+			resp := client.Do(req)
+			if err = resp.Err(); err != nil {
+				continue
+			}
+
+			Info("Downloaded", artifactName, "of",
+				fmt.Sprintf("%.2f", (float64(resp.BytesComplete())/1000)/1000), "MB (",
+				fmt.Sprintf("%.2f", (float64(resp.BytesPerSecond())/1024)/1024), "MiB/s )")
 
 			Debug("Copying file ", filepath.Join(temp, artifactName), "to", cacheFile)
 			err = helpers.CopyFile(filepath.Join(temp, artifactName), cacheFile)
@@ -93,12 +132,18 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 func (c *HttpClient) DownloadFile(name string) (string, error) {
 	var file *os.File = nil
 	var u *url.URL = nil
+	var err error
+	var req *grab.Request
+	var temp string
+
 	ok := false
 
-	temp, err := ioutil.TempDir(os.TempDir(), "tree")
+	temp, err = ioutil.TempDir(os.TempDir(), "tree")
 	if err != nil {
 		return "", err
 	}
+
+	client := grab.NewClient()
 
 	for _, uri := range c.RepoData.Urls {
 
@@ -106,6 +151,7 @@ func (c *HttpClient) DownloadFile(name string) (string, error) {
 		if err != nil {
 			continue
 		}
+
 		u, err = url.Parse(uri)
 		if err != nil {
 			continue
@@ -114,10 +160,19 @@ func (c *HttpClient) DownloadFile(name string) (string, error) {
 
 		Info("Downloading", u.String())
 
-		_, err = grab.Get(temp, u.String())
+		req, err = c.PrepareReq(temp, u.String())
 		if err != nil {
 			continue
 		}
+
+		resp := client.Do(req)
+		if err = resp.Err(); err != nil {
+			continue
+		}
+
+		Info("Downloaded", filepath.Base(resp.Filename), "of",
+			fmt.Sprintf("%.2f", (float64(resp.BytesComplete())/1000)/1000), "MB (",
+			fmt.Sprintf("%.2f", (float64(resp.BytesPerSecond())/1024)/1024), "MiB/s )")
 
 		err = helpers.CopyFile(filepath.Join(temp, name), file.Name())
 		if err != nil {

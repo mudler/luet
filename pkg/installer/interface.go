@@ -53,6 +53,8 @@ type Repository interface {
 	SetTreePath(string)
 	GetType() string
 	SetType(string)
+	SetAuthentication(map[string]string)
+	GetAuthentication() map[string]string
 	GetRevision() int
 	IncrementRevision()
 	GetLastUpdate() string
