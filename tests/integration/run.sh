@@ -12,4 +12,6 @@ popd
 export PATH=$ROOT_DIR/tests/integration/bin/:$PATH
 
 "$ROOT_DIR/tests/integration/01_simple.sh"
+"$ROOT_DIR/tests/integration/01_simple_gzip.sh"
+"$ROOT_DIR/tests/integration/02_create_repo_from_config.sh"
 

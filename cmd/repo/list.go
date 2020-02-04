@@ -18,8 +18,13 @@ package cmd_repo
 
 import (
 	"fmt"
+	"path/filepath"
+	"strconv"
+	"time"
 
 	. "github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/pkg/helpers"
+	installer "github.com/mudler/luet/pkg/installer"
 
 	. "github.com/logrusorgru/aurora"
 	"github.com/spf13/cobra"
@@ -33,7 +38,7 @@ func NewRepoListCommand() *cobra.Command {
 		PreRun: func(cmd *cobra.Command, args []string) {
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			var repoColor, repoText string
+			var repoColor, repoText, repoRevision string
 
 			enable, _ := cmd.Flags().GetBool("enabled")
 			quiet, _ := cmd.Flags().GetBool("quiet")
@@ -47,6 +52,8 @@ func NewRepoListCommand() *cobra.Command {
 				if repoType != "" && repo.Type != repoType {
 					continue
 				}
+
+				repoRevision = ""
 
 				if quiet {
 					fmt.Println(repo.Name)
@@ -62,8 +69,26 @@ func NewRepoListCommand() *cobra.Command {
 						repoText = Yellow(repo.Urls[0]).String()
 					}
 
-					fmt.Println(
-						fmt.Sprintf("%s\n  %s", repoColor, repoText))
+					repobasedir := helpers.GetRepoDatabaseDirPath(repo.Name)
+					if repo.Cached {
+
+						r := installer.NewSystemRepository(repo)
+						localRepo, _ := r.(*installer.LuetSystemRepository).ReadSpecFile(filepath.Join(repobasedir,
+							installer.REPOSITORY_SPECFILE), false)
+						if localRepo != nil {
+							tsec, _ := strconv.ParseInt(localRepo.GetLastUpdate(), 10, 64)
+							repoRevision = Bold(Red(localRepo.GetRevision())).String() +
+								" - " + Bold(Green(time.Unix(tsec, 0).String())).String()
+						}
+					}
+
+					if repoRevision != "" {
+						fmt.Println(
+							fmt.Sprintf("%s\n  %s\n  Revision %s", repoColor, repoText, repoRevision))
+					} else {
+						fmt.Println(
+							fmt.Sprintf("%s\n  %s", repoColor, repoText))
+					}
 				}
 			}
 		},

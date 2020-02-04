@@ -17,8 +17,9 @@ package cmd
 import (
 	"os"
 
+	"github.com/mudler/luet/pkg/compiler"
+	. "github.com/mudler/luet/pkg/config"
 	installer "github.com/mudler/luet/pkg/installer"
-
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
@@ -38,9 +39,14 @@ var createrepoCmd = &cobra.Command{
 		viper.BindPFlag("descr", cmd.Flags().Lookup("descr"))
 		viper.BindPFlag("urls", cmd.Flags().Lookup("urls"))
 		viper.BindPFlag("type", cmd.Flags().Lookup("type"))
+		viper.BindPFlag("tree-compression", cmd.Flags().Lookup("tree-compression"))
+		viper.BindPFlag("tree-path", cmd.Flags().Lookup("tree-path"))
 		viper.BindPFlag("reset-revision", cmd.Flags().Lookup("reset-revision"))
+		viper.BindPFlag("repo", cmd.Flags().Lookup("repo"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		var err error
+		var repo installer.Repository
 
 		tree := viper.GetString("tree")
 		dst := viper.GetString("output")
@@ -50,11 +56,50 @@ var createrepoCmd = &cobra.Command{
 		urls := viper.GetStringSlice("urls")
 		t := viper.GetString("type")
 		reset := viper.GetBool("reset-revision")
+		treetype := viper.GetString("tree-compression")
+		treepath := viper.GetString("tree-path")
+		source_repo := viper.GetString("repo")
 
-		repo, err := installer.GenerateRepository(name, descr, t, urls, 1, packages, tree, pkg.NewInMemoryDatabase(false))
+		if source_repo != "" {
+			// Search for system repository
+			lrepo, err := LuetCfg.GetSystemRepository(source_repo)
+			if err != nil {
+				Fatal("Error: " + err.Error())
+			}
+
+			if tree == "" {
+				tree = lrepo.TreePath
+			}
+
+			if t == "" {
+				t = lrepo.Type
+			}
+
+			repo, err = installer.GenerateRepository(lrepo.Name,
+				lrepo.Description, t,
+				lrepo.Urls,
+				lrepo.Priority,
+				packages,
+				tree,
+				pkg.NewInMemoryDatabase(false))
+
+		} else {
+			repo, err = installer.GenerateRepository(name, descr, t, urls, 1, packages,
+				tree, pkg.NewInMemoryDatabase(false))
+		}
+
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
+
+		if treetype != "" {
+			repo.SetTreeCompressionType(compiler.CompressionImplementation(treetype))
+		}
+
+		if treepath != "" {
+			repo.SetTreePath(treepath)
+		}
+
 		err = repo.Write(dst, reset)
 		if err != nil {
 			Fatal("Error: " + err.Error())
@@ -75,6 +120,10 @@ func init() {
 	createrepoCmd.Flags().StringSlice("urls", []string{}, "Repository URLs")
 	createrepoCmd.Flags().String("type", "disk", "Repository type (disk)")
 	createrepoCmd.Flags().Bool("reset-revision", false, "Reset repository revision.")
+	createrepoCmd.Flags().String("repo", "", "Use repository defined in configuration.")
+
+	createrepoCmd.Flags().String("tree-compression", "none", "Compression alg: none, gzip")
+	createrepoCmd.Flags().String("tree-path", installer.TREE_TARBALL, "Repository tree filename")
 
 	RootCmd.AddCommand(createrepoCmd)
 }

@@ -12,7 +12,7 @@ oneTimeTearDown() {
 
 testBuild() {
     mkdir $tmpdir/testbuild
-    luet build --tree "$ROOT_DIR/tests/fixtures/buildableseed" --destination $tmpdir/testbuild --compression gzip test/c > /dev/null
+    luet build --tree "$ROOT_DIR/tests/fixtures/buildableseed" --destination $tmpdir/testbuild --compression gzip test/c-1.0 > /dev/null
     buildst=$?
     assertEquals 'builds successfully' "$buildst" "0"
     assertTrue 'create package dep B' "[ -e '$tmpdir/testbuild/b-test-1.0.package.tar.gz' ]"
@@ -27,11 +27,16 @@ testRepo() {
     --name "test" \
     --descr "Test Repo" \
     --urls $tmpdir/testrootfs \
+    --tree-compression gzip \
+    --tree-path foo.tar \
     --type disk > /dev/null
 
     createst=$?
     assertEquals 'create repo successfully' "$createst" "0"
     assertTrue 'create repository' "[ -e '$tmpdir/testbuild/repository.yaml' ]"
+    assertTrue 'create named tree in gzip' "[ -e '$tmpdir/testbuild/foo.tar.gz' ]"
+    assertTrue 'create tree in gzip-only' "[ ! -e '$tmpdir/testbuild/foo.tar' ]"
+
 }
 
 testConfig() {
@@ -56,7 +61,7 @@ EOF
 }
 
 testInstall() {
-    luet install --config $tmpdir/luet.yaml test/c
+    luet install --config $tmpdir/luet.yaml test/c-1.0
     #luet install --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"

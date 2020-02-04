@@ -16,8 +16,12 @@
 package helpers
 
 import (
+	"archive/tar"
 	"io"
 	"os"
+	"path/filepath"
+
+	. "github.com/mudler/luet/pkg/config"
 
 	"github.com/docker/docker/pkg/archive"
 )
@@ -49,14 +53,82 @@ func Tar(src, dest string) error {
 
 // Untar just a wrapper around the docker functions
 func Untar(src, dest string, sameOwner bool) error {
+	var ans error
+
 	in, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer in.Close()
 
-	return archive.Untar(in, dest, &archive.TarOptions{
-		NoLchown:        !sameOwner,
-		ExcludePatterns: []string{"dev/"}, // prevent 'operation not permitted'
-	})
+	if LuetCfg.GetGeneral().SameOwner {
+		// PRE: i have root privileged.
+
+		opts := &archive.TarOptions{
+			// NOTE: NoLchown boolean is used for chmod of the symlink
+			// Probably it's needed set this always to true.
+			NoLchown:        true,
+			ExcludePatterns: []string{"dev/"}, // prevent 'operation not permitted'
+		}
+
+		ans = archive.Untar(in, dest, opts)
+	} else {
+
+		var fileReader io.ReadCloser = in
+
+		tr := tar.NewReader(fileReader)
+		for {
+			header, err := tr.Next()
+
+			switch {
+			case err == io.EOF:
+				goto tarEof
+			case err != nil:
+				return err
+			case header == nil:
+				continue
+			}
+
+			// the target location where the dir/file should be created
+			target := filepath.Join(dest, header.Name)
+
+			// Check the file type
+			switch header.Typeflag {
+
+			// if its a dir and it doesn't exist create it
+			case tar.TypeDir:
+				if _, err := os.Stat(target); err != nil {
+					if err := os.MkdirAll(target, 0755); err != nil {
+						return err
+					}
+				}
+
+				// handle creation of file
+			case tar.TypeReg:
+				f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+				if err != nil {
+					return err
+				}
+
+				// copy over contents
+				if _, err := io.Copy(f, tr); err != nil {
+					return err
+				}
+
+				// manually close here after each file operation; defering would cause each
+				// file close to wait until all operations have completed.
+				f.Close()
+
+			case tar.TypeSymlink:
+				source := header.Linkname
+				err := os.Symlink(source, target)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	tarEof:
+	}
+
+	return ans
 }

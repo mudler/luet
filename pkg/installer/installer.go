@@ -128,7 +128,7 @@ func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
 	defer SpinnerStop()
 	syncedRepos := Repositories{}
 	for _, r := range l.PackageRepositories {
-		repo, err := r.Sync()
+		repo, err := r.Sync(false)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed syncing repository: "+r.GetName())
 		}
@@ -178,7 +178,7 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 	// compute a "big" world
 	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
-
+	p = syncedRepos.ResolveSelectors(p)
 	solv := solver.NewSolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false))
 	solution, err := solv.Install(p)
 	if err != nil {
@@ -285,7 +285,9 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
 
 	artifact, err := a.Repository.Client().DownloadArtifact(a.Artifact)
-	defer os.Remove(artifact.GetPath())
+	if err != nil {
+		return errors.Wrap(err, "Error on download artifact")
+	}
 
 	err = artifact.Verify()
 	if err != nil {

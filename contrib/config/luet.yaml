@@ -35,6 +35,9 @@
 #   Enable warnings to exit
 #   fatal_warnings: false
 #
+#   Try extracting tree/packages with the same ownership as exists in the archive (default for superuser).
+#   same_owner: false
+#
 # ---------------------------------------------
 # System configuration section:
 # ---------------------------------------------
@@ -71,9 +74,37 @@
 # define directly the list of the repositories.
 #
 # repositories:
-#   - name: "Local Repos"
-#     type: "dir"
-#     priority: 1
-#     enable: true
-#     path: "/var/cache/luet/repos/local"
 #
+#     Name of the repository. It's better that this name is unique. Mandatory.
+#   - name: "repo1"
+#
+#     A user-friendly description of the repository
+#     description: "My luet repo"
+#
+#     Type of the repository. Supported types are: dir|http. Mandatory.
+#     type: "dir"
+#
+#     Define the priority of the repository on research packages. Default is 9999.
+#     priority: 9999
+#
+#     Enable/Disable of the repository.
+#     enable: false
+#
+#     Cached repository. If true a local cache of the remote repository tree is maintained
+#     locally in the $tree_path else it is used a temporary directory that is removed when
+#     installation of a package is completed. A cached repository reduce time on search/install
+#     packages. By default caching is disable.
+#     cached: false
+#
+#     Path where store tree of the specifications. Default path is $database_path/repos/$repo_name
+#     tree_path: "/var/cache/luet/repos/local"
+#
+#     Define the list of the URL where retrieve tree and packages.
+#     urls:
+#        - https://mydomain.local/luet/repo1
+#
+#     auth:
+#        Define Basic authentication header
+#        basic: "mybasicauth"
+#        Define token authentication header
+#        token: "mytoken"
