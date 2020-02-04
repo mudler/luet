@@ -178,7 +178,7 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 	// compute a "big" world
 	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
-
+	p = syncedRepos.ResolveSelectors(p)
 	solv := solver.NewSolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false))
 	solution, err := solv.Install(p)
 	if err != nil {

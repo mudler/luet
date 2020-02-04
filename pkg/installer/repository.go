@@ -524,6 +524,29 @@ PACKAGE:
 
 }
 
+func (re Repositories) ResolveSelectors(p []pkg.Package) []pkg.Package {
+	// If a selector is given, get the best from each repo
+	sort.Sort(re) // respect prio
+	var matches []pkg.Package
+PACKAGE:
+	for _, pack := range p {
+		for _, r := range re {
+			if pack.IsSelector() {
+				c, err := r.GetTree().GetDatabase().FindPackageCandidate(pack)
+				if err == nil {
+					matches = append(matches, c)
+					continue PACKAGE
+				}
+			} else {
+				matches = append(matches, pack)
+			}
+		}
+	}
+
+	return matches
+
+}
+
 func (re Repositories) Search(s string) []PackageMatch {
 	sort.Sort(re)
 	var term = regexp.MustCompile(s)
