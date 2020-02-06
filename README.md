@@ -6,7 +6,7 @@
 
 Luet is a multi-platform Package Manager based off from containers - it uses Docker (and other tech) to sandbox your builds and generate packages from them. It has no dependencies and it is well suitable for "from scratch" environments. It can also version entire rootfs to enable delivery of OTA-alike updates.
 
-Luet offers a simple [specfile format](https://luet-lab.github.io/docs/docs/concepts/specfile/) in YA<ML notation to define both packages and rootfs. As it is based on containers, it can be used to build seed stages for Linux From Scratch installations and it can build and track updates.
+Luet offers a simple [specfile format](https://luet-lab.github.io/docs/docs/concepts/specfile/) in YAML notation to define both packages and rootfs. As it is based on containers, it can be used to build seed stages for Linux From Scratch installations and it can build and track updates.
 
 It is written entirely in Golang and where used as package manager, it can run in from scratch environment, with zero dependencies.
 
@@ -33,7 +33,7 @@ Luet is not feature-complete yet, it can build, install/uninstall/upgrade packag
 ## Documentation
 
 [Docs](https://https://luet-lab.github.io/docs) are available, or
-run `luet --help`,  any subcommand is documented as well: `luet build --help`.
+run `luet --help`,  any subcommand is documented as well, try e.g.: `luet build --help`.
 
 ## Authors
 
