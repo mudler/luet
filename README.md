@@ -32,7 +32,7 @@ Luet is not feature-complete yet, it can build, install/uninstall/upgrade packag
 
 ## Documentation
 
-[Docs](https://https://luet-lab.github.io/docs) are available, or
+[Documentation](https://luet-lab.github.io/docs) is available, or
 run `luet --help`,  any subcommand is documented as well, try e.g.: `luet build --help`.
 
 ## Authors
