@@ -4,9 +4,9 @@
 [![GoDoc](https://godoc.org/github.com/mudler/luet?status.svg)](https://godoc.org/github.com/mudler/luet)
 [![codecov](https://codecov.io/gh/mudler/luet/branch/master/graph/badge.svg)](https://codecov.io/gh/mudler/luet)
 
-Luet is a multi-platform Package Manager based off from containers - it uses Docker (and other tech) to sandbox your builds and generate packages from them. It has no dependencies and it is well suitable for "from scratch" environments. It can also version entire rootfs to enable delivery of OTA-alike updates.
+Luet is a multi-platform Package Manager based off from containers - it uses Docker (and other tech) to sandbox your builds and generate packages from them. It has zero dependencies and it is well suitable for "from scratch" environments. It can also version entire rootfs and enables delivery of OTA-alike updates, making it a perfect fit for the Edge computing era and IoT embedded devices.
 
-Luet offers a simple [specfile format](https://luet-lab.github.io/docs/docs/concepts/specfile/) in YAML notation to define both packages and rootfs. As it is based on containers, it can be used to build seed stages for Linux From Scratch installations and it can build and track updates.
+It offers a simple [specfile format](https://luet-lab.github.io/docs/docs/concepts/specfile/) in YAML notation to define both packages and rootfs. As it is based on containers, it can be used to build seed stages for Linux From Scratch installations and it can build and track updates for those systems.
 
 It is written entirely in Golang and where used as package manager, it can run in from scratch environment, with zero dependencies.
 
@@ -14,7 +14,7 @@ It is written entirely in Golang and where used as package manager, it can run i
 
 - Luet can reuse Gentoo's portage tree hierarchy, and it is heavily inspired from it.
 - It builds, installs, uninstalls and perform upgrades on machines
-- Installer doesn't depend on anything ( 0 dep installer !)
+- Installer doesn't depend on anything ( 0 dep installer !), statically built
 - Support for packages as "layers"
 - It uses SAT solving techniques to solve the deptree ( Inspired by [OPIUM](https://ranjitjhala.github.io/static/opium.pdf) )
 
