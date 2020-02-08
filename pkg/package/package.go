@@ -128,11 +128,11 @@ func (t *DefaultPackage) JSON() ([]byte, error) {
 
 // DefaultPackage represent a standard package definition
 type DefaultPackage struct {
-	ID               int      `json:"-" storm:"id,increment"` // primary key with auto increment
-	Name             string   `json:"name"`                   // Affects YAML field names too.
-	Version          string   `json:"version"`                // Affects YAML field names too.
-	Category         string   `json:"category"`               // Affects YAML field names too.
-	UseFlags         []string `json:"use_flags"`              // Affects YAML field names too.
+	ID               int      `storm:"id,increment"` // primary key with auto increment
+	Name             string   `json:"name"`          // Affects YAML field names too.
+	Version          string   `json:"version"`       // Affects YAML field names too.
+	Category         string   `json:"category"`      // Affects YAML field names too.
+	UseFlags         []string `json:"use_flags"`     // Affects YAML field names too.
 	State            State
 	PackageRequires  []*DefaultPackage `json:"requires"`  // Affects YAML field names too.
 	PackageConflicts []*DefaultPackage `json:"conflicts"` // Affects YAML field names too.
