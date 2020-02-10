@@ -33,6 +33,8 @@ type PackageSolver interface {
 	ConflictsWith(p pkg.Package, ls []pkg.Package) (bool, error)
 	World() []pkg.Package
 	Upgrade() ([]pkg.Package, PackagesAssertions, error)
+
+	SetResolver(PackageResolver)
 }
 
 // Solver is the default solver for luet
@@ -41,18 +43,25 @@ type Solver struct {
 	SolverDatabase     pkg.PackageDatabase
 	Wanted             []pkg.Package
 	InstalledDatabase  pkg.PackageDatabase
+
+	Resolver PackageResolver
 }
 
 // NewSolver accepts as argument two lists of packages, the first is the initial set,
 // the second represent all the known packages.
 func NewSolver(installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, solverdb pkg.PackageDatabase) PackageSolver {
-	return &Solver{InstalledDatabase: installed, DefinitionDatabase: definitiondb, SolverDatabase: solverdb}
+	return &Solver{InstalledDatabase: installed, DefinitionDatabase: definitiondb, SolverDatabase: solverdb, Resolver: &DummyPackageResolver{}}
 }
 
-// SetWorld is a setter for the list of all known packages to the solver
+// SetDefinitionDatabase is a setter for the definition Database
 
 func (s *Solver) SetDefinitionDatabase(db pkg.PackageDatabase) {
 	s.DefinitionDatabase = db
+}
+
+// SetResolver is a setter for the unsat resolver backend
+func (s *Solver) SetResolver(r PackageResolver) {
+	s.Resolver = r
 }
 
 func (s *Solver) World() []pkg.Package {
@@ -361,13 +370,20 @@ func (s *Solver) solve(f bf.Formula) (map[string]bool, bf.Formula, error) {
 
 // Solve builds the formula given the current state and returns package assertions
 func (s *Solver) Solve() (PackagesAssertions, error) {
+	var model map[string]bool
+	var err error
+
 	f, err := s.BuildFormula()
 
 	if err != nil {
 		return nil, err
 	}
 
-	model, _, err := s.solve(f)
+	model, _, err = s.solve(f)
+	if err != nil && s.Resolver != nil {
+		model, err = s.Resolver.Solve(f, s)
+	}
+
 	if err != nil {
 		return nil, err
 	}
