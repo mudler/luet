@@ -85,6 +85,8 @@ type Package interface {
 	IsSelector() bool
 	VersionMatchSelector(string) (bool, error)
 	SelectorMatchVersion(string) (bool, error)
+
+	String() string
 }
 
 type Tree interface {
@@ -128,11 +130,11 @@ func (t *DefaultPackage) JSON() ([]byte, error) {
 
 // DefaultPackage represent a standard package definition
 type DefaultPackage struct {
-	ID               int      `storm:"id,increment"` // primary key with auto increment
-	Name             string   `json:"name"`          // Affects YAML field names too.
-	Version          string   `json:"version"`       // Affects YAML field names too.
-	Category         string   `json:"category"`      // Affects YAML field names too.
-	UseFlags         []string `json:"use_flags"`     // Affects YAML field names too.
+	ID               int      `storm:"id,increment" json:"id"` // primary key with auto increment
+	Name             string   `json:"name"`                    // Affects YAML field names too.
+	Version          string   `json:"version"`                 // Affects YAML field names too.
+	Category         string   `json:"category"`                // Affects YAML field names too.
+	UseFlags         []string `json:"use_flags"`               // Affects YAML field names too.
 	State            State
 	PackageRequires  []*DefaultPackage `json:"requires"`  // Affects YAML field names too.
 	PackageConflicts []*DefaultPackage `json:"conflicts"` // Affects YAML field names too.
@@ -160,7 +162,7 @@ func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*D
 func (p *DefaultPackage) String() string {
 	b, err := p.JSON()
 	if err != nil {
-		return fmt.Sprintf("{ id: \"%d\", name: \"%s\" }", p.ID, p.Name)
+		return fmt.Sprintf("{ id: \"%d\", name: \"%s\", version: \"%s\", category: \"%s\"  }", p.ID, p.Name, p.Version, p.Category)
 	}
 	return fmt.Sprintf("%s", string(b))
 }
@@ -169,6 +171,16 @@ func (p *DefaultPackage) String() string {
 // FIXME: this needs to be unique, now just name is generalized
 func (p *DefaultPackage) GetFingerPrint() string {
 	return fmt.Sprintf("%s-%s-%s", p.Name, p.Category, p.Version)
+}
+
+func FromString(s string) Package {
+	var unescaped DefaultPackage
+
+	err := json.Unmarshal([]byte(s), &unescaped)
+	if err != nil {
+		return &unescaped
+	}
+	return &unescaped
 }
 
 func (p *DefaultPackage) GetPackageName() string {

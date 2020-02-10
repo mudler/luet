@@ -23,6 +23,15 @@ import (
 
 var _ = Describe("Package", func() {
 
+	Context("Encoding/Decoding", func() {
+		a := &DefaultPackage{Name: "test", Version: "1", Category: "t"}
+		It("Encodes and decodes correctly", func() {
+			Expect(a.String()).ToNot(Equal(""))
+			p := FromString(a.String())
+			Expect(p).To(Equal(a))
+		})
+	})
+
 	Context("Simple package", func() {
 		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
 		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
