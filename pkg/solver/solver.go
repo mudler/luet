@@ -35,6 +35,8 @@ type PackageSolver interface {
 	Upgrade() ([]pkg.Package, PackagesAssertions, error)
 
 	SetResolver(PackageResolver)
+
+	Solve() (PackagesAssertions, error)
 }
 
 // Solver is the default solver for luet
@@ -230,6 +232,7 @@ func (s *Solver) Upgrade() ([]pkg.Package, PackagesAssertions, error) {
 	}
 
 	s2 := NewSolver(installedcopy, s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
+	s2.SetResolver(s.Resolver)
 	// Then try to uninstall the versions in the system, and store that tree
 	for _, p := range toUninstall {
 		r, err := s.Uninstall(p)
@@ -381,7 +384,7 @@ func (s *Solver) Solve() (PackagesAssertions, error) {
 
 	model, _, err = s.solve(f)
 	if err != nil && s.Resolver != nil {
-		model, err = s.Resolver.Solve(f, s)
+		return s.Resolver.Solve(f, s)
 	}
 
 	if err != nil {
