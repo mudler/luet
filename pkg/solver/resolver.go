@@ -16,8 +16,13 @@
 package solver
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/mudler/luet/pkg/helpers"
+	. "github.com/mudler/luet/pkg/logger"
+	"gopkg.in/yaml.v2"
 
 	"github.com/ecooper/qlearning"
 	"github.com/mudler/gophersat/bf"
@@ -28,11 +33,14 @@ import (
 type ActionType int
 
 const (
-	Solved        = 1
+	NoAction      = 0
+	Solved        = iota
 	NoSolution    = iota
 	Going         = iota
 	ActionRemoved = iota
 	ActionAdded   = iota
+
+	DoNoop = false
 )
 
 //. "github.com/mudler/luet/pkg/logger"
@@ -62,6 +70,9 @@ type QLearningResolver struct {
 	Targets []pkg.Package
 	Current []pkg.Package
 
+	observedDelta       int
+	observedDeltaChoice []pkg.Package
+
 	Agent *qlearning.SimpleAgent
 
 	debug bool
@@ -75,14 +86,13 @@ func (resolver *QLearningResolver) Solve(f bf.Formula, s PackageSolver) (Package
 
 	resolver.Formula = f
 	// Our agent has a learning rate of 0.7 and discount of 1.0.
-	resolver.Agent = qlearning.NewSimpleAgent(0.7, 1.0)            // FIXME: Remove hardcoded values
-	resolver.ToAttempt = len(resolver.Solver.(*Solver).Wanted) - 1 // TODO: type assertions must go away
-
+	resolver.Agent = qlearning.NewSimpleAgent(0.7, 1.0)                                              // FIXME: Remove hardcoded values
+	resolver.ToAttempt = int(helpers.Factorial(uint64(len(resolver.Solver.(*Solver).Wanted)-1) * 3)) // TODO: type assertions must go away
+	Debug("Attempts:", resolver.ToAttempt)
 	resolver.Targets = resolver.Solver.(*Solver).Wanted
+	resolver.observedDelta = 999999
 
-	fmt.Println("Targets", resolver.Targets)
-
-	resolver.Attempts = 99
+	resolver.Attempts = 9000
 	resolver.Attempted = make(map[string]bool, len(resolver.Targets))
 
 	resolver.Correct = make([]Choice, len(resolver.Targets), len(resolver.Targets))
@@ -100,39 +110,27 @@ func (resolver *QLearningResolver) Solve(f bf.Formula, s PackageSolver) (Package
 		// Reward doesn't change state so we can check what the
 		// reward would be for this action, and report how the
 		// env changed.
-		if resolver.Reward(action) > 0.0 {
+		score := resolver.Reward(action)
+		Debug("Scored", score)
+		if score > 0.0 {
 			resolver.Log("%s was correct", action.Action.String())
-			resolver.ToAttempt = 0 // We won. As we had one sat, let's take it
+			//resolver.ToAttempt = 0 // We won. As we had one sat, let's take it
 		} else {
 			resolver.Log("%s was incorrect", action.Action.String())
 		}
 	}
 
 	// If we get good result, take it
-	if resolver.IsComplete() == Solved {
-		resolver.Log("Victory!")
-		resolver.Log("removals needed: ", resolver.Correct)
-		p := []pkg.Package{}
-		fmt.Println("Targets", resolver.Targets)
-		// Strip from targets the ones that the agent removed
-	TARGET:
-		for _, pack := range resolver.Targets {
-			for _, w := range resolver.Correct {
-				if pack.String() == w.String() {
-					fmt.Println("Skipping", pack.String())
-					continue TARGET
-				}
+	// Take the result also if we did  reached overall maximum attempts
+	if resolver.IsComplete() == Solved || resolver.IsComplete() == NoSolution {
+		Debug("Finished")
 
-			}
-			fmt.Println("Appending", pack.String())
+		if len(resolver.observedDeltaChoice) != 0 {
+			Debug("Taking minimum observed choiceset", resolver.observedDeltaChoice)
+			// Take the minimum delta observed choice result, and consume it (Try sets the wanted list)
+			resolver.Solver.(*Solver).Wanted = resolver.observedDeltaChoice
+		}
 
-			p = append(p, pack)
-		}
-		fmt.Println("Installing")
-		for _, pack := range p {
-			fmt.Println(pack.String())
-		}
-		resolver.Solver.(*Solver).Wanted = p
 		return resolver.Solver.Solve()
 	} else {
 		resolver.Log("Resolver couldn't find a solution!")
@@ -158,17 +156,23 @@ func (resolver *QLearningResolver) IsComplete() int {
 }
 
 func (resolver *QLearningResolver) Try(c Choice) error {
-	pack := c.String()
+	pack := c.Package
+	packtoAdd := pkg.FromString(pack)
 	resolver.Attempted[pack+strconv.Itoa(int(c.Action))] = true // increase the count
 	s, _ := resolver.Solver.(*Solver)
 	var filtered []pkg.Package
 
 	switch c.Action {
 	case ActionAdded:
-		for _, p := range resolver.Targets {
+		found := false
+		for _, p := range s.Wanted {
 			if p.String() == pack {
-				resolver.Solver.(*Solver).Wanted = append(resolver.Solver.(*Solver).Wanted, p)
+				found = true
+				break
 			}
+		}
+		if !found {
+			resolver.Solver.(*Solver).Wanted = append(resolver.Solver.(*Solver).Wanted, packtoAdd)
 		}
 
 	case ActionRemoved:
@@ -179,9 +183,13 @@ func (resolver *QLearningResolver) Try(c Choice) error {
 		}
 
 		resolver.Solver.(*Solver).Wanted = filtered
-	default:
-		return errors.New("Nonvalid action")
+	case NoAction:
+		Debug("Chosen to keep current state")
+	}
 
+	Debug("Current test")
+	for _, current := range resolver.Solver.(*Solver).Wanted {
+		Debug("-", current.GetName())
 	}
 
 	_, err := resolver.Solver.Solve()
@@ -194,12 +202,21 @@ func (resolver *QLearningResolver) Try(c Choice) error {
 //
 // Choose updates the resolver's state.
 func (resolver *QLearningResolver) Choose(c Choice) bool {
+	pack := pkg.FromString(c.Package)
+	switch c.Action {
+	case ActionRemoved:
+		Debug("Chosed to remove ", pack.GetName())
+	case ActionAdded:
+		Debug("Chosed to add ", pack.GetName())
+	}
 	err := resolver.Try(c)
 
 	if err == nil {
 		resolver.Correct = append(resolver.Correct, c)
 		//	resolver.Correct[index] = pack
 		resolver.ToAttempt--
+		resolver.Attempts-- // Decrease attempts - it's a barrier
+
 	} else {
 		resolver.Attempts--
 		return false
@@ -212,24 +229,39 @@ func (resolver *QLearningResolver) Choose(c Choice) bool {
 // member of the qlearning.Rewarder interface. If the choice will make sat the formula, a positive score is returned.
 // Otherwise, a static -1000 is returned.
 func (resolver *QLearningResolver) Reward(action *qlearning.StateAction) float32 {
-	choice := action.Action.String()
+	choice := action.Action.(*Choice)
 
-	var filtered []pkg.Package
+	//_, err := resolver.Solver.Solve()
+	err := resolver.Try(*choice)
 
-	//Filter by fingerprint
-	for _, p := range resolver.Targets {
-		if p.String() != choice {
-			filtered = append(filtered, p)
-		}
-	}
-
-	resolver.Solver.(*Solver).Wanted = filtered
-	//resolver.Current = filtered
-	_, err := resolver.Solver.Solve()
-	//resolver.Solver.(*Solver).Wanted = resolver.Targets
+	toBeInstalled := len(resolver.Solver.(*Solver).Wanted)
+	originalTarget := len(resolver.Targets)
+	noaction := choice.Action == NoAction
+	delta := originalTarget - toBeInstalled
+	Debug("Observed delta", resolver.observedDelta)
+	Debug("Current delta", delta)
 
 	if err == nil {
-		return 24.0 / float32(len(resolver.Attempted))
+		// if toBeInstalled == originalTarget { // Base case: all the targets matches (it shouldn't happen, but lets put a higher)
+		// 	Debug("Target match, maximum score")
+		// 	return 24.0 / float32(len(resolver.Attempted))
+
+		// }
+		if DoNoop {
+			if noaction && toBeInstalled == 0 { // We decided to stay in the current state, and no targets have been chosen
+				Debug("Penalty, noaction and no installed")
+				return -100
+			}
+		}
+
+		if delta <= resolver.observedDelta { // Try to maximise observedDelta
+			resolver.observedDelta = delta
+			resolver.observedDeltaChoice = resolver.Solver.(*Solver).Wanted // we store it as this is our return value at the end
+			Debug("Delta reward", delta)
+			return 24.0 / float32(len(resolver.Attempted))
+		} else if toBeInstalled > 0 { // If we installed something, at least give a good score
+			return 24.0 / float32(len(resolver.Attempted))
+		}
 
 	}
 
@@ -239,18 +271,27 @@ func (resolver *QLearningResolver) Reward(action *qlearning.StateAction) float32
 // Next creates a new slice of qlearning.Action instances. A possible
 // action is created for each package that could be removed from the formula's target
 func (resolver *QLearningResolver) Next() []qlearning.Action {
-	actions := make([]qlearning.Action, 0, (len(resolver.Targets)-1)*2)
+	actions := make([]qlearning.Action, 0, (len(resolver.Targets)-1)*3)
 
-	fmt.Println("Actions")
+TARGETS:
 	for _, pack := range resolver.Targets {
-		//	attempted := resolver.Attempted[pack.String()]
-		//	if !attempted {
-		actions = append(actions, &Choice{Package: pack.String(), Action: ActionRemoved})
+		for _, current := range resolver.Solver.(*Solver).Wanted {
+			if current.String() == pack.String() {
+				actions = append(actions, &Choice{Package: pack.String(), Action: ActionRemoved})
+				Debug(pack.GetName(), " -> Action REMOVE")
+				continue TARGETS
+			}
+
+		}
 		actions = append(actions, &Choice{Package: pack.String(), Action: ActionAdded})
-		fmt.Println(pack.GetName(), " -> Action added: Removed - Added")
-		//	}
+		Debug(pack.GetName(), " -> Action ADD")
+
 	}
-	fmt.Println("_______")
+
+	if DoNoop {
+		actions = append(actions, &Choice{Package: "", Action: NoAction}) // NOOP
+	}
+
 	return actions
 }
 
@@ -259,25 +300,38 @@ func (resolver *QLearningResolver) Next() []qlearning.Action {
 func (resolver *QLearningResolver) Log(msg string, args ...interface{}) {
 	if resolver.debug {
 		logMsg := fmt.Sprintf("(%d moves, %d remaining attempts) %s\n", len(resolver.Attempted), resolver.Attempts, msg)
-		fmt.Printf(logMsg, args...)
+		Debug(fmt.Sprintf(logMsg, args...))
 	}
 }
 
 // String returns a consistent hash for the current env state to be
 // used in a qlearning.Agent.
 func (resolver *QLearningResolver) String() string {
-	return fmt.Sprintf("%v", resolver.Correct)
+	return fmt.Sprintf("%v", resolver.Solver.(*Solver).Wanted)
 }
 
 // Choice implements qlearning.Action for a package choice for removal from wanted targets
 type Choice struct {
-	Package string
-	Action  ActionType
+	Package string     `json:"pack"`
+	Action  ActionType `json:"action"`
+}
+
+func ChoiceFromString(s string) (*Choice, error) {
+	var p *Choice
+	err := yaml.Unmarshal([]byte(s), &p)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 // String returns the character for the current action.
 func (choice *Choice) String() string {
-	return choice.Package
+	data, err := json.Marshal(choice)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }
 
 // Apply updates the state of the solver for the package choice.
