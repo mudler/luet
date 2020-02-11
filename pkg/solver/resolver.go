@@ -18,7 +18,7 @@ package solver
 import (
 	"fmt"
 
-	"github.com/crillab/gophersat/bf"
+	"github.com/mudler/gophersat/bf"
 	"github.com/ecooper/qlearning"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/pkg/errors"
