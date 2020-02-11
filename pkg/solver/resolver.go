@@ -20,12 +20,12 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/crillab/gophersat/bf"
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	"gopkg.in/yaml.v2"
 
 	"github.com/ecooper/qlearning"
-	"github.com/mudler/gophersat/bf"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/pkg/errors"
 )

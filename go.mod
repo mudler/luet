@@ -8,6 +8,7 @@ require (
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 	github.com/briandowns/spinner v1.7.0
 	github.com/cavaliercoder/grab v2.0.0+incompatible
+	github.com/crillab/gophersat v1.1.7
 	github.com/docker/docker v0.7.3-0.20180827131323-0c5f8d2b9b23
 	github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
 	github.com/ghodss/yaml v1.0.0
@@ -20,7 +21,6 @@ require (
 	github.com/marcsauter/single v0.0.0-20181104081128-f8bf46f26ec0
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/mudler/docker-companion v0.4.6-0.20191110154655-b8b364100616
-	github.com/mudler/gophersat v1.1.5-0.20200211080010-645700b4b7c0
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.0
 	github.com/otiai10/copy v1.0.2

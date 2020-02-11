@@ -20,7 +20,7 @@ import (
 	//. "github.com/mudler/luet/pkg/logger"
 	"github.com/pkg/errors"
 
-	"github.com/mudler/gophersat/bf"
+	"github.com/crillab/gophersat/bf"
 	pkg "github.com/mudler/luet/pkg/package"
 )
 

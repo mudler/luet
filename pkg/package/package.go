@@ -25,7 +25,7 @@ import (
 
 	//	. "github.com/mudler/luet/pkg/logger"
 
-	"github.com/mudler/gophersat/bf"
+	"github.com/crillab/gophersat/bf"
 	version "github.com/hashicorp/go-version"
 	"github.com/jinzhu/copier"
 
