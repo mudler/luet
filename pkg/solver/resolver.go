@@ -17,17 +17,22 @@ package solver
 
 import (
 	"fmt"
+	"strconv"
 
-	"github.com/mudler/gophersat/bf"
 	"github.com/ecooper/qlearning"
+	"github.com/mudler/gophersat/bf"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/pkg/errors"
 )
 
+type ActionType int
+
 const (
-	Solved     = 1
-	NoSolution = iota
-	Going      = iota
+	Solved        = 1
+	NoSolution    = iota
+	Going         = iota
+	ActionRemoved = iota
+	ActionAdded   = iota
 )
 
 //. "github.com/mudler/luet/pkg/logger"
@@ -49,7 +54,7 @@ type QLearningResolver struct {
 
 	ToAttempt int
 	Attempted map[string]bool
-	Correct   []string
+	Correct   []Choice
 
 	Solver  PackageSolver
 	Formula bf.Formula
@@ -80,7 +85,7 @@ func (resolver *QLearningResolver) Solve(f bf.Formula, s PackageSolver) (Package
 	resolver.Attempts = 99
 	resolver.Attempted = make(map[string]bool, len(resolver.Targets))
 
-	resolver.Correct = make([]string, len(resolver.Targets), len(resolver.Targets))
+	resolver.Correct = make([]Choice, len(resolver.Targets), len(resolver.Targets))
 	resolver.debug = true
 	for resolver.IsComplete() == Going {
 		// Pick the next move, which is going to be a letter choice.
@@ -97,6 +102,7 @@ func (resolver *QLearningResolver) Solve(f bf.Formula, s PackageSolver) (Package
 		// env changed.
 		if resolver.Reward(action) > 0.0 {
 			resolver.Log("%s was correct", action.Action.String())
+			resolver.ToAttempt = 0 // We won. As we had one sat, let's take it
 		} else {
 			resolver.Log("%s was incorrect", action.Action.String())
 		}
@@ -112,7 +118,7 @@ func (resolver *QLearningResolver) Solve(f bf.Formula, s PackageSolver) (Package
 	TARGET:
 		for _, pack := range resolver.Targets {
 			for _, w := range resolver.Correct {
-				if pack.String() == w {
+				if pack.String() == w.String() {
 					fmt.Println("Skipping", pack.String())
 					continue TARGET
 				}
@@ -151,36 +157,48 @@ func (resolver *QLearningResolver) IsComplete() int {
 	return Solved
 }
 
+func (resolver *QLearningResolver) Try(c Choice) error {
+	pack := c.String()
+	resolver.Attempted[pack+strconv.Itoa(int(c.Action))] = true // increase the count
+	s, _ := resolver.Solver.(*Solver)
+	var filtered []pkg.Package
+
+	switch c.Action {
+	case ActionAdded:
+		for _, p := range resolver.Targets {
+			if p.String() == pack {
+				resolver.Solver.(*Solver).Wanted = append(resolver.Solver.(*Solver).Wanted, p)
+			}
+		}
+
+	case ActionRemoved:
+		for _, p := range s.Wanted {
+			if p.String() != pack {
+				filtered = append(filtered, p)
+			}
+		}
+
+		resolver.Solver.(*Solver).Wanted = filtered
+	default:
+		return errors.New("Nonvalid action")
+
+	}
+
+	_, err := resolver.Solver.Solve()
+
+	return err
+}
+
 // Choose applies a pack attempt, returning
 // true if the formula returns sat.
 //
 // Choose updates the resolver's state.
-func (resolver *QLearningResolver) Choose(pack string) bool {
-	resolver.Attempted[pack] = true
-
-	s, _ := resolver.Solver.(*Solver)
-
-	var filtered []pkg.Package
-	var index int
-
-	//Filter by fingerprint
-	for i, p := range s.Wanted {
-		if p.String() != pack {
-			index = i
-			filtered = append(filtered, p)
-		}
-	}
-
-	resolver.Solver.(*Solver).Wanted = filtered
-	//resolver.Current = filtered
-
-	_, err := resolver.Solver.Solve()
-	//resolver.Solver.(*Solver).Wanted = resolver.Targets
-
-	//resolver.Solver.(*Solver).Wanted = resolver.Targets
+func (resolver *QLearningResolver) Choose(c Choice) bool {
+	err := resolver.Try(c)
 
 	if err == nil {
-		resolver.Correct[index] = pack
+		resolver.Correct = append(resolver.Correct, c)
+		//	resolver.Correct[index] = pack
 		resolver.ToAttempt--
 	} else {
 		resolver.Attempts--
@@ -221,15 +239,17 @@ func (resolver *QLearningResolver) Reward(action *qlearning.StateAction) float32
 // Next creates a new slice of qlearning.Action instances. A possible
 // action is created for each package that could be removed from the formula's target
 func (resolver *QLearningResolver) Next() []qlearning.Action {
-	actions := make([]qlearning.Action, 0, len(resolver.Targets)-1)
+	actions := make([]qlearning.Action, 0, (len(resolver.Targets)-1)*2)
 
+	fmt.Println("Actions")
 	for _, pack := range resolver.Targets {
 		//	attempted := resolver.Attempted[pack.String()]
 		//	if !attempted {
-		actions = append(actions, &Choice{Package: pack.String()})
+		actions = append(actions, &Choice{Package: pack.String(), Action: ActionRemoved})
+		actions = append(actions, &Choice{Package: pack.String(), Action: ActionAdded})
+		fmt.Println(pack.GetName(), " -> Action added: Removed - Added")
 		//	}
 	}
-	fmt.Println("ACTIONS", actions)
 	fmt.Println("_______")
 	return actions
 }
@@ -246,12 +266,13 @@ func (resolver *QLearningResolver) Log(msg string, args ...interface{}) {
 // String returns a consistent hash for the current env state to be
 // used in a qlearning.Agent.
 func (resolver *QLearningResolver) String() string {
-	return fmt.Sprintf("%s", resolver.Correct)
+	return fmt.Sprintf("%v", resolver.Correct)
 }
 
 // Choice implements qlearning.Action for a package choice for removal from wanted targets
 type Choice struct {
 	Package string
+	Action  ActionType
 }
 
 // String returns the character for the current action.
@@ -262,7 +283,7 @@ func (choice *Choice) String() string {
 // Apply updates the state of the solver for the package choice.
 func (choice *Choice) Apply(state qlearning.State) qlearning.State {
 	resolver := state.(*QLearningResolver)
-	resolver.Choose(choice.Package)
+	resolver.Choose(*choice)
 
 	return resolver
 }
