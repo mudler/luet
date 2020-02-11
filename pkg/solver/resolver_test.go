@@ -93,7 +93,7 @@ var _ = Describe("Resolver", func() {
 		})
 		Context("QLearningResolver", func() {
 			It("will find out that we can install D by ignoring A", func() {
-				s.SetResolver(&QLearningResolver{})
+				s.SetResolver(SimpleQLearningSolver())
 				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{C})
 				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
@@ -121,7 +121,7 @@ var _ = Describe("Resolver", func() {
 			})
 
 			It("will find out that we can install D and F by ignoring E and A", func() {
-				s.SetResolver(&QLearningResolver{})
+				s.SetResolver(SimpleQLearningSolver())
 				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{C})
 				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
