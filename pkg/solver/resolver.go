@@ -224,10 +224,10 @@ func (resolver *QLearningResolver) Next() []qlearning.Action {
 	actions := make([]qlearning.Action, 0, len(resolver.Targets)-1)
 
 	for _, pack := range resolver.Targets {
-		attempted := resolver.Attempted[pack.String()]
-		if !attempted {
-			actions = append(actions, &Choice{Package: pack.String()})
-		}
+		//	attempted := resolver.Attempted[pack.String()]
+		//	if !attempted {
+		actions = append(actions, &Choice{Package: pack.String()})
+		//	}
 	}
 	fmt.Println("ACTIONS", actions)
 	fmt.Println("_______")
