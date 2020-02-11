@@ -87,16 +87,10 @@ func New(problem *Problem) *Solver {
 		return &Solver{status: Unsat}
 	}
 	nbVars := problem.NbVars
-
-	trailCap := nbVars
-	if len(problem.Units) > trailCap {
-		trailCap = len(problem.Units)
-	}
-
 	s := &Solver{
 		nbVars:     nbVars,
 		status:     problem.Status,
-		trail:      make([]Lit, len(problem.Units), trailCap),
+		trail:      make([]Lit, len(problem.Units), nbVars),
 		model:      problem.Model,
 		activity:   make([]float64, nbVars),
 		polarity:   make([]bool, nbVars),
@@ -349,7 +343,7 @@ func (s *Solver) propagateAndSearch(lit Lit, lvl decLevel) Status {
 				return Indet
 			}
 			if s.Stats.NbConflicts >= s.wl.idxReduce*s.wl.nbMax {
-				s.wl.idxReduce = s.Stats.NbConflicts/s.wl.nbMax + 1
+				s.wl.idxReduce = (s.Stats.NbConflicts / s.wl.nbMax) + 1
 				s.reduceLearned()
 				s.bumpNbMax()
 			}
@@ -744,7 +738,7 @@ func (s *Solver) Optimal(results chan Result, stop chan struct{}) (res Result) {
 		copy(s.lastModel, s.model) // Save this model: it might be the last one
 		cost = 0
 		for i, lit := range s.minLits {
-			if s.model[lit.Var()] > 0 == lit.IsPositive() {
+			if (s.model[lit.Var()] > 0) == lit.IsPositive() {
 				if s.minWeights == nil {
 					cost++
 				} else {
@@ -809,7 +803,7 @@ func (s *Solver) Minimize() int {
 		copy(s.lastModel, s.model) // Save this model: it might be the last one
 		cost = 0
 		for i, lit := range s.minLits {
-			if s.model[lit.Var()] > 0 == lit.IsPositive() {
+			if (s.model[lit.Var()] > 0) == lit.IsPositive() {
 				if s.minWeights == nil {
 					cost++
 				} else {

@@ -49,6 +49,9 @@ github.com/containerd/continuity/pathdriver
 github.com/containerd/continuity/syscallx
 # github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
 github.com/cpuguy83/go-md2man/v2/md2man
+# github.com/crillab/gophersat v1.1.7
+github.com/crillab/gophersat/bf
+github.com/crillab/gophersat/solver
 # github.com/cyphar/filepath-securejoin v0.2.2
 github.com/cyphar/filepath-securejoin
 # github.com/docker/distribution v2.7.0+incompatible
@@ -90,8 +93,6 @@ github.com/docker/go-units
 github.com/docker/libnetwork/ipamutils
 # github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7
 github.com/docker/libtrust
-# github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
-github.com/ecooper/qlearning
 # github.com/fatih/color v1.7.0
 github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.7
@@ -156,9 +157,6 @@ github.com/mattn/go-isatty
 github.com/mitchellh/mapstructure
 # github.com/mudler/docker-companion v0.4.6-0.20191110154655-b8b364100616
 github.com/mudler/docker-companion/api
-# github.com/mudler/gophersat v1.1.5-0.20200211080010-645700b4b7c0
-github.com/mudler/gophersat/bf
-github.com/mudler/gophersat/solver
 # github.com/onsi/ginkgo v1.10.1
 github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
@@ -265,8 +263,8 @@ go.uber.org/multierr
 go.uber.org/tools/update-license
 # go.uber.org/zap v1.13.0
 go.uber.org/zap
-go.uber.org/zap/zapcore
 go.uber.org/zap/internal/bufferpool
+go.uber.org/zap/zapcore
 go.uber.org/zap/buffer
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit

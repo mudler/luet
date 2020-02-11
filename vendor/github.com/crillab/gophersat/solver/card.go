@@ -15,11 +15,10 @@ func AtLeast1(lits ...int) CardConstr {
 
 // AtMost1 returns a cardinality constraint stating that at most one of the given lits can be true.
 func AtMost1(lits ...int) CardConstr {
-	negated := make([]int, len(lits))
 	for i, lit := range lits {
-		negated[i] = -lit
+		lits[i] = -lit
 	}
-	return CardConstr{Lits: negated, AtLeast: len(lits) - 1}
+	return CardConstr{Lits: lits, AtLeast: len(lits) - 1}
 }
 
 // Exactly1 returns two cardinality constraints stating that exactly one of the given lits must be true.
