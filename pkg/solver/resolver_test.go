@@ -58,6 +58,38 @@ var _ = Describe("Resolver", func() {
 				Expect(len(solution)).To(Equal(0))
 				Expect(err).To(HaveOccurred())
 			})
+			It("succeeds to install D and F if explictly requested", func() {
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{C})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+				F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+				for _, p := range []pkg.Package{A, B, C, D, E, F} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{C} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				solution, err := s.Install([]pkg.Package{D, F}) // D and F should go as they have no deps. A/E should be filtered by QLearn
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(len(solution)).To(Equal(6))
+
+				Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: E, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: F, Value: true}))
+
+			})
+
 		})
 		Context("QLearningResolver", func() {
 			It("will find out that we can install D by ignoring A", func() {
@@ -87,7 +119,8 @@ var _ = Describe("Resolver", func() {
 				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
 				Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
 			})
-			PIt("will find out that we can install D by ignoring A", func() {
+
+			It("will find out that we can install D and F by ignoring E and A", func() {
 				s.SetResolver(&QLearningResolver{})
 				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{C})
@@ -113,11 +146,10 @@ var _ = Describe("Resolver", func() {
 
 				Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: false}))
 				Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: false}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true})) // Was already installed
 				Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: E, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: E, Value: false}))
 				Expect(solution).To(ContainElement(PackageAssert{Package: F, Value: true}))
-
 			})
 		})
 
