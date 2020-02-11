@@ -8,7 +8,7 @@ require (
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 	github.com/briandowns/spinner v1.7.0
 	github.com/cavaliercoder/grab v2.0.0+incompatible
-	github.com/crillab/gophersat v1.1.7
+	github.com/crillab/gophersat v1.1.9-0.20200211102949-9a8bf7f2f0a3
 	github.com/docker/docker v0.7.3-0.20180827131323-0c5f8d2b9b23
 	github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
 	github.com/ghodss/yaml v1.0.0
