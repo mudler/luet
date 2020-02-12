@@ -52,7 +52,13 @@ type Solver struct {
 // NewSolver accepts as argument two lists of packages, the first is the initial set,
 // the second represent all the known packages.
 func NewSolver(installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, solverdb pkg.PackageDatabase) PackageSolver {
-	return &Solver{InstalledDatabase: installed, DefinitionDatabase: definitiondb, SolverDatabase: solverdb, Resolver: &DummyPackageResolver{}}
+	return NewResolver(installed, definitiondb, solverdb, &DummyPackageResolver{})
+}
+
+// NewReSolver accepts as argument two lists of packages, the first is the initial set,
+// the second represent all the known packages.
+func NewResolver(installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, solverdb pkg.PackageDatabase, re PackageResolver) PackageSolver {
+	return &Solver{InstalledDatabase: installed, DefinitionDatabase: definitiondb, SolverDatabase: solverdb, Resolver: re}
 }
 
 // SetDefinitionDatabase is a setter for the definition Database

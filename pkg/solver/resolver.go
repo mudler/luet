@@ -22,7 +22,6 @@ import (
 
 	"github.com/crillab/gophersat/bf"
 	"github.com/mudler/luet/pkg/helpers"
-	. "github.com/mudler/luet/pkg/logger"
 	"gopkg.in/yaml.v2"
 
 	"github.com/ecooper/qlearning"
@@ -48,6 +47,8 @@ const (
 	DefaultLearningRate    = 0.7
 	DefaultDiscount        = 1.0
 	DefaultInitialObserved = 999999
+
+	QLearningResolverType = "qlearning"
 )
 
 //. "github.com/mudler/luet/pkg/logger"
@@ -99,6 +100,7 @@ func NewQLearningResolver(LearningRate, Discount float32, MaxAttempts, initialOb
 }
 
 func (resolver *QLearningResolver) Solve(f bf.Formula, s PackageSolver) (PackagesAssertions, error) {
+	//	Info("Using QLearning solver to resolve conflicts. Please be patient.")
 	resolver.Solver = s
 
 	s.SetResolver(&DummyPackageResolver{}) // Set dummy. Otherwise the attempts will run again a QLearning instance.
@@ -114,7 +116,6 @@ func (resolver *QLearningResolver) Solve(f bf.Formula, s PackageSolver) (Package
 	// 3 are the action domains, counting noop regardless if enabled or not
 	// get the permutations to attempt
 	resolver.ToAttempt = int(helpers.Factorial(uint64(len(resolver.Solver.(*Solver).Wanted)-1) * ActionDomains)) // TODO: type assertions must go away
-	Debug("Attempts:", resolver.ToAttempt)
 	resolver.Targets = resolver.Solver.(*Solver).Wanted
 
 	resolver.attempts = resolver.Attempts
@@ -134,29 +135,25 @@ func (resolver *QLearningResolver) Solve(f bf.Formula, s PackageSolver) (Package
 		// Reward doesn't change state so we can check what the
 		// reward would be for this action, and report how the
 		// env changed.
-		score := resolver.Reward(action)
-		Debug("Scored", score)
-		if score > 0.0 {
-			resolver.Log("%s was correct", action.Action.String())
-		} else {
-			resolver.Log("%s was incorrect", action.Action.String())
-		}
+		//	score := resolver.Reward(action)
+		//	if score > 0.0 {
+		//	resolver.Log("%s was correct", action.Action.String())
+		//	} else {
+		//	resolver.Log("%s was incorrect", action.Action.String())
+		//	}
 	}
 
 	// If we get good result, take it
 	// Take the result also if we did  reached overall maximum attempts
 	if resolver.IsComplete() == Solved || resolver.IsComplete() == NoSolution {
-		Debug("Finished")
 
 		if len(resolver.observedDeltaChoice) != 0 {
-			Debug("Taking minimum observed choiceset", resolver.observedDeltaChoice)
 			// Take the minimum delta observed choice result, and consume it (Try sets the wanted list)
 			resolver.Solver.(*Solver).Wanted = resolver.observedDeltaChoice
 		}
 
 		return resolver.Solver.Solve()
 	} else {
-		resolver.Log("Resolver couldn't find a solution!")
 		return nil, errors.New("QLearning resolver failed ")
 	}
 
@@ -165,16 +162,13 @@ func (resolver *QLearningResolver) Solve(f bf.Formula, s PackageSolver) (Package
 // Returns the current state.
 func (resolver *QLearningResolver) IsComplete() int {
 	if resolver.attempts < 1 {
-		resolver.Log("Attempts finished!")
 		return NoSolution
 	}
 
 	if resolver.ToAttempt > 0 {
-		resolver.Log("We must continue!")
 		return Going
 	}
 
-	resolver.Log("we solved it!")
 	return Solved
 }
 
@@ -206,13 +200,6 @@ func (resolver *QLearningResolver) Try(c Choice) error {
 		}
 
 		resolver.Solver.(*Solver).Wanted = filtered
-	case NoAction:
-		Debug("Chosen to keep current state")
-	}
-
-	Debug("Current test")
-	for _, current := range resolver.Solver.(*Solver).Wanted {
-		Debug("-", current.GetName())
 	}
 
 	_, err := resolver.Solver.Solve()
@@ -225,13 +212,8 @@ func (resolver *QLearningResolver) Try(c Choice) error {
 //
 // Choose updates the resolver's state.
 func (resolver *QLearningResolver) Choose(c Choice) bool {
-	pack := pkg.FromString(c.Package)
-	switch c.Action {
-	case ActionRemoved:
-		Debug("Chosed to remove ", pack.GetName())
-	case ActionAdded:
-		Debug("Chosed to add ", pack.GetName())
-	}
+	//pack := pkg.FromString(c.Package)
+
 	err := resolver.Try(c)
 
 	if err == nil {
@@ -258,8 +240,6 @@ func (resolver *QLearningResolver) Reward(action *qlearning.StateAction) float32
 	originalTarget := len(resolver.Targets)
 	noaction := choice.Action == NoAction
 	delta := originalTarget - toBeInstalled
-	Debug("Observed delta", resolver.observedDelta)
-	Debug("Current delta", delta)
 
 	if err == nil {
 		// if toBeInstalled == originalTarget { // Base case: all the targets matches (it shouldn't happen, but lets put a higher)
@@ -269,7 +249,6 @@ func (resolver *QLearningResolver) Reward(action *qlearning.StateAction) float32
 		// }
 		if DoNoop {
 			if noaction && toBeInstalled == 0 { // We decided to stay in the current state, and no targets have been chosen
-				Debug("Penalty, noaction and no installed")
 				return -100
 			}
 		}
@@ -277,7 +256,6 @@ func (resolver *QLearningResolver) Reward(action *qlearning.StateAction) float32
 		if delta <= resolver.observedDelta { // Try to maximise observedDelta
 			resolver.observedDelta = delta
 			resolver.observedDeltaChoice = resolver.Solver.(*Solver).Wanted // we store it as this is our return value at the end
-			Debug("Delta reward", delta)
 			return 24.0 / float32(len(resolver.Attempted))
 		} else if toBeInstalled > 0 { // If we installed something, at least give a good score
 			return 24.0 / float32(len(resolver.Attempted))
@@ -298,14 +276,11 @@ TARGETS:
 		for _, current := range resolver.Solver.(*Solver).Wanted {
 			if current.String() == pack.String() {
 				actions = append(actions, &Choice{Package: pack.String(), Action: ActionRemoved})
-				Debug(pack.GetName(), " -> Action REMOVE")
 				continue TARGETS
 			}
 
 		}
 		actions = append(actions, &Choice{Package: pack.String(), Action: ActionAdded})
-		Debug(pack.GetName(), " -> Action ADD")
-
 	}
 
 	if DoNoop {
@@ -319,7 +294,7 @@ TARGETS:
 // to stdout.
 func (resolver *QLearningResolver) Log(msg string, args ...interface{}) {
 	logMsg := fmt.Sprintf("(%d moves, %d remaining attempts) %s\n", len(resolver.Attempted), resolver.attempts, msg)
-	Debug(fmt.Sprintf(logMsg, args...))
+	fmt.Println(fmt.Sprintf(logMsg, args...))
 }
 
 // String returns a consistent hash for the current env state to be
