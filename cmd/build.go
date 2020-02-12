@@ -45,6 +45,11 @@ var buildCmd = &cobra.Command{
 		viper.BindPFlag("revdeps", cmd.Flags().Lookup("revdeps"))
 		viper.BindPFlag("all", cmd.Flags().Lookup("all"))
 		viper.BindPFlag("compression", cmd.Flags().Lookup("compression"))
+
+		LuetCfg.Viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
+		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
+		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
+		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -92,7 +97,22 @@ var buildCmd = &cobra.Command{
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
+
+		stype := LuetCfg.Viper.GetString("solver.type")
+		discount := LuetCfg.Viper.GetFloat64("solver.discount")
+		rate := LuetCfg.Viper.GetFloat64("solver.rate")
+		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
+
+		LuetCfg.GetSolverOptions().Type = stype
+		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
+		LuetCfg.GetSolverOptions().Discount = float32(discount)
+		LuetCfg.GetSolverOptions().MaxAttempts = attempts
+
+		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
+
 		opts := compiler.NewDefaultCompilerOptions()
+		opts.SolverOptions = *LuetCfg.GetSolverOptions()
+
 		opts.Clean = clean
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), opts)
 		luetCompiler.SetConcurrency(concurrency)
@@ -176,6 +196,11 @@ func init() {
 	buildCmd.Flags().Bool("all", false, "Build all packages in the tree")
 	buildCmd.Flags().String("destination", path, "Destination folder")
 	buildCmd.Flags().String("compression", "none", "Compression alg: none, gzip")
+
+	buildCmd.Flags().String("solver-type", "", "Solver strategy")
+	buildCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
+	buildCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
+	buildCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 
 	RootCmd.AddCommand(buildCmd)
 }

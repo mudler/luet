@@ -1,0 +1,5 @@
+prelude:
+  - echo f > /eprelude
+steps:
+  - echo f > /f
+image: "alpine"

@@ -108,3 +108,21 @@
 #        basic: "mybasicauth"
 #        Define token authentication header
 #        token: "mytoken"
+# ---------------------------------------------
+# Solver parameter configuration:
+# ---------------------------------------------
+# solver:
+#
+#   Solver strategy to solve possible conflicts during depedency
+#   solving. Defaults to empty (none). Available: qlearning
+#   type: ""
+#
+#   Solver agent learning rate. 0.1 to 1.0
+#   rate: 0.7
+#
+#   Learning discount factor.
+#   discount: 1.0
+#
+#   Number of overall attempts that the solver has available before bailing out.
+#   max_attempts: 9000
+#

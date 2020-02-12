@@ -42,6 +42,7 @@ type LuetCompiler struct {
 	PullFirst, KeepImg, Clean bool
 	Concurrency               int
 	CompressionType           CompressionImplementation
+	Options                   CompilerOptions
 }
 
 func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase, opt *CompilerOptions) Compiler {
@@ -58,6 +59,7 @@ func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase, opt *Compi
 		KeepImg:         opt.KeepImg,
 		Concurrency:     opt.Concurrency,
 		Clean:           opt.Clean,
+		Options:         *opt,
 	}
 }
 
@@ -459,7 +461,7 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 
 func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssertions, error) {
 
-	s := solver.NewSolver(pkg.NewInMemoryDatabase(false), cs.Database, pkg.NewInMemoryDatabase(false))
+	s := solver.NewResolver(pkg.NewInMemoryDatabase(false), cs.Database, pkg.NewInMemoryDatabase(false), cs.Options.SolverOptions.Resolver())
 
 	solution, err := s.Install([]pkg.Package{p.GetPackage()})
 	if err != nil {

@@ -35,9 +35,9 @@ var cleanupCmd = &cobra.Command{
 		var cleaned int = 0
 
 		// Check if cache dir exists
-		if helpers.Exists(helpers.GetSystemPkgsCacheDirPath()) {
+		if helpers.Exists(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()) {
 
-			files, err := ioutil.ReadDir(helpers.GetSystemPkgsCacheDirPath())
+			files, err := ioutil.ReadDir(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath())
 			if err != nil {
 				Fatal("Error on read cachedir ", err.Error())
 			}
@@ -52,7 +52,7 @@ var cleanupCmd = &cobra.Command{
 				}
 
 				err := os.RemoveAll(
-					filepath.Join(helpers.GetSystemPkgsCacheDirPath(), file.Name()))
+					filepath.Join(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), file.Name()))
 				if err != nil {
 					Fatal("Error on removing", file.Name())
 				}

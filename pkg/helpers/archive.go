@@ -21,8 +21,6 @@ import (
 	"os"
 	"path/filepath"
 
-	. "github.com/mudler/luet/pkg/config"
-
 	"github.com/docker/docker/pkg/archive"
 )
 
@@ -61,7 +59,7 @@ func Untar(src, dest string, sameOwner bool) error {
 	}
 	defer in.Close()
 
-	if LuetCfg.GetGeneral().SameOwner {
+	if sameOwner {
 		// PRE: i have root privileged.
 
 		opts := &archive.TarOptions{

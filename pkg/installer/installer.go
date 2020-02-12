@@ -25,6 +25,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	compiler "github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -34,9 +35,15 @@ import (
 	"github.com/pkg/errors"
 )
 
+type LuetInstallerOptions struct {
+	SolverOptions config.LuetSolverOptions
+	Concurrency   int
+}
+
 type LuetInstaller struct {
 	PackageRepositories Repositories
-	Concurrency         int
+
+	Options LuetInstallerOptions
 }
 
 type ArtifactMatch struct {
@@ -86,8 +93,8 @@ func NewLuetFinalizerFromYaml(data []byte) (*LuetFinalizer, error) {
 	return &p, err
 }
 
-func NewLuetInstaller(concurrency int) Installer {
-	return &LuetInstaller{Concurrency: concurrency}
+func NewLuetInstaller(opts LuetInstallerOptions) Installer {
+	return &LuetInstaller{Options: opts}
 }
 
 func (l *LuetInstaller) Upgrade(s *System) error {
@@ -100,7 +107,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
 	// compute a "big" world
-	solv := solver.NewSolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false))
+	solv := solver.NewResolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
 	uninstall, solution, err := solv.Upgrade()
 	if err != nil {
 		return errors.Wrap(err, "Failed solving solution for upgrade")
@@ -179,7 +186,8 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
 	p = syncedRepos.ResolveSelectors(p)
-	solv := solver.NewSolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false))
+
+	solv := solver.NewResolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
 	solution, err := solv.Install(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed solving solution for package")
@@ -214,7 +222,7 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 	all := make(chan ArtifactMatch)
 
 	var wg = new(sync.WaitGroup)
-	for i := 0; i < l.Concurrency; i++ {
+	for i := 0; i < l.Options.Concurrency; i++ {
 		wg.Add(1)
 		go l.installerWorker(i, wg, all, s)
 	}
@@ -356,8 +364,7 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 	// compute uninstall from all world - remove packages in parallel - run uninstall finalizer (in order) - mark the uninstallation in db
 	// Get installed definition
-
-	solv := solver.NewSolver(s.Database, s.Database, pkg.NewInMemoryDatabase(false))
+	solv := solver.NewResolver(s.Database, s.Database, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
 	solution, err := solv.Uninstall(p)
 	if err != nil {
 		return errors.Wrap(err, "Uninstall failed")

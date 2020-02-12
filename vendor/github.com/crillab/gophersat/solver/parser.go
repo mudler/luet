@@ -55,8 +55,12 @@ func ParseSlice(cnf [][]int) *Problem {
 			return &pb
 		}
 	}
-	pb.simplify()
+	pb.simplify2()
 	return &pb
+}
+
+func isSpace(b byte) bool {
+	return b == ' ' || b == '\t' || b == '\n' || b == '\r'
 }
 
 // readInt reads an int from r.
@@ -65,7 +69,7 @@ func ParseSlice(cnf [][]int) *Problem {
 // All spaces before the int value are ignored.
 // Can return EOF.
 func readInt(b *byte, r *bufio.Reader) (res int, err error) {
-	for err == nil && (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') {
+	for err == nil && isSpace(*b) {
 		*b, err = r.ReadByte()
 	}
 	if err == io.EOF {
@@ -88,7 +92,7 @@ func readInt(b *byte, r *bufio.Reader) (res int, err error) {
 		}
 		res = 10*res + int(*b-'0')
 		*b, err = r.ReadByte()
-		if *b == ' ' || *b == '\t' || *b == '\n' || *b == '\r' {
+		if isSpace(*b) {
 			break
 		}
 	}

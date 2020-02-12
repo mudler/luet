@@ -21,6 +21,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/mudler/luet/pkg/compiler"
@@ -39,7 +40,7 @@ func (c *LocalClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Art
 	var err error
 
 	artifactName := path.Base(artifact.GetPath())
-	cacheFile := filepath.Join(helpers.GetSystemPkgsCacheDirPath(), artifactName)
+	cacheFile := filepath.Join(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), artifactName)
 
 	// Check if file is already in cache
 	if helpers.Exists(cacheFile) {

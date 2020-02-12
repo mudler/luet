@@ -1,0 +1,5 @@
+image: "alpine"
+prelude:
+  - echo d > /dprelude
+steps:
+  - echo d > /d

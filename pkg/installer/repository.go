@@ -360,7 +360,7 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 		return nil, errors.Wrap(err, "While downloading "+REPOSITORY_SPECFILE)
 	}
 
-	repobasedir := helpers.GetRepoDatabaseDirPath(r.GetName())
+	repobasedir := config.LuetCfg.GetSystem().GetRepoDatabaseDirPath(r.GetName())
 	repo, err := r.ReadSpecFile(file, false)
 	if err != nil {
 		return nil, err

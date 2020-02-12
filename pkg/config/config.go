@@ -19,14 +19,20 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"os/user"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
+	solver "github.com/mudler/luet/pkg/solver"
 	v "github.com/spf13/viper"
 )
 
 var LuetCfg = NewLuetConfig(v.GetViper())
+var AvailableResolvers = strings.Join([]string{solver.QLearningResolverType}, " ")
 
 type LuetLoggingConfig struct {
 	Path       string `mapstructure:"path"`
@@ -44,11 +50,74 @@ type LuetGeneralConfig struct {
 	FatalWarns      bool `mapstructure:"fatal_warnings"`
 }
 
+type LuetSolverOptions struct {
+	Type        string  `mapstructure:"type"`
+	LearnRate   float32 `mapstructure:"rate"`
+	Discount    float32 `mapstructure:"discount"`
+	MaxAttempts int     `mapstructure:"max_attempts"`
+}
+
+func (opts LuetSolverOptions) Resolver() solver.PackageResolver {
+	switch opts.Type {
+	case solver.QLearningResolverType:
+		if opts.LearnRate != 0.0 {
+			return solver.NewQLearningResolver(opts.LearnRate, opts.Discount, opts.MaxAttempts, 999999)
+
+		}
+		return solver.SimpleQLearningSolver()
+	}
+
+	return &solver.DummyPackageResolver{}
+}
+
+func (opts *LuetSolverOptions) CompactString() string {
+	return fmt.Sprintf("type: %s rate: %f, discount: %f, attempts: %d, initialobserved: %d",
+		opts.Type, opts.LearnRate, opts.Discount, opts.MaxAttempts, 999999)
+}
+
 type LuetSystemConfig struct {
 	DatabaseEngine string `yaml:"database_engine" mapstructure:"database_engine"`
 	DatabasePath   string `yaml:"database_path" mapstructure:"database_path"`
 	Rootfs         string `yaml:"rootfs" mapstructure:"rootfs"`
 	PkgsCachePath  string `yaml:"pkgs_cache_path" mapstructure:"pkgs_cache_path"`
+}
+
+func (sc LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
+	dbpath := filepath.Join(sc.Rootfs, sc.DatabasePath)
+	dbpath = filepath.Join(dbpath, "repos/"+name)
+	err := os.MkdirAll(dbpath, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+	return dbpath
+}
+
+func (sc LuetSystemConfig) GetSystemRepoDatabaseDirPath() string {
+	dbpath := filepath.Join(sc.Rootfs,
+		sc.DatabasePath)
+	err := os.MkdirAll(dbpath, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+	return dbpath
+}
+
+func (sc LuetSystemConfig) GetSystemPkgsCacheDirPath() (ans string) {
+	var cachepath string
+	if sc.PkgsCachePath != "" {
+		cachepath = sc.PkgsCachePath
+	} else {
+		// Create dynamic cache for test suites
+		cachepath, _ = ioutil.TempDir(os.TempDir(), "cachepkgs")
+	}
+
+	if filepath.IsAbs(cachepath) {
+		ans = cachepath
+	} else {
+		ans = filepath.Join(sc.GetSystemRepoDatabaseDirPath(), cachepath)
+	}
+
+	return
 }
 
 type LuetRepository struct {
@@ -112,6 +181,7 @@ type LuetConfig struct {
 	Logging LuetLoggingConfig `mapstructure:"logging"`
 	General LuetGeneralConfig `mapstructure:"general"`
 	System  LuetSystemConfig  `mapstructure:"system"`
+	Solver  LuetSolverOptions `mapstructure:"solver"`
 
 	RepositoriesConfDir []string         `mapstructure:"repos_confdir"`
 	CacheRepositories   []LuetRepository `mapstructure:"repetitors"`
@@ -154,6 +224,11 @@ func GenDefault(viper *v.Viper) {
 	viper.SetDefault("repos_confdir", []string{"/etc/luet/repos.conf.d"})
 	viper.SetDefault("cache_repositories", []string{})
 	viper.SetDefault("system_repositories", []string{})
+
+	viper.SetDefault("solver.type", "")
+	viper.SetDefault("solver.rate", 0.7)
+	viper.SetDefault("solver.discount", 1.0)
+	viper.SetDefault("solver.max_attempts", 9000)
 }
 
 func (c *LuetConfig) AddSystemRepository(r LuetRepository) {
@@ -172,6 +247,10 @@ func (c *LuetConfig) GetSystem() *LuetSystemConfig {
 	return &c.System
 }
 
+func (c *LuetConfig) GetSolverOptions() *LuetSolverOptions {
+	return &c.Solver
+}
+
 func (c *LuetConfig) GetSystemRepository(name string) (*LuetRepository, error) {
 	var ans *LuetRepository = nil
 
@@ -186,6 +265,18 @@ func (c *LuetConfig) GetSystemRepository(name string) (*LuetRepository, error) {
 	}
 
 	return ans, nil
+}
+
+func (c *LuetSolverOptions) String() string {
+	ans := fmt.Sprintf(`
+solver:
+  type: %s
+  rate: %f
+  discount: %f
+  max_attempts: %d`, c.Type, c.LearnRate, c.Discount,
+		c.MaxAttempts)
+
+	return ans
 }
 
 func (c *LuetGeneralConfig) String() string {

@@ -33,6 +33,10 @@ type PackageSolver interface {
 	ConflictsWith(p pkg.Package, ls []pkg.Package) (bool, error)
 	World() []pkg.Package
 	Upgrade() ([]pkg.Package, PackagesAssertions, error)
+
+	SetResolver(PackageResolver)
+
+	Solve() (PackagesAssertions, error)
 }
 
 // Solver is the default solver for luet
@@ -41,18 +45,31 @@ type Solver struct {
 	SolverDatabase     pkg.PackageDatabase
 	Wanted             []pkg.Package
 	InstalledDatabase  pkg.PackageDatabase
+
+	Resolver PackageResolver
 }
 
 // NewSolver accepts as argument two lists of packages, the first is the initial set,
 // the second represent all the known packages.
 func NewSolver(installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, solverdb pkg.PackageDatabase) PackageSolver {
-	return &Solver{InstalledDatabase: installed, DefinitionDatabase: definitiondb, SolverDatabase: solverdb}
+	return NewResolver(installed, definitiondb, solverdb, &DummyPackageResolver{})
 }
 
-// SetWorld is a setter for the list of all known packages to the solver
+// NewReSolver accepts as argument two lists of packages, the first is the initial set,
+// the second represent all the known packages.
+func NewResolver(installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, solverdb pkg.PackageDatabase, re PackageResolver) PackageSolver {
+	return &Solver{InstalledDatabase: installed, DefinitionDatabase: definitiondb, SolverDatabase: solverdb, Resolver: re}
+}
+
+// SetDefinitionDatabase is a setter for the definition Database
 
 func (s *Solver) SetDefinitionDatabase(db pkg.PackageDatabase) {
 	s.DefinitionDatabase = db
+}
+
+// SetResolver is a setter for the unsat resolver backend
+func (s *Solver) SetResolver(r PackageResolver) {
+	s.Resolver = r
 }
 
 func (s *Solver) World() []pkg.Package {
@@ -221,6 +238,7 @@ func (s *Solver) Upgrade() ([]pkg.Package, PackagesAssertions, error) {
 	}
 
 	s2 := NewSolver(installedcopy, s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
+	s2.SetResolver(s.Resolver)
 	// Then try to uninstall the versions in the system, and store that tree
 	for _, p := range toUninstall {
 		r, err := s.Uninstall(p)
@@ -361,13 +379,20 @@ func (s *Solver) solve(f bf.Formula) (map[string]bool, bf.Formula, error) {
 
 // Solve builds the formula given the current state and returns package assertions
 func (s *Solver) Solve() (PackagesAssertions, error) {
+	var model map[string]bool
+	var err error
+
 	f, err := s.BuildFormula()
 
 	if err != nil {
 		return nil, err
 	}
 
-	model, _, err := s.solve(f)
+	model, _, err = s.solve(f)
+	if err != nil && s.Resolver != nil {
+		return s.Resolver.Solve(f, s)
+	}
+
 	if err != nil {
 		return nil, err
 	}

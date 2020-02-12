@@ -4,16 +4,14 @@ go 1.12
 
 require (
 	github.com/DataDog/zstd v1.4.4 // indirect
-	github.com/MottainaiCI/simplestreams-builder v0.0.0-20190710131531-efb382161f56 // indirect
 	github.com/Sabayon/pkgs-checker v0.4.2-0.20200101193228-1d500105afb7
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 	github.com/briandowns/spinner v1.7.0
 	github.com/cavaliercoder/grab v2.0.0+incompatible
-	github.com/creack/pty v1.1.9 // indirect
-	github.com/crillab/gophersat v1.1.7
+	github.com/crillab/gophersat v1.1.9-0.20200211102949-9a8bf7f2f0a3
 	github.com/docker/docker v0.7.3-0.20180827131323-0c5f8d2b9b23
+	github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
 	github.com/hashicorp/go-version v1.2.0
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
 	github.com/klauspost/pgzip v1.2.1
@@ -29,7 +27,6 @@ require (
 	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/philopon/go-toposort v0.0.0-20170620085441-9be86dbd762f
 	github.com/pkg/errors v0.8.1
-	github.com/rogpeppe/go-internal v1.5.1 // indirect
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5 // indirect
@@ -46,6 +43,5 @@ require (
 	golang.org/x/tools v0.0.0-20200102200121-6de373a2766c // indirect
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
 	gopkg.in/yaml.v2 v2.2.7
-	mvdan.cc/sh v2.6.4+incompatible // indirect
 	mvdan.cc/sh/v3 v3.0.0-beta1
 )
