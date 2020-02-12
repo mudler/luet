@@ -1,0 +1,7 @@
+category: "test"
+name: "b"
+version: "1.0"
+conflicts:
+ - category: "test"
+   name: "c"
+   version: "1.0"

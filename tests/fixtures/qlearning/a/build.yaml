@@ -1,0 +1,8 @@
+prelude:
+  - echo a > /aprelude
+steps:
+  - echo a > /a
+requires:
+- category: "test"
+  name: "b"
+  version: "1.0"

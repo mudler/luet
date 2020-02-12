@@ -11,7 +11,7 @@ popd
 
 export PATH=$ROOT_DIR/tests/integration/bin/:$PATH
 
-"$ROOT_DIR/tests/integration/01_simple.sh"
-"$ROOT_DIR/tests/integration/01_simple_gzip.sh"
-"$ROOT_DIR/tests/integration/02_create_repo_from_config.sh"
-
+for script in $(ls "$ROOT_DIR/tests/integration/" | grep '^[0-9]*_.*.sh'); do
+  echo "Executing script '$script'."
+  $ROOT_DIR/tests/integration/$script
+done
