@@ -20,7 +20,6 @@ import (
 	"regexp"
 
 	. "github.com/mudler/luet/pkg/config"
-	"github.com/mudler/luet/pkg/helpers"
 	installer "github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -37,6 +36,10 @@ var searchCmd = &cobra.Command{
 		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
 		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
 		viper.BindPFlag("installed", cmd.Flags().Lookup("installed"))
+		LuetCfg.Viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
+		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
+		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
+		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var systemDB pkg.PackageDatabase
@@ -57,7 +60,8 @@ var searchCmd = &cobra.Command{
 				repos = append(repos, r)
 			}
 
-			inst := installer.NewLuetInstaller(LuetCfg.GetGeneral().Concurrency)
+			inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{Concurrency: LuetCfg.GetGeneral().Concurrency, SolverOptions: *LuetCfg.GetSolverOptions()})
+
 			inst.Repositories(repos)
 			synced, err := inst.SyncRepositories(false)
 			if err != nil {
@@ -101,5 +105,9 @@ func init() {
 	searchCmd.Flags().String("system-dbpath", path, "System db path")
 	searchCmd.Flags().String("system-target", path, "System rootpath")
 	searchCmd.Flags().Bool("installed", false, "Search between system packages")
+	searchCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+AvailableResolvers+" )")
+	searchCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
+	searchCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
+	searchCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	RootCmd.AddCommand(searchCmd)
 }
