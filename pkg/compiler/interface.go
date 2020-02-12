@@ -18,6 +18,7 @@ package compiler
 import (
 	"runtime"
 
+	"github.com/mudler/luet/pkg/config"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 )
@@ -48,6 +49,8 @@ type CompilerOptions struct {
 	Concurrency        int
 	CompressionType    CompressionImplementation
 	Clean              bool
+
+	SolverOptions config.LuetSolverOptions
 }
 
 func NewDefaultCompilerOptions() *CompilerOptions {
