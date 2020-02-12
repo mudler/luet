@@ -68,6 +68,9 @@ type QLearningResolver struct {
 	Attempts int
 
 	ToAttempt int
+
+	attempts int
+
 	Attempted map[string]bool
 
 	Solver  PackageSolver
@@ -114,6 +117,8 @@ func (resolver *QLearningResolver) Solve(f bf.Formula, s PackageSolver) (Package
 	Debug("Attempts:", resolver.ToAttempt)
 	resolver.Targets = resolver.Solver.(*Solver).Wanted
 
+	resolver.attempts = resolver.Attempts
+
 	resolver.Attempted = make(map[string]bool, len(resolver.Targets))
 
 	for resolver.IsComplete() == Going {
@@ -159,7 +164,7 @@ func (resolver *QLearningResolver) Solve(f bf.Formula, s PackageSolver) (Package
 
 // Returns the current state.
 func (resolver *QLearningResolver) IsComplete() int {
-	if resolver.Attempts < 1 {
+	if resolver.attempts < 1 {
 		resolver.Log("Attempts finished!")
 		return NoSolution
 	}
@@ -231,10 +236,9 @@ func (resolver *QLearningResolver) Choose(c Choice) bool {
 
 	if err == nil {
 		resolver.ToAttempt--
-		resolver.Attempts-- // Decrease attempts - it's a barrier
-
+		resolver.attempts-- // Decrease attempts - it's a barrier. We could also do not decrease it here, allowing more attempts to be made
 	} else {
-		resolver.Attempts--
+		resolver.attempts--
 		return false
 	}
 
@@ -314,7 +318,7 @@ TARGETS:
 // Log is a wrapper of fmt.Printf. If Game.debug is true, Log will print
 // to stdout.
 func (resolver *QLearningResolver) Log(msg string, args ...interface{}) {
-	logMsg := fmt.Sprintf("(%d moves, %d remaining attempts) %s\n", len(resolver.Attempted), resolver.Attempts, msg)
+	logMsg := fmt.Sprintf("(%d moves, %d remaining attempts) %s\n", len(resolver.Attempted), resolver.attempts, msg)
 	Debug(fmt.Sprintf(logMsg, args...))
 }
 
