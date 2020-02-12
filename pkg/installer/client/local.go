@@ -21,8 +21,8 @@ import (
 	"path"
 	"path/filepath"
 
-	. "github.com/mudler/luet/pkg/logger"
 	"github.com/mudler/luet/pkg/config"
+	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/helpers"
