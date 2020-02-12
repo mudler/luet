@@ -99,7 +99,7 @@ var _ = Describe("Installer", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
-			inst := NewLuetInstaller(1)
+			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
@@ -212,7 +212,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
-			inst := NewLuetInstaller(1)
+			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
@@ -320,7 +320,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
-			inst := NewLuetInstaller(1)
+			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
@@ -435,7 +435,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
-			inst := NewLuetInstaller(1)
+			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
