@@ -57,7 +57,7 @@ var upgradeCmd = &cobra.Command{
 
 		if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
 			systemDB = pkg.NewBoltDatabase(
-				filepath.Join(helpers.GetSystemRepoDatabaseDirPath(), "luet.db"))
+				filepath.Join(LuetCfg.GetSystem().GetSystemRepoDatabaseDirPath(), "luet.db"))
 		} else {
 			systemDB = pkg.NewInMemoryDatabase(true)
 		}

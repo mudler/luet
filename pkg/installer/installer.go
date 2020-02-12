@@ -25,6 +25,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	compiler "github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"

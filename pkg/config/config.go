@@ -22,7 +22,12 @@ import (
 	"os/user"
 	"runtime"
 	"time"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	pkg "github.com/mudler/luet/pkg/package"
 
+	solver "github.com/mudler/luet/pkg/solver"
 	v "github.com/spf13/viper"
 )
 
@@ -50,6 +55,46 @@ type LuetSystemConfig struct {
 	Rootfs         string `yaml:"rootfs" mapstructure:"rootfs"`
 	PkgsCachePath  string `yaml:"pkgs_cache_path" mapstructure:"pkgs_cache_path"`
 }
+
+
+func (sc LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
+	dbpath := filepath.Join(sc.Rootfs, sc.DatabasePath)
+	dbpath = filepath.Join(dbpath, "repos/"+name)
+	err := os.MkdirAll(dbpath, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+	return dbpath
+}
+
+func (sc LuetSystemConfig)  GetSystemRepoDatabaseDirPath() string {
+	dbpath := filepath.Join(sc.Rootfs,
+		sc.DatabasePath)
+	err := os.MkdirAll(dbpath, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+	return dbpath
+}
+
+func (sc LuetSystemConfig) GetSystemPkgsCacheDirPath() (ans string) {
+	var cachepath string
+	if sc.PkgsCachePath != "" {
+		cachepath = sc.PkgsCachePath
+	} else {
+		// Create dynamic cache for test suites
+		cachepath, _ = ioutil.TempDir(os.TempDir(), "cachepkgs")
+	}
+
+	if filepath.IsAbs(cachepath) {
+		ans = cachepath
+	} else {
+		ans = filepath.Join(sc.GetSystemRepoDatabaseDirPath(), cachepath)
+	}
+
+	return
+}
+
 
 type LuetRepository struct {
 	Name           string            `json:"name" yaml:"name" mapstructure:"name"`

@@ -23,7 +23,6 @@ import (
 	"time"
 
 	. "github.com/mudler/luet/pkg/config"
-	"github.com/mudler/luet/pkg/helpers"
 	installer "github.com/mudler/luet/pkg/installer"
 
 	. "github.com/logrusorgru/aurora"
@@ -69,7 +68,7 @@ func NewRepoListCommand() *cobra.Command {
 						repoText = Yellow(repo.Urls[0]).String()
 					}
 
-					repobasedir := helpers.GetRepoDatabaseDirPath(repo.Name)
+					repobasedir := LuetCfg.GetSystem().GetRepoDatabaseDirPath(repo.Name)
 					if repo.Cached {
 
 						r := installer.NewSystemRepository(repo)

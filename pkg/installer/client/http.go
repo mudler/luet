@@ -28,6 +28,7 @@ import (
 
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/helpers"
+	"github.com/mudler/luet/pkg/config"
 
 	"github.com/cavaliercoder/grab"
 )
@@ -70,7 +71,7 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 	var temp string
 
 	artifactName := path.Base(artifact.GetPath())
-	cacheFile := filepath.Join(helpers.GetSystemPkgsCacheDirPath(), artifactName)
+	cacheFile := filepath.Join(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), artifactName)
 	ok := false
 
 	// Check if file is already in cache
