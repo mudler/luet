@@ -30,6 +30,23 @@ To install luet, you can grab a release on the [Release page](https://github.com
 
 Luet is not feature-complete yet, it can build, install/uninstall/upgrade packages - but it doesn't support yet all the features you would normally expect from a Package Manager nowadays.
 
+# Dependency solving
+
+Luet uses SAT and Reinforcement learning engine for dependency solving.
+It encodes the package requirements into a SAT problem, using gophersat to solve the dependency tree and give a concrete model as result.
+
+## SAT encoding
+
+Each package and its constraints are encoded and built around [OPIUM](https://ranjitjhala.github.io/static/opium.pdf). Additionally, Luet treats
+also selectors seamlessly while building the model, adding *ALO* ( *At least one* ) and *AMO* ( *At most one* ) rules to guarantee coherence within the installed system.
+
+## Reinforcement learning
+
+Luet also implements a small and portable qlearning agent that will try to solve conflict on your behalf
+when they arises while trying to validate your queries against the system model.
+
+To leverage it, simply pass ```--solver-type qlearning``` to the subcommands that supports it ( you can check out by invoking ```--help``` ).
+
 ## Documentation
 
 [Documentation](https://luet-lab.github.io/docs) is available, or
