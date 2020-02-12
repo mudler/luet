@@ -19,19 +19,20 @@ package config
 import (
 	"errors"
 	"fmt"
-	"os/user"
-	"runtime"
-	"time"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path/filepath"
-	pkg "github.com/mudler/luet/pkg/package"
+	"runtime"
+	"strings"
+	"time"
 
 	solver "github.com/mudler/luet/pkg/solver"
 	v "github.com/spf13/viper"
 )
 
 var LuetCfg = NewLuetConfig(v.GetViper())
+var AvailableResolvers = strings.Join([]string{solver.QLearningResolverType}, " ")
 
 type LuetLoggingConfig struct {
 	Path       string `mapstructure:"path"`
@@ -49,13 +50,33 @@ type LuetGeneralConfig struct {
 	FatalWarns      bool `mapstructure:"fatal_warnings"`
 }
 
+type ResolverType string
+type LuetSolverOptions struct {
+	Type        ResolverType `mapstructure:"type"`
+	LearnRate   float32      `mapstructure:"rate"`
+	Discount    float32      `mapstructure:"discount"`
+	MaxAttempts int          `mapstructure:"max_attempts"`
+}
+
+func (opts LuetSolverOptions) Resolver() solver.PackageResolver {
+	switch opts.Type {
+	case solver.QLearningResolverType:
+		if opts.LearnRate != 0.0 {
+			return solver.NewQLearningResolver(opts.LearnRate, opts.Discount, opts.MaxAttempts, 999999)
+
+		}
+		return solver.SimpleQLearningSolver()
+	}
+
+	return &solver.DummyPackageResolver{}
+}
+
 type LuetSystemConfig struct {
 	DatabaseEngine string `yaml:"database_engine" mapstructure:"database_engine"`
 	DatabasePath   string `yaml:"database_path" mapstructure:"database_path"`
 	Rootfs         string `yaml:"rootfs" mapstructure:"rootfs"`
 	PkgsCachePath  string `yaml:"pkgs_cache_path" mapstructure:"pkgs_cache_path"`
 }
-
 
 func (sc LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
 	dbpath := filepath.Join(sc.Rootfs, sc.DatabasePath)
@@ -67,7 +88,7 @@ func (sc LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
 	return dbpath
 }
 
-func (sc LuetSystemConfig)  GetSystemRepoDatabaseDirPath() string {
+func (sc LuetSystemConfig) GetSystemRepoDatabaseDirPath() string {
 	dbpath := filepath.Join(sc.Rootfs,
 		sc.DatabasePath)
 	err := os.MkdirAll(dbpath, os.ModePerm)
@@ -94,7 +115,6 @@ func (sc LuetSystemConfig) GetSystemPkgsCacheDirPath() (ans string) {
 
 	return
 }
-
 
 type LuetRepository struct {
 	Name           string            `json:"name" yaml:"name" mapstructure:"name"`
@@ -157,6 +177,7 @@ type LuetConfig struct {
 	Logging LuetLoggingConfig `mapstructure:"logging"`
 	General LuetGeneralConfig `mapstructure:"general"`
 	System  LuetSystemConfig  `mapstructure:"system"`
+	Solver  LuetSolverOptions `mapstructure:"solver"`
 
 	RepositoriesConfDir []string         `mapstructure:"repos_confdir"`
 	CacheRepositories   []LuetRepository `mapstructure:"repetitors"`
@@ -199,6 +220,11 @@ func GenDefault(viper *v.Viper) {
 	viper.SetDefault("repos_confdir", []string{"/etc/luet/repos.conf.d"})
 	viper.SetDefault("cache_repositories", []string{})
 	viper.SetDefault("system_repositories", []string{})
+
+	viper.SetDefault("solver.type", "")
+	viper.SetDefault("solver.rate", 0.7)
+	viper.SetDefault("solver.discount", 1.0)
+	viper.SetDefault("solver.max_attempts", 9000)
 }
 
 func (c *LuetConfig) AddSystemRepository(r LuetRepository) {
@@ -217,6 +243,10 @@ func (c *LuetConfig) GetSystem() *LuetSystemConfig {
 	return &c.System
 }
 
+func (c *LuetConfig) GetSolverOptions() *LuetSolverOptions {
+	return &c.Solver
+}
+
 func (c *LuetConfig) GetSystemRepository(name string) (*LuetRepository, error) {
 	var ans *LuetRepository = nil
 
@@ -231,6 +261,18 @@ func (c *LuetConfig) GetSystemRepository(name string) (*LuetRepository, error) {
 	}
 
 	return ans, nil
+}
+
+func (c *LuetSolverOptions) String() string {
+	ans := fmt.Sprintf(`
+solver:
+  type: %s
+  rate: %f
+  discount: %f
+  max_attempts: %d`, c.Type, c.LearnRate, c.Discount,
+		c.MaxAttempts)
+
+	return ans
 }
 
 func (c *LuetGeneralConfig) String() string {
