@@ -25,7 +25,6 @@ import (
 	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var searchCmd = &cobra.Command{
@@ -35,7 +34,7 @@ var searchCmd = &cobra.Command{
 	PreRun: func(cmd *cobra.Command, args []string) {
 		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
 		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
-		viper.BindPFlag("installed", cmd.Flags().Lookup("installed"))
+		LuetCfg.Viper.BindPFlag("installed", cmd.Flags().Lookup("installed"))
 		LuetCfg.Viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
 		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
 		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
@@ -47,7 +46,18 @@ var searchCmd = &cobra.Command{
 		if len(args) != 1 {
 			Fatal("Wrong number of arguments (expected 1)")
 		}
-		installed := viper.GetBool("installed")
+		installed := LuetCfg.Viper.GetBool("installed")
+		stype := LuetCfg.Viper.GetString("solver.type")
+		discount := LuetCfg.Viper.GetFloat64("solver.discount")
+		rate := LuetCfg.Viper.GetFloat64("solver.rate")
+		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
+
+		LuetCfg.GetSolverOptions().Type = stype
+		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
+		LuetCfg.GetSolverOptions().Discount = float32(discount)
+		LuetCfg.GetSolverOptions().MaxAttempts = attempts
+
+		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 
 		if !installed {
 

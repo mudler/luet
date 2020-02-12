@@ -79,6 +79,18 @@ var installCmd = &cobra.Command{
 			repos = append(repos, r)
 		}
 
+		stype := LuetCfg.Viper.GetString("solver.type")
+		discount := LuetCfg.Viper.GetFloat64("solver.discount")
+		rate := LuetCfg.Viper.GetFloat64("solver.rate")
+		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
+
+		LuetCfg.GetSolverOptions().Type = stype
+		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
+		LuetCfg.GetSolverOptions().Discount = float32(discount)
+		LuetCfg.GetSolverOptions().MaxAttempts = attempts
+
+		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
+
 		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{Concurrency: LuetCfg.GetGeneral().Concurrency, SolverOptions: *LuetCfg.GetSolverOptions()})
 		inst.Repositories(repos)
 

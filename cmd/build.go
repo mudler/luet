@@ -97,8 +97,22 @@ var buildCmd = &cobra.Command{
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
+
+		stype := LuetCfg.Viper.GetString("solver.type")
+		discount := LuetCfg.Viper.GetFloat64("solver.discount")
+		rate := LuetCfg.Viper.GetFloat64("solver.rate")
+		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
+
+		LuetCfg.GetSolverOptions().Type = stype
+		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
+		LuetCfg.GetSolverOptions().Discount = float32(discount)
+		LuetCfg.GetSolverOptions().MaxAttempts = attempts
+
+		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
+
 		opts := compiler.NewDefaultCompilerOptions()
 		opts.SolverOptions = *LuetCfg.GetSolverOptions()
+
 		opts.Clean = clean
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), opts)
 		luetCompiler.SetConcurrency(concurrency)
