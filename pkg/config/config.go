@@ -50,12 +50,11 @@ type LuetGeneralConfig struct {
 	FatalWarns      bool `mapstructure:"fatal_warnings"`
 }
 
-type ResolverType string
 type LuetSolverOptions struct {
-	Type        ResolverType `mapstructure:"type"`
-	LearnRate   float32      `mapstructure:"rate"`
-	Discount    float32      `mapstructure:"discount"`
-	MaxAttempts int          `mapstructure:"max_attempts"`
+	Type        string  `mapstructure:"type"`
+	LearnRate   float32 `mapstructure:"rate"`
+	Discount    float32 `mapstructure:"discount"`
+	MaxAttempts int     `mapstructure:"max_attempts"`
 }
 
 func (opts LuetSolverOptions) Resolver() solver.PackageResolver {
@@ -69,6 +68,11 @@ func (opts LuetSolverOptions) Resolver() solver.PackageResolver {
 	}
 
 	return &solver.DummyPackageResolver{}
+}
+
+func (opts *LuetSolverOptions) CompactString() string {
+	return fmt.Sprintf("type: %s rate: %f, discount: %f, attempts: %d, initialobserved: %d",
+		opts.Type, opts.LearnRate, opts.Discount, opts.MaxAttempts, 999999)
 }
 
 type LuetSystemConfig struct {
