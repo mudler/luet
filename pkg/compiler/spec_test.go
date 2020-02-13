@@ -105,4 +105,74 @@ RUN echo bar > /test2`))
 		})
 
 	})
+
+	It("Renders retrieve and env fields", func() {
+		generalRecipe := tree.NewGeneralRecipe(pkg.NewInMemoryDatabase(false))
+
+		err := generalRecipe.Load("../../tests/fixtures/retrieve")
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
+
+		compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase(), NewDefaultCompilerOptions())
+		spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.0"})
+		Expect(err).ToNot(HaveOccurred())
+
+		lspec, ok := spec.(*LuetCompilationSpec)
+		Expect(ok).To(BeTrue())
+
+		Expect(lspec.Steps).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
+		Expect(lspec.Image).To(Equal("luet/base"))
+		Expect(lspec.Seed).To(Equal("alpine"))
+		tmpdir, err := ioutil.TempDir("", "tree")
+		Expect(err).ToNot(HaveOccurred())
+		defer os.RemoveAll(tmpdir) // clean up
+
+		err = lspec.WriteBuildImageDefinition(filepath.Join(tmpdir, "Dockerfile"))
+		Expect(err).ToNot(HaveOccurred())
+		dockerfile, err := helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(dockerfile).To(Equal(`
+FROM alpine
+COPY . /luetbuild
+WORKDIR /luetbuild
+ENV PACKAGE_NAME=a
+ENV PACKAGE_VERSION=1.0
+ENV PACKAGE_CATEGORY=test
+ADD test /luetbuild/
+ADD http://www.google.com /luetbuild/
+ENV test=1`))
+
+		lspec.SetOutputPath("/foo/bar")
+
+		err = lspec.WriteBuildImageDefinition(filepath.Join(tmpdir, "Dockerfile"))
+		Expect(err).ToNot(HaveOccurred())
+		dockerfile, err = helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(dockerfile).To(Equal(`
+FROM alpine
+COPY . /luetbuild
+WORKDIR /luetbuild
+ENV PACKAGE_NAME=a
+ENV PACKAGE_VERSION=1.0
+ENV PACKAGE_CATEGORY=test
+ADD /foo/bar/test /luetbuild/
+ADD http://www.google.com /luetbuild/
+ENV test=1`))
+
+		err = lspec.WriteStepImageDefinition(lspec.Image, filepath.Join(tmpdir, "Dockerfile"))
+		Expect(err).ToNot(HaveOccurred())
+		dockerfile, err = helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(dockerfile).To(Equal(`
+FROM luet/base
+ENV PACKAGE_NAME=a
+ENV PACKAGE_VERSION=1.0
+ENV PACKAGE_CATEGORY=test
+ENV test=1
+RUN echo foo > /test
+RUN echo bar > /test2`))
+
+	})
 })

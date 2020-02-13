@@ -154,6 +154,9 @@ type CompilationSpec interface {
 
 	GetSourceAssertion() solver.PackagesAssertions
 	SetSourceAssertion(as solver.PackagesAssertions)
+
+	GetRetrieve() []string
+	CopyRetrieves(dest string) error
 }
 
 type CompilationSpecs interface {

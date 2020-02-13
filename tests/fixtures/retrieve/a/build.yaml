@@ -1,0 +1,10 @@
+image: "luet/base"
+seed: "alpine"
+steps:
+  - echo foo > /test
+  - echo bar > /test2
+retrieve:
+- test
+- http://www.google.com
+env:
+- test=1

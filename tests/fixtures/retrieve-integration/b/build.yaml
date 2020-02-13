@@ -1,0 +1,10 @@
+
+steps:
+- tar xvf a-test-1.0.package.* -C ./
+- mv a /b
+requires:
+- name: "a"
+  version: "1.0"
+  category: "test"
+retrieve:
+- a-test-1.0.package.*

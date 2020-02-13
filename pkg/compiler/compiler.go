@@ -256,6 +256,15 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		return nil, errors.Wrap(err, "Could not copy package sources")
 
 	}
+
+	// Copy file into the build context, the compilespec might have requested to do so.
+	if len(p.GetRetrieve()) > 0 {
+		err := p.CopyRetrieves(buildDir)
+		if err != nil {
+			Warning("Failed copying retrieves", err.Error())
+		}
+	}
+
 	if buildertaggedImage == "" {
 		buildertaggedImage = cs.ImageRepository + "-" + p.GetPackage().GetFingerPrint() + "-builder"
 	}

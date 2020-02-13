@@ -21,6 +21,7 @@ import (
 
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
+	"github.com/otiai10/copy"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -95,6 +96,8 @@ type LuetCompilationSpec struct {
 	Package         *pkg.DefaultPackage       `json:"package"`
 	SourceAssertion solver.PackagesAssertions `json:"-"`
 
+	Retrieve []string `json:"retrieve"`
+
 	OutputPath string   `json:"-"` // Where the build processfiles go
 	Unpack     bool     `json:"unpack"`
 	Includes   []string `json:"includes"`
@@ -136,6 +139,10 @@ func (cs *LuetCompilationSpec) GetIncludes() []string {
 	return cs.Includes
 }
 
+func (cs *LuetCompilationSpec) GetRetrieve() []string {
+	return cs.Retrieve
+}
+
 func (cs *LuetCompilationSpec) GetSeedImage() string {
 	return cs.Seed
 }
@@ -164,6 +171,24 @@ func (cs *LuetCompilationSpec) SetSeedImage(s string) {
 	cs.Seed = s
 }
 
+func (cs *LuetCompilationSpec) CopyRetrieves(dest string) error {
+	var err error
+	if len(cs.Retrieve) > 0 {
+		for _, s := range cs.Retrieve {
+			matches, err := filepath.Glob(cs.Rel(s))
+
+			if err != nil {
+				continue
+			}
+
+			for _, m := range matches {
+				err = copy.Copy(m, filepath.Join(dest, filepath.Base(m)))
+			}
+		}
+	}
+	return err
+}
+
 // TODO: docker build image first. Then a backend can be used to actually spin up a container with it and run the steps within
 func (cs *LuetCompilationSpec) RenderBuildImage() (string, error) {
 	spec := `
@@ -173,6 +198,19 @@ WORKDIR /luetbuild
 ENV PACKAGE_NAME=` + cs.Package.GetName() + `
 ENV PACKAGE_VERSION=` + cs.Package.GetVersion() + `
 ENV PACKAGE_CATEGORY=` + cs.Package.GetCategory()
+
+	if len(cs.Retrieve) > 0 {
+		for _, s := range cs.Retrieve {
+			//var file string
+			// if helpers.IsValidUrl(s) {
+			// 	file = s
+			// } else {
+			// 	file = cs.Rel(s)
+			// }
+			spec = spec + `
+ADD ` + s + ` /luetbuild/`
+		}
+	}
 
 	for _, s := range cs.Env {
 		spec = spec + `

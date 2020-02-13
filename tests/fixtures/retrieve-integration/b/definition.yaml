@@ -1,0 +1,7 @@
+name: "b"
+version: "1.0"
+category: "test"
+requires:
+- name: "a"
+  version: "1.0"
+  category: "test"
