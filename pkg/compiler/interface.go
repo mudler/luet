@@ -44,11 +44,11 @@ type CompilerBackendOptions struct {
 }
 
 type CompilerOptions struct {
-	ImageRepository    string
-	PullFirst, KeepImg bool
-	Concurrency        int
-	CompressionType    CompressionImplementation
-	Clean              bool
+	ImageRepository          string
+	PullFirst, KeepImg, Push bool
+	Concurrency              int
+	CompressionType          CompressionImplementation
+	Clean                    bool
 
 	SolverOptions config.LuetSolverOptions
 }
@@ -56,7 +56,8 @@ type CompilerOptions struct {
 func NewDefaultCompilerOptions() *CompilerOptions {
 	return &CompilerOptions{
 		ImageRepository: "luet/cache",
-		PullFirst:       true,
+		PullFirst:       false,
+		Push:            false,
 		CompressionType: None,
 		KeepImg:         true,
 		Concurrency:     runtime.NumCPU(),
@@ -74,6 +75,8 @@ type CompilerBackend interface {
 
 	CopyImage(string, string) error
 	DownloadImage(opts CompilerBackendOptions) error
+
+	Push(opts CompilerBackendOptions) error
 }
 
 type Artifact interface {

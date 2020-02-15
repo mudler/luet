@@ -47,6 +47,9 @@ var buildCmd = &cobra.Command{
 		viper.BindPFlag("compression", cmd.Flags().Lookup("compression"))
 
 		viper.BindPFlag("image-repository", cmd.Flags().Lookup("image-repository"))
+		viper.BindPFlag("push", cmd.Flags().Lookup("push"))
+		viper.BindPFlag("pull", cmd.Flags().Lookup("pull"))
+		viper.BindPFlag("keep-images", cmd.Flags().Lookup("keep-images"))
 
 		LuetCfg.Viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
 		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
@@ -66,6 +69,9 @@ var buildCmd = &cobra.Command{
 		databaseType := viper.GetString("database")
 		compressionType := viper.GetString("compression")
 		imageRepository := viper.GetString("image-repository")
+		push := viper.GetBool("push")
+		pull := viper.GetBool("pull")
+		keepImages := viper.GetBool("keep-images")
 
 		compilerSpecs := compiler.NewLuetCompilationspecs()
 		var compilerBackend compiler.CompilerBackend
@@ -117,6 +123,9 @@ var buildCmd = &cobra.Command{
 		opts.SolverOptions = *LuetCfg.GetSolverOptions()
 		opts.ImageRepository = imageRepository
 		opts.Clean = clean
+		opts.PullFirst = pull
+		opts.KeepImg = keepImages
+		opts.Push = push
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), opts)
 		luetCompiler.SetConcurrency(concurrency)
 		luetCompiler.SetCompressionType(compiler.CompressionImplementation(compressionType))
@@ -200,6 +209,9 @@ func init() {
 	buildCmd.Flags().String("destination", path, "Destination folder")
 	buildCmd.Flags().String("compression", "none", "Compression alg: none, gzip")
 	buildCmd.Flags().String("image-repository", "luet/cache", "Default base image string for generated image")
+	buildCmd.Flags().Bool("push", false, "Push images to a hub")
+	buildCmd.Flags().Bool("pull", false, "Pull images from a hub")
+	buildCmd.Flags().Bool("keep-images", true, "Keep built docker images in the host")
 
 	buildCmd.Flags().String("solver-type", "", "Solver strategy")
 	buildCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")

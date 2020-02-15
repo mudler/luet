@@ -101,6 +101,18 @@ func (*SimpleDocker) RemoveImage(opts compiler.CompilerBackendOptions) error {
 	return nil
 }
 
+func (*SimpleDocker) Push(opts compiler.CompilerBackendOptions) error {
+	name := opts.ImageName
+	pusharg := []string{"push", name}
+	out, err := exec.Command("docker", pusharg...).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed pushing image: "+string(out))
+	}
+	Info(":whale: Pushed image:", name)
+	//Info(string(out))
+	return nil
+}
+
 func (s *SimpleDocker) ImageDefinitionToTar(opts compiler.CompilerBackendOptions) error {
 	if err := s.BuildImage(opts); err != nil {
 		return errors.Wrap(err, "Failed building image")

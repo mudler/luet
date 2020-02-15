@@ -272,7 +272,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		packageImage = cs.ImageRepository + "-" + p.GetPackage().GetFingerPrint()
 	}
 
-	if cs.PullFirst {
+	if cs.Options.PullFirst {
 		//Best effort pull
 		cs.Backend.DownloadImage(CompilerBackendOptions{ImageName: buildertaggedImage})
 		cs.Backend.DownloadImage(CompilerBackendOptions{ImageName: packageImage})
@@ -299,6 +299,12 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		return nil, errors.Wrap(err, "Could not export image")
 	}
 
+	if cs.Options.Push {
+		err = cs.Backend.Push(builderOpts)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
+		}
+	}
 	// Then we write the step image, which uses the builder one
 	p.WriteStepImageDefinition(buildertaggedImage, filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+".dockerfile"))
 	runnerOpts := CompilerBackendOptions{
@@ -319,6 +325,13 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	}
 	if err := cs.Backend.ExportImage(runnerOpts); err != nil {
 		return nil, errors.Wrap(err, "Failed exporting image")
+	}
+
+	if cs.Options.Push {
+		err = cs.Backend.Push(runnerOpts)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
+		}
 	}
 	//	}
 

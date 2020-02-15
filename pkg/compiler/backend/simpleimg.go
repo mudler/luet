@@ -145,3 +145,15 @@ func (*SimpleImg) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerms 
 func (*SimpleImg) Changes(fromImage, toImage string) ([]compiler.ArtifactLayer, error) {
 	return NewSimpleDockerBackend().Changes(fromImage, toImage)
 }
+
+func (*SimpleImg) Push(opts compiler.CompilerBackendOptions) error {
+	name := opts.ImageName
+	pusharg := []string{"push", name}
+	out, err := exec.Command("img", pusharg...).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed pushing image: "+string(out))
+	}
+	Info(":tea: Pushed image:", name)
+	//Info(string(out))
+	return nil
+}
