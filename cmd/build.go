@@ -46,6 +46,8 @@ var buildCmd = &cobra.Command{
 		viper.BindPFlag("all", cmd.Flags().Lookup("all"))
 		viper.BindPFlag("compression", cmd.Flags().Lookup("compression"))
 
+		viper.BindPFlag("image-repository", cmd.Flags().Lookup("image-repository"))
+
 		LuetCfg.Viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
 		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
 		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
@@ -63,6 +65,7 @@ var buildCmd = &cobra.Command{
 		all := viper.GetBool("all")
 		databaseType := viper.GetString("database")
 		compressionType := viper.GetString("compression")
+		imageRepository := viper.GetString("image-repository")
 
 		compilerSpecs := compiler.NewLuetCompilationspecs()
 		var compilerBackend compiler.CompilerBackend
@@ -112,7 +115,7 @@ var buildCmd = &cobra.Command{
 
 		opts := compiler.NewDefaultCompilerOptions()
 		opts.SolverOptions = *LuetCfg.GetSolverOptions()
-
+		opts.ImageRepository = imageRepository
 		opts.Clean = clean
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), opts)
 		luetCompiler.SetConcurrency(concurrency)
@@ -196,6 +199,7 @@ func init() {
 	buildCmd.Flags().Bool("all", false, "Build all packages in the tree")
 	buildCmd.Flags().String("destination", path, "Destination folder")
 	buildCmd.Flags().String("compression", "none", "Compression alg: none, gzip")
+	buildCmd.Flags().String("image-repository", "luet/cache", "Default base image string for generated image")
 
 	buildCmd.Flags().String("solver-type", "", "Solver strategy")
 	buildCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
