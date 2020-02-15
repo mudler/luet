@@ -272,12 +272,6 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		packageImage = cs.ImageRepository + "-" + p.GetPackage().GetFingerPrint()
 	}
 
-	if cs.Options.PullFirst {
-		//Best effort pull
-		cs.Backend.DownloadImage(CompilerBackendOptions{ImageName: buildertaggedImage})
-		cs.Backend.DownloadImage(CompilerBackendOptions{ImageName: packageImage})
-	}
-
 	Info(pkgTag, "Generating :whale: definition for builder image from", image)
 
 	// First we create the builder image
@@ -289,19 +283,25 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		Destination:    p.Rel(p.GetPackage().GetFingerPrint() + "-builder.image.tar"),
 	}
 
-	err = cs.Backend.BuildImage(builderOpts)
-	if err != nil {
-		return nil, errors.Wrap(err, "Could not build image: "+image+" "+builderOpts.DockerFileName)
+	buildBuilderImage := true
+	if cs.Options.PullFirst {
+		if err := cs.Backend.DownloadImage(builderOpts); err == nil {
+			buildBuilderImage = false
+		}
 	}
 
-	err = cs.Backend.ExportImage(builderOpts)
-	if err != nil {
+	if buildBuilderImage {
+		if err = cs.Backend.BuildImage(builderOpts); err != nil {
+			return nil, errors.Wrap(err, "Could not build image: "+image+" "+builderOpts.DockerFileName)
+		}
+	}
+
+	if err = cs.Backend.ExportImage(builderOpts); err != nil {
 		return nil, errors.Wrap(err, "Could not export image")
 	}
 
-	if cs.Options.Push {
-		err = cs.Backend.Push(builderOpts)
-		if err != nil {
+	if cs.Options.Push && buildBuilderImage {
+		if err = cs.Backend.Push(builderOpts); err != nil {
 			return nil, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
 		}
 	}
@@ -320,14 +320,25 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	// 		return nil, errors.Wrap(err, "Could not export image to tar")
 	// 	}
 	// } else {
-	if err := cs.Backend.BuildImage(runnerOpts); err != nil {
-		return nil, errors.Wrap(err, "Failed building image for "+runnerOpts.ImageName+" "+runnerOpts.DockerFileName)
+	buildPackageImage := true
+	if cs.Options.PullFirst {
+		//Best effort pull
+		if err := cs.Backend.DownloadImage(runnerOpts); err == nil {
+			buildPackageImage = false
+		}
 	}
+
+	if buildPackageImage {
+		if err := cs.Backend.BuildImage(runnerOpts); err != nil {
+			return nil, errors.Wrap(err, "Failed building image for "+runnerOpts.ImageName+" "+runnerOpts.DockerFileName)
+		}
+	}
+
 	if err := cs.Backend.ExportImage(runnerOpts); err != nil {
 		return nil, errors.Wrap(err, "Failed exporting image")
 	}
 
-	if cs.Options.Push {
+	if cs.Options.Push && buildPackageImage {
 		err = cs.Backend.Push(runnerOpts)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
