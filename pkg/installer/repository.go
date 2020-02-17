@@ -530,14 +530,21 @@ func (re Repositories) ResolveSelectors(p []pkg.Package) []pkg.Package {
 	var matches []pkg.Package
 PACKAGE:
 	for _, pack := range p {
+	REPOSITORY:
 		for _, r := range re {
 			if pack.IsSelector() {
 				c, err := r.GetTree().GetDatabase().FindPackageCandidate(pack)
+				// If FindPackageCandidate returns the same package, it means it couldn't find one.
+				// Skip this repository and keep looking.
+				if c.String() == pack.String() {
+					continue REPOSITORY
+				}
 				if err == nil {
 					matches = append(matches, c)
 					continue PACKAGE
 				}
 			} else {
+				// If it's not a selector, just append it
 				matches = append(matches, pack)
 			}
 		}
