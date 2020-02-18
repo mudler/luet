@@ -16,6 +16,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/marcsauter/single"
 	config "github.com/mudler/luet/pkg/config"
+	helpers "github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	repo "github.com/mudler/luet/pkg/repository"
 
@@ -51,12 +53,13 @@ var RootCmd = &cobra.Command{
 			Fatal("failed to load configuration:", err.Error())
 		}
 	},
+	SilenceErrors: true,
 }
 
 func LoadConfig(c *config.LuetConfig) error {
 	// If a config file is found, read it in.
 	if err := c.Viper.ReadInConfig(); err != nil {
-		Warning(err)
+		Debug(err)
 	}
 
 	err := c.Viper.Unmarshal(&config.LuetCfg)
@@ -99,8 +102,18 @@ func Execute() {
 		}
 		defer s.TryUnlock()
 	}
+
 	if err := RootCmd.Execute(); err != nil {
-		Error(err)
+		if len(os.Args) > 0 {
+			for _, c := range RootCmd.Commands() {
+				if c.Name() == os.Args[1] {
+					os.Exit(-1) // Something failed
+				}
+			}
+			// Try to load a bin from path.
+			helpers.Exec("luet-"+os.Args[1], os.Args[1:], os.Environ())
+		}
+		fmt.Println(err)
 		os.Exit(-1)
 	}
 }
