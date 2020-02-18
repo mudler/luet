@@ -38,6 +38,9 @@ import (
 type LuetInstallerOptions struct {
 	SolverOptions config.LuetSolverOptions
 	Concurrency   int
+	NoDeps        bool
+	OnlyDeps      bool
+	Force         bool
 }
 
 type LuetInstaller struct {
@@ -115,8 +118,9 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 
 	for _, u := range uninstall {
 		err := l.Uninstall(u, s)
-		if err != nil {
-			Warning("Failed uninstall for ", u.GetFingerPrint())
+		if err != nil && !l.Options.Force {
+			Error("Failed uninstall for ", u.HumanReadableString())
+			return errors.Wrap(err, "uninstalling "+u.HumanReadableString())
 		}
 	}
 
@@ -161,7 +165,7 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 		vers, _ := s.Database.FindPackageVersions(pi)
 
 		if len(vers) >= 1 {
-			Warning("Filtering out package " + pi.GetFingerPrint() + ", it has other versions already installed. Uninstall one of them first ")
+			Warning("Filtering out package " + pi.HumanReadableString() + ", it has other versions already installed. Uninstall one of them first ")
 			continue
 			//return errors.New("Package " + pi.GetFingerPrint() + " has other versions already installed. Uninstall one of them first: " + strings.Join(vers, " "))
 
@@ -186,38 +190,50 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
 	p = syncedRepos.ResolveSelectors(p)
-
-	solv := solver.NewResolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
-	solution, err := solv.Install(p)
-	if err != nil {
-		return errors.Wrap(err, "Failed solving solution for package")
-	}
-
-	// Gathers things to install
 	toInstall := map[string]ArtifactMatch{}
-	for _, assertion := range solution {
-		if assertion.Value {
-			matches := syncedRepos.PackageMatches([]pkg.Package{assertion.Package})
-			if len(matches) == 0 {
-				return errors.New("Failed matching solutions against repository - where are definitions coming from?!")
-			}
-		A:
-			for _, artefact := range matches[0].Repo.GetIndex() {
-				if artefact.GetCompileSpec().GetPackage() == nil {
-					return errors.New("Package in compilespec empty")
+	var packagesToInstall []pkg.Package
 
-				}
-				if matches[0].Package.Matches(artefact.GetCompileSpec().GetPackage()) {
-					// Filter out already installed
-					if _, err := s.Database.FindPackage(assertion.Package); err != nil {
-						toInstall[assertion.Package.GetFingerPrint()] = ArtifactMatch{Package: assertion.Package, Artifact: artefact, Repository: matches[0].Repo}
-					}
-					break A
-				}
+	var solution solver.PackagesAssertions
+
+	if !l.Options.NoDeps {
+		solv := solver.NewResolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
+		solution, err = solv.Install(p)
+		if err != nil && !l.Options.Force {
+			return errors.Wrap(err, "Failed solving solution for package")
+		}
+		// Gathers things to install
+		for _, assertion := range solution {
+			if assertion.Value {
+				packagesToInstall = append(packagesToInstall, assertion.Package)
 			}
+		}
+	} else if !l.Options.OnlyDeps {
+		for _, currentPack := range p {
+			packagesToInstall = append(packagesToInstall, currentPack)
 		}
 	}
 
+	// Gathers things to install
+	for _, currentPack := range packagesToInstall {
+		matches := syncedRepos.PackageMatches([]pkg.Package{currentPack})
+		if len(matches) == 0 {
+			return errors.New("Failed matching solutions against repository for " + currentPack.HumanReadableString() + " where are definitions coming from?!")
+		}
+	A:
+		for _, artefact := range matches[0].Repo.GetIndex() {
+			if artefact.GetCompileSpec().GetPackage() == nil {
+				return errors.New("Package in compilespec empty")
+
+			}
+			if matches[0].Package.Matches(artefact.GetCompileSpec().GetPackage()) {
+				// Filter out already installed
+				if _, err := s.Database.FindPackage(currentPack); err != nil {
+					toInstall[currentPack.GetFingerPrint()] = ArtifactMatch{Package: currentPack, Artifact: artefact, Repository: matches[0].Repo}
+				}
+				break A
+			}
+		}
+	}
 	// Install packages into rootfs in parallel.
 	all := make(chan ArtifactMatch)
 
@@ -242,40 +258,39 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 		for _, ass := range ordered {
 			if ass.Value {
 				// Annotate to the system that the package was installed
-				// TODO: Annotate also files that belong to the package, somewhere to uninstall
 				if _, err := s.Database.FindPackage(ass.Package); err == nil {
 					err := s.Database.UpdatePackage(ass.Package)
-					if err != nil {
+					if err != nil && !l.Options.Force {
 						return errors.Wrap(err, "Failed updating package")
 					}
 				} else {
 					_, err := s.Database.CreatePackage(ass.Package)
-					if err != nil {
+					if err != nil && !l.Options.Force {
 						return errors.Wrap(err, "Failed creating package")
 					}
 				}
 				installed, ok := toInstall[ass.Package.GetFingerPrint()]
 				if !ok {
-					return errors.New("Couldn't find ArtifactMatch for " + ass.Package.GetFingerPrint())
+					return errors.New("Couldn't find ArtifactMatch for " + ass.Package.HumanReadableString())
 				}
 
 				treePackage, err := installed.Repository.GetTree().GetDatabase().FindPackage(ass.Package)
 				if err != nil {
-					return errors.Wrap(err, "Error getting package "+ass.Package.GetFingerPrint())
+					return errors.Wrap(err, "Error getting package "+ass.Package.HumanReadableString())
 				}
 				if helpers.Exists(treePackage.Rel(tree.FinalizerFile)) {
-					Info("Executing finalizer for " + ass.Package.GetName())
+					Info("Executing finalizer for " + ass.Package.HumanReadableString())
 					finalizerRaw, err := ioutil.ReadFile(treePackage.Rel(tree.FinalizerFile))
-					if err != nil {
+					if err != nil && !l.Options.Force {
 						return errors.Wrap(err, "Error reading file "+treePackage.Rel(tree.FinalizerFile))
 					}
 					if _, exists := executedFinalizer[ass.Package.GetFingerPrint()]; !exists {
 						finalizer, err := NewLuetFinalizerFromYaml(finalizerRaw)
-						if err != nil {
+						if err != nil && !l.Options.Force {
 							return errors.Wrap(err, "Error reading finalizer "+treePackage.Rel(tree.FinalizerFile))
 						}
 						err = finalizer.RunInstall()
-						if err != nil {
+						if err != nil && !l.Options.Force {
 							return errors.Wrap(err, "Error executing install finalizer "+treePackage.Rel(tree.FinalizerFile))
 						}
 						executedFinalizer[ass.Package.GetFingerPrint()] = true
@@ -285,7 +300,6 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 		}
 
 	}
-
 	return nil
 
 }
@@ -298,17 +312,17 @@ func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
 	}
 
 	err = artifact.Verify()
-	if err != nil {
+	if err != nil && !l.Options.Force {
 		return errors.Wrap(err, "Artifact integrity check failure")
 	}
 
 	files, err := artifact.FileList()
-	if err != nil {
+	if err != nil && !l.Options.Force {
 		return errors.Wrap(err, "Could not open package archive")
 	}
 
 	err = artifact.Unpack(s.Target, true)
-	if err != nil {
+	if err != nil && !l.Options.Force {
 		return errors.Wrap(err, "Error met while unpacking rootfs")
 	}
 
@@ -323,10 +337,15 @@ func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan Arti
 	for p := range c {
 		// TODO: Keep trace of what was added from the tar, and save it into system
 		err := l.installPackage(p, s)
-		if err != nil {
+		if err != nil && !l.Options.Force {
 			//TODO: Uninstall, rollback.
 			Fatal("Failed installing package "+p.Package.GetName(), err.Error())
 			return errors.Wrap(err, "Failed installing package "+p.Package.GetName())
+		}
+		if err == nil {
+			Info(":package: ", p.Package.HumanReadableString(), "installed")
+		} else if err != nil && l.Options.Force {
+			Info(":package: ", p.Package.HumanReadableString(), "installed with failures (force install)")
 		}
 	}
 
@@ -364,17 +383,27 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 	// compute uninstall from all world - remove packages in parallel - run uninstall finalizer (in order) - mark the uninstallation in db
 	// Get installed definition
-	solv := solver.NewResolver(s.Database, s.Database, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
-	solution, err := solv.Uninstall(p)
-	if err != nil {
-		return errors.Wrap(err, "Uninstall failed")
-	}
-	for _, p := range solution {
-		Info("Uninstalling", p.GetFingerPrint())
+
+	if !l.Options.NoDeps {
+		solv := solver.NewResolver(s.Database, s.Database, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
+		solution, err := solv.Uninstall(p)
+		if err != nil && !l.Options.Force {
+			return errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
+		}
+		for _, p := range solution {
+			Info("Uninstalling", p.HumanReadableString())
+			err := l.uninstall(p, s)
+			if err != nil && !l.Options.Force {
+				return errors.Wrap(err, "Uninstall failed")
+			}
+		}
+	} else {
+		Info("Uninstalling", p.HumanReadableString(), "without deps")
 		err := l.uninstall(p, s)
-		if err != nil {
+		if err != nil && !l.Options.Force {
 			return errors.Wrap(err, "Uninstall failed")
 		}
+		Info(":package: ", p.HumanReadableString(), "uninstalled")
 	}
 	return nil
 

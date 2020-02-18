@@ -39,6 +39,8 @@ var uninstallCmd = &cobra.Command{
 		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
 		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
 		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
+		LuetCfg.Viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
+		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var systemDB pkg.PackageDatabase
@@ -67,6 +69,8 @@ var uninstallCmd = &cobra.Command{
 			discount := LuetCfg.Viper.GetFloat64("solver.discount")
 			rate := LuetCfg.Viper.GetFloat64("solver.rate")
 			attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
+			force := LuetCfg.Viper.GetBool("force")
+			nodeps := LuetCfg.Viper.GetBool("nodeps")
 
 			LuetCfg.GetSolverOptions().Type = stype
 			LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -75,7 +79,12 @@ var uninstallCmd = &cobra.Command{
 
 			Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 
-			inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{Concurrency: LuetCfg.GetGeneral().Concurrency, SolverOptions: *LuetCfg.GetSolverOptions()})
+			inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
+				Concurrency:   LuetCfg.GetGeneral().Concurrency,
+				SolverOptions: *LuetCfg.GetSolverOptions(),
+				NoDeps:        nodeps,
+				Force:         force,
+			})
 
 			if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
 				systemDB = pkg.NewBoltDatabase(
@@ -103,5 +112,8 @@ func init() {
 	uninstallCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
 	uninstallCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	uninstallCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
+	uninstallCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful!)")
+	uninstallCmd.Flags().Bool("force", false, "Force uninstall")
+
 	RootCmd.AddCommand(uninstallCmd)
 }

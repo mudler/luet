@@ -36,6 +36,7 @@ var upgradeCmd = &cobra.Command{
 		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
 		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
 		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
+		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
 	},
 	Long: `Upgrades packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -55,6 +56,7 @@ var upgradeCmd = &cobra.Command{
 		discount := LuetCfg.Viper.GetFloat64("solver.discount")
 		rate := LuetCfg.Viper.GetFloat64("solver.rate")
 		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
+		force := LuetCfg.Viper.GetBool("force")
 
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -63,7 +65,11 @@ var upgradeCmd = &cobra.Command{
 
 		Debug("Solver", LuetCfg.GetSolverOptions().String())
 
-		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{Concurrency: LuetCfg.GetGeneral().Concurrency, SolverOptions: *LuetCfg.GetSolverOptions()})
+		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
+			Concurrency:   LuetCfg.GetGeneral().Concurrency,
+			SolverOptions: *LuetCfg.GetSolverOptions(),
+			Force:         force,
+		})
 		inst.Repositories(repos)
 		_, err := inst.SyncRepositories(false)
 		if err != nil {
@@ -95,5 +101,7 @@ func init() {
 	upgradeCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
 	upgradeCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	upgradeCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
+	upgradeCmd.Flags().Bool("force", false, "Force upgrade by ignoring errors")
+
 	RootCmd.AddCommand(upgradeCmd)
 }

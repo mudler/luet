@@ -39,6 +39,10 @@ var installCmd = &cobra.Command{
 		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
 		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
 		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
+		LuetCfg.Viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
+		LuetCfg.Viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
+		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
+
 	},
 	Long: `Install packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -83,6 +87,9 @@ var installCmd = &cobra.Command{
 		discount := LuetCfg.Viper.GetFloat64("solver.discount")
 		rate := LuetCfg.Viper.GetFloat64("solver.rate")
 		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
+		force := LuetCfg.Viper.GetBool("force")
+		nodeps := LuetCfg.Viper.GetBool("nodeps")
+		onlydeps := LuetCfg.Viper.GetBool("onlydeps")
 
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -91,7 +98,13 @@ var installCmd = &cobra.Command{
 
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 
-		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{Concurrency: LuetCfg.GetGeneral().Concurrency, SolverOptions: *LuetCfg.GetSolverOptions()})
+		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
+			Concurrency:   LuetCfg.GetGeneral().Concurrency,
+			SolverOptions: *LuetCfg.GetSolverOptions(),
+			NoDeps:        nodeps,
+			Force:         force,
+			OnlyDeps:      onlydeps,
+		})
 		inst.Repositories(repos)
 
 		if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
@@ -119,6 +132,9 @@ func init() {
 	installCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
 	installCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	installCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
+	installCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful!)")
+	installCmd.Flags().Bool("onlydeps", false, "Consider **only** package dependencies")
+	installCmd.Flags().Bool("force", false, "Skip errors and keep going (potentially harmful)")
 
 	RootCmd.AddCommand(installCmd)
 }
