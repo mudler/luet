@@ -427,7 +427,7 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 			return art, err
 		}
 	}
-	pkgTag := ":package:  " + p.GetPackage().GetName()
+	pkgTag := ":package:  " + p.GetPackage().HumanReadableString()
 
 	Info(pkgTag, "   🍩 Build starts 🔨 🔨 🔨 ")
 
@@ -483,7 +483,7 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 		}
 	}
 
-	Info(pkgTag, "   :white_check_mark: Done")
+	Info(pkgTag, " :white_check_mark: Done")
 
 	err = artifact.WriteYaml(p.GetOutputPath())
 	if err != nil {
@@ -498,7 +498,7 @@ func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssert
 
 	solution, err := s.Install([]pkg.Package{p.GetPackage()})
 	if err != nil {
-		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().GetName())
+		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().HumanReadableString())
 	}
 
 	dependencies := solution.Order(cs.Database, p.GetPackage().GetFingerPrint())
@@ -530,7 +530,7 @@ func (cs *LuetCompiler) Compile(keepPermissions bool, p CompilationSpec) (Artifa
 }
 
 func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
-	Info(":package: Compiling", p.GetPackage().GetName(), "version", p.GetPackage().GetVersion(), ".... :coffee:")
+	Info(":package: Compiling", p.GetPackage().HumanReadableString(), ".... :coffee:")
 
 	if len(p.GetPackage().GetRequires()) == 0 && p.GetImage() == "" {
 		Error("Package with no deps and no seed image supplied, bailing out")
@@ -558,74 +558,82 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	depsN := 0
 	currentN := 0
 
-	Info(":deciduous_tree: Build dependencies for " + p.GetPackage().GetName())
-	for _, assertion := range dependencies { //highly dependent on the order
-		depsN++
-		Info(" :arrow_right_hook:", assertion.Package.GetName(), ":leaves:", assertion.Package.GetVersion(), "(", assertion.Package.GetCategory(), ")")
-
-	}
-
-	for _, assertion := range dependencies { //highly dependent on the order
-		currentN++
-		pkgTag := fmt.Sprintf(":package:  %d/%d %s ⤑ %s", currentN, depsN, p.GetPackage().GetName(), assertion.Package.GetName())
-		Info(pkgTag, "   :zap:  Building dependency")
-		compileSpec, err := cs.FromPackage(assertion.Package)
-		if err != nil {
-			return nil, errors.Wrap(err, "Error while generating compilespec for "+assertion.Package.GetName())
+	if !cs.Options.NoDeps {
+		Info(":deciduous_tree: Build dependencies for " + p.GetPackage().HumanReadableString())
+		for _, assertion := range dependencies { //highly dependent on the order
+			depsN++
+			Info(" :arrow_right_hook:", assertion.Package.HumanReadableString(), ":leaves:")
 		}
-		compileSpec.SetOutputPath(p.GetOutputPath())
 
-		buildImageHash := cs.ImageRepository + ":" + assertion.Hash.BuildHash
-		currentPackageImageHash := cs.ImageRepository + ":" + assertion.Hash.PackageHash
-		Debug(pkgTag, "    :arrow_right_hook: :whale: Builder image from", buildImageHash)
-		Debug(pkgTag, "    :arrow_right_hook: :whale: Package image name", currentPackageImageHash)
+		for _, assertion := range dependencies { //highly dependent on the order
+			currentN++
+			pkgTag := fmt.Sprintf(":package:  %d/%d %s ⤑ %s", currentN, depsN, p.GetPackage().HumanReadableString(), assertion.Package.HumanReadableString())
+			Info(pkgTag, "   :zap:  Building dependency")
+			compileSpec, err := cs.FromPackage(assertion.Package)
+			if err != nil {
+				return nil, errors.Wrap(err, "Error while generating compilespec for "+assertion.Package.GetName())
+			}
+			compileSpec.SetOutputPath(p.GetOutputPath())
 
-		lastHash = currentPackageImageHash
-		if compileSpec.GetImage() != "" {
-			// TODO: Refactor this
-			if compileSpec.ImageUnpack() { // If it is just an entire image, create a package from it
-				if compileSpec.GetImage() == "" {
-					return nil, errors.New("No image defined for package: " + assertion.Package.GetName())
+			buildImageHash := cs.ImageRepository + ":" + assertion.Hash.BuildHash
+			currentPackageImageHash := cs.ImageRepository + ":" + assertion.Hash.PackageHash
+			Debug(pkgTag, "    :arrow_right_hook: :whale: Builder image from", buildImageHash)
+			Debug(pkgTag, "    :arrow_right_hook: :whale: Package image name", currentPackageImageHash)
+
+			lastHash = currentPackageImageHash
+			if compileSpec.GetImage() != "" {
+				// TODO: Refactor this
+				if compileSpec.ImageUnpack() { // If it is just an entire image, create a package from it
+					if compileSpec.GetImage() == "" {
+						return nil, errors.New("No image defined for package: " + assertion.Package.HumanReadableString())
+					}
+					Info(pkgTag, ":whale: Sourcing package from image", compileSpec.GetImage())
+					artifact, err := cs.packageFromImage(compileSpec, currentPackageImageHash, keepPermissions, cs.KeepImg, concurrency)
+					if err != nil {
+						return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().HumanReadableString())
+					}
+					departifacts = append(departifacts, artifact)
+					continue
 				}
-				Info(pkgTag, ":whale: Sourcing package from image", compileSpec.GetImage())
-				artifact, err := cs.packageFromImage(compileSpec, currentPackageImageHash, keepPermissions, cs.KeepImg, concurrency)
+
+				Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().HumanReadableString()+" from image")
+				artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec)
 				if err != nil {
-					return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().GetName())
+					return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().HumanReadableString())
 				}
 				departifacts = append(departifacts, artifact)
+				Info(pkgTag, ":white_check_mark: Done")
 				continue
 			}
 
-			Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().GetFingerPrint()+" from image")
-			artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec)
+			Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().HumanReadableString()+" from tree")
+			artifact, err := cs.compileWithImage(buildImageHash, "", currentPackageImageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec)
 			if err != nil {
-				return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().GetName())
+				return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().HumanReadableString())
+				//	deperrs = append(deperrs, err)
+				//		break // stop at first error
 			}
 			departifacts = append(departifacts, artifact)
-			Info(pkgTag, ":white_check_mark: Done")
-			continue
+			Info(pkgTag, ":collision: Done")
 		}
 
-		Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().GetFingerPrint()+" from tree")
-		artifact, err := cs.compileWithImage(buildImageHash, "", currentPackageImageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec)
+	} else if len(dependencies) > 0 {
+		lastHash = dependencies[len(dependencies)-1].Hash.PackageHash
+	}
+
+	if !cs.Options.OnlyDeps {
+		Info(":package:", p.GetPackage().HumanReadableString(), ":cyclone:  Building package target from:", lastHash)
+		artifact, err := cs.compileWithImage(lastHash, "", "", concurrency, keepPermissions, cs.KeepImg, p)
 		if err != nil {
-			return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().GetName())
-			//	deperrs = append(deperrs, err)
-			//		break // stop at first error
+			return artifact, err
 		}
-		departifacts = append(departifacts, artifact)
-		Info(pkgTag, ":collision: Done")
-	}
+		artifact.SetDependencies(departifacts)
+		artifact.SetSourceAssertion(p.GetSourceAssertion())
 
-	Info(":package:", p.GetPackage().GetName(), ":cyclone:  Building package target from:", lastHash)
-	artifact, err := cs.compileWithImage(lastHash, "", "", concurrency, keepPermissions, cs.KeepImg, p)
-	if err != nil {
 		return artifact, err
+	} else {
+		return departifacts[len(departifacts)-1], nil
 	}
-	artifact.SetDependencies(departifacts)
-	artifact.SetSourceAssertion(p.GetSourceAssertion())
-
-	return artifact, err
 }
 
 func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {

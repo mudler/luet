@@ -45,6 +45,8 @@ var buildCmd = &cobra.Command{
 		viper.BindPFlag("revdeps", cmd.Flags().Lookup("revdeps"))
 		viper.BindPFlag("all", cmd.Flags().Lookup("all"))
 		viper.BindPFlag("compression", cmd.Flags().Lookup("compression"))
+		viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
+		viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
 
 		viper.BindPFlag("image-repository", cmd.Flags().Lookup("image-repository"))
 		viper.BindPFlag("push", cmd.Flags().Lookup("push"))
@@ -72,6 +74,8 @@ var buildCmd = &cobra.Command{
 		push := viper.GetBool("push")
 		pull := viper.GetBool("pull")
 		keepImages := viper.GetBool("keep-images")
+		nodeps := viper.GetBool("nodeps")
+		onlydeps := viper.GetBool("onlydeps")
 
 		compilerSpecs := compiler.NewLuetCompilationspecs()
 		var compilerBackend compiler.CompilerBackend
@@ -126,6 +130,8 @@ var buildCmd = &cobra.Command{
 		opts.PullFirst = pull
 		opts.KeepImg = keepImages
 		opts.Push = push
+		opts.OnlyDeps = onlydeps
+		opts.NoDeps = nodeps
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), opts)
 		luetCompiler.SetConcurrency(concurrency)
 		luetCompiler.SetCompressionType(compiler.CompressionImplementation(compressionType))
@@ -212,7 +218,8 @@ func init() {
 	buildCmd.Flags().Bool("push", false, "Push images to a hub")
 	buildCmd.Flags().Bool("pull", false, "Pull images from a hub")
 	buildCmd.Flags().Bool("keep-images", true, "Keep built docker images in the host")
-
+	buildCmd.Flags().Bool("nodeps", false, "Build only the target packages, skipping deps (it works only if you already built the deps locally, or by using --pull) ")
+	buildCmd.Flags().Bool("onlydeps", false, "Build only package dependencies")
 	buildCmd.Flags().String("solver-type", "", "Solver strategy")
 	buildCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
 	buildCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")

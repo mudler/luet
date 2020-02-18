@@ -50,6 +50,8 @@ type CompilerOptions struct {
 	CompressionType          CompressionImplementation
 	Clean                    bool
 
+	OnlyDeps      bool
+	NoDeps        bool
 	SolverOptions config.LuetSolverOptions
 }
 
@@ -62,6 +64,8 @@ func NewDefaultCompilerOptions() *CompilerOptions {
 		KeepImg:         true,
 		Concurrency:     runtime.NumCPU(),
 		Clean:           true,
+		OnlyDeps:        false,
+		NoDeps:          false,
 	}
 }
 
