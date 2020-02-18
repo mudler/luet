@@ -87,6 +87,7 @@ type Package interface {
 	SelectorMatchVersion(string) (bool, error)
 
 	String() string
+	HumanReadableString() string
 }
 
 type Tree interface {
@@ -171,6 +172,10 @@ func (p *DefaultPackage) String() string {
 // FIXME: this needs to be unique, now just name is generalized
 func (p *DefaultPackage) GetFingerPrint() string {
 	return fmt.Sprintf("%s-%s-%s", p.Name, p.Category, p.Version)
+}
+
+func (p *DefaultPackage) HumanReadableString() string {
+	return fmt.Sprintf("%s/%s-%s", p.Category, p.Name, p.Version)
 }
 
 func FromString(s string) Package {
