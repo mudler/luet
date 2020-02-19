@@ -17,8 +17,10 @@ package pkg
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"io"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -88,6 +90,7 @@ type Package interface {
 
 	String() string
 	HumanReadableString() string
+	HashFingerprint() string
 }
 
 type Tree interface {
@@ -172,6 +175,12 @@ func (p *DefaultPackage) String() string {
 // FIXME: this needs to be unique, now just name is generalized
 func (p *DefaultPackage) GetFingerPrint() string {
 	return fmt.Sprintf("%s-%s-%s", p.Name, p.Category, p.Version)
+}
+
+func (p *DefaultPackage) HashFingerprint() string {
+	h := md5.New()
+	io.WriteString(h, p.GetFingerPrint())
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 func (p *DefaultPackage) HumanReadableString() string {

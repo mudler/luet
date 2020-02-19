@@ -265,11 +265,12 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		}
 	}
 
+	fp := p.GetPackage().HashFingerprint()
 	if buildertaggedImage == "" {
-		buildertaggedImage = cs.ImageRepository + "-" + p.GetPackage().GetFingerPrint() + "-builder"
+		buildertaggedImage = cs.ImageRepository + "-" + fp + "-builder"
 	}
 	if packageImage == "" {
-		packageImage = cs.ImageRepository + "-" + p.GetPackage().GetFingerPrint()
+		packageImage = cs.ImageRepository + "-" + fp
 	}
 
 	Info(pkgTag, "Generating :whale: definition for builder image from", image)
