@@ -25,10 +25,17 @@ var _ = Describe("Package", func() {
 
 	Context("Encoding/Decoding", func() {
 		a := &DefaultPackage{Name: "test", Version: "1", Category: "t"}
+		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+
 		It("Encodes and decodes correctly", func() {
 			Expect(a.String()).ToNot(Equal(""))
 			p := FromString(a.String())
 			Expect(p).To(Equal(a))
+		})
+
+		It("Generates packages fingerprint's hashes", func() {
+			Expect(a.HashFingerprint()).ToNot(Equal(a1.HashFingerprint()))
+			Expect(a.HashFingerprint()).To(Equal("c64caa391b79adb598ad98e261aa79a0"))
 		})
 	})
 
