@@ -161,6 +161,35 @@ func ParseVersion(v string) (PkgVersionSelector, error) {
 		ans.Condition = PkgCondNot
 	}
 
+	// Check if build number is present
+	buildIdx := strings.Index(v, "+")
+	buildVersion := ""
+	if buildIdx > 0 {
+		// <pre-release> ::= <dot-separated pre-release identifiers>
+		//
+		// <dot-separated pre-release identifiers> ::=
+		//      <pre-release identifier> | <pre-release identifier> "."
+		//      <dot-separated pre-release identifiers>
+		//
+		// <build> ::= <dot-separated build identifiers>
+		//
+		// <dot-separated build identifiers> ::= <build identifier>
+		//      | <build identifier> "." <dot-separated build identifiers>
+		//
+		// <pre-release identifier> ::= <alphanumeric identifier>
+		//                            | <numeric identifier>
+		//
+		// <build identifier> ::= <alphanumeric identifier>
+		//      | <digits>
+		//
+		// <alphanumeric identifier> ::= <non-digit>
+		//      | <non-digit> <identifier characters>
+		//      | <identifier characters> <non-digit>
+		//      | <identifier characters> <non-digit> <identifier characters>
+		buildVersion = v[buildIdx:]
+		v = v[0:buildIdx]
+	}
+
 	regexPkg := regexp.MustCompile(
 		fmt.Sprintf("(%s|%s|%s|%s|%s|%s)((%s|%s|%s|%s|%s|%s|%s)+)*$",
 			// Version regex
@@ -215,6 +244,8 @@ func ParseVersion(v string) (PkgVersionSelector, error) {
 	if ans.Condition == PkgCondInvalid && ans.Version != "" {
 		ans.Condition = PkgCondEqual
 	}
+
+	ans.Version += buildVersion
 
 	// NOTE: Now suffix complex like _alpha_rc1 are not supported.
 	return ans, nil
