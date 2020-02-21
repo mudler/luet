@@ -15,18 +15,17 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	. "github.com/mudler/luet/pkg/config"
+	helpers "github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	tree "github.com/mudler/luet/pkg/tree"
 
-	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -137,26 +136,12 @@ var buildCmd = &cobra.Command{
 		luetCompiler.SetCompressionType(compiler.CompressionImplementation(compressionType))
 		if !all {
 			for _, a := range args {
-				gp, err := _gentoo.ParsePackageStr(a)
+
+				pack, err := helpers.ParsePackageStr(a)
 				if err != nil {
 					Fatal("Invalid package string ", a, ": ", err.Error())
 				}
 
-				if gp.Version == "" {
-					gp.Version = "0"
-					gp.Condition = _gentoo.PkgCondGreaterEqual
-				}
-
-				pack := &pkg.DefaultPackage{
-					Name: gp.Name,
-					Version: fmt.Sprintf("%s%s%s",
-						pkg.PkgSelectorConditionFromInt(gp.Condition.Int()).String(),
-						gp.Version,
-						gp.VersionSuffix,
-					),
-					Category: gp.Category,
-					Uri:      make([]string, 0),
-				}
 				spec, err := luetCompiler.FromPackage(pack)
 				if err != nil {
 					Fatal("Error: " + err.Error())

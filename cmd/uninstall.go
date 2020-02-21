@@ -15,16 +15,15 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
 	. "github.com/mudler/luet/pkg/config"
+	helpers "github.com/mudler/luet/pkg/helpers"
 	installer "github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
-	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	"github.com/spf13/cobra"
 )
 
@@ -46,23 +45,10 @@ var uninstallCmd = &cobra.Command{
 		var systemDB pkg.PackageDatabase
 
 		for _, a := range args {
-			gp, err := _gentoo.ParsePackageStr(a)
+
+			pack, err := helpers.ParsePackageStr(a)
 			if err != nil {
 				Fatal("Invalid package string ", a, ": ", err.Error())
-			}
-			if gp.Version == "" {
-				gp.Version = "0"
-				gp.Condition = _gentoo.PkgCondGreaterEqual
-			}
-			pack := &pkg.DefaultPackage{
-				Name: gp.Name,
-				Version: fmt.Sprintf("%s%s%s",
-					pkg.PkgSelectorConditionFromInt(gp.Condition.Int()).String(),
-					gp.Version,
-					gp.VersionSuffix,
-				),
-				Category: gp.Category,
-				Uri:      make([]string, 0),
 			}
 
 			stype := LuetCfg.Viper.GetString("solver.type")
