@@ -301,6 +301,10 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		return nil, errors.Wrap(err, "Could not export image")
 	}
 
+	if !cs.Options.KeepImageExport {
+		defer os.Remove(builderOpts.Destination)
+	}
+
 	if cs.Options.Push && buildBuilderImage {
 		if err = cs.Backend.Push(builderOpts); err != nil {
 			return nil, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
@@ -337,6 +341,10 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 
 	if err := cs.Backend.ExportImage(runnerOpts); err != nil {
 		return nil, errors.Wrap(err, "Failed exporting image")
+	}
+
+	if !cs.Options.KeepImageExport {
+		defer os.Remove(runnerOpts.Destination)
 	}
 
 	if cs.Options.Push && buildPackageImage {
@@ -450,6 +458,10 @@ func (cs *LuetCompiler) packageFromImage(p CompilationSpec, tag string, keepPerm
 	err = cs.Backend.ExportImage(builderOpts)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not export image")
+	}
+
+	if !cs.Options.KeepImageExport {
+		defer os.Remove(builderOpts.Destination)
 	}
 
 	rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")

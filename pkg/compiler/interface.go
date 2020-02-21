@@ -49,6 +49,7 @@ type CompilerOptions struct {
 	Concurrency              int
 	CompressionType          CompressionImplementation
 	Clean                    bool
+	KeepImageExport          bool
 
 	OnlyDeps      bool
 	NoDeps        bool
