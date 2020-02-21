@@ -4,7 +4,8 @@ go 1.12
 
 require (
 	github.com/DataDog/zstd v1.4.4 // indirect
-	github.com/Sabayon/pkgs-checker v0.4.2-0.20200101193228-1d500105afb7
+	github.com/MottainaiCI/simplestreams-builder v0.0.0-20190710131531-efb382161f56 // indirect
+	github.com/Sabayon/pkgs-checker v0.5.1-0.20200221202320-073693f2c657
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 	github.com/briandowns/spinner v1.7.0
 	github.com/cavaliercoder/grab v2.0.0+incompatible
@@ -12,6 +13,7 @@ require (
 	github.com/docker/docker v0.7.3-0.20180827131323-0c5f8d2b9b23
 	github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
 	github.com/ghodss/yaml v1.0.0
+	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
 	github.com/hashicorp/go-version v1.2.0
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
 	github.com/klauspost/pgzip v1.2.1

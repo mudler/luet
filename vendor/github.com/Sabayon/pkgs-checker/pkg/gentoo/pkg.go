@@ -54,11 +54,17 @@ const (
 	PkgCondMatchVersion = 8
 )
 
+const (
+	RegexCatString     = `(^[a-z]+[0-9]*[a-z]*[-][a-z]+[0-9]*[a-z]*|^virtual)`
+	RegexPkgNameString = `([a-z]+[0-9a-zA-Z\-[+]*]*[+]*)`
+)
+
 type GentooPackage struct {
 	Name          string `json:"name",omitempty"`
 	Category      string `json:"category",omitempty"`
 	Version       string `json:"version",omitempty"`
 	VersionSuffix string `json:"version_suffix",omitempty"`
+	VersionBuild  string `json:"version_build",omitempty"`
 	Slot          string `json:"slot",omitempty"`
 	Condition     PackageCond
 	Repository    string   `json:"repository",omitempty"`
@@ -191,14 +197,23 @@ func (p *GentooPackage) Admit(i *GentooPackage) (bool, error) {
 			fmt.Sprintf("Wrong name for package %s", i.Name))
 	}
 
-	if p.Version != "" {
-		v1, err = version.NewVersion(p.Version)
+	v1s := p.Version
+	v2s := i.Version
+
+	if v1s != "" {
+		if p.VersionBuild != "" {
+			v1s = p.Version + "+" + p.VersionBuild
+		}
+		v1, err = version.NewVersion(v1s)
 		if err != nil {
 			return false, err
 		}
 	}
-	if i.Version != "" {
-		v2, err = version.NewVersion(i.Version)
+	if v2s != "" {
+		if i.VersionBuild != "" {
+			v2s = i.Version + "+" + i.VersionBuild
+		}
+		v2, err = version.NewVersion(v2s)
 		if err != nil {
 			return false, err
 		}
@@ -210,7 +225,8 @@ func (p *GentooPackage) Admit(i *GentooPackage) (bool, error) {
 	} else {
 		if p.Condition == PkgCondInvalid || p.Condition == PkgCondEqual {
 			// case 1: source-pkg-1.0 and dest-pkg-1.0 or dest-pkg without version
-			if i.Version != "" && i.Version == p.Version && p.VersionSuffix == i.VersionSuffix {
+			if i.Version != "" && i.Version == p.Version && p.VersionSuffix == i.VersionSuffix &&
+				p.VersionBuild == i.VersionBuild {
 				ans = true
 			}
 		} else if p.Condition == PkgCondAnyRevision {
@@ -270,8 +286,9 @@ func ParsePackageStr(pkg string) (*GentooPackage, error) {
 	}
 
 	ans := GentooPackage{
-		Slot:      "0",
-		Condition: PkgCondInvalid,
+		Slot:         "0",
+		Condition:    PkgCondInvalid,
+		VersionBuild: "",
 	}
 
 	// Check if pkg string contains inline use flags
@@ -315,6 +332,67 @@ func ParsePackageStr(pkg string) (*GentooPackage, error) {
 		ans.Condition = PkgCondNot
 	}
 
+	regexVerString := fmt.Sprintf("[-](%s|%s|%s|%s|%s|%s)((%s|%s|%s|%s|%s|%s|%s)+)*",
+		// Version regex
+		// 1.1
+		"[0-9]+[.][0-9]+[a-z]*",
+		// 1
+		"[0-9]+[a-z]*",
+		// 1.1.1
+		"[0-9]+[.][0-9]+[.][0-9]+[a-z]*",
+		// 1.1.1.1
+		"[0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[a-z]*",
+		// 1.1.1.1.1
+		"[0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[a-z]*",
+		// 1.1.1.1.1.1
+		"[0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[a-z]*",
+		// suffix
+		"-r[0-9]+",
+		"_p[0-9]+",
+		"_pre[0-9]*",
+		"_rc[0-9]+",
+		// handle also rc without number
+		"_rc",
+		"_alpha",
+		"_beta",
+	)
+
+	hasBuild, _ := regexp.MatchString(
+		fmt.Sprintf("(%s[/]%s%s([[:]{1,2}[0-9a-zA-Z]*]*)*[+])",
+			RegexCatString, RegexPkgNameString, regexVerString),
+		pkg,
+	)
+
+	if hasBuild {
+		// Check if build number is present
+		buildIdx := strings.LastIndex(pkg, "+")
+		if buildIdx > 0 {
+			// <pre-release> ::= <dot-separated pre-release identifiers>
+			//
+			// <dot-separated pre-release identifiers> ::=
+			//      <pre-release identifier> | <pre-release identifier> "."
+			//      <dot-separated pre-release identifiers>
+			//
+			// <build> ::= <dot-separated build identifiers>
+			//
+			// <dot-separated build identifiers> ::= <build identifier>
+			//      | <build identifier> "." <dot-separated build identifiers>
+			//
+			// <pre-release identifier> ::= <alphanumeric identifier>
+			//                            | <numeric identifier>
+			//
+			// <build identifier> ::= <alphanumeric identifier>
+			//      | <digits>
+			//
+			// <alphanumeric identifier> ::= <non-digit>
+			//      | <non-digit> <identifier characters>
+			//      | <identifier characters> <non-digit>
+			//      | <identifier characters> <non-digit> <identifier characters>
+			ans.VersionBuild = pkg[buildIdx+1:]
+			pkg = pkg[0:buildIdx]
+		}
+	}
+
 	words := strings.Split(pkg, "/")
 	if len(words) != 2 {
 		return nil, errors.New(fmt.Sprintf("Invalid package string %s", pkg))
@@ -337,31 +415,9 @@ func ParsePackageStr(pkg string) (*GentooPackage, error) {
 	}
 
 	regexPkg := regexp.MustCompile(
-		fmt.Sprintf("[-](%s|%s|%s|%s|%s|%s)((%s|%s|%s|%s|%s|%s|%s)+)*$",
-			// Version regex
-			// 1.1
-			"[0-9]+[.][0-9]+[a-z]*",
-			// 1
-			"[0-9]+[a-z]*",
-			// 1.1.1
-			"[0-9]+[.][0-9]+[.][0-9]+[a-z]*",
-			// 1.1.1.1
-			"[0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[a-z]*",
-			// 1.1.1.1.1
-			"[0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[a-z]*",
-			// 1.1.1.1.1.1
-			"[0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[a-z]*",
-			// suffix
-			"-r[0-9]+",
-			"_p[0-9]+",
-			"_pre[0-9]*",
-			"_rc[0-9]+",
-			// handle also rc without number
-			"_rc",
-			"_alpha",
-			"_beta",
-		),
+		fmt.Sprintf("%s$", regexVerString),
 	)
+
 	matches := regexPkg.FindAllString(pkgname, -1)
 
 	// NOTE: Now suffix comples like _alpha_rc1 are not supported.
