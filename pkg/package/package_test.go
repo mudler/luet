@@ -211,7 +211,7 @@ var _ = Describe("Package", func() {
 
 			f, err := a1.BuildFormula(definitions, db)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(f)).To(Equal(2))
+			Expect(len(f)).To(Equal(8))
 			//	Expect(f[0].String()).To(Equal("or(not(c31f5842), a4910f77)"))
 			//	Expect(f[1].String()).To(Equal("or(not(c31f5842), not(a97670be))"))
 		})
