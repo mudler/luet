@@ -631,7 +631,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 		}
 
 	} else if len(dependencies) > 0 {
-		lastHash = dependencies[len(dependencies)-1].Hash.PackageHash
+		lastHash = cs.ImageRepository + ":" + dependencies[len(dependencies)-1].Hash.PackageHash
 	}
 
 	if !cs.Options.OnlyDeps {
