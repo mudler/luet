@@ -468,6 +468,22 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 	A := bf.Var(encodedA)
 
 	var formulas []bf.Formula
+
+	// Do conflict with other packages versions (if A is selected, then conflict with other versions of A)
+	packages, _ := definitiondb.FindPackageVersions(p)
+	if len(packages) > 0 {
+		for _, cp := range packages {
+			encodedB, err := cp.Encode(db)
+			if err != nil {
+				return nil, err
+			}
+			B := bf.Var(encodedB)
+			if !p.Matches(cp) {
+				formulas = append(formulas, bf.Or(A, bf.Or(bf.Not(A), bf.Not(B))))
+			}
+		}
+	}
+
 	for _, requiredDef := range p.GetRequires() {
 		required, err := definitiondb.FindPackage(requiredDef)
 		if err != nil || requiredDef.IsSelector() {
@@ -600,6 +616,7 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 		formulas = append(formulas, f...)
 
 	}
+
 	return formulas, nil
 }
 
