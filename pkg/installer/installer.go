@@ -124,7 +124,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 		}
 	}
 
-	if err := l.Install(toInstall, s, true); err != nil {
+	if err := l.install(syncedRepos, toInstall, s, true); err != nil {
 		return errors.Wrap(err, "Pre-downloading packages")
 	}
 
@@ -153,7 +153,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	}
 	l.Options.Force = forced
 
-	return l.Install(toInstall, s, false)
+	return l.install(syncedRepos, toInstall, s, false)
 }
 
 func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
@@ -179,6 +179,14 @@ func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
 }
 
 func (l *LuetInstaller) Install(cp []pkg.Package, s *System, downloadOnly bool) error {
+	syncedRepos, err := l.SyncRepositories(true)
+	if err != nil {
+		return err
+	}
+	return l.install(syncedRepos, cp, s, downloadOnly)
+}
+
+func (l *LuetInstaller) install(syncedRepos Repositories, cp []pkg.Package, s *System, downloadOnly bool) error {
 	var p []pkg.Package
 
 	// Check if the package is installed first
@@ -201,10 +209,6 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System, downloadOnly bool) 
 	}
 	// First get metas from all repos (and decodes trees)
 
-	syncedRepos, err := l.SyncRepositories(true)
-	if err != nil {
-		return err
-	}
 	// First match packages against repositories by priority
 	//	matches := syncedRepos.PackageMatches(p)
 
@@ -214,7 +218,7 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System, downloadOnly bool) 
 	p = syncedRepos.ResolveSelectors(p)
 	toInstall := map[string]ArtifactMatch{}
 	var packagesToInstall []pkg.Package
-
+	var err error
 	var solution solver.PackagesAssertions
 
 	if !l.Options.NoDeps {
