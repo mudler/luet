@@ -106,23 +106,39 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 		return err
 	}
 	// First match packages against repositories by priority
-	//	matches := syncedRepos.PackageMatches(p)
 	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
 	// compute a "big" world
 	solv := solver.NewResolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
-	uninstall, solution, err := solv.Upgrade()
+	uninstall, solution, err := solv.Upgrade(false)
 	if err != nil {
 		return errors.Wrap(err, "Failed solving solution for upgrade")
 	}
 
+	// We don't want any conflict with the installed to raise during the upgrade.
+	// In this way we both force uninstalls and we avoid to check with conflicts
+	// against the current system state which is pending to deletion
+	// E.g. you can't check for conflicts for an upgrade of a new version of A
+	// if the old A results installed in the system. This is due to the fact that
+	// now the solver enforces the constraints and explictly denies two packages
+	// of the same version installed.
+	forced := false
+	if l.Options.Force {
+		forced = true
+	}
+	l.Options.Force = true
+
 	for _, u := range uninstall {
+		Info(":package: Marked for deletion", u.HumanReadableString())
+
 		err := l.Uninstall(u, s)
 		if err != nil && !l.Options.Force {
 			Error("Failed uninstall for ", u.HumanReadableString())
 			return errors.Wrap(err, "uninstalling "+u.HumanReadableString())
 		}
+
 	}
+	l.Options.Force = forced
 
 	toInstall := []pkg.Package{}
 	for _, assertion := range solution {
@@ -249,29 +265,27 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 	close(all)
 	wg.Wait()
 
+	for _, c := range toInstall {
+		// Annotate to the system that the package was installed
+		_, err := s.Database.CreatePackage(c.Package)
+		if err != nil && !l.Options.Force {
+			return errors.Wrap(err, "Failed creating package")
+		}
+	}
 	executedFinalizer := map[string]bool{}
 
 	// TODO: Lower those errors as warning
 	for _, w := range p {
 		// Finalizers needs to run in order and in sequence.
 		ordered := solution.Order(allRepos, w.GetFingerPrint())
+	ORDER:
 		for _, ass := range ordered {
 			if ass.Value {
-				// Annotate to the system that the package was installed
-				if _, err := s.Database.FindPackage(ass.Package); err == nil {
-					err := s.Database.UpdatePackage(ass.Package)
-					if err != nil && !l.Options.Force {
-						return errors.Wrap(err, "Failed updating package")
-					}
-				} else {
-					_, err := s.Database.CreatePackage(ass.Package)
-					if err != nil && !l.Options.Force {
-						return errors.Wrap(err, "Failed creating package")
-					}
-				}
+
 				installed, ok := toInstall[ass.Package.GetFingerPrint()]
 				if !ok {
-					return errors.New("Couldn't find ArtifactMatch for " + ass.Package.HumanReadableString())
+					// It was a dep already installed in the system, so we can skip it safely
+					continue ORDER
 				}
 
 				treePackage, err := installed.Repository.GetTree().GetDatabase().FindPackage(ass.Package)
@@ -381,12 +395,17 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 }
 
 func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
-	// compute uninstall from all world - remove packages in parallel - run uninstall finalizer (in order) - mark the uninstallation in db
+	// compute uninstall from all world - remove packages in parallel - run uninstall finalizer (in order) TODO - mark the uninstallation in db
 	// Get installed definition
+
+	checkConflicts := true
+	if l.Options.Force == true {
+		checkConflicts = false
+	}
 
 	if !l.Options.NoDeps {
 		solv := solver.NewResolver(s.Database, s.Database, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
-		solution, err := solv.Uninstall(p)
+		solution, err := solv.Uninstall(p, checkConflicts)
 		if err != nil && !l.Options.Force {
 			return errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
 		}

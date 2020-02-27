@@ -28,11 +28,11 @@ import (
 type PackageSolver interface {
 	SetDefinitionDatabase(pkg.PackageDatabase)
 	Install(p []pkg.Package) (PackagesAssertions, error)
-	Uninstall(candidate pkg.Package) ([]pkg.Package, error)
+	Uninstall(candidate pkg.Package, checkconflicts bool) ([]pkg.Package, error)
 	ConflictsWithInstalled(p pkg.Package) (bool, error)
 	ConflictsWith(p pkg.Package, ls []pkg.Package) (bool, error)
 	World() []pkg.Package
-	Upgrade() ([]pkg.Package, PackagesAssertions, error)
+	Upgrade(checkconflicts bool) ([]pkg.Package, PackagesAssertions, error)
 
 	SetResolver(PackageResolver)
 
@@ -210,7 +210,7 @@ func (s *Solver) ConflictsWithInstalled(p pkg.Package) (bool, error) {
 	return s.ConflictsWith(p, s.Installed())
 }
 
-func (s *Solver) Upgrade() ([]pkg.Package, PackagesAssertions, error) {
+func (s *Solver) Upgrade(checkconflicts bool) ([]pkg.Package, PackagesAssertions, error) {
 
 	// First get candidates that needs to be upgraded..
 
@@ -236,12 +236,11 @@ func (s *Solver) Upgrade() ([]pkg.Package, PackagesAssertions, error) {
 			}
 		}
 	}
-
 	s2 := NewSolver(installedcopy, s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
 	s2.SetResolver(s.Resolver)
 	// Then try to uninstall the versions in the system, and store that tree
 	for _, p := range toUninstall {
-		r, err := s.Uninstall(p)
+		r, err := s.Uninstall(p, checkconflicts)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't uninstall selected candidate "+p.GetFingerPrint())
 		}
@@ -262,7 +261,7 @@ func (s *Solver) Upgrade() ([]pkg.Package, PackagesAssertions, error) {
 
 // Uninstall takes a candidate package and return a list of packages that would be removed
 // in order to purge the candidate. Returns error if unsat.
-func (s *Solver) Uninstall(c pkg.Package) ([]pkg.Package, error) {
+func (s *Solver) Uninstall(c pkg.Package, checkconflicts bool) ([]pkg.Package, error) {
 	var res []pkg.Package
 	candidate, err := s.InstalledDatabase.FindPackage(c)
 	if err != nil {
@@ -294,17 +293,19 @@ func (s *Solver) Uninstall(c pkg.Package) ([]pkg.Package, error) {
 		}
 	}
 
+	s2 := NewSolver(pkg.NewInMemoryDatabase(false), s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
+	s2.SetResolver(s.Resolver)
 	// Get the requirements to install the candidate
-	saved := s.InstalledDatabase
-	s.InstalledDatabase = pkg.NewInMemoryDatabase(false)
-	asserts, err := s.Install([]pkg.Package{candidate})
+	asserts, err := s2.Install([]pkg.Package{candidate})
 	if err != nil {
 		return nil, err
 	}
-	s.InstalledDatabase = saved
-
 	for _, a := range asserts {
 		if a.Value {
+			if !checkconflicts {
+				res = append(res, a.Package.IsFlagged(false))
+				continue
+			}
 
 			c, err := s.ConflictsWithInstalled(a.Package)
 			if err != nil {

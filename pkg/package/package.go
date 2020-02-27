@@ -479,7 +479,7 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 			}
 			B := bf.Var(encodedB)
 			if !p.Matches(cp) {
-				formulas = append(formulas, bf.Or(A, bf.Or(bf.Not(A), bf.Not(B))))
+				formulas = append(formulas, bf.Or(bf.Not(A), bf.Or(bf.Not(A), bf.Not(B))))
 			}
 		}
 	}
@@ -495,62 +495,60 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 			if err != nil || len(packages) == 0 {
 				required = requiredDef
 			} else {
-				if len(packages) == 1 {
-					required = packages[0]
-				} else {
-					var ALO, priorityConstraints, priorityALO []bf.Formula
 
-					// Try to prio best match
-					// Force the solver to consider first our candidate (if does exists).
-					// Then builds ALO and AMO for the requires.
-					c, candidateErr := definitiondb.FindPackageCandidate(requiredDef)
-					var C bf.Formula
-					if candidateErr == nil {
-						// We have a desired candidate, try to look a solution with that included first
-						for _, o := range packages {
-							encodedB, err := o.Encode(db)
-							if err != nil {
-								return nil, err
-							}
-							B := bf.Var(encodedB)
-							if !o.Matches(c) {
-								priorityConstraints = append(priorityConstraints, bf.Not(B))
-								priorityALO = append(priorityALO, B)
-							}
-						}
-						encodedC, err := c.Encode(db)
-						if err != nil {
-							return nil, err
-						}
-						C = bf.Var(encodedC)
-						// Or the Candidate is true, or all the others might be not true
-						// This forces the CDCL sat implementation to look first at a solution with C=true
-						formulas = append(formulas, bf.Or(bf.Or(C, bf.Or(priorityConstraints...)), bf.Or(bf.Not(C), bf.Or(priorityALO...))))
-					}
+				var ALO, priorityConstraints, priorityALO []bf.Formula
 
-					// AMO - At most one
+				// Try to prio best match
+				// Force the solver to consider first our candidate (if does exists).
+				// Then builds ALO and AMO for the requires.
+				c, candidateErr := definitiondb.FindPackageCandidate(requiredDef)
+				var C bf.Formula
+				if candidateErr == nil {
+					// We have a desired candidate, try to look a solution with that included first
 					for _, o := range packages {
 						encodedB, err := o.Encode(db)
 						if err != nil {
 							return nil, err
 						}
 						B := bf.Var(encodedB)
-						ALO = append(ALO, B)
-						for _, i := range packages {
-							encodedI, err := i.Encode(db)
-							if err != nil {
-								return nil, err
-							}
-							I := bf.Var(encodedI)
-							if !o.Matches(i) {
-								formulas = append(formulas, bf.Or(bf.Not(I), bf.Not(B)))
-							}
+						if !o.Matches(c) {
+							priorityConstraints = append(priorityConstraints, bf.Not(B))
+							priorityALO = append(priorityALO, B)
 						}
 					}
-					formulas = append(formulas, bf.Or(ALO...)) // ALO - At least one
-					continue
+					encodedC, err := c.Encode(db)
+					if err != nil {
+						return nil, err
+					}
+					C = bf.Var(encodedC)
+					// Or the Candidate is true, or all the others might be not true
+					// This forces the CDCL sat implementation to look first at a solution with C=true
+					formulas = append(formulas, bf.Or(bf.Not(A), bf.Or(bf.Or(C, bf.Or(priorityConstraints...)), bf.Or(bf.Not(C), bf.Or(priorityALO...)))))
 				}
+
+				// AMO - At most one
+				for _, o := range packages {
+					encodedB, err := o.Encode(db)
+					if err != nil {
+						return nil, err
+					}
+					B := bf.Var(encodedB)
+					ALO = append(ALO, B)
+					for _, i := range packages {
+						encodedI, err := i.Encode(db)
+						if err != nil {
+							return nil, err
+						}
+						I := bf.Var(encodedI)
+						if !o.Matches(i) {
+							formulas = append(formulas, bf.Or(bf.Not(A), bf.Or(bf.Not(I), bf.Not(B))))
+						}
+					}
+				}
+				formulas = append(formulas, bf.Or(bf.Not(A), bf.Or(ALO...))) // ALO - At least one
+				continue
 			}
+
 		}
 
 		encodedB, err := required.Encode(db)

@@ -429,7 +429,7 @@ var _ = Describe("Solver", func() {
 			Expect(solution).To(ContainElement(PackageAssert{Package: D1, Value: false}))
 			Expect(solution).ToNot(ContainElement(PackageAssert{Package: E, Value: true}))
 
-			Expect(len(solution)).To(Equal(5))
+			Expect(len(solution)).To(Equal(6))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -470,7 +470,7 @@ var _ = Describe("Solver", func() {
 			Expect(solution).To(ContainElement(PackageAssert{Package: D1, Value: false}))
 			Expect(solution).ToNot(ContainElement(PackageAssert{Package: E, Value: true}))
 
-			Expect(len(solution)).To(Equal(4))
+			Expect(len(solution)).To(Equal(6))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -511,7 +511,7 @@ var _ = Describe("Solver", func() {
 			Expect(solution).To(ContainElement(PackageAssert{Package: D1, Value: false}))
 			Expect(solution).ToNot(ContainElement(PackageAssert{Package: E, Value: true}))
 
-			Expect(len(solution)).To(Equal(4))
+			Expect(len(solution)).To(Equal(6))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -533,7 +533,7 @@ var _ = Describe("Solver", func() {
 			}
 			s = NewSolver(dbInstalled, dbDefinitions, db)
 
-			solution, err := s.Uninstall(A)
+			solution, err := s.Uninstall(A, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(solution).To(ContainElement(A.IsFlagged(false)))
@@ -559,7 +559,7 @@ var _ = Describe("Solver", func() {
 			}
 			s = NewSolver(dbInstalled, dbDefinitions, db)
 
-			solution, err := s.Uninstall(&pkg.DefaultPackage{Name: "A", Version: ">1.0"})
+			solution, err := s.Uninstall(&pkg.DefaultPackage{Name: "A", Version: ">1.0"}, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(solution).To(ContainElement(A.IsFlagged(false)))
@@ -674,7 +674,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			solution, err := s.Uninstall(A)
+			solution, err := s.Uninstall(A, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(solution).To(ContainElement(A.IsFlagged(false)))
@@ -698,7 +698,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			solution, err := s.Uninstall(A)
+			solution, err := s.Uninstall(A, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(solution).To(ContainElement(A.IsFlagged(false)))
@@ -721,7 +721,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			solution, err := s.Uninstall(A)
+			solution, err := s.Uninstall(A, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(solution).To(ContainElement(A.IsFlagged(false)))
@@ -746,7 +746,7 @@ var _ = Describe("Solver", func() {
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			solution, err := s.Uninstall(A)
+			solution, err := s.Uninstall(A, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(solution).To(ContainElement(A.IsFlagged(false)))
@@ -772,7 +772,7 @@ var _ = Describe("Solver", func() {
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			solution, err := s.Uninstall(A)
+			solution, err := s.Uninstall(A, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(solution).To(ContainElement(A.IsFlagged(false)))
@@ -893,7 +893,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			uninstall, solution, err := s.Upgrade()
+			uninstall, solution, err := s.Upgrade(true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(len(uninstall)).To(Equal(1))

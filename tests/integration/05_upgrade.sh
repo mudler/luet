@@ -29,9 +29,21 @@ testBuild() {
 
     luet build --tree "$ROOT_DIR/tests/fixtures/upgrade_integration" --destination $tmpdir/testbuild --compression gzip test/a-1.1
     buildst=$?
-        assertEquals 'builds successfully' "$buildst" "0"
+    assertEquals 'builds successfully' "$buildst" "0"
 
     assertTrue 'create package A 1.1' "[ -e '$tmpdir/testbuild/a-test-1.1.package.tar.gz' ]"
+
+    luet build --tree "$ROOT_DIR/tests/fixtures/upgrade_integration" --destination $tmpdir/testbuild --compression gzip test/a-1.2
+    buildst=$?
+    assertEquals 'builds successfully' "$buildst" "0"
+
+    assertTrue 'create package A 1.2' "[ -e '$tmpdir/testbuild/a-test-1.2.package.tar.gz' ]"
+
+
+    luet build --tree "$ROOT_DIR/tests/fixtures/upgrade_integration" --destination $tmpdir/testbuild --compression gzip test/c-1.0
+    buildst=$?
+    assertEquals 'builds successfully' "$buildst" "0"
+    assertTrue 'create package C 1.0' "[ -e '$tmpdir/testbuild/c-test-1.0.package.tar.gz' ]"
 
 }
 
@@ -73,27 +85,36 @@ EOF
 
 testInstall() {
     luet install --config $tmpdir/luet.yaml test/b-1.0
-    #luet install --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package installed B' "[ -e '$tmpdir/testrootfs/test5' ]"
 
     luet install --config $tmpdir/luet.yaml test/a-1.0
-    #luet install --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
-        assertTrue 'package installed A' "[ -e '$tmpdir/testrootfs/testaa' ]"
-
+    assertTrue 'package installed A' "[ -e '$tmpdir/testrootfs/testaa' ]"
     installst=$?
+    assertEquals 'install test successfully' "$installst" "0"
+
+    luet install --config $tmpdir/luet.yaml test/a-1.1
+    assertTrue 'package installed A' "[ -e '$tmpdir/testrootfs/testaa' ]"
+    installst=$?
+    assertEquals 'install test successfully' "$installst" "0"
+    assertTrue 'package keeps old A' "[ -e '$tmpdir/testrootfs/testaa' ]"
+    assertTrue 'package new A was not installed' "[ ! -e '$tmpdir/testrootfs/testlatest' ]"
+
+    luet install --config $tmpdir/luet.yaml test/c-1.0
+    installst=$?
+    assertEquals 'install test successfully' "$installst" "0"
+    assertTrue 'package installed C' "[ -e '$tmpdir/testrootfs/c' ]"
 }
 
 testUpgrade() {
-    output=$(luet --config $tmpdir/luet.yaml upgrade)
+    luet --config $tmpdir/luet.yaml upgrade
     installst=$?
-    echo $output
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package uninstalled B' "[ ! -e '$tmpdir/testrootfs/test5' ]"
     assertTrue 'package installed B' "[ -e '$tmpdir/testrootfs/newc' ]"
     assertTrue 'package uninstalled A' "[ ! -e '$tmpdir/testrootfs/testaa' ]"
-    assertTrue 'package installed new A' "[ -e '$tmpdir/testrootfs/test3' ]"
+    assertTrue 'package installed new A' "[ -e '$tmpdir/testrootfs/testlatest' ]"
 }
 
 # Load shUnit2.

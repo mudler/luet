@@ -1,3 +1,9 @@
 category: "test"
 name: "c"
 version: "1.0"
+# Boom?
+
+requires:
+- category: "test"
+  name: "a"
+  version: ">=0.1"
