@@ -124,36 +124,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 		}
 	}
 
-	if err := l.install(syncedRepos, toInstall, s, true); err != nil {
-		return errors.Wrap(err, "Pre-downloading packages")
-	}
-
-	// We don't want any conflict with the installed to raise during the upgrade.
-	// In this way we both force uninstalls and we avoid to check with conflicts
-	// against the current system state which is pending to deletion
-	// E.g. you can't check for conflicts for an upgrade of a new version of A
-	// if the old A results installed in the system. This is due to the fact that
-	// now the solver enforces the constraints and explictly denies two packages
-	// of the same version installed.
-	forced := false
-	if l.Options.Force {
-		forced = true
-	}
-	l.Options.Force = true
-
-	for _, u := range uninstall {
-		Info(":package: Marked for deletion", u.HumanReadableString())
-
-		err := l.Uninstall(u, s)
-		if err != nil && !l.Options.Force {
-			Error("Failed uninstall for ", u.HumanReadableString())
-			return errors.Wrap(err, "uninstalling "+u.HumanReadableString())
-		}
-
-	}
-	l.Options.Force = forced
-
-	return l.install(syncedRepos, toInstall, s, false)
+	return l.swap(syncedRepos, uninstall, toInstall, s)
 }
 
 func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
@@ -176,6 +147,53 @@ func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
 	}
 
 	return syncedRepos, nil
+}
+
+func (l *LuetInstaller) Swap(toRemove []pkg.Package, toInstall []pkg.Package, s *System) error {
+	syncedRepos, err := l.SyncRepositories(true)
+	if err != nil {
+		return err
+	}
+	return l.swap(syncedRepos, toRemove, toInstall, s)
+}
+
+func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove []pkg.Package, toInstall []pkg.Package, s *System) error {
+
+	// First match packages against repositories by priority
+	allRepos := pkg.NewInMemoryDatabase(false)
+	syncedRepos.SyncDatabase(allRepos)
+	toInstall = syncedRepos.ResolveSelectors(toInstall)
+
+	if err := l.install(syncedRepos, toInstall, s, true); err != nil {
+		return errors.Wrap(err, "Pre-downloading packages")
+	}
+
+	// We don't want any conflict with the installed to raise during the upgrade.
+	// In this way we both force uninstalls and we avoid to check with conflicts
+	// against the current system state which is pending to deletion
+	// E.g. you can't check for conflicts for an upgrade of a new version of A
+	// if the old A results installed in the system. This is due to the fact that
+	// now the solver enforces the constraints and explictly denies two packages
+	// of the same version installed.
+	forced := false
+	if l.Options.Force {
+		forced = true
+	}
+	l.Options.Force = true
+
+	for _, u := range toRemove {
+		Info(":package: Marked for deletion", u.HumanReadableString())
+
+		err := l.Uninstall(u, s)
+		if err != nil && !l.Options.Force {
+			Error("Failed uninstall for ", u.HumanReadableString())
+			return errors.Wrap(err, "uninstalling "+u.HumanReadableString())
+		}
+
+	}
+	l.Options.Force = forced
+
+	return l.install(syncedRepos, toInstall, s, false)
 }
 
 func (l *LuetInstaller) Install(cp []pkg.Package, s *System, downloadOnly bool) error {

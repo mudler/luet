@@ -28,6 +28,7 @@ type Installer interface {
 	Upgrade(s *System) error
 	Repositories([]Repository)
 	SyncRepositories(bool) (Repositories, error)
+	Swap([]pkg.Package, []pkg.Package, *System) error
 }
 
 type Client interface {
