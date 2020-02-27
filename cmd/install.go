@@ -82,11 +82,12 @@ var installCmd = &cobra.Command{
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 
 		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-			Concurrency:   LuetCfg.GetGeneral().Concurrency,
-			SolverOptions: *LuetCfg.GetSolverOptions(),
-			NoDeps:        nodeps,
-			Force:         force,
-			OnlyDeps:      onlydeps,
+			Concurrency:                 LuetCfg.GetGeneral().Concurrency,
+			SolverOptions:               *LuetCfg.GetSolverOptions(),
+			NoDeps:                      nodeps,
+			Force:                       force,
+			OnlyDeps:                    onlydeps,
+			PreserveSystemEssentialData: true,
 		})
 		inst.Repositories(repos)
 

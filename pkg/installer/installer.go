@@ -21,6 +21,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/ghodss/yaml"
@@ -36,11 +37,12 @@ import (
 )
 
 type LuetInstallerOptions struct {
-	SolverOptions config.LuetSolverOptions
-	Concurrency   int
-	NoDeps        bool
-	OnlyDeps      bool
-	Force         bool
+	SolverOptions               config.LuetSolverOptions
+	Concurrency                 int
+	NoDeps                      bool
+	OnlyDeps                    bool
+	Force                       bool
+	PreserveSystemEssentialData bool
 }
 
 type LuetInstaller struct {
@@ -375,7 +377,15 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 	// Remove from target
 	for _, f := range files {
 		target := filepath.Join(s.Target, f)
-		Info("Removing", target)
+		Debug("Removing", target)
+
+		if l.Options.PreserveSystemEssentialData &&
+			strings.HasPrefix(f, config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()) ||
+			strings.HasPrefix(f, config.LuetCfg.GetSystem().GetSystemRepoDatabaseDirPath()) {
+			Warning("Preserve ", f, " which is required by luet ( you have to delete it manually if you really need to)")
+			continue
+		}
+
 		err := os.Remove(target)
 		if err != nil {
 			Warning("Failed removing file (not present in the system target ?)", target)
