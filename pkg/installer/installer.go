@@ -117,6 +117,17 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 		return errors.Wrap(err, "Failed solving solution for upgrade")
 	}
 
+	toInstall := []pkg.Package{}
+	for _, assertion := range solution {
+		if assertion.Value {
+			toInstall = append(toInstall, assertion.Package)
+		}
+	}
+
+	if err := l.Install(toInstall, s, true); err != nil {
+		return errors.Wrap(err, "Pre-downloading packages")
+	}
+
 	// We don't want any conflict with the installed to raise during the upgrade.
 	// In this way we both force uninstalls and we avoid to check with conflicts
 	// against the current system state which is pending to deletion
@@ -142,14 +153,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	}
 	l.Options.Force = forced
 
-	toInstall := []pkg.Package{}
-	for _, assertion := range solution {
-		if assertion.Value {
-			toInstall = append(toInstall, assertion.Package)
-		}
-	}
-
-	return l.Install(toInstall, s)
+	return l.Install(toInstall, s, false)
 }
 
 func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
@@ -174,7 +178,7 @@ func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
 	return syncedRepos, nil
 }
 
-func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
+func (l *LuetInstaller) Install(cp []pkg.Package, s *System, downloadOnly bool) error {
 	var p []pkg.Package
 
 	// Check if the package is installed first
@@ -256,16 +260,51 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 	all := make(chan ArtifactMatch)
 
 	var wg = new(sync.WaitGroup)
-	for i := 0; i < l.Options.Concurrency; i++ {
-		wg.Add(1)
-		go l.installerWorker(i, wg, all, s)
+
+	if !downloadOnly {
+		// Download first
+		for i := 0; i < l.Options.Concurrency; i++ {
+			wg.Add(1)
+			go l.installerWorker(i, wg, all, s, true)
+		}
+
+		for _, c := range toInstall {
+			all <- c
+		}
+		close(all)
+		wg.Wait()
+
+		all = make(chan ArtifactMatch)
+
+		wg = new(sync.WaitGroup)
+
+		// Do the real install
+		for i := 0; i < l.Options.Concurrency; i++ {
+			wg.Add(1)
+			go l.installerWorker(i, wg, all, s, false)
+		}
+
+		for _, c := range toInstall {
+			all <- c
+		}
+		close(all)
+		wg.Wait()
+	} else {
+		for i := 0; i < l.Options.Concurrency; i++ {
+			wg.Add(1)
+			go l.installerWorker(i, wg, all, s, downloadOnly)
+		}
+
+		for _, c := range toInstall {
+			all <- c
+		}
+		close(all)
+		wg.Wait()
 	}
 
-	for _, c := range toInstall {
-		all <- c
+	if downloadOnly {
+		return nil
 	}
-	close(all)
-	wg.Wait()
 
 	for _, c := range toInstall {
 		// Annotate to the system that the package was installed
@@ -320,7 +359,7 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System) error {
 
 }
 
-func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
+func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System, downloadOnly bool) error {
 
 	artifact, err := a.Repository.Client().DownloadArtifact(a.Artifact)
 	if err != nil {
@@ -330,6 +369,9 @@ func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
 	err = artifact.Verify()
 	if err != nil && !l.Options.Force {
 		return errors.Wrap(err, "Artifact integrity check failure")
+	}
+	if downloadOnly {
+		return nil
 	}
 
 	files, err := artifact.FileList()
@@ -347,18 +389,20 @@ func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
 	return s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: a.Package.GetFingerPrint(), Files: files})
 }
 
-func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch, s *System) error {
+func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch, s *System, downloadOnly bool) error {
 	defer wg.Done()
 
 	for p := range c {
 		// TODO: Keep trace of what was added from the tar, and save it into system
-		err := l.installPackage(p, s)
+		err := l.installPackage(p, s, downloadOnly)
 		if err != nil && !l.Options.Force {
 			//TODO: Uninstall, rollback.
 			Fatal("Failed installing package "+p.Package.GetName(), err.Error())
 			return errors.Wrap(err, "Failed installing package "+p.Package.GetName())
 		}
-		if err == nil {
+		if err == nil && downloadOnly {
+			Info(":package: ", p.Package.HumanReadableString(), "downloaded")
+		} else if err == nil {
 			Info(":package: ", p.Package.HumanReadableString(), "installed")
 		} else if err != nil && l.Options.Force {
 			Info(":package: ", p.Package.HumanReadableString(), "installed with failures (force install)")

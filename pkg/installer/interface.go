@@ -23,7 +23,7 @@ import (
 )
 
 type Installer interface {
-	Install([]pkg.Package, *System) error
+	Install([]pkg.Package, *System, bool) error
 	Uninstall(pkg.Package, *System) error
 	Upgrade(s *System) error
 	Repositories([]Repository)

@@ -41,6 +41,7 @@ var installCmd = &cobra.Command{
 		LuetCfg.Viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
 		LuetCfg.Viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
 		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
+		LuetCfg.Viper.BindPFlag("download-only", cmd.Flags().Lookup("download-only"))
 
 	},
 	Long: `Install packages in parallel`,
@@ -73,7 +74,7 @@ var installCmd = &cobra.Command{
 		force := LuetCfg.Viper.GetBool("force")
 		nodeps := LuetCfg.Viper.GetBool("nodeps")
 		onlydeps := LuetCfg.Viper.GetBool("onlydeps")
-
+		downloadOnly := LuetCfg.Viper.GetBool("download-only")
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
 		LuetCfg.GetSolverOptions().Discount = float32(discount)
@@ -98,7 +99,7 @@ var installCmd = &cobra.Command{
 			systemDB = pkg.NewInMemoryDatabase(true)
 		}
 		system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
-		err := inst.Install(toInstall, system)
+		err := inst.Install(toInstall, system, downloadOnly)
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
@@ -119,6 +120,7 @@ func init() {
 	installCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful!)")
 	installCmd.Flags().Bool("onlydeps", false, "Consider **only** package dependencies")
 	installCmd.Flags().Bool("force", false, "Skip errors and keep going (potentially harmful)")
+	installCmd.Flags().Bool("download-only", false, "Download dependencies only")
 
 	RootCmd.AddCommand(installCmd)
 }
