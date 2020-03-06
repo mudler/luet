@@ -122,7 +122,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	pflags := RootCmd.PersistentFlags()
 	pflags.StringVar(&cfgFile, "config", "", "config file (default is $HOME/.luet.yaml)")
-	pflags.BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
+	pflags.BoolP("debug", "d", false, "verbose output")
 	pflags.Bool("fatal", false, "Enables Warnings to exit")
 
 	u, err := user.Current()
@@ -137,7 +137,7 @@ func init() {
 	pflags.Int("concurrency", runtime.NumCPU(), "Concurrency")
 
 	config.LuetCfg.Viper.BindPFlag("general.same_owner", pflags.Lookup("same-owner"))
-	config.LuetCfg.Viper.BindPFlag("general.debug", pflags.Lookup("verbose"))
+	config.LuetCfg.Viper.BindPFlag("general.debug", pflags.Lookup("debug"))
 	config.LuetCfg.Viper.BindPFlag("general.concurrency", pflags.Lookup("concurrency"))
 	config.LuetCfg.Viper.BindPFlag("general.fatal_warnings", pflags.Lookup("fatal"))
 }
