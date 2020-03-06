@@ -74,12 +74,12 @@ func NewTreePkglistCommand() *cobra.Command {
 
 			regExcludes := make([]*regexp.Regexp, len(excludes))
 			if len(excludes) > 0 {
-				for _, excreg := range excludes {
+				for idx, excreg := range excludes {
 					re := regexp.MustCompile(excreg)
 					if re == nil {
 						Fatal("Invalid regex " + excreg + "!")
 					}
-					regExcludes = append(regExcludes, re)
+					regExcludes[idx] = re
 				}
 			}
 
