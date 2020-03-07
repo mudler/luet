@@ -154,7 +154,6 @@ func initConfig() {
 	viper.SetConfigType("yaml")
 	viper.SetConfigName(".luet") // name of config file (without extension)
 	if cfgFile != "" {           // enable ability to specify config file via flag
-		Info(">>> cfgFile: ", cfgFile)
 		viper.SetConfigFile(cfgFile)
 	} else {
 		viper.AddConfigPath(dir)
