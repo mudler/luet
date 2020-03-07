@@ -35,7 +35,7 @@ func LoadRepositories(c *LuetConfig) error {
 
 		files, err := ioutil.ReadDir(rdir)
 		if err != nil {
-			Warning("Skip dir", rdir, ":", err.Error())
+			Debug("Skip dir", rdir, ":", err.Error())
 			continue
 		}
 
