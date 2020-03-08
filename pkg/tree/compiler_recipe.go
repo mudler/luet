@@ -56,6 +56,10 @@ func (r *CompilerRecipe) Load(path string) error {
 	// the function that handles each file or dir
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
 
+		if err != nil {
+			return errors.Wrap(err, "Error on walk path "+currentpath)
+		}
+
 		if info.Name() != DefinitionFile {
 			return nil // Skip with no errors
 		}
