@@ -80,11 +80,15 @@ func (r *CompilerRecipe) Load(path string) error {
 		if helpers.Exists(compileDefPath) {
 			dat, err = ioutil.ReadFile(compileDefPath)
 			if err != nil {
-				return errors.Wrap(err, "Error reading file "+currentpath)
+				return errors.Wrap(err,
+					"Error reading file "+CompilerDefinitionFile+" from "+
+						filepath.Dir(currentpath))
 			}
 			packbuild, err := pkg.DefaultPackageFromYaml(dat)
 			if err != nil {
-				return errors.Wrap(err, "Error reading yaml "+currentpath)
+				return errors.Wrap(err,
+					"Error reading yaml "+CompilerDefinitionFile+" from "+
+						filepath.Dir(currentpath))
 			}
 			pack.Requires(packbuild.GetRequires())
 			pack.Conflicts(packbuild.GetConflicts())
