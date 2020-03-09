@@ -19,6 +19,8 @@ github.com/Sabayon/pkgs-checker v0.4.2-0.20200101193228-1d500105afb7/go.mod h1:G
 github.com/Sabayon/pkgs-checker v0.5.0 h1:VRyyAxo6ox41Dytyl+K+QC+Tps0IxvqYbidu+AH+HUQ=
 github.com/Sabayon/pkgs-checker v0.5.1-0.20200221202320-073693f2c657 h1:VK5S2Gh9kPUxX81zCFUgKVQn+hFy6VgyZMD3QLm76u8=
 github.com/Sabayon/pkgs-checker v0.5.1-0.20200221202320-073693f2c657/go.mod h1:GFGM6ZzSE5owdGgjLnulj0+Vt9UTd5LFGmB2AOVPYrE=
+github.com/Sabayon/pkgs-checker v0.6.1 h1:7HIrrAQujfEQ0+vPjb1Px4AdUY7KWQPn8W0NjKMoGLI=
+github.com/Sabayon/pkgs-checker v0.6.1/go.mod h1:GFGM6ZzSE5owdGgjLnulj0+Vt9UTd5LFGmB2AOVPYrE=
 github.com/Sereal/Sereal v0.0.0-20181211220259-509a78ddbda3 h1:Xu7z47ZiE/J+sKXHZMGxEor/oY2q6dq51fkO0JqdSwY=
 github.com/Sereal/Sereal v0.0.0-20181211220259-509a78ddbda3/go.mod h1:D0JMgToj/WdxCgd30Kc1UcA9E+WdZoJqeVOuYW7iTBM=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=

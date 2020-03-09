@@ -23,7 +23,7 @@ github.com/Microsoft/hcsshim/internal/longpath
 github.com/Microsoft/hcsshim/internal/safefile
 # github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5
 github.com/Nvveen/Gotty
-# github.com/Sabayon/pkgs-checker v0.5.1-0.20200221202320-073693f2c657
+# github.com/Sabayon/pkgs-checker v0.6.1
 github.com/Sabayon/pkgs-checker/pkg/gentoo
 # github.com/apex/log v1.1.1
 github.com/apex/log
