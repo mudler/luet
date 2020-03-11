@@ -363,12 +363,19 @@ var _ = Describe("Solver", func() {
 		It("Selects best version", func() {
 
 			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			E.SetCategory("test")
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			C.SetCategory("test")
 			D2 := pkg.NewPackage("D", "1.9", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D2.SetCategory("test")
 			D := pkg.NewPackage("D", "1.8", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D.SetCategory("test")
 			D1 := pkg.NewPackage("D", "1.4", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B := pkg.NewPackage("B", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "D", Version: ">=1.0"}}, []*pkg.DefaultPackage{})
-			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "D", Version: ">=1.0"}}, []*pkg.DefaultPackage{})
+			D1.SetCategory("test")
+			B := pkg.NewPackage("B", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "D", Version: ">=1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+			B.SetCategory("test")
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "D", Version: ">=1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+			A.SetCategory("test")
 
 			for _, p := range []pkg.Package{A, B, C, D, D1, D2, E} {
 				_, err := dbDefinitions.CreatePackage(p)
@@ -397,16 +404,23 @@ var _ = Describe("Solver", func() {
 		It("Support provides", func() {
 
 			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-
+			E.SetCategory("test")
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			C.SetCategory("test")
 			D2 := pkg.NewPackage("D", "1.9", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D2.SetCategory("test")
 			D := pkg.NewPackage("D", "1.8", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D.SetCategory("test")
 			D1 := pkg.NewPackage("D", "1.4", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B := pkg.NewPackage("B", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "D", Version: ">=1.0"}}, []*pkg.DefaultPackage{})
-			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "D", Version: ">=1.0"}}, []*pkg.DefaultPackage{})
+			D1.SetCategory("test")
+			B := pkg.NewPackage("B", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "D", Version: ">=1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+			B.SetCategory("test")
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "D", Version: ">=1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+			A.SetCategory("test")
 
-			D2.SetProvides([]*pkg.DefaultPackage{{Name: "E"}})
-			A2 := pkg.NewPackage("A", "1.3", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "E", Version: ""}}, []*pkg.DefaultPackage{})
+			D2.SetProvides([]*pkg.DefaultPackage{{Name: "E", Category: "test"}})
+			A2 := pkg.NewPackage("A", "1.3", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "E", Version: "", Category: "test"}}, []*pkg.DefaultPackage{})
+			A2.SetCategory("test")
 
 			for _, p := range []pkg.Package{A, B, C, D, D1, D2, A2, E} {
 				_, err := dbDefinitions.CreatePackage(p)
