@@ -50,6 +50,7 @@ func pkgDetail(pkg pkg.Package) string {
 
 func NewTreePkglistCommand() *cobra.Command {
 	var excludes []string
+	var matches []string
 
 	var ans = &cobra.Command{
 		Use:   "pkglist [OPTIONS]",
@@ -83,6 +84,17 @@ func NewTreePkglistCommand() *cobra.Command {
 				}
 			}
 
+			regMatches := make([]*regexp.Regexp, len(matches))
+			if len(matches) > 0 {
+				for idx, mreg := range matches {
+					re := regexp.MustCompile(mreg)
+					if re == nil {
+						Fatal("Invalid regex " + mreg + "!")
+					}
+					regMatches[idx] = re
+				}
+			}
+
 			plist := make([]string, 0)
 			for _, p := range reciper.GetDatabase().World() {
 				pkgstr := ""
@@ -95,7 +107,20 @@ func NewTreePkglistCommand() *cobra.Command {
 					pkgstr = fmt.Sprintf("%s/%s", p.GetCategory(), p.GetName())
 				}
 
-				if len(excludes) > 0 {
+				if len(matches) > 0 {
+					matched := false
+					for _, rgx := range regMatches {
+						if rgx.MatchString(pkgstr) {
+							matched = true
+							break
+						}
+					}
+					if !matched {
+						addPkg = false
+					}
+				}
+
+				if len(excludes) > 0 && addPkg {
 					for _, rgx := range regExcludes {
 						if rgx.MatchString(pkgstr) {
 							addPkg = false
@@ -119,6 +144,8 @@ func NewTreePkglistCommand() *cobra.Command {
 	ans.Flags().BoolP("verbose", "v", false, "Add package version")
 	ans.Flags().BoolP("full", "f", false, "Show package detail")
 	ans.Flags().StringP("tree", "t", "", "Path of the tree to use.")
+	ans.Flags().StringSliceVarP(&matches, "matches", "m", []string{},
+		"Include only matched packages from list. (Use string as regex).")
 	ans.Flags().StringSliceVarP(&excludes, "exclude", "e", []string{},
 		"Exclude matched packages from list. (Use string as regex).")
 
