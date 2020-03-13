@@ -337,45 +337,72 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp []pkg.Package, s *S
 	}
 	executedFinalizer := map[string]bool{}
 
-	// TODO: Lower those errors as warning
-	for _, w := range p {
-		// Finalizers needs to run in order and in sequence.
-		ordered := solution.Order(allRepos, w.GetFingerPrint())
-	ORDER:
-		for _, ass := range ordered {
-			if ass.Value {
+	if !l.Options.NoDeps {
+		// TODO: Lower those errors as warning
+		for _, w := range p {
+			// Finalizers needs to run in order and in sequence.
+			ordered := solution.Order(allRepos, w.GetFingerPrint())
+		ORDER:
+			for _, ass := range ordered {
+				if ass.Value {
 
-				installed, ok := toInstall[ass.Package.GetFingerPrint()]
-				if !ok {
-					// It was a dep already installed in the system, so we can skip it safely
-					continue ORDER
-				}
-
-				treePackage, err := installed.Repository.GetTree().GetDatabase().FindPackage(ass.Package)
-				if err != nil {
-					return errors.Wrap(err, "Error getting package "+ass.Package.HumanReadableString())
-				}
-				if helpers.Exists(treePackage.Rel(tree.FinalizerFile)) {
-					Info("Executing finalizer for " + ass.Package.HumanReadableString())
-					finalizerRaw, err := ioutil.ReadFile(treePackage.Rel(tree.FinalizerFile))
-					if err != nil && !l.Options.Force {
-						return errors.Wrap(err, "Error reading file "+treePackage.Rel(tree.FinalizerFile))
+					installed, ok := toInstall[ass.Package.GetFingerPrint()]
+					if !ok {
+						// It was a dep already installed in the system, so we can skip it safely
+						continue ORDER
 					}
-					if _, exists := executedFinalizer[ass.Package.GetFingerPrint()]; !exists {
-						finalizer, err := NewLuetFinalizerFromYaml(finalizerRaw)
+
+					treePackage, err := installed.Repository.GetTree().GetDatabase().FindPackage(ass.Package)
+					if err != nil {
+						return errors.Wrap(err, "Error getting package "+ass.Package.HumanReadableString())
+					}
+					if helpers.Exists(treePackage.Rel(tree.FinalizerFile)) {
+						Info("Executing finalizer for " + ass.Package.HumanReadableString())
+						finalizerRaw, err := ioutil.ReadFile(treePackage.Rel(tree.FinalizerFile))
 						if err != nil && !l.Options.Force {
-							return errors.Wrap(err, "Error reading finalizer "+treePackage.Rel(tree.FinalizerFile))
+							return errors.Wrap(err, "Error reading file "+treePackage.Rel(tree.FinalizerFile))
 						}
-						err = finalizer.RunInstall()
-						if err != nil && !l.Options.Force {
-							return errors.Wrap(err, "Error executing install finalizer "+treePackage.Rel(tree.FinalizerFile))
+						if _, exists := executedFinalizer[ass.Package.GetFingerPrint()]; !exists {
+							finalizer, err := NewLuetFinalizerFromYaml(finalizerRaw)
+							if err != nil && !l.Options.Force {
+								return errors.Wrap(err, "Error reading finalizer "+treePackage.Rel(tree.FinalizerFile))
+							}
+							err = finalizer.RunInstall()
+							if err != nil && !l.Options.Force {
+								return errors.Wrap(err, "Error executing install finalizer "+treePackage.Rel(tree.FinalizerFile))
+							}
+							executedFinalizer[ass.Package.GetFingerPrint()] = true
 						}
-						executedFinalizer[ass.Package.GetFingerPrint()] = true
 					}
 				}
 			}
-		}
 
+		}
+	} else {
+		for _, c := range toInstall {
+			treePackage, err := c.Repository.GetTree().GetDatabase().FindPackage(c.Package)
+			if err != nil {
+				return errors.Wrap(err, "Error getting package "+c.Package.HumanReadableString())
+			}
+			if helpers.Exists(treePackage.Rel(tree.FinalizerFile)) {
+				Info("Executing finalizer for " + c.Package.HumanReadableString())
+				finalizerRaw, err := ioutil.ReadFile(treePackage.Rel(tree.FinalizerFile))
+				if err != nil && !l.Options.Force {
+					return errors.Wrap(err, "Error reading file "+treePackage.Rel(tree.FinalizerFile))
+				}
+				if _, exists := executedFinalizer[c.Package.GetFingerPrint()]; !exists {
+					finalizer, err := NewLuetFinalizerFromYaml(finalizerRaw)
+					if err != nil && !l.Options.Force {
+						return errors.Wrap(err, "Error reading finalizer "+treePackage.Rel(tree.FinalizerFile))
+					}
+					err = finalizer.RunInstall()
+					if err != nil && !l.Options.Force {
+						return errors.Wrap(err, "Error executing install finalizer "+treePackage.Rel(tree.FinalizerFile))
+					}
+					executedFinalizer[c.Package.GetFingerPrint()] = true
+				}
+			}
+		}
 	}
 	return nil
 
