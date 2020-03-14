@@ -18,6 +18,7 @@ package cmd_tree
 
 import (
 	"fmt"
+	"os"
 	"sort"
 
 	//. "github.com/mudler/luet/pkg/config"
@@ -184,6 +185,12 @@ func NewTreeValidateCommand() *cobra.Command {
 				fmt.Println(e)
 			}
 			fmt.Println("Broken packages:", brokenPkgs)
+
+			if brokenPkgs > 0 {
+				os.Exit(1)
+			} else {
+				os.Exit(0)
+			}
 		},
 	}
 
