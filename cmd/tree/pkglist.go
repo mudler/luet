@@ -18,10 +18,10 @@ package cmd_tree
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 
 	//. "github.com/mudler/luet/pkg/config"
+	helpers "github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	tree "github.com/mudler/luet/pkg/tree"
@@ -73,26 +73,13 @@ func NewTreePkglistCommand() *cobra.Command {
 				Fatal("Error on load tree ", err)
 			}
 
-			regExcludes := make([]*regexp.Regexp, len(excludes))
-			if len(excludes) > 0 {
-				for idx, excreg := range excludes {
-					re := regexp.MustCompile(excreg)
-					if re == nil {
-						Fatal("Invalid regex " + excreg + "!")
-					}
-					regExcludes[idx] = re
-				}
+			regExcludes, err := helpers.CreateRegexArray(excludes)
+			if err != nil {
+				Fatal(err.Error())
 			}
-
-			regMatches := make([]*regexp.Regexp, len(matches))
-			if len(matches) > 0 {
-				for idx, mreg := range matches {
-					re := regexp.MustCompile(mreg)
-					if re == nil {
-						Fatal("Invalid regex " + mreg + "!")
-					}
-					regMatches[idx] = re
-				}
+			regMatches, err := helpers.CreateRegexArray(matches)
+			if err != nil {
+				Fatal(err.Error())
 			}
 
 			plist := make([]string, 0)

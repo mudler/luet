@@ -17,11 +17,28 @@
 package helpers
 
 import (
+	"errors"
 	"fmt"
+	"regexp"
 
 	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	pkg "github.com/mudler/luet/pkg/package"
 )
+
+func CreateRegexArray(rgx []string) ([]*regexp.Regexp, error) {
+	ans := make([]*regexp.Regexp, len(rgx))
+	if len(rgx) > 0 {
+		for idx, reg := range rgx {
+			re := regexp.MustCompile(reg)
+			if re == nil {
+				return nil, errors.New("Invalid regex " + reg + "!")
+			}
+			ans[idx] = re
+		}
+	}
+
+	return ans, nil
+}
 
 func ParsePackageStr(p string) (*pkg.DefaultPackage, error) {
 	gp, err := _gentoo.ParsePackageStr(p)
