@@ -52,6 +52,7 @@ func NewTreeValidateCommand() *cobra.Command {
 			errors := make([]string, 0)
 
 			brokenPkgs := 0
+			brokenDeps := 0
 			treePath, _ := cmd.Flags().GetString("tree")
 			withSolver, _ := cmd.Flags().GetBool("with-solver")
 
@@ -141,6 +142,8 @@ func NewTreeValidateCommand() *cobra.Command {
 								r.GetCategory(), r.GetName(), r.GetVersion(),
 								errstr))
 
+						brokenDeps++
+
 						validpkg = false
 
 					} else {
@@ -167,6 +170,7 @@ func NewTreeValidateCommand() *cobra.Command {
 										r.GetCategory(), r.GetName(), r.GetVersion(),
 										err.Error()))
 
+								brokenDeps++
 								validpkg = false
 							}
 
@@ -184,7 +188,7 @@ func NewTreeValidateCommand() *cobra.Command {
 			for _, e := range errors {
 				fmt.Println(e)
 			}
-			fmt.Println("Broken packages:", brokenPkgs)
+			fmt.Println("Broken packages:", brokenPkgs, "(", brokenDeps, "deps ).")
 
 			if brokenPkgs > 0 {
 				os.Exit(1)
