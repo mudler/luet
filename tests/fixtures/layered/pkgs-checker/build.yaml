@@ -3,7 +3,7 @@ requires:
     name: "extra"
     version: "0.1"
 prelude:
-- apk add git
+- apt-get install git
 - mkdir -p /go/src/github.com/Sabayon/
 - git clone https://github.com/Sabayon/pkgs-checker /go/src/github.com/Sabayon/pkgs-checker
 steps:

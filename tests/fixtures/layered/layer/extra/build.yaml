@@ -3,8 +3,8 @@ requires:
     name: "base"
     version: "0.1"
 prelude:
-- apk update
-- apk add git
+- apt-get update
+- apt-get install git
 - rm -rf /go/pkg/mod
 steps:
 - echo test > /extra-layer
