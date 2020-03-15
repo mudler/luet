@@ -34,14 +34,14 @@ import (
 func NewTreeValidateCommand() *cobra.Command {
 	var excludes []string
 	var matches []string
+	var treePaths []string
 
 	var ans = &cobra.Command{
 		Use:   "validate [OPTIONS]",
 		Short: "Validate a tree or a list of packages",
 		Args:  cobra.OnlyValidArgs,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			t, _ := cmd.Flags().GetString("tree")
-			if t == "" {
+			if len(treePaths) < 1 {
 				Fatal("Mandatory tree param missing.")
 			}
 		},
@@ -53,13 +53,14 @@ func NewTreeValidateCommand() *cobra.Command {
 
 			brokenPkgs := 0
 			brokenDeps := 0
-			treePath, _ := cmd.Flags().GetString("tree")
 			withSolver, _ := cmd.Flags().GetBool("with-solver")
 
 			reciper := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
-			err := reciper.Load(treePath)
-			if err != nil {
-				Fatal("Error on load tree ", err)
+			for _, treePath := range treePaths {
+				err := reciper.Load(treePath)
+				if err != nil {
+					Fatal("Error on load tree ", err)
+				}
 			}
 
 			emptyInstallationDb := pkg.NewInMemoryDatabase(false)
@@ -200,7 +201,8 @@ func NewTreeValidateCommand() *cobra.Command {
 
 	ans.Flags().BoolP("with-solver", "s", false,
 		"Enable check of requires also with solver.")
-	ans.Flags().StringP("tree", "t", "", "Path of the tree to use.")
+	ans.Flags().StringSliceVarP(&treePaths, "tree", "t", []string{},
+		"Path of the tree to use.")
 	ans.Flags().StringSliceVarP(&excludes, "exclude", "e", []string{},
 		"Exclude matched packages from analysis. (Use string as regex).")
 	ans.Flags().StringSliceVarP(&matches, "matches", "m", []string{},
