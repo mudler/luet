@@ -26,5 +26,5 @@ type Builder interface {
 	GetDatabase() pkg.PackageDatabase
 	WithDatabase(d pkg.PackageDatabase)
 
-	GetSourcePath() string
+	GetSourcePath() []string
 }

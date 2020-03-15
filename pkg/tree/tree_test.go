@@ -96,4 +96,60 @@ var _ = Describe("Tree", func() {
 		})
 	})
 
+	Context("Multiple trees", func() {
+		It("Merges", func() {
+			for index := 0; index < 300; index++ { // Just to make sure we don't have false positives
+				db := pkg.NewInMemoryDatabase(false)
+				generalRecipe := NewCompilerRecipe(db)
+				tmpdir, err := ioutil.TempDir("", "package")
+				Expect(err).ToNot(HaveOccurred())
+				defer os.RemoveAll(tmpdir) // clean up
+
+				err = generalRecipe.Load("../../tests/fixtures/buildableseed")
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(len(generalRecipe.GetDatabase().World())).To(Equal(4))
+
+				err = generalRecipe.Load("../../tests/fixtures/layers")
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(len(generalRecipe.GetDatabase().World())).To(Equal(6))
+
+				extra, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "extra", Category: "layer", Version: "1.0"})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(extra).ToNot(BeNil())
+
+				D, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(D.GetRequires()[0].GetName()).To(Equal("c"))
+				CfromD, err := generalRecipe.GetDatabase().FindPackage(D.GetRequires()[0])
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(len(CfromD.GetRequires()) != 0).To(BeTrue())
+				Expect(CfromD.GetRequires()[0].GetName()).To(Equal("b"))
+
+				s := solver.NewSolver(pkg.NewInMemoryDatabase(false), generalRecipe.GetDatabase(), db)
+
+				Dd, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
+				Expect(err).ToNot(HaveOccurred())
+
+				solution, err := s.Install([]pkg.Package{Dd})
+				Expect(err).ToNot(HaveOccurred())
+
+				solution = solution.Order(generalRecipe.GetDatabase(), Dd.GetFingerPrint())
+				pack, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.0"})
+				Expect(err).ToNot(HaveOccurred())
+
+				base, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "base", Category: "layer", Version: "0.2"})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(solution).To(ContainElement(solver.PackageAssert{Package: pack.(*pkg.DefaultPackage), Value: false}))
+				Expect(solution).To(ContainElement(solver.PackageAssert{Package: D.(*pkg.DefaultPackage), Value: true}))
+				Expect(solution).To(ContainElement(solver.PackageAssert{Package: extra.(*pkg.DefaultPackage), Value: false}))
+				Expect(solution).To(ContainElement(solver.PackageAssert{Package: base.(*pkg.DefaultPackage), Value: false}))
+				Expect(len(solution)).To(Equal(6))
+			}
+		})
+	})
+
 })

@@ -45,7 +45,7 @@ type CompilerRecipe struct {
 
 func (r *CompilerRecipe) Load(path string) error {
 
-	r.SourcePath = path
+	r.SourcePath = append(r.SourcePath, path)
 	//tmpfile, err := ioutil.TempFile("", "luet")
 	//if err != nil {
 	//	return err
@@ -111,4 +111,4 @@ func (r *CompilerRecipe) Load(path string) error {
 
 func (r *CompilerRecipe) GetDatabase() pkg.PackageDatabase   { return r.Database }
 func (r *CompilerRecipe) WithDatabase(d pkg.PackageDatabase) { r.Database = d }
-func (r *CompilerRecipe) GetSourcePath() string              { return r.SourcePath }
+func (r *CompilerRecipe) GetSourcePath() []string            { return r.SourcePath }

@@ -37,7 +37,7 @@ func NewGeneralRecipe(db pkg.PackageDatabase) Builder { return &Recipe{Database:
 
 // Recipe is the "general" reciper for Trees
 type Recipe struct {
-	SourcePath string
+	SourcePath []string
 	Database   pkg.PackageDatabase
 }
 
@@ -65,7 +65,7 @@ func (r *Recipe) Load(path string) error {
 	// if err != nil {
 	// 	return err
 	// }
-	r.SourcePath = path
+	r.SourcePath = append(r.SourcePath, path)
 
 	if r.Database == nil {
 		r.Database = pkg.NewInMemoryDatabase(false)
@@ -109,4 +109,4 @@ func (r *Recipe) Load(path string) error {
 
 func (r *Recipe) GetDatabase() pkg.PackageDatabase   { return r.Database }
 func (r *Recipe) WithDatabase(d pkg.PackageDatabase) { r.Database = d }
-func (r *Recipe) GetSourcePath() string              { return r.SourcePath }
+func (r *Recipe) GetSourcePath() []string            { return r.SourcePath }

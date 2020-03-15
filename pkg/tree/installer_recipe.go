@@ -40,7 +40,7 @@ func NewInstallerRecipe(db pkg.PackageDatabase) Builder {
 
 // InstallerRecipe is the "general" reciper for Trees
 type InstallerRecipe struct {
-	SourcePath string
+	SourcePath []string
 	Database   pkg.PackageDatabase
 }
 
@@ -74,7 +74,7 @@ func (r *InstallerRecipe) Load(path string) error {
 	// if err != nil {
 	// 	return err
 	// }
-	r.SourcePath = path
+	r.SourcePath = append(r.SourcePath, path)
 
 	//r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
 	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
@@ -114,4 +114,4 @@ func (r *InstallerRecipe) Load(path string) error {
 
 func (r *InstallerRecipe) GetDatabase() pkg.PackageDatabase   { return r.Database }
 func (r *InstallerRecipe) WithDatabase(d pkg.PackageDatabase) { r.Database = d }
-func (r *InstallerRecipe) GetSourcePath() string              { return r.SourcePath }
+func (r *InstallerRecipe) GetSourcePath() []string            { return r.SourcePath }
