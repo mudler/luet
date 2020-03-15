@@ -55,8 +55,8 @@ const (
 )
 
 const (
-	RegexCatString     = `(^[a-z]+[0-9]*[a-z]*[-][a-z]+[0-9]*[a-z]*|^virtual)`
-	RegexPkgNameString = `([a-zA-Z0-9]+[0-9a-zA-Z\.\-_[+]*]*[+]*)`
+	RegexCatString     = `(^[a-z]+[0-9]*[a-z]*[-]*[a-z]+[0-9]*[a-z]*|^virtual)`
+	RegexPkgNameString = `([a-zA-Z]*[0-9a-zA-Z\.\-_]*[a-zA-Z0-9]+|[a-zA-Z]+[+]+)`
 )
 
 type GentooPackage struct {
@@ -69,6 +69,7 @@ type GentooPackage struct {
 	Condition     PackageCond
 	Repository    string   `json:"repository",omitempty"`
 	UseFlags      []string `json:"use_flags",omitempty"`
+	License       string   `json:"license",omitempty"`
 }
 
 func (p *GentooPackage) String() string {
