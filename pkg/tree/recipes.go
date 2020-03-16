@@ -41,20 +41,28 @@ type Recipe struct {
 	Database   pkg.PackageDatabase
 }
 
-func (r *Recipe) Save(path string) error {
+func WriteDefinitionFile(p pkg.Package, definitionFilePath string) error {
+	data, err := p.Yaml()
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(definitionFilePath, data, 0644)
+	if err != nil {
+		return err
+	}
 
+	return nil
+}
+
+func (r *Recipe) Save(path string) error {
 	for _, p := range r.Database.World() {
 		dir := filepath.Join(path, p.GetCategory(), p.GetName(), p.GetVersion())
 		os.MkdirAll(dir, os.ModePerm)
-		data, err := p.Yaml()
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(filepath.Join(dir, DefinitionFile), data, 0644)
-		if err != nil {
-			return err
-		}
 
+		err := WriteDefinitionFile(p, filepath.Join(dir, DefinitionFile))
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -256,15 +256,20 @@ func PackageAdmit(selector, i PkgVersionSelector) (bool, error) {
 	var v2 *version.Version = nil
 	var ans bool
 	var err error
+	var sanitizedSelectorVersion, sanitizedIVersion string
 
 	if selector.Version != "" {
-		v1, err = version.NewVersion(selector.Version)
+		// TODO: This is temporary!. I promise it.
+		sanitizedSelectorVersion = strings.ReplaceAll(selector.Version, "_", "-")
+
+		v1, err = version.NewVersion(sanitizedSelectorVersion)
 		if err != nil {
 			return false, err
 		}
 	}
 	if i.Version != "" {
-		v2, err = version.NewVersion(i.Version)
+		sanitizedIVersion = strings.ReplaceAll(i.Version, "_", "-")
+		v2, err = version.NewVersion(sanitizedIVersion)
 		if err != nil {
 			return false, err
 		}
@@ -290,7 +295,7 @@ func PackageAdmit(selector, i PkgVersionSelector) (bool, error) {
 			// TODO: case of 7.3* where 7.30 is accepted.
 			if v1 != nil && v2 != nil {
 				segments := v1.Segments()
-				n := strings.Count(selector.Version, ".")
+				n := strings.Count(sanitizedIVersion, ".")
 				switch n {
 				case 0:
 					segments[0]++
@@ -303,7 +308,7 @@ func PackageAdmit(selector, i PkgVersionSelector) (bool, error) {
 				}
 				nextVersion := strings.Trim(strings.Replace(fmt.Sprint(segments), " ", ".", -1), "[]")
 				constraints, err := version.NewConstraint(
-					fmt.Sprintf(">= %s, < %s", selector.Version, nextVersion),
+					fmt.Sprintf(">= %s, < %s", sanitizedSelectorVersion, nextVersion),
 				)
 				if err != nil {
 					return false, err
