@@ -191,6 +191,17 @@ var _ = Describe("Versions", func() {
 		})
 	})
 
+	Context("Versions Parser16 - semver", func() {
+		v, err := ParseVersion("<=1.0.29+pre2_p20191024")
+		It("ParseVersion10", func() {
+			var c PkgSelectorCondition = PkgCondLessEqual
+			Expect(err).Should(BeNil())
+			Expect(v.Version).Should(Equal("1.0.29+pre2_p20191024"))
+			Expect(v.VersionSuffix).Should(Equal(""))
+			Expect(v.Condition).Should(Equal(c))
+		})
+	})
+
 	Context("Selector1", func() {
 		v1, err := ParseVersion(">=0.0.20190406.4.9.172-r1")
 		v2, err2 := ParseVersion("1.0.111")
@@ -268,6 +279,18 @@ var _ = Describe("Versions", func() {
 		v2, err2 := ParseVersion("0.1.0+0.5")
 		match, err3 := PackageAdmit(v1, v2)
 		It("Selector7", func() {
+			Expect(err).Should(BeNil())
+			Expect(err2).Should(BeNil())
+			Expect(err3).Should(BeNil())
+			Expect(match).Should(Equal(true))
+		})
+	})
+
+	Context("Selector8", func() {
+		v1, err := ParseVersion(">=0")
+		v2, err2 := ParseVersion("1.0.29+pre2_p20191024")
+		match, err3 := PackageAdmit(v1, v2)
+		It("Selector8", func() {
 			Expect(err).Should(BeNil())
 			Expect(err2).Should(BeNil())
 			Expect(err3).Should(BeNil())
