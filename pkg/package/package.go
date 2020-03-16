@@ -62,7 +62,6 @@ type Package interface {
 	GetVersion() string
 	RequiresContains(PackageDatabase, Package) (bool, error)
 	Matches(m Package) bool
-	Bigger(m Package) bool
 
 	AddUse(use string)
 	RemoveUse(use string)
@@ -334,13 +333,7 @@ func (p *DefaultPackage) Matches(m Package) bool {
 	}
 	return false
 }
-func (p *DefaultPackage) Bigger(m Package) bool {
-	low := Lower([]Package{p, m})
-	if low.Matches(m) {
-		return true
-	}
-	return false
-}
+
 
 func (p *DefaultPackage) Expand(definitiondb PackageDatabase) ([]Package, error) {
 	var versionsInWorld []Package
@@ -408,29 +401,7 @@ func (pack *DefaultPackage) RequiresContains(definitiondb PackageDatabase, s Pac
 
 	return false, nil
 }
-func Lower(set []Package) Package {
-	var versionsMap map[string]Package = make(map[string]Package)
-	if len(set) == 0 {
-		panic("Best needs a list with elements")
-	}
 
-	versionsRaw := []string{}
-	for _, p := range set {
-		versionsRaw = append(versionsRaw, p.GetVersion())
-		versionsMap[p.GetVersion()] = p
-	}
-
-	versions := make([]*version.Version, len(versionsRaw))
-	for i, raw := range versionsRaw {
-		v, _ := version.NewVersion(raw)
-		versions[i] = v
-	}
-
-	// After this, the versions are properly sorted
-	sort.Sort(version.Collection(versions))
-
-	return versionsMap[versions[0].Original()]
-}
 func Best(set []Package) Package {
 	var versionsMap map[string]Package = make(map[string]Package)
 	if len(set) == 0 {
