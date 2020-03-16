@@ -38,6 +38,20 @@ func NewCompilerRecipe(d pkg.PackageDatabase) Builder {
 	return &CompilerRecipe{Recipe: Recipe{Database: d}}
 }
 
+func ReadDefinitionFile(path string) (pkg.DefaultPackage, error) {
+	empty := pkg.DefaultPackage{}
+	dat, err := ioutil.ReadFile(path)
+	if err != nil {
+		return empty, errors.Wrap(err, "Error reading file "+path)
+	}
+	pack, err := pkg.DefaultPackageFromYaml(dat)
+	if err != nil {
+		return empty, errors.Wrap(err, "Error reading yaml "+path)
+	}
+
+	return pack, nil
+}
+
 // Recipe is the "general" reciper for Trees
 type CompilerRecipe struct {
 	Recipe
@@ -64,13 +78,9 @@ func (r *CompilerRecipe) Load(path string) error {
 			return nil // Skip with no errors
 		}
 
-		dat, err := ioutil.ReadFile(currentpath)
+		pack, err := ReadDefinitionFile(currentpath)
 		if err != nil {
-			return errors.Wrap(err, "Error reading file "+currentpath)
-		}
-		pack, err := pkg.DefaultPackageFromYaml(dat)
-		if err != nil {
-			return errors.Wrap(err, "Error reading yaml "+currentpath)
+			return err
 		}
 		// Path is set only internally when tree is loaded from disk
 		pack.SetPath(filepath.Dir(currentpath))
@@ -78,7 +88,7 @@ func (r *CompilerRecipe) Load(path string) error {
 		// Instead of rdeps, have a different tree for build deps.
 		compileDefPath := pack.Rel(CompilerDefinitionFile)
 		if helpers.Exists(compileDefPath) {
-			dat, err = ioutil.ReadFile(compileDefPath)
+			dat, err := ioutil.ReadFile(compileDefPath)
 			if err != nil {
 				return errors.Wrap(err,
 					"Error reading file "+CompilerDefinitionFile+" from "+

@@ -252,4 +252,69 @@ var _ = Describe("Package", func() {
 			Expect(len(a1.GetUses())).To(Equal(0))
 		})
 	})
+
+	Context("Check Bump build Version", func() {
+		It("Bump without build version", func() {
+			a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+			err := a1.BumpBuildVersion()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(a1.GetVersion()).To(Equal("1.0+1"))
+		})
+		It("Bump 2", func() {
+			p := NewPackage("A", "1.0+1", []*DefaultPackage{}, []*DefaultPackage{})
+			err := p.BumpBuildVersion()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(p.GetVersion()).To(Equal("1.0+2"))
+		})
+
+		It("Bump 3", func() {
+			p := NewPackage("A", "1.0+100", []*DefaultPackage{}, []*DefaultPackage{})
+			err := p.BumpBuildVersion()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(p.GetVersion()).To(Equal("1.0+101"))
+		})
+
+		It("Bump 4", func() {
+			p := NewPackage("A", "1.0+r1", []*DefaultPackage{}, []*DefaultPackage{})
+			err := p.BumpBuildVersion()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(p.GetVersion()).To(Equal("1.0+r2"))
+		})
+
+		It("Bump 5", func() {
+			p := NewPackage("A", "1.0+p1", []*DefaultPackage{}, []*DefaultPackage{})
+			err := p.BumpBuildVersion()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(p.GetVersion()).To(Equal("1.0+p2"))
+		})
+
+		It("Bump 6", func() {
+			p := NewPackage("A", "1.0+pre20200315", []*DefaultPackage{}, []*DefaultPackage{})
+			err := p.BumpBuildVersion()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(p.GetVersion()).To(Equal("1.0+pre20200315.1"))
+		})
+
+		It("Bump 7", func() {
+			p := NewPackage("A", "1.0+pre20200315.1", []*DefaultPackage{}, []*DefaultPackage{})
+			err := p.BumpBuildVersion()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(p.GetVersion()).To(Equal("1.0+pre20200315.2"))
+		})
+
+		It("Bump 8", func() {
+			p := NewPackage("A", "1.0+d-r1", []*DefaultPackage{}, []*DefaultPackage{})
+			err := p.BumpBuildVersion()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(p.GetVersion()).To(Equal("1.0+d-r1.1"))
+		})
+
+		It("Bump 9", func() {
+			p := NewPackage("A", "1.0+p20200315.1", []*DefaultPackage{}, []*DefaultPackage{})
+			err := p.BumpBuildVersion()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(p.GetVersion()).To(Equal("1.0+p20200315.2"))
+		})
+	})
+
 })

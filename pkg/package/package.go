@@ -22,16 +22,17 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
-	//	. "github.com/mudler/luet/pkg/logger"
-
+	gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	"github.com/crillab/gophersat/bf"
+	"github.com/ghodss/yaml"
 	version "github.com/hashicorp/go-version"
 	"github.com/jinzhu/copier"
-
-	"github.com/ghodss/yaml"
+	"github.com/pkg/errors"
 )
 
 // Package is a package interface (TBD)
@@ -62,6 +63,7 @@ type Package interface {
 	GetVersion() string
 	RequiresContains(PackageDatabase, Package) (bool, error)
 	Matches(m Package) bool
+	BumpBuildVersion() error
 
 	AddUse(use string)
 	RemoveUse(use string)
@@ -333,7 +335,6 @@ func (p *DefaultPackage) Matches(m Package) bool {
 	}
 	return false
 }
-
 
 func (p *DefaultPackage) Expand(definitiondb PackageDatabase) ([]Package, error) {
 	var versionsInWorld []Package
@@ -607,4 +608,90 @@ func (p *DefaultPackage) Explain() {
 
 	fmt.Println("====================")
 
+}
+
+func (p *DefaultPackage) BumpBuildVersion() error {
+	cat := p.Category
+	if cat == "" {
+		// Use fake category for parse package
+		cat = "app"
+	}
+	gp, err := gentoo.ParsePackageStr(
+		fmt.Sprintf("%s/%s-%s", cat,
+			p.Name, p.GetVersion()))
+	if err != nil {
+		return errors.Wrap(err, "Error on parser version")
+	}
+
+	buildPrefix := ""
+	buildId := 0
+
+	if gp.VersionBuild != "" {
+		// Check if version build is a number
+		buildId, err = strconv.Atoi(gp.VersionBuild)
+		if err == nil {
+			goto end
+		}
+		// POST: is not only a number
+
+		// TODO: check if there is a better way to handle all use cases.
+
+		r1 := regexp.MustCompile(`^r[0-9]*$`)
+		if r1 == nil {
+			return errors.New("Error on create regex for -r[0-9]")
+		}
+		if r1.MatchString(gp.VersionBuild) {
+			buildId, err = strconv.Atoi(strings.ReplaceAll(gp.VersionBuild, "r", ""))
+			if err == nil {
+				buildPrefix = "r"
+				goto end
+			}
+		}
+
+		p1 := regexp.MustCompile(`^p[0-9]*$`)
+		if p1 == nil {
+			return errors.New("Error on create regex for -p[0-9]")
+		}
+		if p1.MatchString(gp.VersionBuild) {
+			buildId, err = strconv.Atoi(strings.ReplaceAll(gp.VersionBuild, "p", ""))
+			if err == nil {
+				buildPrefix = "p"
+				goto end
+			}
+		}
+
+		rc1 := regexp.MustCompile(`^rc[0-9]*$`)
+		if rc1 == nil {
+			return errors.New("Error on create regex for -rc[0-9]")
+		}
+		if rc1.MatchString(gp.VersionBuild) {
+			buildId, err = strconv.Atoi(strings.ReplaceAll(gp.VersionBuild, "rc", ""))
+			if err == nil {
+				buildPrefix = "rc"
+				goto end
+			}
+		}
+
+		// Check if version build contains a dot
+		dotIdx := strings.LastIndex(gp.VersionBuild, ".")
+		if dotIdx > 0 {
+			buildPrefix = gp.VersionBuild[0 : dotIdx+1]
+			bVersion := gp.VersionBuild[dotIdx+1:]
+			buildId, err = strconv.Atoi(bVersion)
+			if err == nil {
+				goto end
+			}
+		}
+
+		buildPrefix = gp.VersionBuild + "."
+		buildId = 0
+	}
+
+end:
+
+	buildId++
+	p.Version = fmt.Sprintf("%s%s+%s%d",
+		gp.Version, gp.VersionSuffix, buildPrefix, buildId)
+
+	return nil
 }

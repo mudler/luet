@@ -33,5 +33,6 @@ func init() {
 	treeGroupCmd.AddCommand(
 		NewTreePkglistCommand(),
 		NewTreeValidateCommand(),
+		NewTreeBumpCommand(),
 	)
 }
