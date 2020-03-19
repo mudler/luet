@@ -596,17 +596,6 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 
 			lastHash = currentPackageImageHash
 			if compileSpec.GetImage() != "" {
-				// TODO: Refactor this
-				if compileSpec.ImageUnpack() { // If it is just an entire image, create a package from it
-					Info(pkgTag, ":whale: Sourcing package from image", compileSpec.GetImage())
-					artifact, err := cs.packageFromImage(compileSpec, currentPackageImageHash, keepPermissions, cs.KeepImg, concurrency)
-					if err != nil {
-						return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().HumanReadableString())
-					}
-					departifacts = append(departifacts, artifact)
-					continue
-				}
-
 				Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().HumanReadableString()+" from image")
 				artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec)
 				if err != nil {
