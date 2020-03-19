@@ -570,6 +570,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	var lastHash string
 	depsN := 0
 	currentN := 0
+	targetAssertion := p.GetSourceAssertion().Search(p.GetPackage().GetFingerPrint())
 
 	if !cs.Options.NoDeps {
 		Info(":deciduous_tree: Build dependencies for " + p.GetPackage().HumanReadableString())
@@ -635,8 +636,9 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	}
 
 	if !cs.Options.OnlyDeps {
+		targetPackageHash := cs.ImageRepository + ":" + targetAssertion.Hash.PackageHash
 		Info(":package:", p.GetPackage().HumanReadableString(), ":cyclone:  Building package target from:", lastHash)
-		artifact, err := cs.compileWithImage(lastHash, "", "", concurrency, keepPermissions, cs.KeepImg, p)
+		artifact, err := cs.compileWithImage(lastHash, "", targetPackageHash, concurrency, keepPermissions, cs.KeepImg, p)
 		if err != nil {
 			return artifact, err
 		}
