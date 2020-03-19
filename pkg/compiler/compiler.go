@@ -550,14 +550,13 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 		return nil, errors.New("Package " + p.GetPackage().GetFingerPrint() + "with no deps and no seed image supplied, bailing out")
 	}
 
+	targetAssertion := p.GetSourceAssertion().Search(p.GetPackage().GetFingerPrint())
+	targetPackageHash := cs.ImageRepository + ":" + targetAssertion.Hash.PackageHash
+
 	// - If image is set we just generate a plain dockerfile
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
 	if p.GetImage() != "" {
-		if p.ImageUnpack() { // If it is just an entire image, create a package from it
-			return cs.packageFromImage(p, "", keepPermissions, cs.KeepImg, concurrency)
-		}
-
-		return cs.compileWithImage(p.GetImage(), "", "", concurrency, keepPermissions, cs.KeepImg, p)
+		return cs.compileWithImage(p.GetImage(), "", targetPackageHash, concurrency, keepPermissions, cs.KeepImg, p)
 	}
 
 	// - If image is not set, we read a base_image. Then we will build one image from it to kick-off our build based
@@ -570,7 +569,6 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	var lastHash string
 	depsN := 0
 	currentN := 0
-	targetAssertion := p.GetSourceAssertion().Search(p.GetPackage().GetFingerPrint())
 
 	if !cs.Options.NoDeps {
 		Info(":deciduous_tree: Build dependencies for " + p.GetPackage().HumanReadableString())
@@ -622,7 +620,6 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	}
 
 	if !cs.Options.OnlyDeps {
-		targetPackageHash := cs.ImageRepository + ":" + targetAssertion.Hash.PackageHash
 		Info(":package:", p.GetPackage().HumanReadableString(), ":cyclone:  Building package target from:", lastHash)
 		artifact, err := cs.compileWithImage(lastHash, "", targetPackageHash, concurrency, keepPermissions, cs.KeepImg, p)
 		if err != nil {
