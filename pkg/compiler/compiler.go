@@ -598,9 +598,6 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 			if compileSpec.GetImage() != "" {
 				// TODO: Refactor this
 				if compileSpec.ImageUnpack() { // If it is just an entire image, create a package from it
-					if compileSpec.GetImage() == "" {
-						return nil, errors.New("No image defined for package: " + assertion.Package.HumanReadableString())
-					}
 					Info(pkgTag, ":whale: Sourcing package from image", compileSpec.GetImage())
 					artifact, err := cs.packageFromImage(compileSpec, currentPackageImageHash, keepPermissions, cs.KeepImg, concurrency)
 					if err != nil {
