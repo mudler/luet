@@ -48,6 +48,7 @@ type Package interface {
 	Requires([]*DefaultPackage) Package
 	Conflicts([]*DefaultPackage) Package
 	Revdeps(PackageDatabase) []Package
+	LabelDeps(PackageDatabase, string) []Package
 
 	GetProvides() []*DefaultPackage
 	SetProvides([]*DefaultPackage) Package
@@ -84,6 +85,11 @@ type Package interface {
 
 	SetLicense(string)
 	GetLicense() string
+
+	AddLabel(string, string)
+	GetLabels() map[string]string
+	HasLabel(string) bool
+	MatchLabel(*regexp.Regexp) bool
 
 	IsSelector() bool
 	VersionMatchSelector(string) (bool, error)
@@ -151,9 +157,11 @@ type DefaultPackage struct {
 	// Path is set only internally when tree is loaded from disk
 	Path string `json:"path,omitempty"`
 
-	Description string   `json:"description"`
-	Uri         []string `json:"uri"`
-	License     string   `json:"license"`
+	Description string   `json:"description,omitempty"`
+	Uri         []string `json:"uri,omitempty"`
+	License     string   `json:"license,omitempty"`
+
+	Labels map[string]string `json:labels,omitempty`
 }
 
 // State represent the package state
@@ -161,7 +169,13 @@ type State string
 
 // NewPackage returns a new package
 func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*DefaultPackage) *DefaultPackage {
-	return &DefaultPackage{Name: name, Version: version, PackageRequires: requires, PackageConflicts: conflicts}
+	return &DefaultPackage{
+		Name:             name,
+		Version:          version,
+		PackageRequires:  requires,
+		PackageConflicts: conflicts,
+		Labels:           make(map[string]string, 0),
+	}
 }
 
 func (p *DefaultPackage) String() string {
@@ -217,6 +231,28 @@ func (p *DefaultPackage) SetPath(s string) {
 
 func (p *DefaultPackage) IsSelector() bool {
 	return strings.ContainsAny(p.GetVersion(), "<>=")
+}
+
+func (p *DefaultPackage) HasLabel(label string) bool {
+	ans := false
+	for k, _ := range p.Labels {
+		if k == label {
+			ans = true
+			break
+		}
+	}
+	return ans
+}
+
+func (p *DefaultPackage) MatchLabel(r *regexp.Regexp) bool {
+	ans := false
+	for k, v := range p.Labels {
+		if r.MatchString(k + "=" + v) {
+			ans = true
+			break
+		}
+	}
+	return ans
 }
 
 // AddUse adds a use to a package
@@ -303,6 +339,12 @@ func (p *DefaultPackage) SetCategory(s string) {
 func (p *DefaultPackage) GetUses() []string {
 	return p.UseFlags
 }
+func (p *DefaultPackage) AddLabel(k, v string) {
+	p.Labels[k] = v
+}
+func (p *DefaultPackage) GetLabels() map[string]string {
+	return p.Labels
+}
 func (p *DefaultPackage) GetProvides() []*DefaultPackage {
 	return p.Provides
 }
@@ -371,6 +413,19 @@ func (p *DefaultPackage) Revdeps(definitiondb PackageDatabase) []Package {
 	}
 
 	return versionsInWorld
+}
+
+func (p *DefaultPackage) LabelDeps(definitiondb PackageDatabase, labelKey string) []Package {
+	var pkgsWithLabelInWorld []Package
+	// TODO: check if integrate some index to improve
+	// research instead of iterate all list.
+	for _, w := range definitiondb.World() {
+		if w.HasLabel(labelKey) {
+			pkgsWithLabelInWorld = append(pkgsWithLabelInWorld, w)
+		}
+	}
+
+	return pkgsWithLabelInWorld
 }
 
 func DecodePackage(ID string, db PackageDatabase) (Package, error) {

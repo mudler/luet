@@ -45,6 +45,9 @@ type PackageSet interface {
 	World() []Package
 
 	FindPackageCandidate(p Package) (Package, error)
+	FindPackageLabel(labelKey string) ([]Package, error)
+	FindPackageLabelMatch(pattern string) ([]Package, error)
+	FindPackageMatch(pattern string) ([]Package, error)
 }
 
 type PackageFile struct {

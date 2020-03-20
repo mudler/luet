@@ -18,6 +18,7 @@ package pkg
 import (
 	"encoding/base64"
 	"os"
+	"regexp"
 	"strconv"
 	"sync"
 	"time"
@@ -383,4 +384,62 @@ func (db *BoltDatabase) FindPackageVersions(p Package) ([]Package, error) {
 		versionsInWorld = append(versionsInWorld, w)
 	}
 	return versionsInWorld, nil
+}
+
+func (db *BoltDatabase) FindPackageLabel(labelKey string) ([]Package, error) {
+	var ans []Package
+
+	for _, k := range db.GetPackages() {
+		pack, err := db.GetPackage(k)
+		if err != nil {
+			return ans, err
+		}
+		if pack.HasLabel(labelKey) {
+			ans = append(ans, pack)
+		}
+	}
+	return ans, nil
+}
+
+func (db *BoltDatabase) FindPackageLabelMatch(pattern string) ([]Package, error) {
+	var ans []Package
+
+	re := regexp.MustCompile(pattern)
+	if re == nil {
+		return nil, errors.New("Invalid regex " + pattern + "!")
+	}
+
+	for _, k := range db.GetPackages() {
+		pack, err := db.GetPackage(k)
+		if err != nil {
+			return ans, err
+		}
+		if pack.MatchLabel(re) {
+			ans = append(ans, pack)
+		}
+	}
+
+	return ans, nil
+}
+
+func (db *BoltDatabase) FindPackageMatch(pattern string) ([]Package, error) {
+	var ans []Package
+
+	re := regexp.MustCompile(pattern)
+	if re == nil {
+		return nil, errors.New("Invalid regex " + pattern + "!")
+	}
+
+	for _, k := range db.GetPackages() {
+		pack, err := db.GetPackage(k)
+		if err != nil {
+			return ans, err
+		}
+
+		if re.MatchString(pack.GetCategory() + pack.GetName()) {
+			ans = append(ans, pack)
+		}
+	}
+
+	return ans, nil
 }

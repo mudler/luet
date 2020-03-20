@@ -1,0 +1,3 @@
+image: "alpine"
+steps:
+  - echo "test" > /file1

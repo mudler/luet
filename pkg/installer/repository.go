@@ -21,7 +21,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -67,6 +66,19 @@ type LuetSystemRepositorySerialized struct {
 	TreePath            string                             `json:"treepath"`
 	TreeCompressionType compiler.CompressionImplementation `json:"treecompressiontype"`
 	TreeChecksums       compiler.Checksums                 `json:"treechecksums"`
+}
+
+type LuetSearchModeType string
+
+const (
+	SLabel      LuetSearchModeType = "label"
+	SRegexPkg   LuetSearchModeType = "regexPkg"
+	SRegexLabel LuetSearchModeType = "regexLabel"
+)
+
+type LuetSearchOpts struct {
+	Pattern string
+	Mode    LuetSearchModeType
 }
 
 func GenerateRepository(name, descr, t string, urls []string, priority int, src, treeDir string, db pkg.PackageDatabase) (Repository, error) {
@@ -554,18 +566,40 @@ PACKAGE:
 
 }
 
-func (re Repositories) Search(s string) []PackageMatch {
+func (re Repositories) SearchPackages(p string, o LuetSearchOpts) []PackageMatch {
 	sort.Sort(re)
-	var term = regexp.MustCompile(s)
 	var matches []PackageMatch
+	var err error
 
 	for _, r := range re {
-		for _, pack := range r.GetTree().GetDatabase().World() {
-			if term.MatchString(pack.GetName()) {
+		var repoMatches []pkg.Package
+		if o.Mode == SRegexPkg {
+			repoMatches, err = r.GetTree().GetDatabase().FindPackageMatch(p)
+
+		} else if o.Mode == SLabel {
+			repoMatches, err = r.GetTree().GetDatabase().FindPackageLabel(p)
+		} else if o.Mode == SRegexLabel {
+			repoMatches, err = r.GetTree().GetDatabase().FindPackageLabelMatch(p)
+		}
+
+		if err == nil && len(repoMatches) > 0 {
+			for _, pack := range repoMatches {
 				matches = append(matches, PackageMatch{Package: pack, Repo: r})
 			}
 		}
 	}
 
 	return matches
+}
+
+func (re Repositories) SearchLabelMatch(s string) []PackageMatch {
+	return re.SearchPackages(s, LuetSearchOpts{Pattern: s, Mode: SRegexLabel})
+}
+
+func (re Repositories) SearchLabel(s string) []PackageMatch {
+	return re.SearchPackages(s, LuetSearchOpts{Pattern: s, Mode: SLabel})
+}
+
+func (re Repositories) Search(s string) []PackageMatch {
+	return re.SearchPackages(s, LuetSearchOpts{Pattern: s, Mode: SRegexPkg})
 }
