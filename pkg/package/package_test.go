@@ -16,6 +16,8 @@
 package pkg_test
 
 import (
+	"regexp"
+
 	. "github.com/mudler/luet/pkg/package"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -58,6 +60,34 @@ var _ = Describe("Package", func() {
 			Expect(len(lst)).To(Equal(2))
 			p := Best(lst)
 			Expect(p).To(Equal(a11))
+		})
+	})
+
+	Context("Find label on packages", func() {
+		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a.AddLabel("project1", "test1")
+		a.AddLabel("label2", "value1")
+		b := NewPackage("B", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		b.AddLabel("project2", "test2")
+		b.AddLabel("label2", "value1")
+		It("Expands correctly", func() {
+			var err error
+			definitions := NewInMemoryDatabase(false)
+			for _, p := range []Package{a, b} {
+				_, err = definitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			re := regexp.MustCompile("project[0-9][=].*")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(re).ToNot(BeNil())
+			Expect(a.HasLabel("label2")).To(Equal(true))
+			Expect(a.HasLabel("label3")).To(Equal(false))
+			Expect(a.HasLabel("project1")).To(Equal(true))
+			Expect(b.HasLabel("project2")).To(Equal(true))
+			Expect(b.HasLabel("label2")).To(Equal(true))
+			Expect(b.MatchLabel(re)).To(Equal(true))
+			Expect(a.MatchLabel(re)).To(Equal(true))
+
 		})
 	})
 

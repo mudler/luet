@@ -18,6 +18,7 @@ package pkg
 import (
 	"encoding/base64"
 	"encoding/json"
+	"regexp"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -357,4 +358,63 @@ func (db *InMemoryDatabase) FindPackageCandidate(p Package) (Package, error) {
 
 	return required, err
 
+}
+
+func (db *InMemoryDatabase) FindPackageLabel(labelKey string) ([]Package, error) {
+	var ans []Package
+
+	for _, k := range db.GetPackages() {
+		pack, err := db.GetPackage(k)
+		if err != nil {
+			return ans, err
+		}
+		if pack.HasLabel(labelKey) {
+			ans = append(ans, pack)
+		}
+	}
+
+	return ans, nil
+}
+
+func (db *InMemoryDatabase) FindPackageLabelMatch(pattern string) ([]Package, error) {
+	var ans []Package
+
+	re := regexp.MustCompile(pattern)
+	if re == nil {
+		return nil, errors.New("Invalid regex " + pattern + "!")
+	}
+
+	for _, k := range db.GetPackages() {
+		pack, err := db.GetPackage(k)
+		if err != nil {
+			return ans, err
+		}
+		if pack.MatchLabel(re) {
+			ans = append(ans, pack)
+		}
+	}
+
+	return ans, nil
+}
+
+func (db *InMemoryDatabase) FindPackageMatch(pattern string) ([]Package, error) {
+	var ans []Package
+
+	re := regexp.MustCompile(pattern)
+	if re == nil {
+		return nil, errors.New("Invalid regex " + pattern + "!")
+	}
+
+	for _, k := range db.GetPackages() {
+		pack, err := db.GetPackage(k)
+		if err != nil {
+			return ans, err
+		}
+
+		if re.MatchString(pack.GetCategory() + pack.GetName()) {
+			ans = append(ans, pack)
+		}
+	}
+
+	return ans, nil
 }

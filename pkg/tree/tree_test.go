@@ -152,4 +152,21 @@ var _ = Describe("Tree", func() {
 		})
 	})
 
+	Context("Simple tree with labels", func() {
+		It("Read tree with labels", func() {
+			db := pkg.NewInMemoryDatabase(false)
+			generalRecipe := NewCompilerRecipe(db)
+
+			err := generalRecipe.Load("../../tests/fixtures/labels")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().World())).To(Equal(1))
+			pack, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "pkgA", Category: "test", Version: "0.1"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(pack.HasLabel("label1")).To(Equal(true))
+			Expect(pack.HasLabel("label3")).To(Equal(false))
+		})
+	})
+
 })

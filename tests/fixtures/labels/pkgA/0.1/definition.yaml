@@ -1,0 +1,6 @@
+category: "test"
+name: "pkgA"
+version: "0.1"
+labels:
+  label1: "value1"
+  label2: "value2"

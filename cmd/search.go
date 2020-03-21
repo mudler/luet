@@ -17,7 +17,6 @@ package cmd
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 
 	. "github.com/mudler/luet/pkg/config"
 	installer "github.com/mudler/luet/pkg/installer"
@@ -51,6 +50,8 @@ var searchCmd = &cobra.Command{
 		discount := LuetCfg.Viper.GetFloat64("solver.discount")
 		rate := LuetCfg.Viper.GetFloat64("solver.rate")
 		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
+		searchWithLabel, _ := cmd.Flags().GetBool("by-label")
+		searchWithLabelMatch, _ := cmd.Flags().GetBool("by-label-regex")
 
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -70,8 +71,12 @@ var searchCmd = &cobra.Command{
 				repos = append(repos, r)
 			}
 
-			inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{Concurrency: LuetCfg.GetGeneral().Concurrency, SolverOptions: *LuetCfg.GetSolverOptions()})
-
+			inst := installer.NewLuetInstaller(
+				installer.LuetInstallerOptions{
+					Concurrency:   LuetCfg.GetGeneral().Concurrency,
+					SolverOptions: *LuetCfg.GetSolverOptions(),
+				},
+			)
 			inst.Repositories(repos)
 			synced, err := inst.SyncRepositories(false)
 			if err != nil {
@@ -80,7 +85,14 @@ var searchCmd = &cobra.Command{
 
 			Info("--- Search results: ---")
 
-			matches := synced.Search(args[0])
+			matches := []installer.PackageMatch{}
+			if searchWithLabel {
+				matches = synced.SearchLabel(args[0])
+			} else if searchWithLabelMatch {
+				matches = synced.SearchLabelMatch(args[0])
+			} else {
+				matches = synced.Search(args[0])
+			}
 			for _, m := range matches {
 				Info(":package:", m.Package.GetCategory(), m.Package.GetName(),
 					m.Package.GetVersion(), "repository:", m.Repo.GetName())
@@ -94,14 +106,25 @@ var searchCmd = &cobra.Command{
 				systemDB = pkg.NewInMemoryDatabase(true)
 			}
 			system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
-			var term = regexp.MustCompile(args[0])
 
-			for _, k := range system.Database.GetPackages() {
-				pack, err := system.Database.GetPackage(k)
-				if err == nil && term.MatchString(pack.GetName()) {
-					Info(":package:", pack.GetCategory(), pack.GetName(), pack.GetVersion())
-				}
+			var err error
+			iMatches := []pkg.Package{}
+			if searchWithLabel {
+				iMatches, err = system.Database.FindPackageLabel(args[0])
+			} else if searchWithLabelMatch {
+				iMatches, err = system.Database.FindPackageLabelMatch(args[0])
+			} else {
+				iMatches, err = system.Database.FindPackageMatch(args[0])
 			}
+
+			if err != nil {
+				Fatal("Error: " + err.Error())
+			}
+
+			for _, pack := range iMatches {
+				Info(":package:", pack.GetCategory(), pack.GetName(), pack.GetVersion())
+			}
+
 		}
 
 	},
@@ -119,5 +142,7 @@ func init() {
 	searchCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
 	searchCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	searchCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
+	searchCmd.Flags().Bool("by-label", false, "Search packages through label")
+	searchCmd.Flags().Bool("by-label-regex", false, "Search packages through label regex")
 	RootCmd.AddCommand(searchCmd)
 }
