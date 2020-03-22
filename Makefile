@@ -29,6 +29,10 @@ test-integration:
 coverage:
 	go test ./... -race -coverprofile=coverage.txt -covermode=atomic
 
+.PHONY: test-coverage
+test-coverage:
+	scripts/ginkgo.coverage.sh --codecov
+
 .PHONY: help
 help:
 	# make all => deps test lint build
