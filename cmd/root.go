@@ -35,6 +35,7 @@ import (
 
 var cfgFile string
 var Verbose bool
+var LockedCommands = []string{"install", "uninstall", "upgrade"}
 
 const (
 	LuetCLIVersion = "0.8-dev"
@@ -91,16 +92,21 @@ func LoadConfig(c *config.LuetConfig) error {
 // Execute adds all child commands to the root command sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	// XXX: This is mostly from scratch images.
+
 	if os.Getenv("LUET_NOLOCK") != "true" {
-		s := single.New("luet")
-		if err := s.CheckLock(); err != nil && err == single.ErrAlreadyRunning {
-			Fatal("another instance of the app is already running, exiting")
-		} else if err != nil {
-			// Another error occurred, might be worth handling it as well
-			Fatal("failed to acquire exclusive app lock:", err.Error())
+		for _, lockedCmd := range LockedCommands {
+			if os.Args[1] == lockedCmd {
+				s := single.New("luet")
+				if err := s.CheckLock(); err != nil && err == single.ErrAlreadyRunning {
+					Fatal("another instance of the app is already running, exiting")
+				} else if err != nil {
+					// Another error occurred, might be worth handling it as well
+					Fatal("failed to acquire exclusive app lock:", err.Error())
+				}
+				defer s.TryUnlock()
+				break
+			}
 		}
-		defer s.TryUnlock()
 	}
 
 	if err := RootCmd.Execute(); err != nil {
