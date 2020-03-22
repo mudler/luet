@@ -573,12 +573,13 @@ func (re Repositories) SearchPackages(p string, o LuetSearchOpts) []PackageMatch
 
 	for _, r := range re {
 		var repoMatches []pkg.Package
-		if o.Mode == SRegexPkg {
-			repoMatches, err = r.GetTree().GetDatabase().FindPackageMatch(p)
 
-		} else if o.Mode == SLabel {
+		switch o.Mode {
+		case SRegexPkg:
+			repoMatches, err = r.GetTree().GetDatabase().FindPackageMatch(p)
+		case SLabel:
 			repoMatches, err = r.GetTree().GetDatabase().FindPackageLabel(p)
-		} else if o.Mode == SRegexLabel {
+		case SRegexLabel:
 			repoMatches, err = r.GetTree().GetDatabase().FindPackageLabelMatch(p)
 		}
 
