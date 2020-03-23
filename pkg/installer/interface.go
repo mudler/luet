@@ -46,12 +46,15 @@ type Repository interface {
 	AddUrl(string)
 	GetPriority() int
 	GetIndex() compiler.ArtifactIndex
+	SetIndex(i compiler.ArtifactIndex)
 	GetTree() tree.Builder
 	SetTree(tree.Builder)
 	Write(path string, resetRevision bool) error
 	Sync(bool) (Repository, error)
 	GetTreePath() string
 	SetTreePath(string)
+	GetMetaPath() string
+	SetMetaPath(string)
 	GetType() string
 	SetType(string)
 	SetAuthentication(map[string]string)
@@ -62,8 +65,8 @@ type Repository interface {
 	SetLastUpdate(string)
 	Client() Client
 
-	GetTreeChecksums() compiler.Checksums
-	GetTreeCompressionType() compiler.CompressionImplementation
-	SetTreeCompressionType(c compiler.CompressionImplementation)
-	SetTreeChecksums(c compiler.Checksums)
+	GetRepositoryFile(string) (LuetRepositoryFile, error)
+	SetRepositoryFile(string, LuetRepositoryFile)
+
+	Serialize() (*LuetSystemRepositoryMetadata, LuetSystemRepositorySerialized)
 }

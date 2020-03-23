@@ -96,8 +96,11 @@
 #     packages. By default caching is disable.
 #     cached: false
 #
-#     Path where store tree of the specifications. Default path is $database_path/repos/$repo_name
-#     tree_path: "/var/cache/luet/repos/local"
+#     Path where store tree of the specifications. Default path is $database_path/repos/$repo_name/treefs
+#     tree_path: "/var/cache/luet/repos/local/treefs"
+#
+#     Path where store repository metadata. Default path is $database_path/repos/$repo_name/meta
+#     meta_path: "/var/cache/luet/repos/local/meta"
 #
 #     Define the list of the URL where retrieve tree and packages.
 #     urls:
