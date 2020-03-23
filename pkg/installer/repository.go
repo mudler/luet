@@ -438,6 +438,7 @@ func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
 		return errors.Wrap(err, "Failed generating checksums for tree")
 	}
 	treeFile.SetChecksums(a.GetChecksums())
+	r.SetRepositoryFile(REPOFILE_TREE_KEY, treeFile)
 
 	// Create Metadata struct and serialized repository
 	meta, serialized := r.Serialize()
@@ -470,6 +471,7 @@ func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
 	}
 
 	metaFile.SetName(path.Base(a.GetPath()))
+	r.SetRepositoryFile(REPOFILE_META_KEY, metaFile)
 	err = a.Hash()
 	if err != nil {
 		return errors.Wrap(err, "Failed generating checksums for metadata")
