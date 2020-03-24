@@ -47,9 +47,9 @@ var _ = Describe("Installer", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
 
-			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
@@ -62,9 +62,9 @@ var _ = Describe("Installer", func() {
 			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2", "chmod +x generate.sh"}))
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(2)
+			c.SetConcurrency(2)
 
-			artifact, err := compiler.Compile(false, spec)
+			artifact, err := c.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
 			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
@@ -147,6 +147,125 @@ urls:
 
 	})
 
+	Context("Writes a repository definition without compression", func() {
+		It("Writes a repo and can install packages from it", func() {
+			//repo:=NewLuetSystemRepository()
+
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err = generalRecipe.Load("../../tests/fixtures/buildable")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
+
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(),
+				generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+
+			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err = ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			Expect(spec.BuildSteps()).To(Equal([]string{"echo artifact5 > /test5", "echo artifact6 > /test6", "./generate.sh"}))
+			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2", "chmod +x generate.sh"}))
+
+			spec.SetOutputPath(tmpdir)
+			c.SetConcurrency(2)
+
+			artifact, err := c.Compile(false, spec)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+
+			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
+
+			content1, err := helpers.Read(spec.Rel("test5"))
+			Expect(err).ToNot(HaveOccurred())
+			content2, err := helpers.Read(spec.Rel("test6"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(content1).To(Equal("artifact5\n"))
+			Expect(content2).To(Equal("artifact6\n"))
+
+			Expect(helpers.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
+
+			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, "../../tests/fixtures/buildable", pkg.NewInMemoryDatabase(false))
+			treeFile := NewDefaultTreeRepositoryFile()
+			treeFile.SetCompressionType(compiler.None)
+			repo.SetRepositoryFile(REPOFILE_TREE_KEY, treeFile)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(repo.GetName()).To(Equal("test"))
+			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
+			err = repo.Write(tmpdir, false)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).To(BeTrue())
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
+			Expect(repo.GetType()).To(Equal("disk"))
+
+			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(fakeroot) // clean up
+
+			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
+			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
+name: "test"
+type: "disk"
+urls:
+  - "`+tmpdir+`"
+`), pkg.NewInMemoryDatabase(false))
+			Expect(err).ToNot(HaveOccurred())
+
+			inst.Repositories(Repositories{repo2})
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
+			Expect(repo.GetType()).To(Equal("disk"))
+			systemDB := pkg.NewInMemoryDatabase(false)
+			system := &System{Database: systemDB, Target: fakeroot}
+			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system, false)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())
+			Expect(helpers.Exists(filepath.Join(fakeroot, "test6"))).To(BeTrue())
+			_, err = systemDB.FindPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			files, err := systemDB.GetPackageFiles(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(files).To(Equal([]string{"artifact42", "test5", "test6"}))
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(system.Database.GetPackages())).To(Equal(1))
+			p, err := system.Database.GetPackage(system.Database.GetPackages()[0])
+			Expect(err).ToNot(HaveOccurred())
+			Expect(p.GetName()).To(Equal("b"))
+
+			err = inst.Uninstall(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}, system)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Nothing should be there anymore (files, packagedb entry)
+			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).ToNot(BeTrue())
+			Expect(helpers.Exists(filepath.Join(fakeroot, "test6"))).ToNot(BeTrue())
+
+			_, err = systemDB.FindPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).To(HaveOccurred())
+			_, err = systemDB.GetPackageFiles(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).To(HaveOccurred())
+		})
+
+	})
+
 	Context("Installation", func() {
 		It("Installs in a system with a persistent db", func() {
 			//repo:=NewLuetSystemRepository()
@@ -162,9 +281,9 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
 
-			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
@@ -177,9 +296,9 @@ urls:
 			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2", "chmod +x generate.sh"}))
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(2)
+			c.SetConcurrency(2)
 
-			artifact, err := compiler.Compile(false, spec)
+			artifact, err := c.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
 			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
