@@ -28,7 +28,7 @@ testRepo() {
     --descr "Test Repo" \
     --urls $tmpdir/testrootfs \
     --tree-compression gzip \
-    --tree-name foo.tar \
+    --tree-filename foo.tar \
     --type disk > /dev/null
 
     createst=$?

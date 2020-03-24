@@ -28,8 +28,8 @@ testRepo() {
     --descr "Test Repo" \
     --urls $tmpdir/testrootfs \
     --tree-compression gzip \
-    --tree-name foo.tar \
-    --meta-name repository.meta.tar \
+    --tree-filename foo.tar \
+    --meta-filename repository.meta.tar \
     --meta-compression gzip \
     --type disk > /dev/null
 
