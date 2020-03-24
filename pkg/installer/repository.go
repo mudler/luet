@@ -49,7 +49,7 @@ const (
 )
 
 type LuetRepositoryFile struct {
-	Name            string                             `json:"name"`
+	FileName        string                             `json:"filename"`
 	CompressionType compiler.CompressionImplementation `json:"compressiontype,omitempty"`
 	Checksums       compiler.Checksums                 `json:"checksums,omitempty"`
 }
@@ -145,23 +145,23 @@ func (m *LuetSystemRepositoryMetadata) ToArtificatIndex() (ans compiler.Artifact
 
 func NewDefaultTreeRepositoryFile() LuetRepositoryFile {
 	return LuetRepositoryFile{
-		Name:            TREE_TARBALL,
+		FileName:        TREE_TARBALL,
 		CompressionType: compiler.GZip,
 	}
 }
 
 func NewDefaultMetaRepositoryFile() LuetRepositoryFile {
 	return LuetRepositoryFile{
-		Name:            REPOSITORY_METAFILE + ".tar",
+		FileName:        REPOSITORY_METAFILE + ".tar",
 		CompressionType: compiler.None,
 	}
 }
 
-func (f *LuetRepositoryFile) SetName(n string) {
-	f.Name = n
+func (f *LuetRepositoryFile) SetFileName(n string) {
+	f.FileName = n
 }
-func (f *LuetRepositoryFile) GetName() string {
-	return f.Name
+func (f *LuetRepositoryFile) GetFileName() string {
+	return f.FileName
 }
 func (f *LuetRepositoryFile) SetCompressionType(c compiler.CompressionImplementation) {
 	f.CompressionType = c
@@ -421,7 +421,7 @@ func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
 		r.SetRepositoryFile(REPOFILE_TREE_KEY, treeFile)
 	}
 
-	a := compiler.NewPackageArtifact(filepath.Join(dst, treeFile.GetName()))
+	a := compiler.NewPackageArtifact(filepath.Join(dst, treeFile.GetFileName()))
 	a.SetCompressionType(treeFile.GetCompressionType())
 	err = a.Compress(archive, 1)
 	if err != nil {
@@ -429,7 +429,7 @@ func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
 	}
 
 	// Update the tree name with the name created by compression selected.
-	treeFile.SetName(path.Base(a.GetPath()))
+	treeFile.SetFileName(path.Base(a.GetPath()))
 	err = a.Hash()
 	if err != nil {
 		return errors.Wrap(err, "Failed generating checksums for tree")
@@ -460,14 +460,14 @@ func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
 		return err
 	}
 
-	a = compiler.NewPackageArtifact(filepath.Join(dst, metaFile.GetName()))
+	a = compiler.NewPackageArtifact(filepath.Join(dst, metaFile.GetFileName()))
 	a.SetCompressionType(metaFile.GetCompressionType())
 	err = a.Compress(metaTmpDir, 1)
 	if err != nil {
 		return errors.Wrap(err, "Error met while archiving repository metadata")
 	}
 
-	metaFile.SetName(path.Base(a.GetPath()))
+	metaFile.SetFileName(path.Base(a.GetPath()))
 	r.SetRepositoryFile(REPOFILE_META_KEY, metaFile)
 	err = a.Hash()
 	if err != nil {
@@ -570,10 +570,10 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	if !repoUpdated {
 
 		// Get Tree
-		a := compiler.NewPackageArtifact(treeFile.GetName())
+		a := compiler.NewPackageArtifact(treeFile.GetFileName())
 		artifactTree, err := c.DownloadArtifact(a)
 		if err != nil {
-			return nil, errors.Wrap(err, "While downloading "+treeFile.GetName())
+			return nil, errors.Wrap(err, "While downloading "+treeFile.GetFileName())
 		}
 		defer os.Remove(artifactTree.GetPath())
 
@@ -588,10 +588,10 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 		Debug("Tree tarball for the repository " + r.GetName() + " downloaded correctly.")
 
 		// Get Repository Metadata
-		a = compiler.NewPackageArtifact(metaFile.GetName())
+		a = compiler.NewPackageArtifact(metaFile.GetFileName())
 		artifactMeta, err := c.DownloadArtifact(a)
 		if err != nil {
-			return nil, errors.Wrap(err, "While downloading "+metaFile.GetName())
+			return nil, errors.Wrap(err, "While downloading "+metaFile.GetFileName())
 		}
 		defer os.Remove(artifactMeta.GetPath())
 
