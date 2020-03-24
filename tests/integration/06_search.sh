@@ -112,8 +112,8 @@ testSearch() {
     assertEquals 'search exists successfully' "$searchst" "0"
 
     assertContains 'contains test/b-1.0' "$installed" 'test b 1.0'
-    assertContains 'contains test/b-1.0' "$installed" 'test a 1.0'
-    assertContains 'contains test/b-1.0' "$installed" 'test c 1.0'
+    assertContains 'contains test/a-1.0' "$installed" 'test a 1.0'
+    assertContains 'contains test/c-1.0' "$installed" 'test c 1.0'
 }
 
 # Load shUnit2.

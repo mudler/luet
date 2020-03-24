@@ -119,7 +119,8 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 
 	toInstall := []pkg.Package{}
 	for _, assertion := range solution {
-		if assertion.Value {
+		// Be sure to filter from solutions packages already installed in the system
+		if _, err := s.Database.FindPackage(assertion.Package); err != nil && assertion.Value {
 			toInstall = append(toInstall, assertion.Package)
 		}
 	}
@@ -158,7 +159,6 @@ func (l *LuetInstaller) Swap(toRemove []pkg.Package, toInstall []pkg.Package, s 
 }
 
 func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove []pkg.Package, toInstall []pkg.Package, s *System) error {
-
 	// First match packages against repositories by priority
 	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
