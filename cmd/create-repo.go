@@ -40,7 +40,9 @@ var createrepoCmd = &cobra.Command{
 		viper.BindPFlag("urls", cmd.Flags().Lookup("urls"))
 		viper.BindPFlag("type", cmd.Flags().Lookup("type"))
 		viper.BindPFlag("tree-compression", cmd.Flags().Lookup("tree-compression"))
-		viper.BindPFlag("tree-path", cmd.Flags().Lookup("tree-path"))
+		viper.BindPFlag("tree-name", cmd.Flags().Lookup("tree-name"))
+		viper.BindPFlag("meta-compression", cmd.Flags().Lookup("meta-compression"))
+		viper.BindPFlag("meta-name", cmd.Flags().Lookup("meta-name"))
 		viper.BindPFlag("reset-revision", cmd.Flags().Lookup("reset-revision"))
 		viper.BindPFlag("repo", cmd.Flags().Lookup("repo"))
 	},
@@ -57,8 +59,13 @@ var createrepoCmd = &cobra.Command{
 		t := viper.GetString("type")
 		reset := viper.GetBool("reset-revision")
 		treetype := viper.GetString("tree-compression")
-		treepath := viper.GetString("tree-path")
+		treeName := viper.GetString("tree-name")
+		metatype := viper.GetString("meta-compression")
+		metaName := viper.GetString("meta-name")
 		source_repo := viper.GetString("repo")
+
+		treeFile := installer.NewDefaultTreeRepositoryFile()
+		metaFile := installer.NewDefaultMetaRepositoryFile()
 
 		if source_repo != "" {
 			// Search for system repository
@@ -93,12 +100,23 @@ var createrepoCmd = &cobra.Command{
 		}
 
 		if treetype != "" {
-			repo.SetTreeCompressionType(compiler.CompressionImplementation(treetype))
+			treeFile.SetCompressionType(compiler.CompressionImplementation(treetype))
 		}
 
-		if treepath != "" {
-			repo.SetTreePath(treepath)
+		if treeName != "" {
+			treeFile.SetName(treeName)
 		}
+
+		if metatype != "" {
+			metaFile.SetCompressionType(compiler.CompressionImplementation(metatype))
+		}
+
+		if metaName != "" {
+			metaFile.SetName(metaName)
+		}
+
+		repo.SetRepositoryFile(installer.REPOFILE_TREE_KEY, treeFile)
+		repo.SetRepositoryFile(installer.REPOFILE_META_KEY, metaFile)
 
 		err = repo.Write(dst, reset)
 		if err != nil {
@@ -123,7 +141,9 @@ func init() {
 	createrepoCmd.Flags().String("repo", "", "Use repository defined in configuration.")
 
 	createrepoCmd.Flags().String("tree-compression", "none", "Compression alg: none, gzip")
-	createrepoCmd.Flags().String("tree-path", installer.TREE_TARBALL, "Repository tree filename")
+	createrepoCmd.Flags().String("tree-name", installer.TREE_TARBALL, "Repository tree filename")
+	createrepoCmd.Flags().String("meta-compression", "none", "Compression alg: none, gzip")
+	createrepoCmd.Flags().String("meta-name", installer.REPOSITORY_METAFILE+".tar", "Repository metadata filename")
 
 	RootCmd.AddCommand(createrepoCmd)
 }

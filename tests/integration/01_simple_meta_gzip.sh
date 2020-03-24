@@ -29,6 +29,8 @@ testRepo() {
     --urls $tmpdir/testrootfs \
     --tree-compression gzip \
     --tree-name foo.tar \
+    --meta-name repository.meta.tar \
+    --meta-compression gzip \
     --type disk > /dev/null
 
     createst=$?
@@ -36,7 +38,8 @@ testRepo() {
     assertTrue 'create repository' "[ -e '$tmpdir/testbuild/repository.yaml' ]"
     assertTrue 'create named tree in gzip' "[ -e '$tmpdir/testbuild/foo.tar.gz' ]"
     assertTrue 'create tree in gzip-only' "[ ! -e '$tmpdir/testbuild/foo.tar' ]"
-
+    assertTrue 'create named meta in gzip' "[ -e '$tmpdir/testbuild/repository.meta.tar.gz' ]"
+    assertTrue 'create meta in gzip-only' "[ ! -e '$tmpdir/testbuild/repository.meta.tar' ]"
 }
 
 testConfig() {

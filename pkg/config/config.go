@@ -131,6 +131,7 @@ type LuetRepository struct {
 	Cached         bool              `json:"cached,omitempty" yaml:"cached,omitempty" mapstructure:"cached,omitempty"`
 	Authentication map[string]string `json:"auth,omitempty" yaml:"auth,omitempty" mapstructure:"auth,omitempty"`
 	TreePath       string            `json:"tree_path,omitempty" yaml:"tree_path,omitempty" mapstructure:"tree_path"`
+	MetaPath       string            `json:"meta_path,omitempty" yaml:"meta_path,omitempty" mapstructure:"meta_path"`
 
 	// Serialized options not used in repository configuration
 
@@ -153,6 +154,7 @@ func NewLuetRepository(name, t, descr string, urls []string, priority int, enabl
 		Cached:         cached,
 		Authentication: make(map[string]string, 0),
 		TreePath:       "",
+		MetaPath:       "",
 	}
 }
 
@@ -164,6 +166,7 @@ func NewEmptyLuetRepository() *LuetRepository {
 		Type:           "",
 		Priority:       9999,
 		TreePath:       "",
+		MetaPath:       "",
 		Enable:         false,
 		Cached:         false,
 		Authentication: make(map[string]string, 0),

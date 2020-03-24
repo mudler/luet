@@ -141,16 +141,16 @@ func (t *DefaultPackage) JSON() ([]byte, error) {
 
 // DefaultPackage represent a standard package definition
 type DefaultPackage struct {
-	ID               int      `storm:"id,increment" json:"id"` // primary key with auto increment
-	Name             string   `json:"name"`                    // Affects YAML field names too.
-	Version          string   `json:"version"`                 // Affects YAML field names too.
-	Category         string   `json:"category"`                // Affects YAML field names too.
-	UseFlags         []string `json:"use_flags"`               // Affects YAML field names too.
-	State            State
-	PackageRequires  []*DefaultPackage `json:"requires"`  // Affects YAML field names too.
-	PackageConflicts []*DefaultPackage `json:"conflicts"` // Affects YAML field names too.
-	IsSet            bool              `json:"set"`       // Affects YAML field names too.
-	Provides         []*DefaultPackage `json:"provides"`  // Affects YAML field names too.
+	ID               int               `storm:"id,increment" json:"id"` // primary key with auto increment
+	Name             string            `json:"name"`                    // Affects YAML field names too.
+	Version          string            `json:"version"`                 // Affects YAML field names too.
+	Category         string            `json:"category"`                // Affects YAML field names too.
+	UseFlags         []string          `json:"use_flags,omitempty"`     // Affects YAML field names too.
+	State            State             `json:"state,omitempty"`
+	PackageRequires  []*DefaultPackage `json:"requires"`           // Affects YAML field names too.
+	PackageConflicts []*DefaultPackage `json:"conflicts"`          // Affects YAML field names too.
+	IsSet            bool              `json:"set,omitempty"`      // Affects YAML field names too.
+	Provides         []*DefaultPackage `json:"provides,omitempty"` // Affects YAML field names too.
 
 	// TODO: Annotations?
 

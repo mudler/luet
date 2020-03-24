@@ -62,7 +62,7 @@ $> luet repo update repo1 repo2
 
 			} else {
 				for _, repo := range LuetCfg.SystemRepositories {
-					if repo.Cached {
+					if repo.Cached && repo.Enable {
 						r := installer.NewSystemRepository(repo)
 						Spinner(32)
 						_, err := r.Sync(force)
