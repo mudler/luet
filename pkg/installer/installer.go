@@ -164,7 +164,7 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove []pkg.Package, t
 	syncedRepos.SyncDatabase(allRepos)
 	toInstall = syncedRepos.ResolveSelectors(toInstall)
 
-	if err := l.install(syncedRepos, toInstall, s, true); err != nil {
+	if err := l.download(syncedRepos, toInstall); err != nil {
 		return errors.Wrap(err, "Pre-downloading packages")
 	}
 
@@ -193,7 +193,7 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove []pkg.Package, t
 	}
 	l.Options.Force = forced
 
-	return l.install(syncedRepos, toInstall, s, false)
+	return l.install(syncedRepos, toInstall, s)
 }
 
 func (l *LuetInstaller) Install(cp []pkg.Package, s *System, downloadOnly bool) error {
@@ -201,10 +201,55 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System, downloadOnly bool) 
 	if err != nil {
 		return err
 	}
-	return l.install(syncedRepos, cp, s, downloadOnly)
+	return l.install(syncedRepos, cp, s)
 }
 
-func (l *LuetInstaller) install(syncedRepos Repositories, cp []pkg.Package, s *System, downloadOnly bool) error {
+func (l *LuetInstaller) download(syncedRepos Repositories, cp []pkg.Package) error {
+	toDownload := map[string]ArtifactMatch{}
+
+	// FIXME: This can be optimized. We don't need to re-match this to the repository
+	// But we could just do it once
+
+	// Gathers things to download
+	for _, currentPack := range cp {
+		matches := syncedRepos.PackageMatches([]pkg.Package{currentPack})
+		if len(matches) == 0 {
+			return errors.New("Failed matching solutions against repository for " + currentPack.HumanReadableString() + " where are definitions coming from?!")
+		}
+	A:
+		for _, artefact := range matches[0].Repo.GetIndex() {
+			if artefact.GetCompileSpec().GetPackage() == nil {
+				return errors.New("Package in compilespec empty")
+
+			}
+			if matches[0].Package.Matches(artefact.GetCompileSpec().GetPackage()) {
+
+				toDownload[currentPack.GetFingerPrint()] = ArtifactMatch{Package: currentPack, Artifact: artefact, Repository: matches[0].Repo}
+
+				break A
+			}
+		}
+	}
+	// Download packages into cache in parallel.
+	all := make(chan ArtifactMatch)
+
+	var wg = new(sync.WaitGroup)
+
+	// Download
+	for i := 0; i < l.Options.Concurrency; i++ {
+		wg.Add(1)
+		go l.downloadWorker(i, wg, all)
+	}
+	for _, c := range toDownload {
+		all <- c
+	}
+	close(all)
+	wg.Wait()
+
+	return nil
+}
+
+func (l *LuetInstaller) install(syncedRepos Repositories, cp []pkg.Package, s *System) error {
 	var p []pkg.Package
 
 	// Check if the package is installed first
@@ -283,50 +328,33 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp []pkg.Package, s *S
 
 	var wg = new(sync.WaitGroup)
 
-	if !downloadOnly {
-		// Download first
-		for i := 0; i < l.Options.Concurrency; i++ {
-			wg.Add(1)
-			go l.installerWorker(i, wg, all, s, true)
-		}
-
-		for _, c := range toInstall {
-			all <- c
-		}
-		close(all)
-		wg.Wait()
-
-		all = make(chan ArtifactMatch)
-
-		wg = new(sync.WaitGroup)
-
-		// Do the real install
-		for i := 0; i < l.Options.Concurrency; i++ {
-			wg.Add(1)
-			go l.installerWorker(i, wg, all, s, false)
-		}
-
-		for _, c := range toInstall {
-			all <- c
-		}
-		close(all)
-		wg.Wait()
-	} else {
-		for i := 0; i < l.Options.Concurrency; i++ {
-			wg.Add(1)
-			go l.installerWorker(i, wg, all, s, downloadOnly)
-		}
-
-		for _, c := range toInstall {
-			all <- c
-		}
-		close(all)
-		wg.Wait()
+	// Download first
+	for i := 0; i < l.Options.Concurrency; i++ {
+		wg.Add(1)
+		go l.downloadWorker(i, wg, all)
 	}
 
-	if downloadOnly {
-		return nil
+	for _, c := range toInstall {
+		all <- c
 	}
+	close(all)
+	wg.Wait()
+
+	all = make(chan ArtifactMatch)
+
+	wg = new(sync.WaitGroup)
+
+	// Do the real install
+	for i := 0; i < l.Options.Concurrency; i++ {
+		wg.Add(1)
+		go l.installerWorker(i, wg, all, s)
+	}
+
+	for _, c := range toInstall {
+		all <- c
+	}
+	close(all)
+	wg.Wait()
 
 	for _, c := range toInstall {
 		// Annotate to the system that the package was installed
@@ -408,19 +436,25 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp []pkg.Package, s *S
 
 }
 
-func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System, downloadOnly bool) error {
+func (l *LuetInstaller) downloadPackage(a ArtifactMatch) (compiler.Artifact, error) {
 
 	artifact, err := a.Repository.Client().DownloadArtifact(a.Artifact)
 	if err != nil {
-		return errors.Wrap(err, "Error on download artifact")
+		return nil, errors.Wrap(err, "Error on download artifact")
 	}
 
 	err = artifact.Verify()
 	if err != nil && !l.Options.Force {
-		return errors.Wrap(err, "Artifact integrity check failure")
+		return nil, errors.Wrap(err, "Artifact integrity check failure")
 	}
-	if downloadOnly {
-		return nil
+	return artifact, nil
+}
+
+func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
+
+	artifact, err := l.downloadPackage(a)
+	if err != nil && !l.Options.Force {
+		return errors.Wrap(err, "Failed downloading package")
 	}
 
 	files, err := artifact.FileList()
@@ -438,20 +472,39 @@ func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System, downloadOnly 
 	return s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: a.Package.GetFingerPrint(), Files: files})
 }
 
-func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch, s *System, downloadOnly bool) error {
+func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch) error {
 	defer wg.Done()
 
 	for p := range c {
 		// TODO: Keep trace of what was added from the tar, and save it into system
-		err := l.installPackage(p, s, downloadOnly)
+		_, err := l.downloadPackage(p)
 		if err != nil && !l.Options.Force {
 			//TODO: Uninstall, rollback.
 			Fatal("Failed installing package "+p.Package.GetName(), err.Error())
 			return errors.Wrap(err, "Failed installing package "+p.Package.GetName())
 		}
-		if err == nil && downloadOnly {
+		if err == nil {
 			Info(":package: ", p.Package.HumanReadableString(), "downloaded")
-		} else if err == nil {
+		} else if err != nil && l.Options.Force {
+			Info(":package: ", p.Package.HumanReadableString(), "downloaded with failures (force download)")
+		}
+	}
+
+	return nil
+}
+
+func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch, s *System) error {
+	defer wg.Done()
+
+	for p := range c {
+		// TODO: Keep trace of what was added from the tar, and save it into system
+		err := l.installPackage(p, s)
+		if err != nil && !l.Options.Force {
+			//TODO: Uninstall, rollback.
+			Fatal("Failed installing package "+p.Package.GetName(), err.Error())
+			return errors.Wrap(err, "Failed installing package "+p.Package.GetName())
+		}
+		if err == nil {
 			Info(":package: ", p.Package.HumanReadableString(), "installed")
 		} else if err != nil && l.Options.Force {
 			Info(":package: ", p.Package.HumanReadableString(), "installed with failures (force install)")
