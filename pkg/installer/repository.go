@@ -216,16 +216,6 @@ func NewLuetSystemRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (Repos
 		return nil, err
 	}
 
-	// Check if mandatory key are present
-	treeFile, ok := p.RepositoryFiles[REPOFILE_TREE_KEY]
-	if !ok {
-		return nil, errors.New("Invalid repository without the " + REPOFILE_TREE_KEY + "key file.")
-	}
-	metaFile, ok := p.RepositoryFiles[REPOFILE_META_KEY]
-	if !ok {
-		return nil, errors.New("Invalid repository without the " + REPOFILE_META_KEY + "key file.")
-	}
-
 	r := &LuetSystemRepository{
 		LuetRepository: config.NewLuetRepository(
 			p.Name,
@@ -236,10 +226,7 @@ func NewLuetSystemRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (Repos
 			true,
 			false,
 		),
-		RepositoryFiles: map[string]LuetRepositoryFile{
-			REPOFILE_TREE_KEY: treeFile,
-			REPOFILE_META_KEY: metaFile,
-		},
+		RepositoryFiles: p.RepositoryFiles,
 	}
 	if p.Revision > 0 {
 		r.Revision = p.Revision
@@ -375,6 +362,16 @@ func (r *LuetSystemRepository) ReadSpecFile(file string, removeFile bool) (Repos
 	repo, err = NewLuetSystemRepositoryFromYaml(dat, pkg.NewInMemoryDatabase(false))
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading repository from file "+file)
+	}
+
+	// Check if mandatory key are present
+	_, err = repo.GetRepositoryFile(REPOFILE_TREE_KEY)
+	if err != nil {
+		return nil, errors.New("Invalid repository without the " + REPOFILE_TREE_KEY + " key file.")
+	}
+	_, err = repo.GetRepositoryFile(REPOFILE_META_KEY)
+	if err != nil {
+		return nil, errors.New("Invalid repository without the " + REPOFILE_META_KEY + " key file.")
 	}
 
 	return repo, err
