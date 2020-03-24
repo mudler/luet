@@ -86,12 +86,12 @@ var _ = Describe("Repository", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			err = repo.Write(tmpdir, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel(TREE_TARBALL))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).To(BeTrue())
 		})
 	})
 	Context("Matching packages", func() {
