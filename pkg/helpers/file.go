@@ -23,6 +23,22 @@ import (
 	copy "github.com/otiai10/copy"
 )
 
+func ListDir(dir string) ([]string, error) {
+	content := []string{}
+
+	err := filepath.Walk(dir,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			content = append(content, path)
+
+			return nil
+		})
+
+	return content, err
+}
+
 // Exists reports whether the named file or directory exists.
 func Exists(name string) bool {
 	if _, err := os.Stat(name); err != nil {

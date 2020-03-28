@@ -18,13 +18,11 @@ package installer
 import (
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 
-	"github.com/ghodss/yaml"
 	compiler "github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
@@ -55,47 +53,6 @@ type ArtifactMatch struct {
 	Package    pkg.Package
 	Artifact   compiler.Artifact
 	Repository Repository
-}
-
-type LuetFinalizer struct {
-	Install   []string `json:"install"`
-	Uninstall []string `json:"uninstall"` // TODO: Where to store?
-}
-
-func (f *LuetFinalizer) RunInstall() error {
-	for _, c := range f.Install {
-		Debug("finalizer:", "sh", "-c", c)
-		cmd := exec.Command("sh", "-c", c)
-		stdoutStderr, err := cmd.CombinedOutput()
-		if err != nil {
-			return errors.Wrap(err, "Failed running command: "+string(stdoutStderr))
-		}
-		Info(string(stdoutStderr))
-	}
-	return nil
-}
-
-// TODO: We don't store uninstall finalizers ?!
-func (f *LuetFinalizer) RunUnInstall() error {
-	for _, c := range f.Install {
-		Debug("finalizer:", "sh", "-c", c)
-		cmd := exec.Command("sh", "-c", c)
-		stdoutStderr, err := cmd.CombinedOutput()
-		if err != nil {
-			return errors.Wrap(err, "Failed running command: "+string(stdoutStderr))
-		}
-		Info(string(stdoutStderr))
-	}
-	return nil
-}
-
-func NewLuetFinalizerFromYaml(data []byte) (*LuetFinalizer, error) {
-	var p LuetFinalizer
-	err := yaml.Unmarshal(data, &p)
-	if err != nil {
-		return &p, err
-	}
-	return &p, err
 }
 
 func NewLuetInstaller(opts LuetInstallerOptions) Installer {
@@ -395,13 +352,14 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp []pkg.Package, s *S
 							if err != nil && !l.Options.Force {
 								return errors.Wrap(err, "Error reading finalizer "+treePackage.Rel(tree.FinalizerFile))
 							}
-							err = finalizer.RunInstall()
+							err = finalizer.RunInstall(s)
 							if err != nil && !l.Options.Force {
 								return errors.Wrap(err, "Error executing install finalizer "+treePackage.Rel(tree.FinalizerFile))
 							}
 							executedFinalizer[ass.Package.GetFingerPrint()] = true
 						}
 					}
+
 				}
 			}
 
@@ -423,7 +381,7 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp []pkg.Package, s *S
 					if err != nil && !l.Options.Force {
 						return errors.Wrap(err, "Error reading finalizer "+treePackage.Rel(tree.FinalizerFile))
 					}
-					err = finalizer.RunInstall()
+					err = finalizer.RunInstall(s)
 					if err != nil && !l.Options.Force {
 						return errors.Wrap(err, "Error executing install finalizer "+treePackage.Rel(tree.FinalizerFile))
 					}
@@ -432,6 +390,7 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp []pkg.Package, s *S
 			}
 		}
 	}
+
 	return nil
 
 }
