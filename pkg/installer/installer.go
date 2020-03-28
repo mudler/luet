@@ -325,8 +325,6 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp []pkg.Package, s *S
 	if !l.Options.NoDeps {
 		// TODO: Lower those errors as warning
 		for _, w := range p {
-			Info("Getting finalizer for " + w.HumanReadableString())
-
 			// Finalizers needs to run in order and in sequence.
 			ordered := solution.Order(allRepos, w.GetFingerPrint())
 		ORDER:
