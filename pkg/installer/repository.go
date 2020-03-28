@@ -552,13 +552,15 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
 		}
-		defer os.RemoveAll(treefs)
+		// If we always remove them, later on, no other structure can access
+		// to the tree for e.g. to retrieve finalizers
+		//defer os.RemoveAll(treefs)
 
 		metafs, err = ioutil.TempDir(os.TempDir(), "metafs")
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met whilte creating tempdir for metafs")
 		}
-		defer os.RemoveAll(metafs)
+		//defer os.RemoveAll(metafs)
 
 	}
 
