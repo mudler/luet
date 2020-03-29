@@ -14,16 +14,16 @@ testBuild() {
     mkdir $tmpdir/testbuild
     luet build --tree "$ROOT_DIR/tests/fixtures/versioning" --destination $tmpdir/testbuild --compression gzip --all > /dev/null
     buildst=$?
-    assertEquals 'builds successfully' "$buildst" "0"
+    assertEquals 'builds successfully' "0" "$buildst"
 
     luet build --tree "$ROOT_DIR/tests/fixtures/versioning" --destination $tmpdir/testbuild --compression gzip media-libs/libsndfile
     buildst=$?
-    assertEquals 'builds successfully' "$buildst" "0"
+    assertEquals 'builds successfully' "0" "$buildst"
 
 
     luet build --tree "$ROOT_DIR/tests/fixtures/versioning" --destination $tmpdir/testbuild --compression gzip dev-libs/libsigc++-2
     buildst=$?
-    assertEquals 'builds successfully' "$buildst" "0"
+    assertEquals 'builds successfully' "0" "$buildst"
 }
 
 testRepo() {
@@ -37,7 +37,7 @@ testRepo() {
     --type disk > /dev/null
 
     createst=$?
-    assertEquals 'create repo successfully' "$createst" "0"
+    assertEquals 'create repo successfully' "0" "$createst"
     assertTrue 'create repository' "[ -e '$tmpdir/testbuild/repository.yaml' ]"
 }
 
@@ -59,14 +59,14 @@ repositories:
 EOF
     luet config --config $tmpdir/luet.yaml
     res=$?
-    assertEquals 'config test successfully' "$res" "0"
-}
+    assertEquals 'config test successfully' "0" "$res"
+} 
 
 testInstall() {
     luet install --config $tmpdir/luet.yaml media-libs/libsndfile
     #luet install --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
     installst=$?
-    assertEquals 'install test successfully' "$installst" "0"
+    assertEquals 'install test successfully' "0" "$installst"
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/bin/busybox' ]"
 }
 
@@ -74,7 +74,7 @@ testInstall2() {
     luet install --config $tmpdir/luet.yaml dev-libs/libsigc++-2
     #luet install --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
     installst=$?
-    assertEquals 'install test successfully' "$installst" "0"
+    assertEquals 'install test successfully' "0" "$installst"
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/bin/busybox' ]"
 }
 
@@ -82,7 +82,7 @@ testInstall2() {
 testCleanup() {
     luet cleanup --config $tmpdir/luet.yaml
     installst=$?
-    assertEquals 'install test successfully' "$installst" "0"
+    assertEquals 'install test successfully' "0" "$installst"
 }
 
 # Load shUnit2.
