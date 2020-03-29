@@ -81,6 +81,34 @@ func NewTreeValidateCommand() *cobra.Command {
 
 			for _, p := range reciper.GetDatabase().World() {
 
+				found, err := reciper.GetDatabase().FindPackages(
+					&pkg.DefaultPackage{
+						Name:     p.GetName(),
+						Category: p.GetCategory(),
+						Version:  ">=0",
+					},
+				)
+
+				if err != nil || len(found) < 1 {
+					if err != nil {
+						errstr = err.Error()
+					} else {
+						errstr = "No packages"
+					}
+					Error(fmt.Sprintf("%s/%s-%s: Broken. No versions could be found by database %s",
+						p.GetCategory(), p.GetName(), p.GetVersion(),
+						errstr,
+					))
+
+					errors = append(errors,
+						fmt.Sprintf("%s/%s-%s: Broken. No versions could be found by database %s",
+							p.GetCategory(), p.GetName(), p.GetVersion(),
+							errstr,
+						))
+
+					brokenPkgs++
+				}
+
 				pkgstr := fmt.Sprintf("%s/%s-%s", p.GetCategory(), p.GetName(),
 					p.GetVersion())
 
@@ -115,7 +143,9 @@ func NewTreeValidateCommand() *cobra.Command {
 				}
 				Info("Checking package "+fmt.Sprintf("%s/%s-%s", p.GetCategory(), p.GetName(), p.GetVersion()), "with", len(p.GetRequires()), "dependencies.")
 
-				for _, r := range p.GetRequires() {
+				all := p.GetRequires()
+				all = append(all, p.GetConflicts()...)
+				for _, r := range all {
 
 					deps, err := reciper.GetDatabase().FindPackages(
 						&pkg.DefaultPackage{
