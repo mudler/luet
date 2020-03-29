@@ -162,7 +162,7 @@ func ParseVersion(v string) (PkgVersionSelector, error) {
 	}
 
 	// Check if build number is present
-	buildIdx := strings.Index(v, "+")
+	buildIdx := strings.LastIndex(v, "+")
 	buildVersion := ""
 	if buildIdx > 0 {
 		// <pre-release> ::= <dot-separated pre-release identifiers>
