@@ -5,4 +5,4 @@ conflicts: null
 id: 0
 license: LGPL-2.1+
 name: libsigc++-2
-version: "+1"
+version: "2.10.1+1"
