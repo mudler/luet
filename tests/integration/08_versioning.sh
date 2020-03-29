@@ -15,6 +15,15 @@ testBuild() {
     luet build --tree "$ROOT_DIR/tests/fixtures/versioning" --destination $tmpdir/testbuild --compression gzip --all > /dev/null
     buildst=$?
     assertEquals 'builds successfully' "$buildst" "0"
+
+    luet build --tree "$ROOT_DIR/tests/fixtures/versioning" --destination $tmpdir/testbuild --compression gzip media-libs/libsndfile
+    buildst=$?
+    assertEquals 'builds successfully' "$buildst" "0"
+
+
+    luet build --tree "$ROOT_DIR/tests/fixtures/versioning" --destination $tmpdir/testbuild --compression gzip dev-libs/libsigc++-2
+    buildst=$?
+    assertEquals 'builds successfully' "$buildst" "0"
 }
 
 testRepo() {
