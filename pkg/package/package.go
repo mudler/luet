@@ -466,8 +466,10 @@ func Best(set []Package) Package {
 
 	versionsRaw := []string{}
 	for _, p := range set {
-		versionsRaw = append(versionsRaw, p.GetVersion())
-		versionsMap[p.GetVersion()] = p
+		// TODO: This is temporary!.
+		sanitizedVersion := strings.ReplaceAll(p.GetVersion(), "_", "-")
+		versionsRaw = append(versionsRaw, sanitizedVersion)
+		versionsMap[sanitizedVersion] = p
 	}
 
 	versions := make([]*version.Version, len(versionsRaw))
