@@ -12,7 +12,7 @@ oneTimeTearDown() {
 
 testBuild() {
     mkdir $tmpdir/testbuild
-    luet build --tree "$ROOT_DIR/tests/fixtures/versioning" --destination $tmpdir/testbuild --compression gzip --all > /dev/null
+    luet build --tree "$ROOT_DIR/tests/fixtures/versioning" --destination $tmpdir/testbuild --compression gzip --all
     buildst=$?
     assertEquals 'builds successfully' "0" "$buildst"
 
@@ -64,7 +64,6 @@ EOF
 
 testInstall() {
     luet install --config $tmpdir/luet.yaml media-libs/libsndfile
-    #luet install --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
     installst=$?
     assertEquals 'install test successfully' "0" "$installst"
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/bin/busybox' ]"
@@ -72,7 +71,6 @@ testInstall() {
 
 testInstall2() {
     luet install --config $tmpdir/luet.yaml '>=dev-libs/libsigc++-2-0'
-    #luet install --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
     installst=$?
     assertEquals 'install test successfully' "0" "$installst"
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/bin/busybox' ]"
@@ -87,4 +85,3 @@ testCleanup() {
 
 # Load shUnit2.
 . "$ROOT_DIR/tests/integration/shunit2"/shunit2
-
