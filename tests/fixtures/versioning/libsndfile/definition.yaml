@@ -3,5 +3,5 @@ conflicts: null
 id: 0
 license: LGPL-2.1
 name: libsndfile
-version: 1.0.29+1
-#version: 1.0.29+pre2_p20191024.1
+#version: 1.0.29+1
+version: 1.0.29+pre2_p20191024.1
