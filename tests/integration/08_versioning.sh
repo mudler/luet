@@ -66,14 +66,12 @@ testInstall() {
     luet install --config $tmpdir/luet.yaml media-libs/libsndfile
     installst=$?
     assertEquals 'install test successfully' "0" "$installst"
-    assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/bin/busybox' ]"
 }
 
 testInstall2() {
     luet install --config $tmpdir/luet.yaml '>=dev-libs/libsigc++-2-0'
     installst=$?
     assertEquals 'install test successfully' "0" "$installst"
-    assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/bin/busybox' ]"
 }
 
 
