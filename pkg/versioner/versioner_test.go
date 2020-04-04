@@ -74,9 +74,9 @@ var _ = Describe("Versioner", func() {
 	// from: https://github.com/knqyf263/go-deb-version/blob/master/version_test.go#L8
 	Context("Debian Sorting", func() {
 		versioner := DefaultVersioner()
-		PIt("finds the correct ordering", func() {
-			sorted := versioner.Sort([]string{"2:7.4.052-1ubuntu3", "2:7.4.052-1ubuntu3.1"})
-			Expect(sorted).Should(Equal([]string{"2:7.4.052-1ubuntu3.1", "2:7.4.052-1ubuntu3"}))
+		It("finds the correct ordering", func() {
+			sorted := versioner.Sort([]string{"2:7.4.052-1ubuntu3.1", "2:7.4.052-1ubuntu1", "2:7.4.052-1ubuntu2", "2:7.4.052-1ubuntu3"})
+			Expect(sorted).Should(Equal([]string{"2:7.4.052-1ubuntu1", "2:7.4.052-1ubuntu2", "2:7.4.052-1ubuntu3", "2:7.4.052-1ubuntu3.1"}))
 		})
 	})
 })
