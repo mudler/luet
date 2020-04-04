@@ -141,7 +141,7 @@ func (s *Solver) getList(db pkg.PackageDatabase, lsp pkg.Packages) (pkg.Packages
 			if err != nil || len(packages) == 0 {
 				cp = pp
 			} else {
-				cp = packages.Best()
+				cp = packages.Best(nil)
 			}
 		}
 		ls = append(ls, cp)
@@ -229,7 +229,7 @@ func (s *Solver) Upgrade(checkconflicts bool) (pkg.Packages, PackagesAssertions,
 		installedcopy.CreatePackage(p)
 		packages, ok := availableCache[p.GetName()+p.GetCategory()]
 		if ok && len(packages) != 0 {
-			best := packages.Best()
+			best := packages.Best(nil)
 			if best.GetVersion() != p.GetVersion() {
 				toUninstall = append(toUninstall, p)
 				toInstall = append(toInstall, best)
@@ -272,7 +272,7 @@ func (s *Solver) Uninstall(c pkg.Package, checkconflicts bool) (pkg.Packages, er
 		if err != nil || len(packages) == 0 {
 			candidate = c
 		} else {
-			candidate = packages.Best()
+			candidate = packages.Best(nil)
 		}
 		//Relax search, otherwise we cannot compute solutions for packages not in definitions
 		//	return nil, errors.Wrap(err, "Package not found between installed")

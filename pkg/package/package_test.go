@@ -58,7 +58,7 @@ var _ = Describe("Package", func() {
 			Expect(lst).To(ContainElement(a1))
 			Expect(lst).ToNot(ContainElement(a01))
 			Expect(len(lst)).To(Equal(2))
-			p := lst.Best()
+			p := lst.Best(nil)
 			Expect(p).To(Equal(a11))
 		})
 	})

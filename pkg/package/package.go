@@ -23,15 +23,14 @@ import (
 	"io"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 
 	gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	"github.com/crillab/gophersat/bf"
 	"github.com/ghodss/yaml"
-	version "github.com/hashicorp/go-version"
 	"github.com/jinzhu/copier"
+	version "github.com/mudler/luet/pkg/versioner"
 	"github.com/pkg/errors"
 )
 
@@ -460,7 +459,13 @@ func (pack *DefaultPackage) RequiresContains(definitiondb PackageDatabase, s Pac
 	return false, nil
 }
 
-func (set Packages) Best() Package {
+// Best returns the best version of the package (the most bigger) from a list
+// Accepts a versioner interface to change the ordering policy. If null is supplied
+// It defaults to version.WrappedVersioner which supports both semver and debian versioning
+func (set Packages) Best(v version.Versioner) Package {
+	if v == nil {
+		v = &version.WrappedVersioner{}
+	}
 	var versionsMap map[string]Package = make(map[string]Package)
 	if len(set) == 0 {
 		panic("Best needs a list with elements")
@@ -468,22 +473,12 @@ func (set Packages) Best() Package {
 
 	versionsRaw := []string{}
 	for _, p := range set {
-		// TODO: This is temporary!.
-		sanitizedVersion := strings.ReplaceAll(p.GetVersion(), "_", "-")
-		versionsRaw = append(versionsRaw, sanitizedVersion)
-		versionsMap[sanitizedVersion] = p
+		versionsRaw = append(versionsRaw, p.GetVersion())
+		versionsMap[p.GetVersion()] = p
 	}
+	sorted := v.Sort(versionsRaw)
 
-	versions := make([]*version.Version, len(versionsRaw))
-	for i, raw := range versionsRaw {
-		v, _ := version.NewVersion(raw)
-		versions[i] = v
-	}
-
-	// After this, the versions are properly sorted
-	sort.Sort(version.Collection(versions))
-
-	return versionsMap[versions[len(versions)-1].Original()]
+	return versionsMap[sorted[len(sorted)-1]]
 }
 
 func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db PackageDatabase) ([]bf.Formula, error) {

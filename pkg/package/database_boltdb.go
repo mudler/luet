@@ -338,7 +338,7 @@ func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
 		if err != nil || len(packages) == 0 {
 			required = p
 		} else {
-			required = packages.Best()
+			required = packages.Best(nil)
 
 		}
 		return required, nil
