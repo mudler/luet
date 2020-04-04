@@ -18,7 +18,9 @@ package version
 
 import (
 	"errors"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	semver "github.com/hashicorp/go-version"
@@ -30,6 +32,10 @@ import (
 // that is understendable by the whole code
 type WrappedVersioner struct{}
 
+func DefaultVersioner() Versioner {
+	return &WrappedVersioner{}
+}
+
 func (w *WrappedVersioner) Validate(version string) error {
 	if !debversion.Valid(version) {
 		return errors.New("Invalid version")
@@ -39,6 +45,31 @@ func (w *WrappedVersioner) Validate(version string) error {
 
 func (w *WrappedVersioner) Sanitize(s string) string {
 	return strings.ReplaceAll(s, "_", "-")
+}
+
+func (w *WrappedVersioner) IsSemver(v string) bool {
+
+	// Taken https://github.com/hashicorp/go-version/blob/2b13044f5cdd3833370d41ce57d8bf3cec5e62b8/version.go#L44
+	// semver doesn't have a Validate method, so we should filter before
+	// going to use it blindly (it panics)
+	semverRegexp := regexp.MustCompile("^" + semver.SemverRegexpRaw + "$")
+
+	// See https://github.com/hashicorp/go-version/blob/2b13044f5cdd3833370d41ce57d8bf3cec5e62b8/version.go#L61
+	matches := semverRegexp.FindStringSubmatch(v)
+	if matches == nil {
+		return false
+	}
+	segmentsStr := strings.Split(matches[1], ".")
+	segments := make([]int64, len(segmentsStr))
+	for i, str := range segmentsStr {
+		val, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			return false
+		}
+
+		segments[i] = int64(val)
+	}
+	return (len(segments) != 0)
 }
 
 func (w *WrappedVersioner) Sort(toSort []string) []string {
@@ -55,21 +86,33 @@ func (w *WrappedVersioner) Sort(toSort []string) []string {
 	}
 
 	versions := make([]*semver.Version, len(versionsRaw))
-	for i, raw := range versionsRaw {
-		v, _ := semver.NewVersion(raw)
-		versions[i] = v
-	}
 
-	// Try first semver sorting
-	sort.Sort(semver.Collection(versions))
-	if len(versions) > 0 {
-		for _, v := range versions {
-			result = append(result, versionsMap[v.Original()])
-
+	// Check if all of them are semver, otherwise we cannot do a good comparison
+	allSemverCompliant := true
+	for _, raw := range versionsRaw {
+		if !w.IsSemver(raw) {
+			allSemverCompliant = false
 		}
-		return result
 	}
 
+	if allSemverCompliant {
+		for i, raw := range versionsRaw {
+			if w.IsSemver(raw) { // Make sure we include only semver, or go-version will panic
+				v, _ := semver.NewVersion(raw)
+				versions[i] = v
+			}
+		}
+
+		// Try first semver sorting
+		sort.Sort(semver.Collection(versions))
+		if len(versions) > 0 {
+			for _, v := range versions {
+				result = append(result, versionsMap[v.Original()])
+
+			}
+			return result
+		}
+	}
 	// Try with debian sorting
 	vs := make([]debversion.Version, len(versionsRaw))
 	for i, r := range versionsRaw {
@@ -80,6 +123,7 @@ func (w *WrappedVersioner) Sort(toSort []string) []string {
 	sort.Slice(vs, func(i, j int) bool {
 		return vs[i].LessThan(vs[j])
 	})
+
 	for _, v := range vs {
 		result = append(result, versionsMap[v.String()])
 	}
