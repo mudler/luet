@@ -27,12 +27,12 @@ import (
 // PackageSolver is an interface to a generic package solving algorithm
 type PackageSolver interface {
 	SetDefinitionDatabase(pkg.PackageDatabase)
-	Install(p []pkg.Package) (PackagesAssertions, error)
-	Uninstall(candidate pkg.Package, checkconflicts bool) ([]pkg.Package, error)
+	Install(p pkg.Packages) (PackagesAssertions, error)
+	Uninstall(candidate pkg.Package, checkconflicts bool) (pkg.Packages, error)
 	ConflictsWithInstalled(p pkg.Package) (bool, error)
-	ConflictsWith(p pkg.Package, ls []pkg.Package) (bool, error)
-	World() []pkg.Package
-	Upgrade(checkconflicts bool) ([]pkg.Package, PackagesAssertions, error)
+	ConflictsWith(p pkg.Package, ls pkg.Packages) (bool, error)
+	World() pkg.Packages
+	Upgrade(checkconflicts bool) (pkg.Packages, PackagesAssertions, error)
 
 	SetResolver(PackageResolver)
 
@@ -43,7 +43,7 @@ type PackageSolver interface {
 type Solver struct {
 	DefinitionDatabase pkg.PackageDatabase
 	SolverDatabase     pkg.PackageDatabase
-	Wanted             []pkg.Package
+	Wanted             pkg.Packages
 	InstalledDatabase  pkg.PackageDatabase
 
 	Resolver PackageResolver
@@ -72,11 +72,11 @@ func (s *Solver) SetResolver(r PackageResolver) {
 	s.Resolver = r
 }
 
-func (s *Solver) World() []pkg.Package {
+func (s *Solver) World() pkg.Packages {
 	return s.DefinitionDatabase.World()
 }
 
-func (s *Solver) Installed() []pkg.Package {
+func (s *Solver) Installed() pkg.Packages {
 
 	return s.InstalledDatabase.World()
 }
@@ -130,8 +130,8 @@ func (s *Solver) BuildWorld(includeInstalled bool) (bf.Formula, error) {
 	return bf.And(formulas...), nil
 }
 
-func (s *Solver) getList(db pkg.PackageDatabase, lsp []pkg.Package) ([]pkg.Package, error) {
-	var ls []pkg.Package
+func (s *Solver) getList(db pkg.PackageDatabase, lsp pkg.Packages) (pkg.Packages, error) {
+	var ls pkg.Packages
 
 	for _, pp := range lsp {
 		cp, err := db.FindPackage(pp)
@@ -141,7 +141,7 @@ func (s *Solver) getList(db pkg.PackageDatabase, lsp []pkg.Package) ([]pkg.Packa
 			if err != nil || len(packages) == 0 {
 				cp = pp
 			} else {
-				cp = pkg.Best(packages)
+				cp = packages.Best()
 			}
 		}
 		ls = append(ls, cp)
@@ -149,7 +149,7 @@ func (s *Solver) getList(db pkg.PackageDatabase, lsp []pkg.Package) ([]pkg.Packa
 	return ls, nil
 }
 
-func (s *Solver) ConflictsWith(pack pkg.Package, lsp []pkg.Package) (bool, error) {
+func (s *Solver) ConflictsWith(pack pkg.Package, lsp pkg.Packages) (bool, error) {
 	p, err := s.DefinitionDatabase.FindPackage(pack)
 	if err != nil {
 		p = pack //Relax search, otherwise we cannot compute solutions for packages not in definitions
@@ -210,14 +210,14 @@ func (s *Solver) ConflictsWithInstalled(p pkg.Package) (bool, error) {
 	return s.ConflictsWith(p, s.Installed())
 }
 
-func (s *Solver) Upgrade(checkconflicts bool) ([]pkg.Package, PackagesAssertions, error) {
+func (s *Solver) Upgrade(checkconflicts bool) (pkg.Packages, PackagesAssertions, error) {
 
 	// First get candidates that needs to be upgraded..
 
-	toUninstall := []pkg.Package{}
-	toInstall := []pkg.Package{}
+	toUninstall := pkg.Packages{}
+	toInstall := pkg.Packages{}
 
-	availableCache := map[string][]pkg.Package{}
+	availableCache := map[string]pkg.Packages{}
 	for _, p := range s.DefinitionDatabase.World() {
 		// Each one, should be expanded
 		availableCache[p.GetName()+p.GetCategory()] = append(availableCache[p.GetName()+p.GetCategory()], p)
@@ -229,7 +229,7 @@ func (s *Solver) Upgrade(checkconflicts bool) ([]pkg.Package, PackagesAssertions
 		installedcopy.CreatePackage(p)
 		packages, ok := availableCache[p.GetName()+p.GetCategory()]
 		if ok && len(packages) != 0 {
-			best := pkg.Best(packages)
+			best := packages.Best()
 			if best.GetVersion() != p.GetVersion() {
 				toUninstall = append(toUninstall, p)
 				toInstall = append(toInstall, best)
@@ -261,8 +261,8 @@ func (s *Solver) Upgrade(checkconflicts bool) ([]pkg.Package, PackagesAssertions
 
 // Uninstall takes a candidate package and return a list of packages that would be removed
 // in order to purge the candidate. Returns error if unsat.
-func (s *Solver) Uninstall(c pkg.Package, checkconflicts bool) ([]pkg.Package, error) {
-	var res []pkg.Package
+func (s *Solver) Uninstall(c pkg.Package, checkconflicts bool) (pkg.Packages, error) {
+	var res pkg.Packages
 	candidate, err := s.InstalledDatabase.FindPackage(c)
 	if err != nil {
 
@@ -272,13 +272,13 @@ func (s *Solver) Uninstall(c pkg.Package, checkconflicts bool) ([]pkg.Package, e
 		if err != nil || len(packages) == 0 {
 			candidate = c
 		} else {
-			candidate = pkg.Best(packages)
+			candidate = packages.Best()
 		}
 		//Relax search, otherwise we cannot compute solutions for packages not in definitions
 		//	return nil, errors.Wrap(err, "Package not found between installed")
 	}
 	// Build a fake "Installed" - Candidate and its requires tree
-	var InstalledMinusCandidate []pkg.Package
+	var InstalledMinusCandidate pkg.Packages
 
 	// TODO: Can be optimized
 	for _, i := range s.Installed() {
@@ -296,7 +296,7 @@ func (s *Solver) Uninstall(c pkg.Package, checkconflicts bool) ([]pkg.Package, e
 	s2 := NewSolver(pkg.NewInMemoryDatabase(false), s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
 	s2.SetResolver(s.Resolver)
 	// Get the requirements to install the candidate
-	asserts, err := s2.Install([]pkg.Package{candidate})
+	asserts, err := s2.Install(pkg.Packages{candidate})
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +403,7 @@ func (s *Solver) Solve() (PackagesAssertions, error) {
 
 // Install given a list of packages, returns package assertions to indicate the packages that must be installed in the system in order
 // to statisfy all the constraints
-func (s *Solver) Install(c []pkg.Package) (PackagesAssertions, error) {
+func (s *Solver) Install(c pkg.Packages) (PackagesAssertions, error) {
 
 	coll, err := s.getList(s.DefinitionDatabase, c)
 	if err != nil {

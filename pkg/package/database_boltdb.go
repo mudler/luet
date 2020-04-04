@@ -314,7 +314,7 @@ func (db *BoltDatabase) RemovePackage(p Package) error {
 	return nil
 }
 
-func (db *BoltDatabase) World() []Package {
+func (db *BoltDatabase) World() Packages {
 
 	var all []Package
 	// FIXME: This should all be locked in the db - for now forbid the solver to be run in threads.
@@ -324,7 +324,7 @@ func (db *BoltDatabase) World() []Package {
 			all = append(all, pack)
 		}
 	}
-	return all
+	return Packages(all)
 }
 
 func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
@@ -338,7 +338,7 @@ func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
 		if err != nil || len(packages) == 0 {
 			required = p
 		} else {
-			required = Best(packages)
+			required = packages.Best()
 
 		}
 		return required, nil
@@ -351,7 +351,7 @@ func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
 
 // FindPackages return the list of the packages beloging to cat/name  (any versions in requested range)
 // FIXME: Optimize, see inmemorydb
-func (db *BoltDatabase) FindPackages(p Package) ([]Package, error) {
+func (db *BoltDatabase) FindPackages(p Package) (Packages, error) {
 	// Provides: Treat as the replaced package here
 	if provided, err := db.getProvide(p); err == nil {
 		p = provided
@@ -370,11 +370,11 @@ func (db *BoltDatabase) FindPackages(p Package) ([]Package, error) {
 			versionsInWorld = append(versionsInWorld, w)
 		}
 	}
-	return versionsInWorld, nil
+	return Packages(versionsInWorld), nil
 }
 
 // FindPackageVersions return the list of the packages beloging to cat/name
-func (db *BoltDatabase) FindPackageVersions(p Package) ([]Package, error) {
+func (db *BoltDatabase) FindPackageVersions(p Package) (Packages, error) {
 	var versionsInWorld []Package
 	for _, w := range db.World() {
 		if w.GetName() != p.GetName() || w.GetCategory() != p.GetCategory() {
@@ -383,10 +383,10 @@ func (db *BoltDatabase) FindPackageVersions(p Package) ([]Package, error) {
 
 		versionsInWorld = append(versionsInWorld, w)
 	}
-	return versionsInWorld, nil
+	return Packages(versionsInWorld), nil
 }
 
-func (db *BoltDatabase) FindPackageLabel(labelKey string) ([]Package, error) {
+func (db *BoltDatabase) FindPackageLabel(labelKey string) (Packages, error) {
 	var ans []Package
 
 	for _, k := range db.GetPackages() {
@@ -398,10 +398,10 @@ func (db *BoltDatabase) FindPackageLabel(labelKey string) ([]Package, error) {
 			ans = append(ans, pack)
 		}
 	}
-	return ans, nil
+	return Packages(ans), nil
 }
 
-func (db *BoltDatabase) FindPackageLabelMatch(pattern string) ([]Package, error) {
+func (db *BoltDatabase) FindPackageLabelMatch(pattern string) (Packages, error) {
 	var ans []Package
 
 	re := regexp.MustCompile(pattern)
@@ -419,10 +419,10 @@ func (db *BoltDatabase) FindPackageLabelMatch(pattern string) ([]Package, error)
 		}
 	}
 
-	return ans, nil
+	return Packages(ans), nil
 }
 
-func (db *BoltDatabase) FindPackageMatch(pattern string) ([]Package, error) {
+func (db *BoltDatabase) FindPackageMatch(pattern string) (Packages, error) {
 	var ans []Package
 
 	re := regexp.MustCompile(pattern)
@@ -441,5 +441,5 @@ func (db *BoltDatabase) FindPackageMatch(pattern string) ([]Package, error) {
 		}
 	}
 
-	return ans, nil
+	return Packages(ans), nil
 }

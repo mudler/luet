@@ -74,7 +74,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 		return errors.Wrap(err, "Failed solving solution for upgrade")
 	}
 
-	toInstall := []pkg.Package{}
+	toInstall := pkg.Packages{}
 	for _, assertion := range solution {
 		// Be sure to filter from solutions packages already installed in the system
 		if _, err := s.Database.FindPackage(assertion.Package); err != nil && assertion.Value {
@@ -107,7 +107,7 @@ func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
 	return syncedRepos, nil
 }
 
-func (l *LuetInstaller) Swap(toRemove []pkg.Package, toInstall []pkg.Package, s *System) error {
+func (l *LuetInstaller) Swap(toRemove pkg.Packages, toInstall pkg.Packages, s *System) error {
 	syncedRepos, err := l.SyncRepositories(true)
 	if err != nil {
 		return err
@@ -115,7 +115,7 @@ func (l *LuetInstaller) Swap(toRemove []pkg.Package, toInstall []pkg.Package, s 
 	return l.swap(syncedRepos, toRemove, toInstall, s)
 }
 
-func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove []pkg.Package, toInstall []pkg.Package, s *System) error {
+func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, toInstall pkg.Packages, s *System) error {
 	// First match packages against repositories by priority
 	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
@@ -153,7 +153,7 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove []pkg.Package, t
 	return l.install(syncedRepos, toInstall, s)
 }
 
-func (l *LuetInstaller) Install(cp []pkg.Package, s *System, downloadOnly bool) error {
+func (l *LuetInstaller) Install(cp pkg.Packages, s *System, downloadOnly bool) error {
 	syncedRepos, err := l.SyncRepositories(true)
 	if err != nil {
 		return err
@@ -161,7 +161,7 @@ func (l *LuetInstaller) Install(cp []pkg.Package, s *System, downloadOnly bool) 
 	return l.install(syncedRepos, cp, s)
 }
 
-func (l *LuetInstaller) download(syncedRepos Repositories, cp []pkg.Package) error {
+func (l *LuetInstaller) download(syncedRepos Repositories, cp pkg.Packages) error {
 	toDownload := map[string]ArtifactMatch{}
 
 	// FIXME: This can be optimized. We don't need to re-match this to the repository
@@ -169,7 +169,7 @@ func (l *LuetInstaller) download(syncedRepos Repositories, cp []pkg.Package) err
 
 	// Gathers things to download
 	for _, currentPack := range cp {
-		matches := syncedRepos.PackageMatches([]pkg.Package{currentPack})
+		matches := syncedRepos.PackageMatches(pkg.Packages{currentPack})
 		if len(matches) == 0 {
 			return errors.New("Failed matching solutions against repository for " + currentPack.HumanReadableString() + " where are definitions coming from?!")
 		}
@@ -206,8 +206,8 @@ func (l *LuetInstaller) download(syncedRepos Repositories, cp []pkg.Package) err
 	return nil
 }
 
-func (l *LuetInstaller) install(syncedRepos Repositories, cp []pkg.Package, s *System) error {
-	var p []pkg.Package
+func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *System) error {
+	var p pkg.Packages
 
 	// Check if the package is installed first
 	for _, pi := range cp {
@@ -237,7 +237,7 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp []pkg.Package, s *S
 	syncedRepos.SyncDatabase(allRepos)
 	p = syncedRepos.ResolveSelectors(p)
 	toInstall := map[string]ArtifactMatch{}
-	var packagesToInstall []pkg.Package
+	var packagesToInstall pkg.Packages
 	var err error
 	var solution solver.PackagesAssertions
 
@@ -261,7 +261,7 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp []pkg.Package, s *S
 
 	// Gathers things to install
 	for _, currentPack := range packagesToInstall {
-		matches := syncedRepos.PackageMatches([]pkg.Package{currentPack})
+		matches := syncedRepos.PackageMatches(pkg.Packages{currentPack})
 		if len(matches) == 0 {
 			return errors.New("Failed matching solutions against repository for " + currentPack.HumanReadableString() + " where are definitions coming from?!")
 		}

@@ -46,7 +46,7 @@ var installCmd = &cobra.Command{
 	},
 	Long: `Install packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var toInstall []pkg.Package
+		var toInstall pkg.Packages
 		var systemDB pkg.PackageDatabase
 
 		for _, a := range args {

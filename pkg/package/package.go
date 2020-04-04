@@ -47,15 +47,15 @@ type Package interface {
 	GetPackageName() string
 	Requires([]*DefaultPackage) Package
 	Conflicts([]*DefaultPackage) Package
-	Revdeps(PackageDatabase) []Package
-	LabelDeps(PackageDatabase, string) []Package
+	Revdeps(PackageDatabase) Packages
+	LabelDeps(PackageDatabase, string) Packages
 
 	GetProvides() []*DefaultPackage
 	SetProvides([]*DefaultPackage) Package
 
 	GetRequires() []*DefaultPackage
 	GetConflicts() []*DefaultPackage
-	Expand(PackageDatabase) ([]Package, error)
+	Expand(PackageDatabase) (Packages, error)
 	SetCategory(string)
 
 	GetName() string
@@ -104,9 +104,11 @@ type Tree interface {
 	GetPackageSet() PackageDatabase
 	Prelude() string // A tree might have a prelude to be able to consume a tree
 	SetPackageSet(s PackageDatabase)
-	World() ([]Package, error)
+	World() (Packages, error)
 	FindPackage(Package) (Package, error)
 }
+
+type Packages []Package
 
 // >> Unmarshallers
 // DefaultPackageFromYaml decodes a package from yaml bytes
@@ -378,8 +380,8 @@ func (p *DefaultPackage) Matches(m Package) bool {
 	return false
 }
 
-func (p *DefaultPackage) Expand(definitiondb PackageDatabase) ([]Package, error) {
-	var versionsInWorld []Package
+func (p *DefaultPackage) Expand(definitiondb PackageDatabase) (Packages, error) {
+	var versionsInWorld Packages
 
 	all, err := definitiondb.FindPackages(p)
 	if err != nil {
@@ -398,8 +400,8 @@ func (p *DefaultPackage) Expand(definitiondb PackageDatabase) ([]Package, error)
 	return versionsInWorld, nil
 }
 
-func (p *DefaultPackage) Revdeps(definitiondb PackageDatabase) []Package {
-	var versionsInWorld []Package
+func (p *DefaultPackage) Revdeps(definitiondb PackageDatabase) Packages {
+	var versionsInWorld Packages
 	for _, w := range definitiondb.World() {
 		if w.Matches(p) {
 			continue
@@ -415,8 +417,8 @@ func (p *DefaultPackage) Revdeps(definitiondb PackageDatabase) []Package {
 	return versionsInWorld
 }
 
-func (p *DefaultPackage) LabelDeps(definitiondb PackageDatabase, labelKey string) []Package {
-	var pkgsWithLabelInWorld []Package
+func (p *DefaultPackage) LabelDeps(definitiondb PackageDatabase, labelKey string) Packages {
+	var pkgsWithLabelInWorld Packages
 	// TODO: check if integrate some index to improve
 	// research instead of iterate all list.
 	for _, w := range definitiondb.World() {
@@ -458,7 +460,7 @@ func (pack *DefaultPackage) RequiresContains(definitiondb PackageDatabase, s Pac
 	return false, nil
 }
 
-func Best(set []Package) Package {
+func (set Packages) Best() Package {
 	var versionsMap map[string]Package = make(map[string]Package)
 	if len(set) == 0 {
 		panic("Best needs a list with elements")

@@ -882,7 +882,7 @@ var _ = Describe("Solver", func() {
 			Expect(lst).To(ContainElement(a03))
 			Expect(lst).ToNot(ContainElement(old))
 			Expect(len(lst)).To(Equal(5))
-			p := pkg.Best(lst)
+			p := lst.Best()
 			Expect(p).To(Equal(a03))
 		})
 	})
