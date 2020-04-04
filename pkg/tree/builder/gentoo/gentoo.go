@@ -50,7 +50,7 @@ type GentooBuilder struct {
 }
 
 type EbuildParser interface {
-	ScanEbuild(string) ([]pkg.Package, error)
+	ScanEbuild(string) (pkg.Packages, error)
 }
 
 func (gb *GentooBuilder) scanEbuild(path string, db pkg.PackageDatabase) error {

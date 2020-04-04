@@ -23,12 +23,12 @@ import (
 )
 
 type Installer interface {
-	Install([]pkg.Package, *System, bool) error
+	Install(pkg.Packages, *System, bool) error
 	Uninstall(pkg.Package, *System) error
 	Upgrade(s *System) error
 	Repositories([]Repository)
 	SyncRepositories(bool) (Repositories, error)
-	Swap([]pkg.Package, []pkg.Package, *System) error
+	Swap(pkg.Packages, pkg.Packages, *System) error
 }
 
 type Client interface {

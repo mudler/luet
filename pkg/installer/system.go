@@ -9,6 +9,6 @@ type System struct {
 	Target   string
 }
 
-func (s *System) World() ([]pkg.Package, error) {
+func (s *System) World() (pkg.Packages, error) {
 	return s.Database.World(), nil
 }

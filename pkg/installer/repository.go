@@ -701,9 +701,9 @@ func (r Repositories) Less(i, j int) bool {
 	return r[i].GetPriority() < r[j].GetPriority()
 }
 
-func (r Repositories) World() []pkg.Package {
+func (r Repositories) World() pkg.Packages {
 	cache := map[string]pkg.Package{}
-	world := []pkg.Package{}
+	world := pkg.Packages{}
 
 	// Get Uniques. Walk in reverse so the definitions of most prio-repo overwrites lower ones
 	// In this way, when we will walk again later the deps sorting them by most higher prio we have better chance of success.
@@ -741,7 +741,7 @@ type PackageMatch struct {
 	Package pkg.Package
 }
 
-func (re Repositories) PackageMatches(p []pkg.Package) []PackageMatch {
+func (re Repositories) PackageMatches(p pkg.Packages) []PackageMatch {
 	// TODO: Better heuristic. here we pick the first repo that contains the atom, sorted by priority but
 	// we should do a permutations and get the best match, and in case there are more solutions the user should be able to pick
 	sort.Sort(re)
@@ -762,10 +762,10 @@ PACKAGE:
 
 }
 
-func (re Repositories) ResolveSelectors(p []pkg.Package) []pkg.Package {
+func (re Repositories) ResolveSelectors(p pkg.Packages) pkg.Packages {
 	// If a selector is given, get the best from each repo
 	sort.Sort(re) // respect prio
-	var matches []pkg.Package
+	var matches pkg.Packages
 PACKAGE:
 	for _, pack := range p {
 	REPOSITORY:
@@ -798,7 +798,7 @@ func (re Repositories) SearchPackages(p string, o LuetSearchOpts) []PackageMatch
 	var err error
 
 	for _, r := range re {
-		var repoMatches []pkg.Package
+		var repoMatches pkg.Packages
 
 		switch o.Mode {
 		case SRegexPkg:

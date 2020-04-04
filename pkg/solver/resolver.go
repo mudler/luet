@@ -77,11 +77,11 @@ type QLearningResolver struct {
 	Solver  PackageSolver
 	Formula bf.Formula
 
-	Targets []pkg.Package
-	Current []pkg.Package
+	Targets pkg.Packages
+	Current pkg.Packages
 
 	observedDelta       int
-	observedDeltaChoice []pkg.Package
+	observedDeltaChoice pkg.Packages
 
 	Agent *qlearning.SimpleAgent
 }
@@ -177,7 +177,7 @@ func (resolver *QLearningResolver) Try(c Choice) error {
 	packtoAdd := pkg.FromString(pack)
 	resolver.Attempted[pack+strconv.Itoa(int(c.Action))] = true // increase the count
 	s, _ := resolver.Solver.(*Solver)
-	var filtered []pkg.Package
+	var filtered pkg.Packages
 
 	switch c.Action {
 	case ActionAdded:

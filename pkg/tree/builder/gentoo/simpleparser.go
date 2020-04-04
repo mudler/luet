@@ -323,7 +323,7 @@ func SourceFile(ctx context.Context, path string, pkg *_gentoo.GentooPackage) (m
 }
 
 // ScanEbuild returns a list of packages (always one with SimpleEbuildParser) decoded from an ebuild.
-func (ep *SimpleEbuildParser) ScanEbuild(path string) ([]pkg.Package, error) {
+func (ep *SimpleEbuildParser) ScanEbuild(path string) (pkg.Packages, error) {
 	Debug("Starting parsing of ebuild", path)
 
 	pkgstr := filepath.Base(path)
@@ -332,7 +332,7 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string) ([]pkg.Package, error) {
 
 	gp, err := _gentoo.ParsePackageStr(pkgstr)
 	if err != nil {
-		return []pkg.Package{}, errors.New("Error on parsing package string")
+		return pkg.Packages{}, errors.New("Error on parsing package string")
 	}
 
 	pack := &pkg.DefaultPackage{
@@ -350,7 +350,7 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string) ([]pkg.Package, error) {
 	vars, err := SourceFile(timeout, path, gp)
 	if err != nil {
 		Error("Error on source file ", pack.Name, ": ", err)
-		return []pkg.Package{}, err
+		return pkg.Packages{}, err
 	}
 
 	// TODO: Handle this a bit better
@@ -405,8 +405,8 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string) ([]pkg.Package, error) {
 		gRDEPEND, err := ParseRDEPEND(rdepend.String())
 		if err != nil {
 			Warning("Error on parsing RDEPEND for package ", pack.Category+"/"+pack.Name, err)
-			return []pkg.Package{pack}, nil
-			//	return []pkg.Package{}, err
+			return pkg.Packages{pack}, nil
+			//	return pkg.Packages{}, err
 		}
 
 		pack.PackageConflicts = []*pkg.DefaultPackage{}
@@ -436,5 +436,5 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string) ([]pkg.Package, error) {
 	Debug("Finished processing ebuild", path, "deps ", len(pack.PackageRequires))
 
 	//TODO: Deps and conflicts
-	return []pkg.Package{pack}, nil
+	return pkg.Packages{pack}, nil
 }
