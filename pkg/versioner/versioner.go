@@ -50,12 +50,11 @@ func (w *WrappedVersioner) Sort(toSort []string) []string {
 	result := []string{}
 	for _, v := range toSort {
 		sanitizedVersion := w.Sanitize(v)
-		versionsMap[v] = sanitizedVersion
+		versionsMap[sanitizedVersion] = v
 		versionsRaw = append(versionsRaw, sanitizedVersion)
 	}
 
 	versions := make([]*semver.Version, len(versionsRaw))
-
 	for i, raw := range versionsRaw {
 		v, _ := semver.NewVersion(raw)
 		versions[i] = v
