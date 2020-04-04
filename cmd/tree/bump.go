@@ -41,6 +41,7 @@ func NewTreeBumpCommand() *cobra.Command {
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			spec, _ := cmd.Flags().GetString("definition-file")
+			toStdout, _ := cmd.Flags().GetBool("to-stdout")
 			pack, err := tree.ReadDefinitionFile(spec)
 			if err != nil {
 				Fatal(err.Error())
@@ -52,16 +53,26 @@ func NewTreeBumpCommand() *cobra.Command {
 				Fatal("Error on increment build version: " + err.Error())
 			}
 
-			err = tree.WriteDefinitionFile(&pack, spec)
-			if err != nil {
-				Fatal("Error on write definition file: " + err.Error())
-			}
+			if toStdout {
+				data, err := pack.Yaml()
+				if err != nil {
+					Fatal("Error on yaml conversion: " + err.Error())
+				}
+				fmt.Println(string(data))
+			} else {
 
-			fmt.Printf("Bumped package %s/%s-%s.\n", pack.Category, pack.Name, pack.Version)
+				err = tree.WriteDefinitionFile(&pack, spec)
+				if err != nil {
+					Fatal("Error on write definition file: " + err.Error())
+				}
+
+				fmt.Printf("Bumped package %s/%s-%s.\n", pack.Category, pack.Name, pack.Version)
+			}
 		},
 	}
 
 	ans.Flags().StringP("definition-file", "f", "", "Path of the definition to bump.")
+	ans.Flags().BoolP("to-stdout", "o", false, "Bump package to output.")
 
 	return ans
 }
