@@ -27,8 +27,8 @@ import (
 type FakeParser struct {
 }
 
-func (f *FakeParser) ScanEbuild(path string) ([]pkg.Package, error) {
-	return []pkg.Package{&pkg.DefaultPackage{Name: path}}, nil
+func (f *FakeParser) ScanEbuild(path string) (pkg.Packages, error) {
+	return pkg.Packages{&pkg.DefaultPackage{Name: path}}, nil
 }
 
 var _ = Describe("GentooBuilder", func() {
