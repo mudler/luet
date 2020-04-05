@@ -14,12 +14,12 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package pkg_test
+package version_test
 
 import (
 	gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 
-	. "github.com/mudler/luet/pkg/package"
+	. "github.com/mudler/luet/pkg/versioner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

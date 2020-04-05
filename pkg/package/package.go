@@ -749,3 +749,35 @@ end:
 
 	return nil
 }
+
+func (p *DefaultPackage) SelectorMatchVersion(v string) (bool, error) {
+	if !p.IsSelector() {
+		return false, errors.New("Package is not a selector")
+	}
+
+	vS, err := version.ParseVersion(p.GetVersion())
+	if err != nil {
+		return false, err
+	}
+
+	vSI, err := version.ParseVersion(v)
+	if err != nil {
+		return false, err
+	}
+
+	return version.PackageAdmit(vS, vSI)
+}
+
+func (p *DefaultPackage) VersionMatchSelector(selector string) (bool, error) {
+	vS, err := version.ParseVersion(selector)
+	if err != nil {
+		return false, err
+	}
+
+	vSI, err := version.ParseVersion(p.GetVersion())
+	if err != nil {
+		return false, err
+	}
+
+	return version.PackageAdmit(vS, vSI)
+}

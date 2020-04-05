@@ -23,6 +23,7 @@ import (
 
 	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	pkg "github.com/mudler/luet/pkg/package"
+	version "github.com/mudler/luet/pkg/versioner"
 )
 
 func CreateRegexArray(rgx []string) ([]*regexp.Regexp, error) {
@@ -53,14 +54,14 @@ func ParsePackageStr(p string) (*pkg.DefaultPackage, error) {
 	pkgVersion := ""
 	if gp.VersionBuild != "" {
 		pkgVersion = fmt.Sprintf("%s%s%s+%s",
-			pkg.PkgSelectorConditionFromInt(gp.Condition.Int()).String(),
+			version.PkgSelectorConditionFromInt(gp.Condition.Int()).String(),
 			gp.Version,
 			gp.VersionSuffix,
 			gp.VersionBuild,
 		)
 	} else {
 		pkgVersion = fmt.Sprintf("%s%s%s",
-			pkg.PkgSelectorConditionFromInt(gp.Condition.Int()).String(),
+			version.PkgSelectorConditionFromInt(gp.Condition.Int()).String(),
 			gp.Version,
 			gp.VersionSuffix,
 		)
