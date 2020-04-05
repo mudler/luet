@@ -43,6 +43,23 @@ func (w *WrappedVersioner) Validate(version string) error {
 	return nil
 }
 
+func (w *WrappedVersioner) ValidateSelector(version string, selector string) bool {
+	vS, err := ParseVersion(selector)
+	if err != nil {
+		return false
+	}
+
+	vSI, err := ParseVersion(version)
+	if err != nil {
+		return false
+	}
+	ok, err := PackageAdmit(vS, vSI)
+	if err != nil {
+		return false
+	}
+	return ok
+}
+
 func (w *WrappedVersioner) Sanitize(s string) string {
 	return strings.ReplaceAll(s, "_", "-")
 }

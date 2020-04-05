@@ -91,8 +91,8 @@ type Package interface {
 	MatchLabel(*regexp.Regexp) bool
 
 	IsSelector() bool
-	VersionMatchSelector(string) (bool, error)
-	SelectorMatchVersion(string) (bool, error)
+	VersionMatchSelector(string, version.Versioner) (bool, error)
+	SelectorMatchVersion(string, version.Versioner) (bool, error)
 
 	String() string
 	HumanReadableString() string
@@ -387,7 +387,7 @@ func (p *DefaultPackage) Expand(definitiondb PackageDatabase) (Packages, error) 
 		return nil, err
 	}
 	for _, w := range all {
-		match, err := p.SelectorMatchVersion(w.GetVersion())
+		match, err := p.SelectorMatchVersion(w.GetVersion(), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -750,34 +750,21 @@ end:
 	return nil
 }
 
-func (p *DefaultPackage) SelectorMatchVersion(v string) (bool, error) {
+func (p *DefaultPackage) SelectorMatchVersion(ver string, v version.Versioner) (bool, error) {
 	if !p.IsSelector() {
 		return false, errors.New("Package is not a selector")
 	}
-
-	vS, err := version.ParseVersion(p.GetVersion())
-	if err != nil {
-		return false, err
+	if v == nil {
+		v = &version.WrappedVersioner{}
 	}
 
-	vSI, err := version.ParseVersion(v)
-	if err != nil {
-		return false, err
-	}
-
-	return version.PackageAdmit(vS, vSI)
+	return v.ValidateSelector(ver, p.GetVersion()), nil
 }
 
-func (p *DefaultPackage) VersionMatchSelector(selector string) (bool, error) {
-	vS, err := version.ParseVersion(selector)
-	if err != nil {
-		return false, err
+func (p *DefaultPackage) VersionMatchSelector(selector string, v version.Versioner) (bool, error) {
+	if v == nil {
+		v = &version.WrappedVersioner{}
 	}
 
-	vSI, err := version.ParseVersion(p.GetVersion())
-	if err != nil {
-		return false, err
-	}
-
-	return version.PackageAdmit(vS, vSI)
+	return v.ValidateSelector(p.GetVersion(), selector), nil
 }

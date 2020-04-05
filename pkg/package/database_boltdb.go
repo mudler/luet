@@ -233,7 +233,7 @@ func (db *BoltDatabase) getProvide(p Package) (Package, error) {
 
 		for ve, _ := range versions {
 
-			match, err := p.VersionMatchSelector(ve)
+			match, err := p.VersionMatchSelector(ve, nil)
 			if err != nil {
 				return nil, errors.Wrap(err, "Error on match version")
 			}
@@ -362,7 +362,7 @@ func (db *BoltDatabase) FindPackages(p Package) (Packages, error) {
 			continue
 		}
 
-		match, err := p.SelectorMatchVersion(w.GetVersion())
+		match, err := p.SelectorMatchVersion(w.GetVersion(), nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error on match selector")
 		}

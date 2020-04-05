@@ -22,4 +22,6 @@ type Versioner interface {
 	Sanitize(string) string
 	Validate(string) error
 	Sort([]string) []string
+
+	ValidateSelector(version string, selector string) bool
 }

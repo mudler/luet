@@ -178,7 +178,7 @@ func (db *InMemoryDatabase) getProvide(p Package) (Package, error) {
 
 		for ve, _ := range versions {
 
-			match, err := p.VersionMatchSelector(ve)
+			match, err := p.VersionMatchSelector(ve, nil)
 			if err != nil {
 				return nil, errors.Wrap(err, "Error on match version")
 			}
@@ -252,7 +252,7 @@ func (db *InMemoryDatabase) FindPackages(p Package) (Packages, error) {
 	}
 	var versionsInWorld []Package
 	for ve, _ := range versions {
-		match, err := p.SelectorMatchVersion(ve)
+		match, err := p.SelectorMatchVersion(ve, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error on match selector")
 		}
