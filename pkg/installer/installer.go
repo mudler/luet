@@ -326,7 +326,10 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *Sy
 		// TODO: Lower those errors as warning
 		for _, w := range p {
 			// Finalizers needs to run in order and in sequence.
-			ordered := solution.Order(allRepos, w.GetFingerPrint())
+			ordered, err := solution.Order(allRepos, w.GetFingerPrint())
+			if err != nil {
+				return errors.Wrap(err, "While order a solution for "+w.HumanReadableString())
+			}
 		ORDER:
 			for _, ass := range ordered {
 				if ass.Value {

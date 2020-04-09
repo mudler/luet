@@ -72,7 +72,8 @@ var _ = Describe("Decoder", func() {
 
 				Expect(len(solution)).To(Equal(6))
 				Expect(err).ToNot(HaveOccurred())
-				solution = solution.Order(dbDefinitions, A.GetFingerPrint())
+				solution, err = solution.Order(dbDefinitions, A.GetFingerPrint())
+				Expect(err).ToNot(HaveOccurred())
 				//	Expect(len(solution)).To(Equal(6))
 				Expect(solution[0].Package.GetName()).To(Equal("G"))
 				Expect(solution[1].Package.GetName()).To(Equal("H"))
@@ -188,7 +189,8 @@ var _ = Describe("Decoder", func() {
 
 			Expect(len(solution)).To(Equal(6))
 			Expect(err).ToNot(HaveOccurred())
-			solution = solution.Order(dbDefinitions, A.GetFingerPrint())
+			solution, err = solution.Order(dbDefinitions, A.GetFingerPrint())
+			Expect(err).ToNot(HaveOccurred())
 			//	Expect(len(solution)).To(Equal(6))
 			Expect(solution[0].Package.GetName()).To(Equal("G"))
 			Expect(solution[1].Package.GetName()).To(Equal("H"))
@@ -206,7 +208,8 @@ var _ = Describe("Decoder", func() {
 
 			Expect(len(solution)).To(Equal(6))
 			Expect(err).ToNot(HaveOccurred())
-			solution = solution.Order(dbDefinitions, B.GetFingerPrint())
+			solution, err = solution.Order(dbDefinitions, B.GetFingerPrint())
+			Expect(err).ToNot(HaveOccurred())
 			hash2 := solution.AssertionHash()
 
 			//	Expect(len(solution)).To(Equal(6))
@@ -243,7 +246,11 @@ var _ = Describe("Decoder", func() {
 
 			solution2, err := s.Install([]pkg.Package{Z})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(solution.Order(dbDefinitions, Y.GetFingerPrint()).Drop(Y).AssertionHash() == solution2.Order(dbDefinitions, Z.GetFingerPrint()).Drop(Z).AssertionHash()).To(BeTrue())
+			orderY, err := solution.Order(dbDefinitions, Y.GetFingerPrint())
+			Expect(err).ToNot(HaveOccurred())
+			orderZ, err := solution2.Order(dbDefinitions, Z.GetFingerPrint())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(orderY.Drop(Y).AssertionHash() == orderZ.Drop(Z).AssertionHash()).To(BeTrue())
 		})
 
 		It("Hashes them, Cuts them and could be used for comparison", func() {
@@ -267,9 +274,13 @@ var _ = Describe("Decoder", func() {
 
 			solution2, err := s.Install([]pkg.Package{Z})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(solution.Order(dbDefinitions, Y.GetFingerPrint()).Cut(Y).Drop(Y)).To(Equal(solution2.Order(dbDefinitions, Z.GetFingerPrint()).Cut(Z).Drop(Z)))
+			orderY, err := solution.Order(dbDefinitions, Y.GetFingerPrint())
+			Expect(err).ToNot(HaveOccurred())
+			orderZ, err := solution2.Order(dbDefinitions, Z.GetFingerPrint())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(orderY.Cut(Y).Drop(Y)).To(Equal(orderZ.Cut(Z).Drop(Z)))
 
-			Expect(solution.Order(dbDefinitions, Y.GetFingerPrint()).Cut(Y).Drop(Y).AssertionHash()).To(Equal(solution2.Order(dbDefinitions, Z.GetFingerPrint()).Cut(Z).Drop(Z).AssertionHash()))
+			Expect(orderY.Cut(Y).Drop(Y).AssertionHash()).To(Equal(orderZ.Cut(Z).Drop(Z).AssertionHash()))
 		})
 
 	})

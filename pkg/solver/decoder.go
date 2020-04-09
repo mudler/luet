@@ -23,6 +23,7 @@ import (
 
 	pkg "github.com/mudler/luet/pkg/package"
 	toposort "github.com/philopon/go-toposort"
+	"github.com/pkg/errors"
 	"github.com/stevenle/topsort"
 )
 
@@ -145,7 +146,7 @@ func (assertions PackagesAssertions) Search(f string) *PackageAssert {
 	return nil
 }
 
-func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fingerprint string) PackagesAssertions {
+func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fingerprint string) (PackagesAssertions, error) {
 
 	orderedAssertions := PackagesAssertions{}
 	unorderedAssertions := PackagesAssertions{}
@@ -191,19 +192,19 @@ func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fin
 	}
 	result, err := graph.TopSort(fingerprint)
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "fail on sorting "+fingerprint)
 	}
 	for _, res := range result {
 		a, ok := tmpMap[res]
 		if !ok {
-			panic("fail looking for " + res)
+			return nil, errors.New("fail looking for " + res)
 			//	continue
 		}
 		orderedAssertions = append(orderedAssertions, a)
 		//	orderedAssertions = append(PackagesAssertions{a}, orderedAssertions...) // push upfront
 	}
 	//helpers.ReverseAny(orderedAssertions)
-	return orderedAssertions
+	return orderedAssertions, nil
 }
 
 func (assertions PackagesAssertions) Explain() string {

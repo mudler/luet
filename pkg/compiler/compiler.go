@@ -438,7 +438,10 @@ func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssert
 		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().HumanReadableString())
 	}
 
-	dependencies := solution.Order(cs.Database, p.GetPackage().GetFingerPrint())
+	dependencies, err := solution.Order(cs.Database, p.GetPackage().GetFingerPrint())
+	if err != nil {
+		return nil, errors.Wrap(err, "While order a solution for "+p.GetPackage().HumanReadableString())
+	}
 
 	assertions := solver.PackagesAssertions{}
 	for _, assertion := range dependencies { //highly dependent on the order
