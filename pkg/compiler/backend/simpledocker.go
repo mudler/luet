@@ -268,7 +268,7 @@ func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLaye
 		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed unmarshalling json response: "+string(out))
 	}
 
-	if config.LuetCfg.GetLogging().Level == "debug" {
+	if config.LuetCfg.GetGeneral().Debug {
 		summary := compiler.ComputeArtifactLayerSummary(diffs)
 		for _, l := range summary.Layers {
 			Debug(fmt.Sprintf("Diff %s -> %s: add %d (%d bytes), del %d (%d bytes), change %d (%d bytes)",
