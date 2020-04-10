@@ -146,14 +146,19 @@ func NewTreeValidateCommand() *cobra.Command {
 				all := p.GetRequires()
 				all = append(all, p.GetConflicts()...)
 				for _, r := range all {
-
-					deps, err := reciper.GetDatabase().FindPackages(
-						&pkg.DefaultPackage{
-							Name:     r.GetName(),
-							Category: r.GetCategory(),
-							Version:  r.GetVersion(),
-						},
-					)
+					var deps pkg.Packages
+					var err error
+					if r.IsSelector() {
+						deps, err = reciper.GetDatabase().FindPackages(
+							&pkg.DefaultPackage{
+								Name:     r.GetName(),
+								Category: r.GetCategory(),
+								Version:  r.GetVersion(),
+							},
+						)
+					} else {
+						deps = append(deps, r)
+					}
 
 					if err != nil || len(deps) < 1 {
 						if err != nil {
