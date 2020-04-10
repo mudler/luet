@@ -248,12 +248,13 @@ func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLaye
 	cmd := exec.Command("container-diff", diffargs...)
 	cmd.Stderr = &errorBuffer
 	out, err := cmd.Output()
-	if err != nil {
-		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed Resolving layer diffs: "+string(out))
-	}
 
 	if string(errorBuffer.Bytes()) != "" {
 		Warning("container-diff errored with: " + string(errorBuffer.Bytes()))
+	}
+
+	if err != nil {
+		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed Resolving layer diffs: "+string(out))
 	}
 
 	if config.LuetCfg.GetGeneral().ShowBuildOutput {
