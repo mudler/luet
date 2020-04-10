@@ -185,8 +185,9 @@ func NewTreeValidateCommand() *cobra.Command {
 						if withSolver {
 							Spinner(32)
 							solution, err := depSolver.Install(pkg.Packages{r})
+							ass := solution.SearchByName(r.GetPackageName())
 							if err == nil {
-								_, err = solution.Order(reciper.GetDatabase(), r.GetFingerPrint())
+								_, err = solution.Order(reciper.GetDatabase(), ass.Package.GetFingerPrint())
 							}
 							SpinnerStop()
 
