@@ -133,12 +133,14 @@ func init() {
 	pflags.BoolP("debug", "d", false, "verbose output")
 	pflags.Bool("fatal", false, "Enables Warnings to exit")
 
-	u, err := user.Current()
-	if err != nil {
-		Fatal("failed to retrieve user identity:", err.Error())
-	}
 	sameOwner := false
-	if u.Uid == "0" {
+	u, err := user.Current()
+	// os/user doesn't work in from scratch environments
+	if err != nil {
+		Warning("failed to retrieve user identity:", err.Error())
+		sameOwner = true
+	}
+	if u != nil && u.Uid == "0" {
 		sameOwner = true
 	}
 	pflags.Bool("same-owner", sameOwner, "Maintain same owner on uncompress.")

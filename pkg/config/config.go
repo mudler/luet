@@ -212,8 +212,9 @@ func GenDefault(viper *v.Viper) {
 	viper.SetDefault("general.spinner_charset", 22)
 	viper.SetDefault("general.fatal_warnings", false)
 
-	u, _ := user.Current()
-	if u.Uid == "0" {
+	u, err := user.Current()
+	// os/user doesn't work in from scratch environments
+	if err != nil || u.Uid == "0" {
 		viper.SetDefault("general.same_owner", true)
 	} else {
 		viper.SetDefault("general.same_owner", false)
