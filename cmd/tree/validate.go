@@ -81,6 +81,34 @@ func NewTreeValidateCommand() *cobra.Command {
 
 			for _, p := range reciper.GetDatabase().World() {
 
+				found, err := reciper.GetDatabase().FindPackages(
+					&pkg.DefaultPackage{
+						Name:     p.GetName(),
+						Category: p.GetCategory(),
+						Version:  ">=0",
+					},
+				)
+
+				if err != nil || len(found) < 1 {
+					if err != nil {
+						errstr = err.Error()
+					} else {
+						errstr = "No packages"
+					}
+					Error(fmt.Sprintf("%s/%s-%s: Broken. No versions could be found by database %s",
+						p.GetCategory(), p.GetName(), p.GetVersion(),
+						errstr,
+					))
+
+					errors = append(errors,
+						fmt.Sprintf("%s/%s-%s: Broken. No versions could be found by database %s",
+							p.GetCategory(), p.GetName(), p.GetVersion(),
+							errstr,
+						))
+
+					brokenPkgs++
+				}
+
 				pkgstr := fmt.Sprintf("%s/%s-%s", p.GetCategory(), p.GetName(),
 					p.GetVersion())
 
@@ -115,15 +143,22 @@ func NewTreeValidateCommand() *cobra.Command {
 				}
 				Info("Checking package "+fmt.Sprintf("%s/%s-%s", p.GetCategory(), p.GetName(), p.GetVersion()), "with", len(p.GetRequires()), "dependencies.")
 
-				for _, r := range p.GetRequires() {
-
-					deps, err := reciper.GetDatabase().FindPackages(
-						&pkg.DefaultPackage{
-							Name:     r.GetName(),
-							Category: r.GetCategory(),
-							Version:  r.GetVersion(),
-						},
-					)
+				all := p.GetRequires()
+				all = append(all, p.GetConflicts()...)
+				for _, r := range all {
+					var deps pkg.Packages
+					var err error
+					if r.IsSelector() {
+						deps, err = reciper.GetDatabase().FindPackages(
+							&pkg.DefaultPackage{
+								Name:     r.GetName(),
+								Category: r.GetCategory(),
+								Version:  r.GetVersion(),
+							},
+						)
+					} else {
+						deps = append(deps, r)
+					}
 
 					if err != nil || len(deps) < 1 {
 						if err != nil {
@@ -154,7 +189,11 @@ func NewTreeValidateCommand() *cobra.Command {
 
 						if withSolver {
 							Spinner(32)
-							_, err := depSolver.Install([]pkg.Package{r})
+							solution, err := depSolver.Install(pkg.Packages{r})
+							ass := solution.SearchByName(r.GetPackageName())
+							if err == nil {
+								_, err = solution.Order(reciper.GetDatabase(), ass.Package.GetFingerPrint())
+							}
 							SpinnerStop()
 
 							if err != nil {

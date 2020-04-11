@@ -108,7 +108,7 @@ var searchCmd = &cobra.Command{
 			system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
 
 			var err error
-			iMatches := []pkg.Package{}
+			iMatches := pkg.Packages{}
 			if searchWithLabel {
 				iMatches, err = system.Database.FindPackageLabel(args[0])
 			} else if searchWithLabelMatch {

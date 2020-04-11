@@ -16,6 +16,7 @@
 package backend
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -241,9 +242,17 @@ func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLaye
 		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while creating tempdir for rootfs")
 	}
 	defer os.RemoveAll(tmpdiffs) // clean up
+	var errorBuffer bytes.Buffer
 
 	diffargs := []string{"diff", fromImage, toImage, "-v", "error", "-q", "--type=file", "-j", "-n", "-c", tmpdiffs}
-	out, err := exec.Command("container-diff", diffargs...).Output()
+	cmd := exec.Command("container-diff", diffargs...)
+	cmd.Stderr = &errorBuffer
+	out, err := cmd.Output()
+
+	if string(errorBuffer.Bytes()) != "" {
+		Warning("container-diff errored with: " + string(errorBuffer.Bytes()))
+	}
+
 	if err != nil {
 		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed Resolving layer diffs: "+string(out))
 	}
@@ -259,7 +268,7 @@ func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLaye
 		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed unmarshalling json response: "+string(out))
 	}
 
-	if config.LuetCfg.GetLogging().Level == "debug" {
+	if config.LuetCfg.GetGeneral().Debug {
 		summary := compiler.ComputeArtifactLayerSummary(diffs)
 		for _, l := range summary.Layers {
 			Debug(fmt.Sprintf("Diff %s -> %s: add %d (%d bytes), del %d (%d bytes), change %d (%d bytes)",

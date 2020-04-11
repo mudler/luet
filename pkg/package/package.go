@@ -23,15 +23,14 @@ import (
 	"io"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 
 	gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	"github.com/crillab/gophersat/bf"
 	"github.com/ghodss/yaml"
-	version "github.com/hashicorp/go-version"
 	"github.com/jinzhu/copier"
+	version "github.com/mudler/luet/pkg/versioner"
 	"github.com/pkg/errors"
 )
 
@@ -47,15 +46,15 @@ type Package interface {
 	GetPackageName() string
 	Requires([]*DefaultPackage) Package
 	Conflicts([]*DefaultPackage) Package
-	Revdeps(PackageDatabase) []Package
-	LabelDeps(PackageDatabase, string) []Package
+	Revdeps(PackageDatabase) Packages
+	LabelDeps(PackageDatabase, string) Packages
 
 	GetProvides() []*DefaultPackage
 	SetProvides([]*DefaultPackage) Package
 
 	GetRequires() []*DefaultPackage
 	GetConflicts() []*DefaultPackage
-	Expand(PackageDatabase) ([]Package, error)
+	Expand(PackageDatabase) (Packages, error)
 	SetCategory(string)
 
 	GetName() string
@@ -92,8 +91,8 @@ type Package interface {
 	MatchLabel(*regexp.Regexp) bool
 
 	IsSelector() bool
-	VersionMatchSelector(string) (bool, error)
-	SelectorMatchVersion(string) (bool, error)
+	VersionMatchSelector(string, version.Versioner) (bool, error)
+	SelectorMatchVersion(string, version.Versioner) (bool, error)
 
 	String() string
 	HumanReadableString() string
@@ -104,9 +103,11 @@ type Tree interface {
 	GetPackageSet() PackageDatabase
 	Prelude() string // A tree might have a prelude to be able to consume a tree
 	SetPackageSet(s PackageDatabase)
-	World() ([]Package, error)
+	World() (Packages, error)
 	FindPackage(Package) (Package, error)
 }
+
+type Packages []Package
 
 // >> Unmarshallers
 // DefaultPackageFromYaml decodes a package from yaml bytes
@@ -378,15 +379,15 @@ func (p *DefaultPackage) Matches(m Package) bool {
 	return false
 }
 
-func (p *DefaultPackage) Expand(definitiondb PackageDatabase) ([]Package, error) {
-	var versionsInWorld []Package
+func (p *DefaultPackage) Expand(definitiondb PackageDatabase) (Packages, error) {
+	var versionsInWorld Packages
 
 	all, err := definitiondb.FindPackages(p)
 	if err != nil {
 		return nil, err
 	}
 	for _, w := range all {
-		match, err := p.SelectorMatchVersion(w.GetVersion())
+		match, err := p.SelectorMatchVersion(w.GetVersion(), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -398,8 +399,8 @@ func (p *DefaultPackage) Expand(definitiondb PackageDatabase) ([]Package, error)
 	return versionsInWorld, nil
 }
 
-func (p *DefaultPackage) Revdeps(definitiondb PackageDatabase) []Package {
-	var versionsInWorld []Package
+func (p *DefaultPackage) Revdeps(definitiondb PackageDatabase) Packages {
+	var versionsInWorld Packages
 	for _, w := range definitiondb.World() {
 		if w.Matches(p) {
 			continue
@@ -415,8 +416,8 @@ func (p *DefaultPackage) Revdeps(definitiondb PackageDatabase) []Package {
 	return versionsInWorld
 }
 
-func (p *DefaultPackage) LabelDeps(definitiondb PackageDatabase, labelKey string) []Package {
-	var pkgsWithLabelInWorld []Package
+func (p *DefaultPackage) LabelDeps(definitiondb PackageDatabase, labelKey string) Packages {
+	var pkgsWithLabelInWorld Packages
 	// TODO: check if integrate some index to improve
 	// research instead of iterate all list.
 	for _, w := range definitiondb.World() {
@@ -458,7 +459,13 @@ func (pack *DefaultPackage) RequiresContains(definitiondb PackageDatabase, s Pac
 	return false, nil
 }
 
-func Best(set []Package) Package {
+// Best returns the best version of the package (the most bigger) from a list
+// Accepts a versioner interface to change the ordering policy. If null is supplied
+// It defaults to version.WrappedVersioner which supports both semver and debian versioning
+func (set Packages) Best(v version.Versioner) Package {
+	if v == nil {
+		v = &version.WrappedVersioner{}
+	}
 	var versionsMap map[string]Package = make(map[string]Package)
 	if len(set) == 0 {
 		panic("Best needs a list with elements")
@@ -469,17 +476,9 @@ func Best(set []Package) Package {
 		versionsRaw = append(versionsRaw, p.GetVersion())
 		versionsMap[p.GetVersion()] = p
 	}
+	sorted := v.Sort(versionsRaw)
 
-	versions := make([]*version.Version, len(versionsRaw))
-	for i, raw := range versionsRaw {
-		v, _ := version.NewVersion(raw)
-		versions[i] = v
-	}
-
-	// After this, the versions are properly sorted
-	sort.Sort(version.Collection(versions))
-
-	return versionsMap[versions[len(versions)-1].Original()]
+	return versionsMap[sorted[len(sorted)-1]]
 }
 
 func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db PackageDatabase) ([]bf.Formula, error) {
@@ -749,4 +748,23 @@ end:
 		gp.Version, gp.VersionSuffix, buildPrefix, buildId)
 
 	return nil
+}
+
+func (p *DefaultPackage) SelectorMatchVersion(ver string, v version.Versioner) (bool, error) {
+	if !p.IsSelector() {
+		return false, errors.New("Package is not a selector")
+	}
+	if v == nil {
+		v = &version.WrappedVersioner{}
+	}
+
+	return v.ValidateSelector(ver, p.GetVersion()), nil
+}
+
+func (p *DefaultPackage) VersionMatchSelector(selector string, v version.Versioner) (bool, error) {
+	if v == nil {
+		v = &version.WrappedVersioner{}
+	}
+
+	return v.ValidateSelector(p.GetVersion(), selector), nil
 }

@@ -56,7 +56,7 @@ const (
 
 const (
 	RegexCatString     = `(^[a-z]+[0-9]*[a-z]*[-]*[a-z]+[0-9]*[a-z]*|^virtual)`
-	RegexPkgNameString = `([a-zA-Z]*[0-9a-zA-Z\.\-_]*[a-zA-Z0-9]+|[a-zA-Z]+[+]+)`
+	RegexPkgNameString = `([a-zA-Z]*[0-9a-zA-Z\.\-_]*[a-zA-Z0-9]+|[a-zA-Z\-]+[+]+[-]+[0-9a-zA-Z\.]*|[a-zA-Z\-]+[+]+)`
 )
 
 type GentooPackage struct {

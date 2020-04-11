@@ -14,15 +14,14 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package pkg
+package version
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 
-	version "github.com/hashicorp/go-version"
+	semver "github.com/hashicorp/go-version"
 )
 
 // Package Selector Condition
@@ -162,7 +161,7 @@ func ParseVersion(v string) (PkgVersionSelector, error) {
 	}
 
 	// Check if build number is present
-	buildIdx := strings.Index(v, "+")
+	buildIdx := strings.LastIndex(v, "+")
 	buildVersion := ""
 	if buildIdx > 0 {
 		// <pre-release> ::= <dot-separated pre-release identifiers>
@@ -252,8 +251,8 @@ func ParseVersion(v string) (PkgVersionSelector, error) {
 }
 
 func PackageAdmit(selector, i PkgVersionSelector) (bool, error) {
-	var v1 *version.Version = nil
-	var v2 *version.Version = nil
+	var v1 *semver.Version = nil
+	var v2 *semver.Version = nil
 	var ans bool
 	var err error
 	var sanitizedSelectorVersion, sanitizedIVersion string
@@ -262,14 +261,14 @@ func PackageAdmit(selector, i PkgVersionSelector) (bool, error) {
 		// TODO: This is temporary!. I promise it.
 		sanitizedSelectorVersion = strings.ReplaceAll(selector.Version, "_", "-")
 
-		v1, err = version.NewVersion(sanitizedSelectorVersion)
+		v1, err = semver.NewVersion(sanitizedSelectorVersion)
 		if err != nil {
 			return false, err
 		}
 	}
 	if i.Version != "" {
 		sanitizedIVersion = strings.ReplaceAll(i.Version, "_", "-")
-		v2, err = version.NewVersion(sanitizedIVersion)
+		v2, err = semver.NewVersion(sanitizedIVersion)
 		if err != nil {
 			return false, err
 		}
@@ -307,7 +306,7 @@ func PackageAdmit(selector, i PkgVersionSelector) (bool, error) {
 					segments[len(segments)-1]++
 				}
 				nextVersion := strings.Trim(strings.Replace(fmt.Sprint(segments), " ", ".", -1), "[]")
-				constraints, err := version.NewConstraint(
+				constraints, err := semver.NewConstraint(
 					fmt.Sprintf(">= %s, < %s", sanitizedSelectorVersion, nextVersion),
 				)
 				if err != nil {
@@ -334,36 +333,4 @@ func PackageAdmit(selector, i PkgVersionSelector) (bool, error) {
 	}
 
 	return ans, nil
-}
-
-func (p *DefaultPackage) SelectorMatchVersion(v string) (bool, error) {
-	if !p.IsSelector() {
-		return false, errors.New("Package is not a selector")
-	}
-
-	vS, err := ParseVersion(p.GetVersion())
-	if err != nil {
-		return false, err
-	}
-
-	vSI, err := ParseVersion(v)
-	if err != nil {
-		return false, err
-	}
-
-	return PackageAdmit(vS, vSI)
-}
-
-func (p *DefaultPackage) VersionMatchSelector(selector string) (bool, error) {
-	vS, err := ParseVersion(selector)
-	if err != nil {
-		return false, err
-	}
-
-	vSI, err := ParseVersion(p.GetVersion())
-	if err != nil {
-		return false, err
-	}
-
-	return PackageAdmit(vS, vSI)
 }

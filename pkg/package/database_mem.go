@@ -178,7 +178,7 @@ func (db *InMemoryDatabase) getProvide(p Package) (Package, error) {
 
 		for ve, _ := range versions {
 
-			match, err := p.VersionMatchSelector(ve)
+			match, err := p.VersionMatchSelector(ve, nil)
 			if err != nil {
 				return nil, errors.Wrap(err, "Error on match version")
 			}
@@ -223,7 +223,7 @@ func (db *InMemoryDatabase) FindPackage(p Package) (Package, error) {
 }
 
 // FindPackages return the list of the packages beloging to cat/name
-func (db *InMemoryDatabase) FindPackageVersions(p Package) ([]Package, error) {
+func (db *InMemoryDatabase) FindPackageVersions(p Package) (Packages, error) {
 	versions, ok := db.CacheNoVersion[p.GetPackageName()]
 	if !ok {
 		return nil, errors.New("No versions found for package")
@@ -236,11 +236,11 @@ func (db *InMemoryDatabase) FindPackageVersions(p Package) ([]Package, error) {
 		}
 		versionsInWorld = append(versionsInWorld, w)
 	}
-	return versionsInWorld, nil
+	return Packages(versionsInWorld), nil
 }
 
 // FindPackages return the list of the packages beloging to cat/name (any versions in requested range)
-func (db *InMemoryDatabase) FindPackages(p Package) ([]Package, error) {
+func (db *InMemoryDatabase) FindPackages(p Package) (Packages, error) {
 
 	// Provides: Treat as the replaced package here
 	if provided, err := db.getProvide(p); err == nil {
@@ -252,7 +252,7 @@ func (db *InMemoryDatabase) FindPackages(p Package) ([]Package, error) {
 	}
 	var versionsInWorld []Package
 	for ve, _ := range versions {
-		match, err := p.SelectorMatchVersion(ve)
+		match, err := p.SelectorMatchVersion(ve, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error on match selector")
 		}
@@ -265,7 +265,7 @@ func (db *InMemoryDatabase) FindPackages(p Package) ([]Package, error) {
 			versionsInWorld = append(versionsInWorld, w)
 		}
 	}
-	return versionsInWorld, nil
+	return Packages(versionsInWorld), nil
 }
 
 func (db *InMemoryDatabase) UpdatePackage(p Package) error {
@@ -327,7 +327,7 @@ func (db *InMemoryDatabase) RemovePackage(p Package) error {
 	delete(db.Database, p.GetFingerPrint())
 	return nil
 }
-func (db *InMemoryDatabase) World() []Package {
+func (db *InMemoryDatabase) World() Packages {
 	var all []Package
 	// FIXME: This should all be locked in the db - for now forbid the solver to be run in threads.
 	for _, k := range db.GetPackages() {
@@ -336,7 +336,7 @@ func (db *InMemoryDatabase) World() []Package {
 			all = append(all, pack)
 		}
 	}
-	return all
+	return Packages(all)
 }
 
 func (db *InMemoryDatabase) FindPackageCandidate(p Package) (Package, error) {
@@ -349,7 +349,7 @@ func (db *InMemoryDatabase) FindPackageCandidate(p Package) (Package, error) {
 		if err != nil || len(packages) == 0 {
 			required = p
 		} else {
-			required = Best(packages)
+			required = packages.Best(nil)
 
 		}
 		return required, nil
@@ -360,7 +360,7 @@ func (db *InMemoryDatabase) FindPackageCandidate(p Package) (Package, error) {
 
 }
 
-func (db *InMemoryDatabase) FindPackageLabel(labelKey string) ([]Package, error) {
+func (db *InMemoryDatabase) FindPackageLabel(labelKey string) (Packages, error) {
 	var ans []Package
 
 	for _, k := range db.GetPackages() {
@@ -373,10 +373,10 @@ func (db *InMemoryDatabase) FindPackageLabel(labelKey string) ([]Package, error)
 		}
 	}
 
-	return ans, nil
+	return Packages(ans), nil
 }
 
-func (db *InMemoryDatabase) FindPackageLabelMatch(pattern string) ([]Package, error) {
+func (db *InMemoryDatabase) FindPackageLabelMatch(pattern string) (Packages, error) {
 	var ans []Package
 
 	re := regexp.MustCompile(pattern)
@@ -394,10 +394,10 @@ func (db *InMemoryDatabase) FindPackageLabelMatch(pattern string) ([]Package, er
 		}
 	}
 
-	return ans, nil
+	return Packages(ans), nil
 }
 
-func (db *InMemoryDatabase) FindPackageMatch(pattern string) ([]Package, error) {
+func (db *InMemoryDatabase) FindPackageMatch(pattern string) (Packages, error) {
 	var ans []Package
 
 	re := regexp.MustCompile(pattern)
@@ -416,5 +416,5 @@ func (db *InMemoryDatabase) FindPackageMatch(pattern string) ([]Package, error) 
 		}
 	}
 
-	return ans, nil
+	return Packages(ans), nil
 }

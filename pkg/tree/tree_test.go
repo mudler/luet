@@ -65,7 +65,8 @@ var _ = Describe("Tree", func() {
 				solution, err := s.Install([]pkg.Package{pack})
 				Expect(err).ToNot(HaveOccurred())
 
-				solution = solution.Order(generalRecipe.GetDatabase(), pack.GetFingerPrint())
+				solution, err = solution.Order(generalRecipe.GetDatabase(), pack.GetFingerPrint())
+				Expect(err).ToNot(HaveOccurred())
 
 				Expect(solution[0].Package.GetName()).To(Equal("a"))
 				Expect(solution[0].Value).To(BeFalse())
@@ -137,7 +138,8 @@ var _ = Describe("Tree", func() {
 				solution, err := s.Install([]pkg.Package{Dd})
 				Expect(err).ToNot(HaveOccurred())
 
-				solution = solution.Order(generalRecipe.GetDatabase(), Dd.GetFingerPrint())
+				solution, err = solution.Order(generalRecipe.GetDatabase(), Dd.GetFingerPrint())
+				Expect(err).ToNot(HaveOccurred())
 				pack, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.0"})
 				Expect(err).ToNot(HaveOccurred())
 

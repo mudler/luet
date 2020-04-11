@@ -94,17 +94,19 @@ func LoadConfig(c *config.LuetConfig) error {
 func Execute() {
 
 	if os.Getenv("LUET_NOLOCK") != "true" {
-		for _, lockedCmd := range LockedCommands {
-			if os.Args[1] == lockedCmd {
-				s := single.New("luet")
-				if err := s.CheckLock(); err != nil && err == single.ErrAlreadyRunning {
-					Fatal("another instance of the app is already running, exiting")
-				} else if err != nil {
-					// Another error occurred, might be worth handling it as well
-					Fatal("failed to acquire exclusive app lock:", err.Error())
+		if len(os.Args) > 1 {
+			for _, lockedCmd := range LockedCommands {
+				if os.Args[1] == lockedCmd {
+					s := single.New("luet")
+					if err := s.CheckLock(); err != nil && err == single.ErrAlreadyRunning {
+						Fatal("another instance of the app is already running, exiting")
+					} else if err != nil {
+						// Another error occurred, might be worth handling it as well
+						Fatal("failed to acquire exclusive app lock:", err.Error())
+					}
+					defer s.TryUnlock()
+					break
 				}
-				defer s.TryUnlock()
-				break
 			}
 		}
 	}

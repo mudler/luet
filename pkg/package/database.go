@@ -33,7 +33,7 @@ type PackageSet interface {
 	GetPackage(ID string) (Package, error)
 	Clean() error
 	FindPackage(Package) (Package, error)
-	FindPackages(p Package) ([]Package, error)
+	FindPackages(p Package) (Packages, error)
 	UpdatePackage(p Package) error
 	GetAllPackages(packages chan Package) error
 	RemovePackage(Package) error
@@ -41,13 +41,13 @@ type PackageSet interface {
 	GetPackageFiles(Package) ([]string, error)
 	SetPackageFiles(*PackageFile) error
 	RemovePackageFiles(Package) error
-	FindPackageVersions(p Package) ([]Package, error)
-	World() []Package
+	FindPackageVersions(p Package) (Packages, error)
+	World() Packages
 
 	FindPackageCandidate(p Package) (Package, error)
-	FindPackageLabel(labelKey string) ([]Package, error)
-	FindPackageLabelMatch(pattern string) ([]Package, error)
-	FindPackageMatch(pattern string) ([]Package, error)
+	FindPackageLabel(labelKey string) (Packages, error)
+	FindPackageLabelMatch(pattern string) (Packages, error)
+	FindPackageMatch(pattern string) (Packages, error)
 }
 
 type PackageFile struct {
