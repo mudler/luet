@@ -42,12 +42,20 @@ const (
 	LuetEnvPrefix  = "LUET"
 )
 
+// Build time and commit information.
+//
+// ⚠️ WARNING: should only be set by "-ldflags".
+var (
+	BuildTime   string
+	BuildCommit string
+)
+
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:     "luet",
 	Short:   "Package manager for the XXth century!",
 	Long:    `Package manager which uses containers to build packages`,
-	Version: LuetCLIVersion,
+	Version: fmt.Sprintf("%s-g%s %s", LuetCLIVersion, BuildCommit, BuildTime),
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		err := LoadConfig(config.LuetCfg)
 		if err != nil {
