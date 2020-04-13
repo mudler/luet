@@ -26,6 +26,8 @@ type Installer interface {
 	Install(pkg.Packages, *System) error
 	Uninstall(pkg.Package, *System) error
 	Upgrade(s *System) error
+	Reclaim(s *System) error
+
 	Repositories([]Repository)
 	SyncRepositories(bool) (Repositories, error)
 	Swap(pkg.Packages, pkg.Packages, *System) error
