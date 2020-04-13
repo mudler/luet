@@ -83,7 +83,7 @@ var searchCmd = &cobra.Command{
 				Fatal("Error: " + err.Error())
 			}
 
-			Info("--- Search results: ---")
+			Info("--- Search results (" + args[0] + "): ---")
 
 			matches := []installer.PackageMatch{}
 			if searchWithLabel {
