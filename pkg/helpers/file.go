@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	copy "github.com/otiai10/copy"
 )
@@ -37,6 +38,25 @@ func ListDir(dir string) ([]string, error) {
 		})
 
 	return content, err
+}
+
+// Touch creates an empty file
+func Touch(f string) error {
+	_, err := os.Stat(f)
+	if os.IsNotExist(err) {
+		file, err := os.Create(f)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+	} else {
+		currentTime := time.Now().Local()
+		err = os.Chtimes(f, currentTime, currentTime)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Exists reports whether the named file or directory exists.
