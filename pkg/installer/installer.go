@@ -153,7 +153,7 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 	return l.install(syncedRepos, toInstall, s)
 }
 
-func (l *LuetInstaller) Install(cp pkg.Packages, s *System, downloadOnly bool) error {
+func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 	syncedRepos, err := l.SyncRepositories(true)
 	if err != nil {
 		return err

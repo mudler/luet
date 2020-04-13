@@ -115,7 +115,7 @@ urls:
 			Expect(repo.GetType()).To(Equal("disk"))
 			systemDB := pkg.NewInMemoryDatabase(false)
 			system := &System{Database: systemDB, Target: fakeroot}
-			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system, false)
+			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())
@@ -234,7 +234,7 @@ urls:
 			Expect(repo.GetType()).To(Equal("disk"))
 			systemDB := pkg.NewInMemoryDatabase(false)
 			system := &System{Database: systemDB, Target: fakeroot}
-			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system, false)
+			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())
@@ -354,7 +354,7 @@ urls:
 
 			systemDB := pkg.NewBoltDatabase(filepath.Join(bolt, "db.db"))
 			system := &System{Database: systemDB, Target: fakeroot}
-			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system, false)
+			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())
@@ -464,7 +464,7 @@ urls:
 
 			systemDB := pkg.NewBoltDatabase(filepath.Join(bolt, "db.db"))
 			system := &System{Database: systemDB, Target: fakeroot}
-			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system, false)
+			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())
@@ -581,7 +581,7 @@ urls:
 
 			systemDB := pkg.NewBoltDatabase(filepath.Join(bolt, "db.db"))
 			system := &System{Database: systemDB, Target: fakeroot}
-			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system, false)
+			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())
