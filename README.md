@@ -1,4 +1,5 @@
 # luet - Container-based Package manager
+[![Docker Repository on Quay](https://quay.io/repository/luet/base/status "Docker Repository on Quay")](https://quay.io/repository/luet/base)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mudler/luet)](https://goreportcard.com/report/github.com/mudler/luet)
 [![Build Status](https://travis-ci.org/mudler/luet.svg?branch=master)](https://travis-ci.org/mudler/luet)
 [![GoDoc](https://godoc.org/github.com/mudler/luet?status.svg)](https://godoc.org/github.com/mudler/luet)
