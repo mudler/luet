@@ -1,0 +1,4 @@
+image: "alpine"
+unpack: true
+steps:
+- apk update && apk add bash

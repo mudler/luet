@@ -12,15 +12,15 @@ oneTimeTearDown() {
 
 testBuild() {
     mkdir $tmpdir/testbuild
-    luet build --tree "$ROOT_DIR/tests/fixtures/finalizers" --destination $tmpdir/testbuild --compression gzip --all > /dev/null
+    luet build --tree "$ROOT_DIR/tests/fixtures/finalizer_custom" --destination $tmpdir/testbuild --compression gzip --all > /dev/null
     buildst=$?
     assertEquals 'builds successfully' "$buildst" "0"
-    assertTrue 'create package' "[ -e '$tmpdir/testbuild/alpine-seed-1.0.package.tar.gz' ]"
+    assertTrue 'create package' "[ -e '$tmpdir/testbuild/alpine-seed-2.0.package.tar.gz' ]"
 }
 
 testRepo() {
     assertTrue 'no repository' "[ ! -e '$tmpdir/testbuild/repository.yaml' ]"
-    luet create-repo --tree "$ROOT_DIR/tests/fixtures/finalizers" \
+    luet create-repo --tree "$ROOT_DIR/tests/fixtures/finalizer_custom" \
     --output $tmpdir/testbuild \
     --packages $tmpdir/testbuild \
     --name "test" \
@@ -61,7 +61,7 @@ testInstall() {
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/bin/busybox' ]"
     assertTrue 'finalizer runs' "[ -e '$tmpdir/testrootfs/tmp/foo' ]"
-    assertEquals 'finalizer printed used shell' "$(cat $tmpdir/testrootfs/tmp/foo)" 'sh'
+    assertContains 'finalizer printed used shell' "$(cat $tmpdir/testrootfs/tmp/foo)" '/bin/bash'
 }
 
 
