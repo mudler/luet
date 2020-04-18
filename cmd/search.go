@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -94,8 +95,7 @@ var searchCmd = &cobra.Command{
 				matches = synced.Search(args[0])
 			}
 			for _, m := range matches {
-				Info(":package:", m.Package.GetCategory(), m.Package.GetName(),
-					m.Package.GetVersion(), "repository:", m.Repo.GetName())
+				Info(fmt.Sprintf(":file_folder:%s", m.Repo.GetName()), fmt.Sprintf(":package:%s", m.Package.HumanReadableString()))
 			}
 		} else {
 
@@ -122,7 +122,7 @@ var searchCmd = &cobra.Command{
 			}
 
 			for _, pack := range iMatches {
-				Info(":package:", pack.GetCategory(), pack.GetName(), pack.GetVersion())
+				Info(fmt.Sprintf(":package:%s", pack.HumanReadableString()))
 			}
 
 		}
