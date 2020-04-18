@@ -641,13 +641,13 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 		tsec, _ := strconv.ParseInt(repo.GetLastUpdate(), 10, 64)
 
 		InfoC(
-			Bold(Red(":house: Repository "+r.GetName()+" revision: ")).String() +
+			Bold(Red(":house: Repository "+repo.GetName()+" revision: ")).String() +
 				Bold(Green(repo.GetRevision())).String() + " - " +
 				Bold(Green(time.Unix(tsec, 0).String())).String(),
 		)
 
 	} else {
-		Info("Repository", r.GetName(), "is already up to date.")
+		Info("Repository", repo.GetName(), "is already up to date.")
 	}
 
 	meta, err := NewLuetSystemRepositoryMetadata(
@@ -666,9 +666,19 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 
 	repo.SetTree(reciper)
 	repo.SetTreePath(treefs)
+
+	// Copy the local available data to the one which was synced
+	// e.g. locally we can override the type (disk), or priority
+	// while remotely it could be advertized differently
 	repo.SetUrls(r.GetUrls())
 	repo.SetAuthentication(r.GetAuthentication())
-
+	repo.SetType(r.GetType())
+	repo.SetPriority(r.GetPriority())
+	InfoC(
+		Bold(Yellow(":information_source: Repository "+repo.GetName()+" priority: ")).String() +
+			Bold(Green(repo.GetPriority())).String() + " - type " +
+			Bold(Green(repo.GetType())).String(),
+	)
 	return repo, nil
 }
 
