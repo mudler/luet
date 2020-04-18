@@ -1,2 +1,2 @@
 install:
-- touch /tmp/foo
+- echo "$0" > /tmp/foo

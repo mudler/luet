@@ -1,3 +1,8 @@
+
+# go tool nm ./luet | grep Commit
+LDFLAGS += -X "github.com/mudler/luet/cmd.BuildTime=$(shell date -u '+%Y-%m-%d %I:%M:%S %Z')"
+LDFLAGS += -X "github.com/mudler/luet/cmd.BuildCommit=$(shell git rev-parse HEAD)"
+
 NAME ?= luet
 PACKAGE_NAME ?= $(NAME)
 PACKAGE_CONFLICT ?= $(PACKAGE_NAME)-beta
@@ -59,7 +64,7 @@ deps:
 
 .PHONY: build
 build:
-	CGO_ENABLED=0 go build
+	CGO_ENABLED=0 go build -ldflags '$(LDFLAGS)'
 
 .PHONY: image
 image:
@@ -67,7 +72,7 @@ image:
 
 .PHONY: gox-build
 gox-build:
-	CGO_ENABLED=0 gox $(BUILD_PLATFORMS) -output="release/$(NAME)-$(VERSION)-{{.OS}}-{{.Arch}}"
+	CGO_ENABLED=0 gox $(BUILD_PLATFORMS) -ldflags '$(LDFLAGS)' -output="release/$(NAME)-$(VERSION)-{{.OS}}-{{.Arch}}"
 
 .PHONY: lint
 lint:
@@ -85,4 +90,4 @@ test-docker:
 
 .PHONY: multiarch-build
 multiarch-build:
-	gox $(BUILD_PLATFORMS) -output="release/$(NAME)-$(VERSION)-{{.OS}}-{{.Arch}}"
+	gox $(BUILD_PLATFORMS) -ldflags '$(LDFLAGS)' -output="release/$(NAME)-$(VERSION)-{{.OS}}-{{.Arch}}"

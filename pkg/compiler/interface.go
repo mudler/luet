@@ -102,6 +102,9 @@ type Artifact interface {
 	Hash() error
 	Verify() error
 
+	SetFiles(f []string)
+	GetFiles() []string
+
 	GetChecksums() Checksums
 	SetChecksums(c Checksums)
 }

@@ -153,7 +153,7 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 	return l.install(syncedRepos, toInstall, s)
 }
 
-func (l *LuetInstaller) Install(cp pkg.Packages, s *System, downloadOnly bool) error {
+func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 	syncedRepos, err := l.SyncRepositories(true)
 	if err != nil {
 		return err
@@ -203,6 +203,47 @@ func (l *LuetInstaller) download(syncedRepos Repositories, cp pkg.Packages) erro
 	close(all)
 	wg.Wait()
 
+	return nil
+}
+
+// Reclaim adds packages to the system database
+// if files from artifacts in the repositories are found
+// in the system target
+func (l *LuetInstaller) Reclaim(s *System) error {
+	syncedRepos, err := l.SyncRepositories(true)
+	if err != nil {
+		return err
+	}
+
+	var toMerge []ArtifactMatch = []ArtifactMatch{}
+
+	for _, repo := range syncedRepos {
+		for _, artefact := range repo.GetIndex() {
+		FILES:
+			for _, f := range artefact.GetFiles() {
+				if helpers.Exists(filepath.Join(s.Target, f)) {
+					toMerge = append(toMerge, ArtifactMatch{Artifact: artefact, Package: artefact.GetCompileSpec().GetPackage()})
+					break FILES
+				}
+			}
+		}
+	}
+
+	for _, match := range toMerge {
+		pack := match.Package
+		vers, _ := s.Database.FindPackageVersions(pack)
+
+		if len(vers) >= 1 {
+			Warning("Filtering out package " + pack.HumanReadableString() + ", already reclaimed")
+			continue
+		}
+		_, err := s.Database.CreatePackage(pack)
+		if err != nil && !l.Options.Force {
+			return errors.Wrap(err, "Failed creating package")
+		}
+		s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: pack.GetFingerPrint(), Files: match.Artifact.GetFiles()})
+
+	}
 	return nil
 }
 

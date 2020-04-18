@@ -67,11 +67,13 @@ func Untar(src, dest string, sameOwner bool) error {
 			// Probably it's needed set this always to true.
 			NoLchown:        true,
 			ExcludePatterns: []string{"dev/"}, // prevent 'operation not permitted'
+			ContinueOnError: true,
 		}
 
 		ans = archive.Untar(in, dest, opts)
 	} else {
 
+		// TODO: replace with https://github.com/mholt/archiver ?
 		var fileReader io.ReadCloser = in
 
 		tr := tar.NewReader(fileReader)

@@ -115,7 +115,7 @@ urls:
 			Expect(repo.GetType()).To(Equal("disk"))
 			systemDB := pkg.NewInMemoryDatabase(false)
 			system := &System{Database: systemDB, Target: fakeroot}
-			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system, false)
+			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())
@@ -234,7 +234,7 @@ urls:
 			Expect(repo.GetType()).To(Equal("disk"))
 			systemDB := pkg.NewInMemoryDatabase(false)
 			system := &System{Database: systemDB, Target: fakeroot}
-			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system, false)
+			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())
@@ -354,7 +354,7 @@ urls:
 
 			systemDB := pkg.NewBoltDatabase(filepath.Join(bolt, "db.db"))
 			system := &System{Database: systemDB, Target: fakeroot}
-			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system, false)
+			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())
@@ -464,7 +464,7 @@ urls:
 
 			systemDB := pkg.NewBoltDatabase(filepath.Join(bolt, "db.db"))
 			system := &System{Database: systemDB, Target: fakeroot}
-			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system, false)
+			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())
@@ -581,7 +581,7 @@ urls:
 
 			systemDB := pkg.NewBoltDatabase(filepath.Join(bolt, "db.db"))
 			system := &System{Database: systemDB, Target: fakeroot}
-			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system, false)
+			err = inst.Install([]pkg.Package{&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}}, system)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeTrue())
@@ -618,6 +618,113 @@ urls:
 
 		})
 
+	})
+
+	Context("Existing files", func() {
+		It("Reclaims them", func() {
+			//repo:=NewLuetSystemRepository()
+
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err = generalRecipe.Load("../../tests/fixtures/upgrade")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
+
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+
+			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+			spec2, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.1"})
+			Expect(err).ToNot(HaveOccurred())
+			spec3, err := c.FromPackage(&pkg.DefaultPackage{Name: "c", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err = ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+			spec.SetOutputPath(tmpdir)
+			spec2.SetOutputPath(tmpdir)
+			spec3.SetOutputPath(tmpdir)
+			c.SetConcurrency(2)
+			c.SetCompressionType(compiler.GZip)
+			_, errs := c.CompileParallel(false, compiler.NewLuetCompilationspecs(spec, spec2, spec3))
+
+			Expect(errs).To(BeEmpty())
+
+			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, "../../tests/fixtures/upgrade", pkg.NewInMemoryDatabase(false))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(repo.GetName()).To(Equal("test"))
+			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
+			err = repo.Write(tmpdir, false)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(helpers.Exists(spec.Rel("b-test-1.1.package.tar.gz"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("b-test-1.1.package.tar"))).ToNot(BeTrue())
+
+			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).To(BeTrue())
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
+			Expect(repo.GetType()).To(Equal("disk"))
+
+			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(fakeroot) // clean up
+
+			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
+			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
+name: "test"
+type: "disk"
+urls:
+  - "`+tmpdir+`"
+`), pkg.NewInMemoryDatabase(false))
+			Expect(err).ToNot(HaveOccurred())
+
+			inst.Repositories(Repositories{repo2})
+			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
+			Expect(repo.GetType()).To(Equal("disk"))
+
+			bolt, err := ioutil.TempDir("", "db")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(bolt) // clean up
+
+			systemDB := pkg.NewBoltDatabase(filepath.Join(bolt, "db.db"))
+			system := &System{Database: systemDB, Target: fakeroot}
+
+			_, err = system.Database.FindPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).To(HaveOccurred())
+
+			_, err = system.Database.FindPackage(&pkg.DefaultPackage{Name: "c", Category: "test", Version: "1.0"})
+			Expect(err).To(HaveOccurred())
+
+			Expect(len(system.Database.World())).To(Equal(0))
+			Expect(helpers.Exists(filepath.Join(fakeroot, "test5"))).To(BeFalse())
+			Expect(helpers.Exists(filepath.Join(fakeroot, "test6"))).To(BeFalse())
+			Expect(helpers.Exists(filepath.Join(fakeroot, "c"))).To(BeFalse())
+
+			Expect(helpers.Touch(filepath.Join(fakeroot, "test5"))).ToNot(HaveOccurred())
+			Expect(helpers.Touch(filepath.Join(fakeroot, "test6"))).ToNot(HaveOccurred())
+			Expect(helpers.Touch(filepath.Join(fakeroot, "c"))).ToNot(HaveOccurred())
+
+			err = inst.Reclaim(system)
+			Expect(err).ToNot(HaveOccurred())
+
+			_, err = system.Database.FindPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			_, err = system.Database.FindPackage(&pkg.DefaultPackage{Name: "c", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(system.Database.World())).To(Equal(2))
+		})
 	})
 
 })

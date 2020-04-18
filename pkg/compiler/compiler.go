@@ -420,9 +420,16 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		artifact.SetCompileSpec(p)
 	}
 
+	filelist, err := artifact.FileList()
+	if err != nil {
+		return artifact, errors.Wrap(err, "Failed getting package list")
+	}
+
+	artifact.SetFiles(filelist)
+
 	err = artifact.WriteYaml(p.GetOutputPath())
 	if err != nil {
-		return artifact, err
+		return artifact, errors.Wrap(err, "Failed while writing metadata file")
 	}
 	Info(pkgTag, "   :white_check_mark: Done")
 

@@ -1,0 +1,5 @@
+shell:
+- bash
+- -c
+install:
+- echo "$BASH" > /tmp/foo

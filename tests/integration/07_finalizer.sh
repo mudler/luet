@@ -61,6 +61,7 @@ testInstall() {
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/bin/busybox' ]"
     assertTrue 'finalizer runs' "[ -e '$tmpdir/testrootfs/tmp/foo' ]"
+    assertEquals 'finalizer printed used shell' "$(cat $tmpdir/testrootfs/tmp/foo)" 'sh'
 }
 
 

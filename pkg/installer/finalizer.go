@@ -26,23 +26,37 @@ import (
 )
 
 type LuetFinalizer struct {
+	Shell     []string `json:"shell"`
 	Install   []string `json:"install"`
 	Uninstall []string `json:"uninstall"` // TODO: Where to store?
 }
 
 func (f *LuetFinalizer) RunInstall(s *System) error {
-	for _, c := range f.Install {
-		if s.Target == "/" {
+	var cmd string
+	var args []string
+	if len(f.Shell) == 0 {
+		// Default to sh otherwise
+		cmd = "sh"
+		args = []string{"-c"}
+	} else {
+		cmd = f.Shell[0]
+		if len(f.Shell) > 1 {
+			args = f.Shell[1:]
+		}
+	}
 
-			Info("finalizer on / :", "sh", "-c", c)
-			cmd := exec.Command("sh", "-c", c)
+	for _, c := range f.Install {
+		toRun := append(args, c)
+		Info("Executing finalizer on ", s.Target, cmd, toRun)
+		if s.Target == "/" {
+			cmd := exec.Command(cmd, toRun...)
 			stdoutStderr, err := cmd.CombinedOutput()
 			if err != nil {
 				return errors.Wrap(err, "Failed running command: "+string(stdoutStderr))
 			}
 			Info(string(stdoutStderr))
 		} else {
-			b := box.NewBox("sh", []string{"-c", c}, s.Target, false, true, true)
+			b := box.NewBox(cmd, toRun, s.Target, false, true, true)
 			err := b.Run()
 			if err != nil {
 				return errors.Wrap(err, "Failed running command ")

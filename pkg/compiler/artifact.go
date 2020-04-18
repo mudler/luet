@@ -60,6 +60,7 @@ func (i ArtifactIndex) CleanPath() ArtifactIndex {
 			Dependencies:    art.Dependencies,
 			CompressionType: art.CompressionType,
 			Checksums:       art.Checksums,
+			Files:           art.Files,
 		})
 	}
 	return newIndex
@@ -77,6 +78,7 @@ type PackageArtifact struct {
 	Checksums       Checksums                 `json:"checksums"`
 	SourceAssertion solver.PackagesAssertions `json:"-"`
 	CompressionType CompressionImplementation `json:"compressiontype"`
+	Files           []string                  `json:"files"`
 }
 
 func NewPackageArtifact(path string) Artifact {
@@ -116,9 +118,19 @@ func (a *PackageArtifact) SetCompressionType(t CompressionImplementation) {
 func (a *PackageArtifact) GetChecksums() Checksums {
 	return a.Checksums
 }
+
 func (a *PackageArtifact) SetChecksums(c Checksums) {
 	a.Checksums = c
 }
+
+func (a *PackageArtifact) SetFiles(f []string) {
+	a.Files = f
+}
+
+func (a *PackageArtifact) GetFiles() []string {
+	return a.Files
+}
+
 func (a *PackageArtifact) Hash() error {
 	return a.Checksums.Generate(a)
 }
@@ -308,6 +320,7 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 	return errors.New("Compression type must be supplied")
 }
 
+// FileList generates the list of file of a package from the local archive
 func (a *PackageArtifact) FileList() ([]string, error) {
 	var tr *tar.Reader
 	switch a.CompressionType {
