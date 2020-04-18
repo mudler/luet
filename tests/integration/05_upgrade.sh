@@ -55,7 +55,7 @@ testRepo() {
     --name "test" \
     --descr "Test Repo" \
     --urls $tmpdir/testrootfs \
-    --type disk
+    --type http
 
     createst=$?
     assertEquals 'create repo successfully' "$createst" "0"
