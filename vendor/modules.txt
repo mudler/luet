@@ -167,7 +167,7 @@ github.com/mattn/go-colorable
 github.com/mattn/go-isatty
 # github.com/mitchellh/mapstructure v1.1.2
 github.com/mitchellh/mapstructure
-# github.com/moby/sys/mount v0.1.0
+# github.com/moby/sys/mount v0.1.1-0.20200320164225-6154f11e6840
 github.com/moby/sys/mount
 # github.com/moby/sys/mountinfo v0.1.0
 github.com/moby/sys/mountinfo

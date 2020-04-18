@@ -21,7 +21,7 @@ require (
 	github.com/logrusorgru/aurora v0.0.0-20190417123914-21d75270181e
 	github.com/marcsauter/single v0.0.0-20181104081128-f8bf46f26ec0
 	github.com/mattn/go-isatty v0.0.10 // indirect
-	github.com/moby/sys/mount v0.1.0 // indirect
+	github.com/moby/sys/mount v0.1.1-0.20200320164225-6154f11e6840 // indirect
 	github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.0
