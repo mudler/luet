@@ -67,6 +67,7 @@ type Repository interface {
 	SetLastUpdate(string)
 	Client() Client
 
+	SetPriority(int)
 	GetRepositoryFile(string) (LuetRepositoryFile, error)
 	SetRepositoryFile(string, LuetRepositoryFile)
 

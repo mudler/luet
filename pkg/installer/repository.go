@@ -160,6 +160,7 @@ func NewDefaultMetaRepositoryFile() LuetRepositoryFile {
 func (f *LuetRepositoryFile) SetFileName(n string) {
 	f.FileName = n
 }
+
 func (f *LuetRepositoryFile) GetFileName() string {
 	return f.FileName
 }
@@ -268,6 +269,10 @@ func buildPackageIndex(path string) ([]compiler.Artifact, error) {
 
 	}
 	return art, nil
+}
+
+func (r *LuetSystemRepository) SetPriority(n int) {
+	r.LuetRepository.Priority = n
 }
 
 func (r *LuetSystemRepository) GetName() string {
