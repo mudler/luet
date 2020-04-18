@@ -307,6 +307,10 @@ func (c *LuetGeneralConfig) GetSpinnerMs() time.Duration {
 	return duration
 }
 
+func (c *LuetLoggingConfig) SetLogLevel(s string) {
+	c.Level = s
+}
+
 func (c *LuetLoggingConfig) String() string {
 	ans := fmt.Sprintf(`
 logging:
