@@ -271,7 +271,7 @@ github.com/urfave/cli
 github.com/vbatts/go-mtree
 github.com/vbatts/go-mtree/pkg/govis
 github.com/vbatts/go-mtree/xattr
-# go.etcd.io/bbolt v1.3.3
+# go.etcd.io/bbolt v1.3.4
 go.etcd.io/bbolt
 # go.opencensus.io v0.22.0
 go.opencensus.io
