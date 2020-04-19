@@ -66,8 +66,16 @@ func NewTreePkglistCommand() *cobra.Command {
 
 			treePath, _ := cmd.Flags().GetString("tree")
 			verbose, _ := cmd.Flags().GetBool("verbose")
+			buildtime, _ := cmd.Flags().GetBool("buildtime")
 			full, _ := cmd.Flags().GetBool("full")
-			reciper := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
+
+			var reciper tree.Builder
+			if buildtime {
+				reciper = tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+			} else {
+				reciper = tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
+			}
+
 			err := reciper.Load(treePath)
 			if err != nil {
 				Fatal("Error on load tree ", err)
@@ -127,6 +135,8 @@ func NewTreePkglistCommand() *cobra.Command {
 			}
 		},
 	}
+
+	ans.Flags().BoolP("buildtime", "b", false, "Build time match")
 
 	ans.Flags().BoolP("verbose", "v", false, "Add package version")
 	ans.Flags().BoolP("full", "f", false, "Show package detail")
