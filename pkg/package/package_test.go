@@ -159,6 +159,66 @@ var _ = Describe("Package", func() {
 		})
 	})
 
+	Context("revdeps", func() {
+		a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		b := NewPackage("B", "1.0", []*DefaultPackage{&DefaultPackage{Name: "A", Version: ">=1.0"}}, []*DefaultPackage{})
+		c := NewPackage("C", "1.1", []*DefaultPackage{&DefaultPackage{Name: "B", Version: ">=1.0"}}, []*DefaultPackage{})
+		d := NewPackage("D", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
+		e := NewPackage("E", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
+
+		It("doesn't resolve selectors", func() {
+			definitions := NewInMemoryDatabase(false)
+			for _, p := range []Package{a, b, c, d, e} {
+				_, err := definitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			lst := a.Revdeps(definitions)
+			Expect(len(lst)).To(Equal(0))
+		})
+	})
+	Context("Expandedrevdeps", func() {
+		a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		b := NewPackage("B", "1.0", []*DefaultPackage{&DefaultPackage{Name: "A", Version: ">=1.0"}}, []*DefaultPackage{})
+		c := NewPackage("C", "1.1", []*DefaultPackage{&DefaultPackage{Name: "B", Version: ">=1.0"}}, []*DefaultPackage{})
+		d := NewPackage("D", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
+		e := NewPackage("E", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
+
+		It("Computes correctly", func() {
+			definitions := NewInMemoryDatabase(false)
+			for _, p := range []Package{a, b, c, d, e} {
+				_, err := definitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			lst := a.ExpandedRevdeps(definitions)
+			Expect(lst).To(ContainElement(c))
+			Expect(lst).To(ContainElement(d))
+			Expect(lst).To(ContainElement(e))
+			Expect(len(lst)).To(Equal(4))
+		})
+	})
+
+	Context("Expandedrevdeps", func() {
+		a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		b := NewPackage("B", "1.0", []*DefaultPackage{&DefaultPackage{Name: "A", Version: ">=1.0"}}, []*DefaultPackage{})
+		c := NewPackage("C", "1.1", []*DefaultPackage{&DefaultPackage{Name: "B", Version: ">=1.0"}}, []*DefaultPackage{})
+		d := NewPackage("D", "0.1", []*DefaultPackage{&DefaultPackage{Name: "C", Version: ">=1.0"}}, []*DefaultPackage{})
+		e := NewPackage("E", "0.1", []*DefaultPackage{&DefaultPackage{Name: "C", Version: ">=1.0"}}, []*DefaultPackage{})
+
+		It("Computes correctly", func() {
+			definitions := NewInMemoryDatabase(false)
+			for _, p := range []Package{a, b, c, d, e} {
+				_, err := definitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			lst := a.ExpandedRevdeps(definitions)
+			Expect(lst).To(ContainElement(b))
+			Expect(lst).To(ContainElement(c))
+			Expect(lst).To(ContainElement(d))
+			Expect(lst).To(ContainElement(e))
+			Expect(len(lst)).To(Equal(4))
+		})
+	})
+
 	Context("RequiresContains", func() {
 		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
 		a1 := NewPackage("A", "1.0", []*DefaultPackage{a}, []*DefaultPackage{})
