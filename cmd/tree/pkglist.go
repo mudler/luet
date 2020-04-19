@@ -21,6 +21,8 @@ import (
 	"sort"
 
 	//. "github.com/mudler/luet/pkg/config"
+	"github.com/ghodss/yaml"
+	. "github.com/mudler/luet/pkg/config"
 	helpers "github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -28,6 +30,16 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+type PackageResult struct {
+	Name     string `json:"name"`
+	Category string `json:"category"`
+	Version  string `json:"version"`
+}
+
+type Results struct {
+	Packages []PackageResult `json:"packages"`
+}
 
 func pkgDetail(pkg pkg.Package) string {
 	ans := fmt.Sprintf(`
@@ -63,11 +75,16 @@ func NewTreePkglistCommand() *cobra.Command {
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			var results Results
 
 			treePath, _ := cmd.Flags().GetString("tree")
 			verbose, _ := cmd.Flags().GetBool("verbose")
 			buildtime, _ := cmd.Flags().GetBool("buildtime")
 			full, _ := cmd.Flags().GetBool("full")
+			out, _ := cmd.Flags().GetString("output")
+			if out != "terminal" {
+				LuetCfg.GetLogging().SetLogLevel("error")
+			}
 
 			var reciper tree.Builder
 			if buildtime {
@@ -126,17 +143,41 @@ func NewTreePkglistCommand() *cobra.Command {
 
 				if addPkg {
 					plist = append(plist, pkgstr)
+					results.Packages = append(results.Packages, PackageResult{
+						Name:     p.GetName(),
+						Version:  p.GetVersion(),
+						Category: p.GetCategory(),
+					})
 				}
 			}
 
-			sort.Strings(plist)
-			for _, p := range plist {
-				fmt.Println(p)
+			y, err := yaml.Marshal(results)
+			if err != nil {
+				fmt.Printf("err: %v\n", err)
+				return
 			}
+			switch out {
+			case "yaml":
+				fmt.Println(string(y))
+			case "json":
+				j2, err := yaml.YAMLToJSON(y)
+				if err != nil {
+					fmt.Printf("err: %v\n", err)
+					return
+				}
+				fmt.Println(string(j2))
+			default:
+				sort.Strings(plist)
+				for _, p := range plist {
+					fmt.Println(p)
+				}
+			}
+
 		},
 	}
 
 	ans.Flags().BoolP("buildtime", "b", false, "Build time match")
+	ans.Flags().StringP("output", "o", "terminal", "Output format ( Defaults: terminal, available: json,yaml )")
 
 	ans.Flags().BoolP("verbose", "v", false, "Add package version")
 	ans.Flags().BoolP("full", "f", false, "Show package detail")
