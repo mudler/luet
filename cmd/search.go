@@ -27,8 +27,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type PackageResult struct {
+	Name       string `json:"name"`
+	Category   string `json:"category"`
+	Version    string `json:"version"`
+	Repository string `json:"repository"`
+}
+
 type Results struct {
-	Packages []string `json:"packages"`
+	Packages []PackageResult `json:"packages"`
 }
 
 var searchCmd = &cobra.Command{
@@ -104,7 +111,13 @@ var searchCmd = &cobra.Command{
 			}
 			for _, m := range matches {
 				Info(fmt.Sprintf(":file_folder:%s", m.Repo.GetName()), fmt.Sprintf(":package:%s", m.Package.HumanReadableString()))
-				results.Packages = append(results.Packages, m.Package.HumanReadableString())
+				results.Packages = append(results.Packages,
+					PackageResult{
+						Name:       m.Package.GetName(),
+						Version:    m.Package.GetVersion(),
+						Category:   m.Package.GetCategory(),
+						Repository: m.Repo.GetName(),
+					})
 			}
 		} else {
 
@@ -132,7 +145,13 @@ var searchCmd = &cobra.Command{
 
 			for _, pack := range iMatches {
 				Info(fmt.Sprintf(":package:%s", pack.HumanReadableString()))
-				results.Packages = append(results.Packages, pack.HumanReadableString())
+				results.Packages = append(results.Packages,
+					PackageResult{
+						Name:       pack.GetName(),
+						Version:    pack.GetVersion(),
+						Category:   pack.GetCategory(),
+						Repository: "system",
+					})
 			}
 		}
 
