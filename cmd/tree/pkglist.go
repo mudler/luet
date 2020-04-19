@@ -31,14 +31,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type PackageResult struct {
+type TreePackageResult struct {
 	Name     string `json:"name"`
 	Category string `json:"category"`
 	Version  string `json:"version"`
 }
 
-type Results struct {
-	Packages []PackageResult `json:"packages"`
+type TreeResults struct {
+	Packages []TreePackageResult `json:"packages"`
 }
 
 func pkgDetail(pkg pkg.Package) string {
@@ -75,7 +75,7 @@ func NewTreePkglistCommand() *cobra.Command {
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			var results Results
+			var results TreeResults
 
 			treePath, _ := cmd.Flags().GetString("tree")
 			verbose, _ := cmd.Flags().GetBool("verbose")
@@ -143,7 +143,7 @@ func NewTreePkglistCommand() *cobra.Command {
 
 				if addPkg {
 					plist = append(plist, pkgstr)
-					results.Packages = append(results.Packages, PackageResult{
+					results.Packages = append(results.Packages, TreePackageResult{
 						Name:     p.GetName(),
 						Version:  p.GetVersion(),
 						Category: p.GetCategory(),
