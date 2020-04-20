@@ -56,7 +56,7 @@ func NewBoxExecCommand() *cobra.Command {
 			}
 			Info("Executing", args, "in", rootfs)
 
-			b := box.NewBox(entrypoint, args, rootfs, stdin, stdout, stderr)
+			b := box.NewBox(entrypoint, args, mounts, envs, rootfs, stdin, stdout, stderr)
 			err := b.Run()
 			if err != nil {
 				Fatal(err)
@@ -72,6 +72,8 @@ func NewBoxExecCommand() *cobra.Command {
 	ans.Flags().Bool("stdout", true, "Attach to stdout")
 	ans.Flags().Bool("stderr", true, "Attach to stderr")
 	ans.Flags().Bool("decode", false, "Base64 decode")
+	ans.Flags().StringArrayP("env", "e", []string{}, "Environment settings")
+	ans.Flags().StringArrayP("mount", "m", []string{}, "List of paths to bind-mount from the host")
 
 	ans.Flags().String("entrypoint", "/bin/sh", "Entrypoint command (/bin/sh)")
 
