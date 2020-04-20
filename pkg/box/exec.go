@@ -33,23 +33,25 @@ type Box interface {
 }
 
 type DefaultBox struct {
-	Name string
-	Root string
-	Env  []string
-	Cmd  string
-	Args []string
-
+	Name                  string
+	Root                  string
+	Env                   []string
+	Cmd                   string
+	Args                  []string
+	HostMounts            []string
 	Stdin, Stdout, Stderr bool
 }
 
-func NewBox(cmd string, args []string, rootfs string, stdin, stdout, stderr bool) Box {
+func NewBox(cmd string, args, hostmounts, env []string, rootfs string, stdin, stdout, stderr bool) Box {
 	return &DefaultBox{
-		Stdin:  stdin,
-		Stdout: stdout,
-		Stderr: stderr,
-		Cmd:    cmd,
-		Args:   args,
-		Root:   rootfs,
+		Stdin:      stdin,
+		Stdout:     stdout,
+		Stderr:     stderr,
+		Cmd:        cmd,
+		Args:       args,
+		Root:       rootfs,
+		HostMounts: hostmounts,
+		Env:        env,
 	}
 }
 
@@ -63,6 +65,11 @@ func (b *DefaultBox) Exec() error {
 	}
 	if err := PivotRoot(b.Root); err != nil {
 		return errors.Wrap(err, "Failed switching pivot on rootfs")
+	}
+	for _, hostMount := range b.HostMounts {
+		if err := mountBind(hostMount, b.Root); err != nil {
+			return errors.Wrap(err, fmt.Sprintf("Failed mounting %s on rootfs", hostMount))
+		}
 	}
 
 	cmd := exec.Command(b.Cmd, b.Args...)
@@ -82,7 +89,7 @@ func (b *DefaultBox) Exec() error {
 	cmd.Env = b.Env
 
 	if err := cmd.Run(); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("Error running the %s command", b.Cmd))
+		return errors.Wrap(err, fmt.Sprintf("Error running the %s command in box.Exec", b.Cmd))
 	}
 	return nil
 }
@@ -110,6 +117,16 @@ func (b *DefaultBox) Run() error {
 	}
 	// Encode the command in base64 to avoid bad input from the args given
 	execCmd = append(execCmd, "--decode")
+
+	for _, m := range b.HostMounts {
+		execCmd = append(execCmd, "--mount")
+		execCmd = append(execCmd, m)
+	}
+
+	for _, e := range b.Env {
+		execCmd = append(execCmd, "--env")
+		execCmd = append(execCmd, e)
+	}
 
 	for _, a := range b.Args {
 		execCmd = append(execCmd, b64.StdEncoding.EncodeToString([]byte(a)))
@@ -151,7 +168,7 @@ func (b *DefaultBox) Run() error {
 	}
 
 	if err := cmd.Run(); err != nil {
-		return errors.Wrap(err, "Failed running Box command")
+		return errors.Wrap(err, "Failed running Box command in box.Run")
 	}
 	return nil
 }

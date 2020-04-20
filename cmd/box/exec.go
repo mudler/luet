@@ -25,7 +25,6 @@ import (
 	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func NewBoxExecCommand() *cobra.Command {
@@ -34,21 +33,17 @@ func NewBoxExecCommand() *cobra.Command {
 		Short: "Execute a binary in a box",
 		Args:  cobra.OnlyValidArgs,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			viper.BindPFlag("stdin", cmd.Flags().Lookup("stdin"))
-			viper.BindPFlag("stdout", cmd.Flags().Lookup("stdout"))
-			viper.BindPFlag("stderr", cmd.Flags().Lookup("stderr"))
-			viper.BindPFlag("rootfs", cmd.Flags().Lookup("rootfs"))
-			viper.BindPFlag("decode", cmd.Flags().Lookup("decode"))
-			viper.BindPFlag("entrypoint", cmd.Flags().Lookup("entrypoint"))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			stdin := viper.GetBool("stdin")
-			stdout := viper.GetBool("stdout")
-			stderr := viper.GetBool("stderr")
-			rootfs := viper.GetString("rootfs")
-			base := viper.GetBool("decode")
+			stdin, _ := cmd.Flags().GetBool("stdin")
+			stdout, _ := cmd.Flags().GetBool("stdout")
+			stderr, _ := cmd.Flags().GetBool("stderr")
+			rootfs, _ := cmd.Flags().GetString("rootfs")
+			base, _ := cmd.Flags().GetBool("decode")
+			entrypoint, _ := cmd.Flags().GetString("entrypoint")
+			envs, _ := cmd.Flags().GetStringArray("env")
+			mounts, _ := cmd.Flags().GetStringArray("mount")
 
-			entrypoint := viper.GetString("entrypoint")
 			if base {
 				var ss []string
 				for _, a := range args {
