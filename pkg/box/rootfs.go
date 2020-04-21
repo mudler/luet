@@ -75,9 +75,9 @@ func mountProc(newroot string) error {
 	return nil
 }
 
-func mountBind(hostfolder, newroot string) error {
+func mountBind(hostfolder, newroot, dst string) error {
 	source := hostfolder
-	target := filepath.Join(newroot, hostfolder)
+	target := filepath.Join(newroot, dst)
 	fstype := "bind"
 	data := ""
 
@@ -90,5 +90,5 @@ func mountBind(hostfolder, newroot string) error {
 }
 
 func mountDev(newroot string) error {
-	return mountBind("/dev", newroot)
+	return mountBind("/dev", newroot, "/dev")
 }

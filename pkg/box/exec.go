@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 
 	"github.com/pkg/errors"
@@ -63,15 +64,25 @@ func (b *DefaultBox) Exec() error {
 	if err := mountDev(b.Root); err != nil {
 		return errors.Wrap(err, "Failed mounting dev on rootfs")
 	}
-	if err := PivotRoot(b.Root); err != nil {
-		return errors.Wrap(err, "Failed switching pivot on rootfs")
-	}
+
 	for _, hostMount := range b.HostMounts {
-		if err := mountBind(hostMount, b.Root); err != nil {
+		target := hostMount
+		if strings.Contains(hostMount, ":") {
+			dest := strings.Split(hostMount, ":")
+			if len(dest) != 2 {
+				return errors.New("Invalid arguments for mount, it can be: fullpath, or source:target")
+			}
+			hostMount = dest[0]
+			target = dest[1]
+		}
+		if err := mountBind(hostMount, b.Root, target); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed mounting %s on rootfs", hostMount))
 		}
 	}
 
+	if err := PivotRoot(b.Root); err != nil {
+		return errors.Wrap(err, "Failed switching pivot on rootfs")
+	}
 	cmd := exec.Command(b.Cmd, b.Args...)
 
 	if b.Stdin {
