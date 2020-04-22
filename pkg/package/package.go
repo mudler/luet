@@ -47,6 +47,7 @@ type Package interface {
 	Requires([]*DefaultPackage) Package
 	Conflicts([]*DefaultPackage) Package
 	Revdeps(PackageDatabase) Packages
+	ExpandedRevdeps(definitiondb PackageDatabase) Packages
 	LabelDeps(PackageDatabase, string) Packages
 
 	GetProvides() []*DefaultPackage
@@ -416,6 +417,25 @@ func (p *DefaultPackage) Revdeps(definitiondb PackageDatabase) Packages {
 	return versionsInWorld
 }
 
+// ExpandedRevdeps returns the package reverse dependencies,
+// matching also selectors in versions (>, <, >=, <=)
+func (p *DefaultPackage) ExpandedRevdeps(definitiondb PackageDatabase) Packages {
+	var versionsInWorld Packages
+	for _, w := range definitiondb.World() {
+		if w.Matches(p) {
+			continue
+		}
+		//	for _, re := range w.GetRequires() {
+		if ok, _ := w.RequiresContains(definitiondb, p); ok {
+			versionsInWorld = append(versionsInWorld, w)
+			versionsInWorld = append(versionsInWorld, w.ExpandedRevdeps(definitiondb)...)
+		}
+		//}
+	}
+
+	return versionsInWorld.Unique()
+}
+
 func (p *DefaultPackage) LabelDeps(definitiondb PackageDatabase, labelKey string) Packages {
 	var pkgsWithLabelInWorld Packages
 	// TODO: check if integrate some index to improve
@@ -479,6 +499,18 @@ func (set Packages) Best(v version.Versioner) Package {
 	sorted := v.Sort(versionsRaw)
 
 	return versionsMap[sorted[len(sorted)-1]]
+}
+
+func (set Packages) Unique() Packages {
+	var result Packages
+	uniq := make(map[string]Package)
+	for _, p := range set {
+		uniq[p.GetFingerPrint()] = p
+	}
+	for _, p := range uniq {
+		result = append(result, p)
+	}
+	return result
 }
 
 func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db PackageDatabase) ([]bf.Formula, error) {

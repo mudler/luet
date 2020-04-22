@@ -53,12 +53,20 @@ func ZapLogger() error {
 }
 
 func Spinner(i int) {
-
+	var confLevel int
+	if LuetCfg.GetGeneral().Debug {
+		confLevel = 3
+	} else {
+		confLevel = level2Number(LuetCfg.GetLogging().Level)
+	}
+	if 2 > confLevel {
+		return
+	}
 	if i > 43 {
 		i = 43
 	}
 
-	if !LuetCfg.GetGeneral().Debug && !s.Active() {
+	if !s.Active() {
 		//	s.UpdateCharSet(spinner.CharSets[i])
 		s.Start() // Start the spinner
 	}
@@ -79,9 +87,16 @@ func SpinnerText(suffix, prefix string) {
 }
 
 func SpinnerStop() {
-	if !LuetCfg.GetGeneral().Debug {
-		s.Stop()
+	var confLevel int
+	if LuetCfg.GetGeneral().Debug {
+		confLevel = 3
+	} else {
+		confLevel = level2Number(LuetCfg.GetLogging().Level)
 	}
+	if 2 > confLevel {
+		return
+	}
+	s.Stop()
 }
 
 func level2Number(level string) int {

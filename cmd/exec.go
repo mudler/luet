@@ -15,14 +15,15 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	b64 "encoding/base64"
 
 	"github.com/mudler/luet/pkg/box"
 	. "github.com/mudler/luet/pkg/logger"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var execCmd = &cobra.Command{
@@ -30,24 +31,20 @@ var execCmd = &cobra.Command{
 	Short: "Execute a command in the rootfs context",
 	Long:  `Uses unshare technique and pivot root to execute a command inside a folder containing a valid rootfs`,
 	PreRun: func(cmd *cobra.Command, args []string) {
-		viper.BindPFlag("stdin", cmd.Flags().Lookup("stdin"))
-		viper.BindPFlag("stdout", cmd.Flags().Lookup("stdout"))
-		viper.BindPFlag("stderr", cmd.Flags().Lookup("stderr"))
-		viper.BindPFlag("rootfs", cmd.Flags().Lookup("rootfs"))
-		viper.BindPFlag("decode", cmd.Flags().Lookup("decode"))
-		viper.BindPFlag("entrypoint", cmd.Flags().Lookup("entrypoint"))
-
 	},
 	// If you change this, look at pkg/box/exec that runs this command and adapt
 	Run: func(cmd *cobra.Command, args []string) {
 
-		stdin := viper.GetBool("stdin")
-		stdout := viper.GetBool("stdout")
-		stderr := viper.GetBool("stderr")
-		rootfs := viper.GetString("rootfs")
-		base := viper.GetBool("decode")
+		stdin, _ := cmd.Flags().GetBool("stdin")
+		stdout, _ := cmd.Flags().GetBool("stdout")
+		stderr, _ := cmd.Flags().GetBool("stderr")
+		rootfs, _ := cmd.Flags().GetString("rootfs")
+		base, _ := cmd.Flags().GetBool("decode")
 
-		entrypoint := viper.GetString("entrypoint")
+		entrypoint, _ := cmd.Flags().GetString("entrypoint")
+		envs, _ := cmd.Flags().GetStringArray("env")
+		mounts, _ := cmd.Flags().GetStringArray("mount")
+
 		if base {
 			var ss []string
 			for _, a := range args {
@@ -60,10 +57,10 @@ var execCmd = &cobra.Command{
 		}
 		Info("Executing", args, "in", rootfs)
 
-		b := box.NewBox(entrypoint, args, rootfs, stdin, stdout, stderr)
+		b := box.NewBox(entrypoint, args, mounts, envs, rootfs, stdin, stdout, stderr)
 		err := b.Exec()
 		if err != nil {
-			Fatal(err)
+			Fatal(errors.Wrap(err, fmt.Sprintf("entrypoint: %s rootfs: %s", entrypoint, rootfs)))
 		}
 	},
 }
@@ -79,6 +76,9 @@ func init() {
 	execCmd.Flags().Bool("stdout", false, "Attach to stdout")
 	execCmd.Flags().Bool("stderr", false, "Attach to stderr")
 	execCmd.Flags().Bool("decode", false, "Base64 decode")
+
+	execCmd.Flags().StringArrayP("env", "e", []string{}, "Environment settings")
+	execCmd.Flags().StringArrayP("mount", "m", []string{}, "List of paths to bind-mount from the host")
 
 	execCmd.Flags().String("entrypoint", "/bin/sh", "Entrypoint command (/bin/sh)")
 

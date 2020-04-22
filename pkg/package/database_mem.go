@@ -411,7 +411,7 @@ func (db *InMemoryDatabase) FindPackageMatch(pattern string) (Packages, error) {
 			return ans, err
 		}
 
-		if re.MatchString(pack.GetCategory() + pack.GetName()) {
+		if re.MatchString(pack.HumanReadableString()) {
 			ans = append(ans, pack)
 		}
 	}
