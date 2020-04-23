@@ -47,7 +47,7 @@ type Package interface {
 	Requires([]*DefaultPackage) Package
 	Conflicts([]*DefaultPackage) Package
 	Revdeps(PackageDatabase) Packages
-	ExpandedRevdeps(definitiondb PackageDatabase) Packages
+	ExpandedRevdeps(definitiondb PackageDatabase, visited map[string]interface{}) Packages
 	LabelDeps(PackageDatabase, string) Packages
 
 	GetProvides() []*DefaultPackage
@@ -419,20 +419,38 @@ func (p *DefaultPackage) Revdeps(definitiondb PackageDatabase) Packages {
 
 // ExpandedRevdeps returns the package reverse dependencies,
 // matching also selectors in versions (>, <, >=, <=)
-func (p *DefaultPackage) ExpandedRevdeps(definitiondb PackageDatabase) Packages {
+func (p *DefaultPackage) ExpandedRevdeps(definitiondb PackageDatabase, visited map[string]interface{}) Packages {
 	var versionsInWorld Packages
+	if _, ok := visited[p.HumanReadableString()]; ok {
+		return versionsInWorld
+	}
+
 	for _, w := range definitiondb.World() {
 		if w.Matches(p) {
 			continue
 		}
-		//	for _, re := range w.GetRequires() {
-		if ok, _ := w.RequiresContains(definitiondb, p); ok {
-			versionsInWorld = append(versionsInWorld, w)
-			versionsInWorld = append(versionsInWorld, w.ExpandedRevdeps(definitiondb)...)
-		}
-		//}
-	}
+		match := false
 
+		for _, re := range w.GetRequires() {
+			if re.Matches(p) {
+				match = true
+			}
+			if !match {
+			}
+			packages, _ := re.Expand(definitiondb)
+			for _, pa := range packages {
+				if pa.Matches(p) {
+					match = true
+				}
+			}
+		}
+
+		if match {
+			versionsInWorld = append(versionsInWorld, w)
+			versionsInWorld = append(versionsInWorld, w.ExpandedRevdeps(definitiondb, visited)...)
+			visited[w.HumanReadableString()] = true
+		}
+	}
 	return versionsInWorld.Unique()
 }
 

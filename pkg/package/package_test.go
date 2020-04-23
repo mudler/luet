@@ -189,7 +189,8 @@ var _ = Describe("Package", func() {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			lst := a.ExpandedRevdeps(definitions)
+			visited := make(map[string]interface{})
+			lst := a.ExpandedRevdeps(definitions, visited)
 			Expect(lst).To(ContainElement(c))
 			Expect(lst).To(ContainElement(d))
 			Expect(lst).To(ContainElement(e))
@@ -210,7 +211,33 @@ var _ = Describe("Package", func() {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			lst := a.ExpandedRevdeps(definitions)
+			visited := make(map[string]interface{})
+
+			lst := a.ExpandedRevdeps(definitions, visited)
+			Expect(lst).To(ContainElement(b))
+			Expect(lst).To(ContainElement(c))
+			Expect(lst).To(ContainElement(d))
+			Expect(lst).To(ContainElement(e))
+			Expect(len(lst)).To(Equal(4))
+		})
+	})
+
+	Context("Expandedrevdeps", func() {
+		a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		b := NewPackage("B", "1.0", []*DefaultPackage{&DefaultPackage{Name: "A", Version: ">=1.0"}}, []*DefaultPackage{})
+		c := NewPackage("C", "1.1", []*DefaultPackage{&DefaultPackage{Name: "B", Version: ">=1.0"}, &DefaultPackage{Name: "A", Version: ">=0"}}, []*DefaultPackage{})
+		d := NewPackage("D", "0.1", []*DefaultPackage{&DefaultPackage{Name: "C", Version: ">=1.0"}}, []*DefaultPackage{})
+		e := NewPackage("E", "0.1", []*DefaultPackage{&DefaultPackage{Name: "C", Version: ">=1.0"}}, []*DefaultPackage{})
+
+		It("Computes correctly", func() {
+			definitions := NewInMemoryDatabase(false)
+			for _, p := range []Package{a, b, c, d, e} {
+				_, err := definitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			visited := make(map[string]interface{})
+
+			lst := a.ExpandedRevdeps(definitions, visited)
 			Expect(lst).To(ContainElement(b))
 			Expect(lst).To(ContainElement(c))
 			Expect(lst).To(ContainElement(d))
