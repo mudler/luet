@@ -424,6 +424,7 @@ func (p *DefaultPackage) ExpandedRevdeps(definitiondb PackageDatabase, visited m
 	if _, ok := visited[p.HumanReadableString()]; ok {
 		return versionsInWorld
 	}
+	visited[p.HumanReadableString()] = true
 
 	for _, w := range definitiondb.World() {
 		if w.Matches(p) {
@@ -436,21 +437,29 @@ func (p *DefaultPackage) ExpandedRevdeps(definitiondb PackageDatabase, visited m
 				match = true
 			}
 			if !match {
-			}
-			packages, _ := re.Expand(definitiondb)
-			for _, pa := range packages {
-				if pa.Matches(p) {
-					match = true
+
+				packages, _ := re.Expand(definitiondb)
+				for _, pa := range packages {
+					if pa.Matches(p) {
+						match = true
+					}
 				}
 			}
+
+			//	if ok, _ := w.RequiresContains(definitiondb, p); ok {
+
 		}
 
 		if match {
 			versionsInWorld = append(versionsInWorld, w)
-			versionsInWorld = append(versionsInWorld, w.ExpandedRevdeps(definitiondb, visited)...)
-			visited[w.HumanReadableString()] = true
+
+			versionsInWorld = append(versionsInWorld, w.ExpandedRevdeps(definitiondb, visited).Unique()...)
+
 		}
+		//	}
+
 	}
+	//visited[p.HumanReadableString()] = true
 	return versionsInWorld.Unique()
 }
 
