@@ -35,6 +35,7 @@ type TreePackageResult struct {
 	Name     string `json:"name"`
 	Category string `json:"category"`
 	Version  string `json:"version"`
+	Path     string `json:"path"`
 }
 
 type TreeResults struct {
@@ -67,20 +68,22 @@ func NewTreePkglistCommand() *cobra.Command {
 	var ans = &cobra.Command{
 		Use:   "pkglist [OPTIONS]",
 		Short: "List of the packages found in tree.",
-		Args:  cobra.OnlyValidArgs,
+		Args:  cobra.NoArgs,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			t, _ := cmd.Flags().GetString("tree")
-			if t == "" {
+			t, _ := cmd.Flags().GetStringArray("tree")
+			if len(t) == 0 {
 				Fatal("Mandatory tree param missing.")
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			var results TreeResults
 
-			treePath, _ := cmd.Flags().GetString("tree")
+			treePath, _ := cmd.Flags().GetStringArray("tree")
 			verbose, _ := cmd.Flags().GetBool("verbose")
 			buildtime, _ := cmd.Flags().GetBool("buildtime")
 			full, _ := cmd.Flags().GetBool("full")
+			revdeps, _ := cmd.Flags().GetBool("revdeps")
+
 			out, _ := cmd.Flags().GetString("output")
 			if out != "terminal" {
 				LuetCfg.GetLogging().SetLogLevel("error")
@@ -92,10 +95,11 @@ func NewTreePkglistCommand() *cobra.Command {
 			} else {
 				reciper = tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
 			}
-
-			err := reciper.Load(treePath)
-			if err != nil {
-				Fatal("Error on load tree ", err)
+			for _, t := range treePath {
+				err := reciper.Load(t)
+				if err != nil {
+					Fatal("Error on load tree ", err)
+				}
 			}
 
 			regExcludes, err := helpers.CreateRegexArray(excludes)
@@ -114,7 +118,7 @@ func NewTreePkglistCommand() *cobra.Command {
 				if full {
 					pkgstr = pkgDetail(p)
 				} else if verbose {
-					pkgstr = fmt.Sprintf("%s/%s-%s", p.GetCategory(), p.GetName(), p.GetVersion())
+					pkgstr = p.HumanReadableString()
 				} else {
 					pkgstr = fmt.Sprintf("%s/%s", p.GetCategory(), p.GetName())
 				}
@@ -142,12 +146,33 @@ func NewTreePkglistCommand() *cobra.Command {
 				}
 
 				if addPkg {
-					plist = append(plist, pkgstr)
-					results.Packages = append(results.Packages, TreePackageResult{
-						Name:     p.GetName(),
-						Version:  p.GetVersion(),
-						Category: p.GetCategory(),
-					})
+					if !revdeps {
+						plist = append(plist, pkgstr)
+						results.Packages = append(results.Packages, TreePackageResult{
+							Name:     p.GetName(),
+							Version:  p.GetVersion(),
+							Category: p.GetCategory(),
+							Path:     p.GetPath(),
+						})
+					} else {
+						visited := make(map[string]interface{})
+						for _, revdep := range p.ExpandedRevdeps(reciper.GetDatabase(), visited) {
+							if full {
+								pkgstr = pkgDetail(revdep)
+							} else if verbose {
+								pkgstr = revdep.HumanReadableString()
+							} else {
+								pkgstr = fmt.Sprintf("%s/%s", revdep.GetCategory(), revdep.GetName())
+							}
+							plist = append(plist, pkgstr)
+							results.Packages = append(results.Packages, TreePackageResult{
+								Name:     revdep.GetName(),
+								Version:  revdep.GetVersion(),
+								Category: revdep.GetCategory(),
+								Path:     revdep.GetPath(),
+							})
+						}
+					}
 				}
 			}
 
@@ -178,10 +203,11 @@ func NewTreePkglistCommand() *cobra.Command {
 
 	ans.Flags().BoolP("buildtime", "b", false, "Build time match")
 	ans.Flags().StringP("output", "o", "terminal", "Output format ( Defaults: terminal, available: json,yaml )")
+	ans.Flags().Bool("revdeps", false, "Search package reverse dependencies")
 
 	ans.Flags().BoolP("verbose", "v", false, "Add package version")
 	ans.Flags().BoolP("full", "f", false, "Show package detail")
-	ans.Flags().StringP("tree", "t", "", "Path of the tree to use.")
+	ans.Flags().StringArrayP("tree", "t", []string{}, "Path of the tree to use.")
 	ans.Flags().StringSliceVarP(&matches, "matches", "m", []string{},
 		"Include only matched packages from list. (Use string as regex).")
 	ans.Flags().StringSliceVarP(&excludes, "exclude", "e", []string{},
