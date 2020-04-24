@@ -64,6 +64,8 @@ var searchCmd = &cobra.Command{
 		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
 		searchWithLabel, _ := cmd.Flags().GetBool("by-label")
 		searchWithLabelMatch, _ := cmd.Flags().GetBool("by-label-regex")
+		revdeps, _ := cmd.Flags().GetBool("revdeps")
+
 		out, _ := cmd.Flags().GetString("output")
 		if out != "terminal" {
 			LuetCfg.GetLogging().SetLogLevel("error")
@@ -110,14 +112,28 @@ var searchCmd = &cobra.Command{
 				matches = synced.Search(args[0])
 			}
 			for _, m := range matches {
-				Info(fmt.Sprintf(":file_folder:%s", m.Repo.GetName()), fmt.Sprintf(":package:%s", m.Package.HumanReadableString()))
-				results.Packages = append(results.Packages,
-					PackageResult{
-						Name:       m.Package.GetName(),
-						Version:    m.Package.GetVersion(),
-						Category:   m.Package.GetCategory(),
-						Repository: m.Repo.GetName(),
-					})
+				if !revdeps {
+					Info(fmt.Sprintf(":file_folder:%s", m.Repo.GetName()), fmt.Sprintf(":package:%s", m.Package.HumanReadableString()))
+					results.Packages = append(results.Packages,
+						PackageResult{
+							Name:       m.Package.GetName(),
+							Version:    m.Package.GetVersion(),
+							Category:   m.Package.GetCategory(),
+							Repository: m.Repo.GetName(),
+						})
+				} else {
+					visited := make(map[string]interface{})
+					for _, revdep := range m.Package.ExpandedRevdeps(m.Repo.GetTree().GetDatabase(), visited) {
+						Info(fmt.Sprintf(":file_folder:%s", m.Repo.GetName()), fmt.Sprintf(":package:%s", revdep.HumanReadableString()))
+						results.Packages = append(results.Packages,
+							PackageResult{
+								Name:       revdep.GetName(),
+								Version:    revdep.GetVersion(),
+								Category:   revdep.GetCategory(),
+								Repository: m.Repo.GetName(),
+							})
+					}
+				}
 			}
 		} else {
 
@@ -144,14 +160,29 @@ var searchCmd = &cobra.Command{
 			}
 
 			for _, pack := range iMatches {
-				Info(fmt.Sprintf(":package:%s", pack.HumanReadableString()))
-				results.Packages = append(results.Packages,
-					PackageResult{
-						Name:       pack.GetName(),
-						Version:    pack.GetVersion(),
-						Category:   pack.GetCategory(),
-						Repository: "system",
-					})
+				if !revdeps {
+					Info(fmt.Sprintf(":package:%s", pack.HumanReadableString()))
+					results.Packages = append(results.Packages,
+						PackageResult{
+							Name:       pack.GetName(),
+							Version:    pack.GetVersion(),
+							Category:   pack.GetCategory(),
+							Repository: "system",
+						})
+				} else {
+					visited := make(map[string]interface{})
+
+					for _, revdep := range pack.ExpandedRevdeps(system.Database, visited) {
+						Info(fmt.Sprintf(":package:%s", pack.HumanReadableString()))
+						results.Packages = append(results.Packages,
+							PackageResult{
+								Name:       revdep.GetName(),
+								Version:    revdep.GetVersion(),
+								Category:   revdep.GetCategory(),
+								Repository: "system",
+							})
+					}
+				}
 			}
 		}
 
@@ -190,5 +221,6 @@ func init() {
 	searchCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	searchCmd.Flags().Bool("by-label", false, "Search packages through label")
 	searchCmd.Flags().Bool("by-label-regex", false, "Search packages through label regex")
+	searchCmd.Flags().Bool("revdeps", false, "Search package reverse dependencies")
 	RootCmd.AddCommand(searchCmd)
 }
