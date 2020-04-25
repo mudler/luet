@@ -10,6 +10,7 @@ require (
 	github.com/cavaliercoder/grab v2.0.0+incompatible
 	github.com/crillab/gophersat v1.1.9-0.20200211102949-9a8bf7f2f0a3
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200417035958-130b0bc6032c+incompatible
+	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
 	github.com/ghodss/yaml v1.0.0
 	github.com/hashicorp/go-version v1.2.0
@@ -41,8 +42,9 @@ require (
 	golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f // indirect
 	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553 // indirect
 	golang.org/x/tools v0.0.0-20200102200121-6de373a2766c // indirect
-	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
+	google.golang.org/appengine v1.6.6 // indirect
 	gopkg.in/yaml.v2 v2.2.7
+	gotest.tools/v3 v3.0.2 // indirect
 	mvdan.cc/sh/v3 v3.0.0-beta1
 )
 
