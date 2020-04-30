@@ -222,7 +222,11 @@ func (l *LuetInstaller) Reclaim(s *System) error {
 		FILES:
 			for _, f := range artefact.GetFiles() {
 				if helpers.Exists(filepath.Join(s.Target, f)) {
-					toMerge = append(toMerge, ArtifactMatch{Artifact: artefact, Package: artefact.GetCompileSpec().GetPackage()})
+					p, err := repo.GetTree().GetDatabase().FindPackage(artefact.GetCompileSpec().GetPackage())
+					if err != nil {
+						return err
+					}
+					toMerge = append(toMerge, ArtifactMatch{Artifact: artefact, Package: p})
 					break FILES
 				}
 			}
