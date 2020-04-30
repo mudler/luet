@@ -480,7 +480,11 @@ func DecodePackage(ID string, db PackageDatabase) (Package, error) {
 	return db.GetPackage(ID)
 }
 
-func (pack *DefaultPackage) RequiresContains(definitiondb PackageDatabase, s Package) (bool, error) {
+func (pack *DefaultPackage) scanRequires(definitiondb PackageDatabase, s Package, visited map[string]interface{}) (bool, error) {
+	if _, ok := visited[pack.HumanReadableString()]; ok {
+		return false, nil
+	}
+	visited[pack.HumanReadableString()] = true
 	p, err := definitiondb.FindPackage(pack)
 	if err != nil {
 		p = pack //relax things
@@ -498,12 +502,18 @@ func (pack *DefaultPackage) RequiresContains(definitiondb PackageDatabase, s Pac
 				return true, nil
 			}
 		}
-		if contains, err := re.RequiresContains(definitiondb, s); err == nil && contains {
+		if contains, err := re.scanRequires(definitiondb, s, visited); err == nil && contains {
 			return true, nil
 		}
 	}
 
 	return false, nil
+}
+
+// RequiresContains recursively scans into the database packages dependencies to find a match with the given package
+// It is used by the solver during uninstall.
+func (pack *DefaultPackage) RequiresContains(definitiondb PackageDatabase, s Package) (bool, error) {
+	return pack.scanRequires(definitiondb, s, make(map[string]interface{}))
 }
 
 // Best returns the best version of the package (the most bigger) from a list
