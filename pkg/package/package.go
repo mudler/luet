@@ -550,7 +550,11 @@ func (set Packages) Unique() Packages {
 	return result
 }
 
-func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db PackageDatabase) ([]bf.Formula, error) {
+func (pack *DefaultPackage) buildFormula(definitiondb PackageDatabase, db PackageDatabase, visited map[string]interface{}) ([]bf.Formula, error) {
+	if _, ok := visited[pack.HumanReadableString()]; ok {
+		return nil, nil
+	}
+	visited[pack.HumanReadableString()] = true
 	p, err := definitiondb.FindPackage(pack)
 	if err != nil {
 		p = pack // Relax failures and trust the def
@@ -652,8 +656,8 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 		}
 		B := bf.Var(encodedB)
 		formulas = append(formulas, bf.Or(bf.Not(A), B))
-
-		f, err := required.BuildFormula(definitiondb, db)
+		r := required.(*DefaultPackage) // We know since the implementation is DefaultPackage, that can be only DefaultPackage
+		f, err := r.buildFormula(definitiondb, db, visited)
 		if err != nil {
 			return nil, err
 		}
@@ -682,8 +686,8 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 						B := bf.Var(encodedB)
 						formulas = append(formulas, bf.Or(bf.Not(A),
 							bf.Not(B)))
-
-						f, err := p.BuildFormula(definitiondb, db)
+						r := p.(*DefaultPackage) // We know since the implementation is DefaultPackage, that can be only DefaultPackage
+						f, err := r.buildFormula(definitiondb, db, visited)
 						if err != nil {
 							return nil, err
 						}
@@ -702,7 +706,8 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 		formulas = append(formulas, bf.Or(bf.Not(A),
 			bf.Not(B)))
 
-		f, err := required.BuildFormula(definitiondb, db)
+		r := required.(*DefaultPackage) // We know since the implementation is DefaultPackage, that can be only DefaultPackage
+		f, err := r.buildFormula(definitiondb, db, visited)
 		if err != nil {
 			return nil, err
 		}
@@ -711,6 +716,10 @@ func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db Packag
 	}
 
 	return formulas, nil
+}
+
+func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db PackageDatabase) ([]bf.Formula, error) {
+	return pack.buildFormula(definitiondb, db, make(map[string]interface{}))
 }
 
 func (p *DefaultPackage) Explain() {
