@@ -16,7 +16,6 @@
 package client
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -76,7 +75,7 @@ func (c *LocalClient) DownloadFile(name string) (string, error) {
 	ok := false
 	for _, uri := range c.RepoData.Urls {
 		Info("Downloading file", name, "from", uri)
-		file, err = ioutil.TempFile(os.TempDir(), "localclient")
+		file, err = config.LuetCfg.GetSystem().TempFile("localclient")
 		if err != nil {
 			continue
 		}

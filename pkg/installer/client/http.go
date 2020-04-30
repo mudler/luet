@@ -17,7 +17,6 @@ package client
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math"
 	"net/url"
 	"os"
@@ -79,7 +78,7 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 		Info("Use artifact", artifactName, "from cache.")
 	} else {
 
-		temp, err = ioutil.TempDir(os.TempDir(), "tree")
+		temp, err = config.LuetCfg.GetSystem().TempDir("tree")
 		if err != nil {
 			return nil, err
 		}
@@ -139,7 +138,7 @@ func (c *HttpClient) DownloadFile(name string) (string, error) {
 
 	ok := false
 
-	temp, err = ioutil.TempDir(os.TempDir(), "tree")
+	temp, err = config.LuetCfg.GetSystem().TempDir("tree")
 	if err != nil {
 		return "", err
 	}
@@ -148,7 +147,7 @@ func (c *HttpClient) DownloadFile(name string) (string, error) {
 
 	for _, uri := range c.RepoData.Urls {
 
-		file, err = ioutil.TempFile(os.TempDir(), "HttpClient")
+		file, err = config.LuetCfg.GetSystem().TempFile("HttpClient")
 		if err != nil {
 			continue
 		}

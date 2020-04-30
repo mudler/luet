@@ -410,14 +410,14 @@ func worker(i int, wg *sync.WaitGroup, s <-chan CopyJob) {
 // ExtractArtifactFromDelta extracts deltas from ArtifactLayer from an image in tar format
 func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurrency int, keepPerms bool, includes []string, t CompressionImplementation) (Artifact, error) {
 
-	archive, err := ioutil.TempDir(os.TempDir(), "archive")
+	archive, err := LuetCfg.GetSystem().TempDir("archive")
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating tempdir for archive")
 	}
 	defer os.RemoveAll(archive) // clean up
 
 	if strings.HasSuffix(src, ".tar") {
-		rootfs, err := ioutil.TempDir(os.TempDir(), "rootfs")
+		rootfs, err := LuetCfg.GetSystem().TempDir("rootfs")
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
 		}

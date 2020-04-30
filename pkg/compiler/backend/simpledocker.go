@@ -237,7 +237,7 @@ func (*SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPer
 // ]
 // Changes uses container-diff (https://github.com/GoogleContainerTools/container-diff) for retrieving out layer diffs
 func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLayer, error) {
-	tmpdiffs, err := ioutil.TempDir(os.TempDir(), "tmpdiffs")
+	tmpdiffs, err := config.LuetCfg.GetSystem().TempDir("tmpdiffs")
 	if err != nil {
 		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while creating tempdir for rootfs")
 	}

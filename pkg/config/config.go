@@ -80,6 +80,7 @@ type LuetSystemConfig struct {
 	DatabasePath   string `yaml:"database_path" mapstructure:"database_path"`
 	Rootfs         string `yaml:"rootfs" mapstructure:"rootfs"`
 	PkgsCachePath  string `yaml:"pkgs_cache_path" mapstructure:"pkgs_cache_path"`
+	TmpDirBase     string `yaml:"tmpdir_base" mapstructure:"tmpdir_base"`
 }
 
 func (sc LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
@@ -223,6 +224,7 @@ func GenDefault(viper *v.Viper) {
 	viper.SetDefault("system.database_engine", "boltdb")
 	viper.SetDefault("system.database_path", "/var/cache/luet")
 	viper.SetDefault("system.rootfs", "/")
+	viper.SetDefault("system.tmpdir_base", filepath.Join(os.TempDir(), "tmpluet"))
 	viper.SetDefault("system.pkgs_cache_path", "packages")
 
 	viper.SetDefault("repos_confdir", []string{"/etc/luet/repos.conf.d"})
@@ -327,8 +329,26 @@ system:
   database_engine: %s
   database_path: %s
   pkgs_cache_path: %s
+  tmpdir_base: %s
   rootfs: %s`,
-		c.DatabaseEngine, c.DatabasePath, c.PkgsCachePath, c.Rootfs)
+		c.DatabaseEngine, c.DatabasePath, c.PkgsCachePath,
+		c.TmpDirBase, c.Rootfs)
 
 	return ans
+}
+
+func (c *LuetSystemConfig) InitTmpDir() error {
+	return os.MkdirAll(c.TmpDirBase, os.ModePerm)
+}
+
+func (c *LuetSystemConfig) CleanupTmpDir() error {
+	return os.RemoveAll(c.TmpDirBase)
+}
+
+func (c *LuetSystemConfig) TempDir(pattern string) (string, error) {
+	return ioutil.TempDir(c.TmpDirBase, pattern)
+}
+
+func (c *LuetSystemConfig) TempFile(pattern string) (*os.File, error) {
+	return ioutil.TempFile(c.TmpDirBase, pattern)
 }

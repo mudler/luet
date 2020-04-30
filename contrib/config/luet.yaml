@@ -56,6 +56,10 @@
 #   The path is append to rootfs option path.
 #   database_path: "/var/cache/luet"
 #
+#   Define the tmpdir base directory where luet store temporary files.
+#   Default $TMPDIR/tmpluet
+#   tmpdir_base: "/tmp/tmpluet"
+#
 # ---------------------------------------------
 # Repositories configurations directories.
 # ---------------------------------------------
