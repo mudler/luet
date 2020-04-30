@@ -17,6 +17,7 @@ package pkg
 
 import (
 	"encoding/base64"
+	"fmt"
 	"os"
 	"regexp"
 	"strconv"
@@ -228,7 +229,7 @@ func (db *BoltDatabase) getProvide(p Package) (Package, error) {
 		db.Unlock()
 
 		if !ok {
-			return nil, errors.New("No versions found for package")
+			return nil, errors.New(fmt.Sprintf("No versions found for: %s", p.HumanReadableString()))
 		}
 
 		for ve, _ := range versions {
@@ -240,7 +241,7 @@ func (db *BoltDatabase) getProvide(p Package) (Package, error) {
 			if match {
 				pa, ok := db.ProvidesDatabase[p.GetPackageName()][ve]
 				if !ok {
-					return nil, errors.New("No versions found for package")
+					return nil, errors.New(fmt.Sprintf("No versions found for: %s", p.HumanReadableString()))
 				}
 				return pa, nil //pick the first (we shouldn't have providers that are conflicting)
 				// TODO: A find dbcall here would recurse, but would give chance to have providers of providers
@@ -309,7 +310,7 @@ func (db *BoltDatabase) RemovePackage(p Package) error {
 	var found DefaultPackage
 	err = bolt.Select(q.Eq("Name", p.GetName()), q.Eq("Category", p.GetCategory()), q.Eq("Version", p.GetVersion())).Limit(1).Delete(&found)
 	if err != nil {
-		return errors.Wrap(err, "No package found to delete")
+		return errors.New(fmt.Sprintf("Package not found: %s", p.HumanReadableString()))
 	}
 	return nil
 }

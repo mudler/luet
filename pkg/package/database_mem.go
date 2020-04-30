@@ -18,6 +18,7 @@ package pkg
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"sync"
 
@@ -59,7 +60,7 @@ func (db *InMemoryDatabase) Get(s string) (string, error) {
 	defer db.Unlock()
 	pa, ok := db.Database[s]
 	if !ok {
-		return "", errors.New("No key found with that id")
+		return "", errors.New(fmt.Sprintf("No key found for: %s", s))
 	}
 	return pa, nil
 }
@@ -248,7 +249,7 @@ func (db *InMemoryDatabase) FindPackages(p Package) (Packages, error) {
 	}
 	versions, ok := db.CacheNoVersion[p.GetPackageName()]
 	if !ok {
-		return nil, errors.New("No versions found for package")
+		return nil, errors.New(fmt.Sprintf("No versions found for: %s", p.HumanReadableString()))
 	}
 	var versionsInWorld []Package
 	for ve, _ := range versions {
@@ -277,7 +278,7 @@ func (db *InMemoryDatabase) UpdatePackage(p Package) error {
 
 	return db.Set(p.GetFingerPrint(), enc)
 
-	return errors.New("Package not found")
+	return errors.New(fmt.Sprintf("Package not found: %s", p.HumanReadableString()))
 }
 
 func (db *InMemoryDatabase) GetPackages() []string {
@@ -302,7 +303,7 @@ func (db *InMemoryDatabase) GetPackageFiles(p Package) ([]string, error) {
 
 	pa, ok := db.FileDatabase[p.GetFingerPrint()]
 	if !ok {
-		return pa, errors.New("No key found with that id")
+		return pa, errors.New(fmt.Sprintf("No key found for: %s", p.HumanReadableString()))
 	}
 
 	return pa, nil
