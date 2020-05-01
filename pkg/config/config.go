@@ -27,7 +27,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mudler/luet/pkg/helpers"
 	solver "github.com/mudler/luet/pkg/solver"
+
 	v "github.com/spf13/viper"
 )
 
@@ -338,7 +340,10 @@ system:
 }
 
 func (c *LuetSystemConfig) InitTmpDir() error {
-	return os.MkdirAll(c.TmpDirBase, os.ModePerm)
+	if !helpers.Exists(c.TmpDirBase) {
+		return os.MkdirAll(c.TmpDirBase, os.ModePerm)
+	}
+	return nil
 }
 
 func (c *LuetSystemConfig) CleanupTmpDir() error {
@@ -346,9 +351,17 @@ func (c *LuetSystemConfig) CleanupTmpDir() error {
 }
 
 func (c *LuetSystemConfig) TempDir(pattern string) (string, error) {
+	err := c.InitTmpDir()
+	if err != nil {
+		return "", err
+	}
 	return ioutil.TempDir(c.TmpDirBase, pattern)
 }
 
 func (c *LuetSystemConfig) TempFile(pattern string) (*os.File, error) {
+	err := c.InitTmpDir()
+	if err != nil {
+		return nil, err
+	}
 	return ioutil.TempFile(c.TmpDirBase, pattern)
 }
