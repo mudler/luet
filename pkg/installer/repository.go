@@ -179,12 +179,13 @@ func (f *LuetRepositoryFile) GetChecksums() compiler.Checksums {
 
 func GenerateRepository(name, descr, t string, urls []string, priority int, src, treeDir string, db pkg.PackageDatabase) (Repository, error) {
 
-	art, err := buildPackageIndex(src)
+	tr := tree.NewInstallerRecipe(db)
+	err := tr.Load(treeDir)
 	if err != nil {
 		return nil, err
 	}
-	tr := tree.NewInstallerRecipe(db)
-	err = tr.Load(treeDir)
+
+	art, err := buildPackageIndex(src, tr.GetDatabase())
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +241,7 @@ func NewLuetSystemRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (Repos
 	return r, err
 }
 
-func buildPackageIndex(path string) ([]compiler.Artifact, error) {
+func buildPackageIndex(path string, db pkg.PackageDatabase) ([]compiler.Artifact, error) {
 
 	var art []compiler.Artifact
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
@@ -258,6 +259,11 @@ func buildPackageIndex(path string) ([]compiler.Artifact, error) {
 		if err != nil {
 			return errors.Wrap(err, "Error reading yaml "+currentpath)
 		}
+
+		if _, notfound := db.FindPackage(artifact.GetCompileSpec().GetPackage()); notfound != nil {
+			return nil
+		}
+
 		art = append(art, artifact)
 
 		return nil
