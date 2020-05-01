@@ -136,7 +136,7 @@ func (m *LuetSystemRepositoryMetadata) ReadFile(file string, removeFile bool) er
 	return nil
 }
 
-func (m *LuetSystemRepositoryMetadata) ToArtificatIndex() (ans compiler.ArtifactIndex) {
+func (m *LuetSystemRepositoryMetadata) ToArtifactIndex() (ans compiler.ArtifactIndex) {
 	for _, a := range m.Index {
 		ans = append(ans, a)
 	}
@@ -260,6 +260,8 @@ func buildPackageIndex(path string, db pkg.PackageDatabase) ([]compiler.Artifact
 			return errors.Wrap(err, "Error reading yaml "+currentpath)
 		}
 
+		// We want to include packages that are ONLY referenced in the tree.
+		// the ones which aren't should be deleted. (TODO: by another cli command?)
 		if _, notfound := db.FindPackage(artifact.GetCompileSpec().GetPackage()); notfound != nil {
 			return nil
 		}
@@ -662,7 +664,7 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "While processing "+REPOSITORY_METAFILE)
 	}
-	repo.SetIndex(meta.ToArtificatIndex())
+	repo.SetIndex(meta.ToArtifactIndex())
 
 	reciper := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
 	err = reciper.Load(treefs)
