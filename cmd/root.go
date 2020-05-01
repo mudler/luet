@@ -73,7 +73,7 @@ var RootCmd = &cobra.Command{
 		// Cleanup all tmp directories used by luet
 		err := config.LuetCfg.GetSystem().CleanupTmpDir()
 		if err != nil {
-			Fatal("failed on cleanup tmpdir:", err.Error())
+			Warning("failed on cleanup tmpdir:", err.Error())
 		}
 	},
 	SilenceErrors: true,
