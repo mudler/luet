@@ -38,7 +38,6 @@ var _ = Describe("Config", func() {
 			tmpDir, err := config.LuetCfg.GetSystem().TempDir("test1")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(strings.HasPrefix(tmpDir, filepath.Join(os.TempDir(), "tmpluet"))).To(BeTrue())
-			Expect(strings.HasPrefix(tmpDir, filepath.Join(os.TempDir(), "tmpluet"))).To(BeTrue())
 			Expect(helpers.Exists(tmpDir)).To(BeTrue())
 
 			defer os.RemoveAll(tmpDir)
