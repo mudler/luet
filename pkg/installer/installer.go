@@ -219,6 +219,9 @@ func (l *LuetInstaller) Reclaim(s *System) error {
 
 	for _, repo := range syncedRepos {
 		for _, artefact := range repo.GetIndex() {
+			Debug("Checking if",
+				artefact.GetCompileSpec().GetPackage().HumanReadableString(),
+				"from", repo.GetName(), "is installed")
 		FILES:
 			for _, f := range artefact.GetFiles() {
 				if helpers.Exists(filepath.Join(s.Target, f)) {
@@ -226,6 +229,7 @@ func (l *LuetInstaller) Reclaim(s *System) error {
 					if err != nil {
 						return err
 					}
+					Info("Found package:", p.HumanReadableString())
 					toMerge = append(toMerge, ArtifactMatch{Artifact: artefact, Package: p})
 					break FILES
 				}
@@ -246,8 +250,10 @@ func (l *LuetInstaller) Reclaim(s *System) error {
 			return errors.Wrap(err, "Failed creating package")
 		}
 		s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: pack.GetFingerPrint(), Files: match.Artifact.GetFiles()})
-
+		Info("Reclaimed package:", pack.HumanReadableString())
 	}
+	Info("Done!")
+
 	return nil
 }
 
