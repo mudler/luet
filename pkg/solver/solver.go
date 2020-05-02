@@ -31,6 +31,8 @@ type PackageSolver interface {
 	Uninstall(candidate pkg.Package, checkconflicts bool) (pkg.Packages, error)
 	ConflictsWithInstalled(p pkg.Package) (bool, error)
 	ConflictsWith(p pkg.Package, ls pkg.Packages) (bool, error)
+	Conflicts(pack pkg.Package, lsp pkg.Packages) (bool, error)
+
 	World() pkg.Packages
 	Upgrade(checkconflicts bool) (pkg.Packages, PackagesAssertions, error)
 
@@ -149,6 +151,35 @@ func (s *Solver) getList(db pkg.PackageDatabase, lsp pkg.Packages) (pkg.Packages
 	return ls, nil
 }
 
+// Conflicts acts like ConflictsWith, but uses package's reverse dependencies to
+// determine if it conflicts with the given set
+func (s *Solver) Conflicts(pack pkg.Package, lsp pkg.Packages) (bool, error) {
+	p, err := s.DefinitionDatabase.FindPackage(pack)
+	if err != nil {
+		p = pack
+	}
+
+	ls, err := s.getList(s.DefinitionDatabase, lsp)
+	if err != nil {
+		return false, errors.Wrap(err, "Package not found in definition db")
+	}
+
+	if s.noRulesWorld() {
+		return false, nil
+	}
+
+	temporarySet := pkg.NewInMemoryDatabase(false)
+	for _, p := range ls {
+		temporarySet.CreatePackage(p)
+	}
+	visited := make(map[string]interface{})
+	revdeps := p.ExpandedRevdeps(temporarySet, visited)
+
+	return len(revdeps) != 0, nil
+}
+
+// ConflictsWith return true if a package is part of the requirement set of a list of package
+// return false otherwise (and thus it is NOT relevant to the given list)
 func (s *Solver) ConflictsWith(pack pkg.Package, lsp pkg.Packages) (bool, error) {
 	p, err := s.DefinitionDatabase.FindPackage(pack)
 	if err != nil {

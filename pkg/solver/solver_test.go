@@ -672,6 +672,99 @@ var _ = Describe("Solver", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(val).ToNot(BeTrue())
 		})
+
+		It("Find conflicts using revdeps", func() {
+
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{A}, []*pkg.DefaultPackage{})
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			val, err := s.Conflicts(A, dbInstalled.World())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(val).To(BeTrue())
+
+		})
+
+		It("Find nested conflicts with revdeps", func() {
+
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{A}, []*pkg.DefaultPackage{})
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			val, err := s.Conflicts(D, dbInstalled.World())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(val).To(BeTrue())
+		})
+
+		It("Doesn't find nested conflicts with revdeps", func() {
+
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{A}, []*pkg.DefaultPackage{})
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			val, err := s.Conflicts(C, dbInstalled.World())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(val).ToNot(BeTrue())
+		})
+
+		It("Doesn't find conflicts with revdeps", func() {
+
+			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B, C, D} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			val, err := s.Conflicts(C, dbInstalled.World())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(val).ToNot(BeTrue())
+		})
+
 		It("Uninstalls simple packages not in world correctly", func() {
 
 			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
