@@ -312,6 +312,11 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *Sy
 
 	// Gathers things to install
 	for _, currentPack := range packagesToInstall {
+		// Check if package is already installed.
+		if _, err := s.Database.FindPackage(currentPack); err == nil {
+			// skip matching if it is installed already
+			continue
+		}
 		matches := syncedRepos.PackageMatches(pkg.Packages{currentPack})
 		if len(matches) == 0 {
 			return errors.New("Failed matching solutions against repository for " + currentPack.HumanReadableString() + " where are definitions coming from?!")
