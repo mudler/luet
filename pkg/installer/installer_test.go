@@ -385,7 +385,7 @@ urls:
 
 		})
 
-		FIt("Installs new packages from a syste with others installed", func() {
+		It("Installs new packages from a syste with others installed", func() {
 			//repo:=NewLuetSystemRepository()
 
 			tmpdir, err := ioutil.TempDir("", "tree")
