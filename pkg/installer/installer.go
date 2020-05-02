@@ -576,9 +576,19 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 	if l.Options.Force == true {
 		checkConflicts = false
 	}
+	// Create a temporary DB with the installed packages
+	// so the solver is much faster finding the deptree
+	installedtmp := pkg.NewInMemoryDatabase(false)
+
+	for _, i := range s.Database.World() {
+		_, err := installedtmp.CreatePackage(i)
+		if err != nil {
+			return errors.Wrap(err, "Failed create temporary in-memory db")
+		}
+	}
 
 	if !l.Options.NoDeps {
-		solv := solver.NewResolver(s.Database, s.Database, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
+		solv := solver.NewResolver(installedtmp, installedtmp, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
 		solution, err := solv.Uninstall(p, checkConflicts)
 		if err != nil && !l.Options.Force {
 			return errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
