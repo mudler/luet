@@ -418,7 +418,7 @@ func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
 	))
 
 	// Create tree and repository file
-	archive, err := ioutil.TempDir(os.TempDir(), "archive")
+	archive, err := config.LuetCfg.GetSystem().TempDir("archive")
 	if err != nil {
 		return errors.Wrap(err, "Error met while creating tempdir for archive")
 	}
@@ -454,7 +454,7 @@ func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
 	meta, serialized := r.Serialize()
 
 	// Create metadata file and repository file
-	metaTmpDir, err := ioutil.TempDir(os.TempDir(), "metadata")
+	metaTmpDir, err := config.LuetCfg.GetSystem().TempDir("metadata")
 	defer os.RemoveAll(metaTmpDir) // clean up
 	if err != nil {
 		return errors.Wrap(err, "Error met while creating tempdir for metadata")
@@ -561,15 +561,14 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 		}
 
 	} else {
-		treefs, err = ioutil.TempDir(os.TempDir(), "treefs")
+		treefs, err = config.LuetCfg.GetSystem().TempDir("treefs")
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
 		}
-		// If we always remove them, later on, no other structure can access
+		// Note: If we always remove them, later on, no other structure can access
 		// to the tree for e.g. to retrieve finalizers
-		//defer os.RemoveAll(treefs)
 
-		metafs, err = ioutil.TempDir(os.TempDir(), "metafs")
+		metafs, err = config.LuetCfg.GetSystem().TempDir("metafs")
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met whilte creating tempdir for metafs")
 		}

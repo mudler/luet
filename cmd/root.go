@@ -61,6 +61,20 @@ var RootCmd = &cobra.Command{
 		if err != nil {
 			Fatal("failed to load configuration:", err.Error())
 		}
+		// Initialize tmpdir prefix. TODO: Move this with LoadConfig
+		// directly on sub command to ensure the creation only when it's
+		// needed.
+		err = config.LuetCfg.GetSystem().InitTmpDir()
+		if err != nil {
+			Fatal("failed on init tmp basedir:", err.Error())
+		}
+	},
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		// Cleanup all tmp directories used by luet
+		err := config.LuetCfg.GetSystem().CleanupTmpDir()
+		if err != nil {
+			Warning("failed on cleanup tmpdir:", err.Error())
+		}
 	},
 	SilenceErrors: true,
 }
