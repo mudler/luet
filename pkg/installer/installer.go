@@ -569,9 +569,13 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 }
 
 func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
+	Spinner(32)
+	defer SpinnerStop()
+
+	Info("Uninstalling :package:", p.HumanReadableString(), "hang tight")
+
 	// compute uninstall from all world - remove packages in parallel - run uninstall finalizer (in order) TODO - mark the uninstallation in db
 	// Get installed definition
-
 	checkConflicts := l.Options.CheckConflicts
 	full := l.Options.FullUninstall
 	if l.Options.Force == true { // IF forced, we want to remove the package and all its requires
@@ -591,6 +595,7 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 	}
 
 	if !l.Options.NoDeps {
+		Info("Finding :package:", p.HumanReadableString(), "dependency graph :deciduous_tree:")
 		solv := solver.NewResolver(installedtmp, installedtmp, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
 		solution, err := solv.Uninstall(p, checkConflicts, full)
 		if err != nil && !l.Options.Force {
