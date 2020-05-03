@@ -139,7 +139,7 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 	l.Options.Force = true
 
 	for _, u := range toRemove {
-		Info(":package: Marked for deletion", u.HumanReadableString())
+		Info(":package:", u.HumanReadableString(), "Marked for deletion")
 
 		err := l.Uninstall(u, s)
 		if err != nil && !l.Options.Force {
@@ -309,7 +309,7 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *Sy
 			packagesToInstall = append(packagesToInstall, currentPack)
 		}
 	}
-
+	Info(":deciduous_tree: Finding packages to install")
 	// Gathers things to install
 	for _, currentPack := range packagesToInstall {
 		// Check if package is already installed.
@@ -331,6 +331,7 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *Sy
 				// Filter out already installed
 				if _, err := s.Database.FindPackage(currentPack); err != nil {
 					toInstall[currentPack.GetFingerPrint()] = ArtifactMatch{Package: currentPack, Artifact: artefact, Repository: matches[0].Repo}
+					Info("\t:package:", currentPack.HumanReadableString(), "from repository", matches[0].Repo.GetName())
 				}
 				break A
 			}
@@ -614,7 +615,7 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 		if err != nil && !l.Options.Force {
 			return errors.Wrap(err, "Uninstall failed")
 		}
-		Info(":package: ", p.HumanReadableString(), "uninstalled")
+		Info(":package:", p.HumanReadableString(), "uninstalled")
 	}
 	return nil
 
