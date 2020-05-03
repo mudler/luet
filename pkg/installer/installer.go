@@ -41,6 +41,8 @@ type LuetInstallerOptions struct {
 	OnlyDeps                    bool
 	Force                       bool
 	PreserveSystemEssentialData bool
+	FullUninstall               bool
+	CheckConflicts              bool
 }
 
 type LuetInstaller struct {
@@ -132,10 +134,8 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 	// if the old A results installed in the system. This is due to the fact that
 	// now the solver enforces the constraints and explictly denies two packages
 	// of the same version installed.
-	forced := false
-	if l.Options.Force {
-		forced = true
-	}
+	forced := l.Options.Force
+
 	l.Options.Force = true
 
 	for _, u := range toRemove {
@@ -572,10 +572,13 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 	// compute uninstall from all world - remove packages in parallel - run uninstall finalizer (in order) TODO - mark the uninstallation in db
 	// Get installed definition
 
-	checkConflicts := true
-	if l.Options.Force == true {
+	checkConflicts := l.Options.CheckConflicts
+	full := l.Options.FullUninstall
+	if l.Options.Force == true { // IF forced, we want to remove the package and all its requires
 		checkConflicts = false
+		full = false
 	}
+
 	// Create a temporary DB with the installed packages
 	// so the solver is much faster finding the deptree
 	installedtmp := pkg.NewInMemoryDatabase(false)
@@ -589,7 +592,7 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 
 	if !l.Options.NoDeps {
 		solv := solver.NewResolver(installedtmp, installedtmp, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
-		solution, err := solv.Uninstall(p, checkConflicts)
+		solution, err := solv.Uninstall(p, checkConflicts, full)
 		if err != nil && !l.Options.Force {
 			return errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
 		}

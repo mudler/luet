@@ -18,6 +18,8 @@ package solver
 import (
 
 	//. "github.com/mudler/luet/pkg/logger"
+	"fmt"
+
 	"github.com/pkg/errors"
 
 	"github.com/crillab/gophersat/bf"
@@ -28,7 +30,7 @@ import (
 type PackageSolver interface {
 	SetDefinitionDatabase(pkg.PackageDatabase)
 	Install(p pkg.Packages) (PackagesAssertions, error)
-	Uninstall(candidate pkg.Package, checkconflicts bool) (pkg.Packages, error)
+	Uninstall(candidate pkg.Package, checkconflicts, full bool) (pkg.Packages, error)
 	ConflictsWithInstalled(p pkg.Package) (bool, error)
 	ConflictsWith(p pkg.Package, ls pkg.Packages) (bool, error)
 	Conflicts(pack pkg.Package, lsp pkg.Packages) (bool, error)
@@ -175,7 +177,15 @@ func (s *Solver) Conflicts(pack pkg.Package, lsp pkg.Packages) (bool, error) {
 	visited := make(map[string]interface{})
 	revdeps := p.ExpandedRevdeps(temporarySet, visited)
 
-	return len(revdeps) != 0, nil
+	var revdepsErr error
+	for _, r := range revdeps {
+		if revdepsErr == nil {
+			revdepsErr = errors.New("")
+		}
+		revdepsErr = errors.New(fmt.Sprintf("%s\n%s", revdepsErr.Error(), r.HumanReadableString()))
+	}
+
+	return len(revdeps) != 0, revdepsErr
 }
 
 // ConflictsWith return true if a package is part of the requirement set of a list of package
@@ -271,7 +281,7 @@ func (s *Solver) Upgrade(checkconflicts bool) (pkg.Packages, PackagesAssertions,
 	s2.SetResolver(s.Resolver)
 	// Then try to uninstall the versions in the system, and store that tree
 	for _, p := range toUninstall {
-		r, err := s.Uninstall(p, checkconflicts)
+		r, err := s.Uninstall(p, checkconflicts, false)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't uninstall selected candidate "+p.GetFingerPrint())
 		}
@@ -292,7 +302,7 @@ func (s *Solver) Upgrade(checkconflicts bool) (pkg.Packages, PackagesAssertions,
 
 // Uninstall takes a candidate package and return a list of packages that would be removed
 // in order to purge the candidate. Returns error if unsat.
-func (s *Solver) Uninstall(c pkg.Package, checkconflicts bool) (pkg.Packages, error) {
+func (s *Solver) Uninstall(c pkg.Package, checkconflicts, full bool) (pkg.Packages, error) {
 	var res pkg.Packages
 	candidate, err := s.InstalledDatabase.FindPackage(c)
 	if err != nil {
@@ -310,6 +320,16 @@ func (s *Solver) Uninstall(c pkg.Package, checkconflicts bool) (pkg.Packages, er
 	}
 	// Build a fake "Installed" - Candidate and its requires tree
 	var InstalledMinusCandidate pkg.Packages
+
+	// We are asked to not perform a full uninstall (checking all the possible requires that could
+	// be removed). Let's only check if we can remove the selected package
+	if !full && checkconflicts {
+		if conflicts, err := s.Conflicts(candidate, s.Installed()); conflicts {
+			return nil, err
+		} else {
+			return pkg.Packages{candidate}, nil
+		}
+	}
 
 	// TODO: Can be optimized
 	for _, i := range s.Installed() {

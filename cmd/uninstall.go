@@ -57,6 +57,8 @@ var uninstallCmd = &cobra.Command{
 			attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
 			force := LuetCfg.Viper.GetBool("force")
 			nodeps := LuetCfg.Viper.GetBool("nodeps")
+			full, _ := cmd.Flags().GetBool("full")
+			checkconflicts, _ := cmd.Flags().GetBool("conflictscheck")
 
 			LuetCfg.GetSolverOptions().Type = stype
 			LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -66,10 +68,12 @@ var uninstallCmd = &cobra.Command{
 			Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 
 			inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-				Concurrency:   LuetCfg.GetGeneral().Concurrency,
-				SolverOptions: *LuetCfg.GetSolverOptions(),
-				NoDeps:        nodeps,
-				Force:         force,
+				Concurrency:    LuetCfg.GetGeneral().Concurrency,
+				SolverOptions:  *LuetCfg.GetSolverOptions(),
+				NoDeps:         nodeps,
+				Force:          force,
+				FullUninstall:  full,
+				CheckConflicts: checkconflicts,
 			})
 
 			if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
@@ -98,8 +102,10 @@ func init() {
 	uninstallCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
 	uninstallCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	uninstallCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
-	uninstallCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful!)")
+	uninstallCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful! overrides checkconflicts and full!)")
 	uninstallCmd.Flags().Bool("force", false, "Force uninstall")
+	uninstallCmd.Flags().Bool("full", false, "Attempts to remove as much packages as possible which aren't required (slow)")
+	uninstallCmd.Flags().Bool("conflictscheck", true, "Check if the package marked for deletion is required by other packages")
 
 	RootCmd.AddCommand(uninstallCmd)
 }
