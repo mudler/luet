@@ -170,10 +170,10 @@ func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fin
 
 	sort.Sort(unorderedAssertions)
 	// Build a topological graph
-	//graph := toposort.NewGraph(len(unorderedAssertions))
-	//	graph.AddNodes(fingerprints...)
+	added := map[string]map[string]interface{}{}
 	for _, a := range unorderedAssertions {
 		currentPkg := a.Package
+	REQUIRES:
 		for _, requiredDef := range currentPkg.GetRequires() {
 			if def, err := definitiondb.FindPackage(requiredDef); err == nil { // Provides: Get a chance of being override here
 				requiredDef = def.(*pkg.DefaultPackage)
@@ -185,9 +185,15 @@ func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fin
 			if req != nil {
 				requiredDef = req.Package
 			}
-
+			if _, ok := added[currentPkg.GetFingerPrint()][requiredDef.GetFingerPrint()]; ok {
+				continue REQUIRES
+			}
 			// Expand also here, as we need to order them (or instead the solver should give back the dep correctly?)
 			graph.AddEdge(currentPkg.GetFingerPrint(), requiredDef.GetFingerPrint())
+			if _, ok := added[currentPkg.GetFingerPrint()]; !ok {
+				added[currentPkg.GetFingerPrint()] = map[string]interface{}{}
+			}
+			added[currentPkg.GetFingerPrint()][requiredDef.GetFingerPrint()] = nil
 		}
 	}
 	result, err := graph.TopSort(fingerprint)
