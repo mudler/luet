@@ -92,7 +92,7 @@ func LoadConfig(c *config.LuetConfig) error {
 
 	NewSpinner()
 
-	if c.GetLogging().Path != "" {
+	if c.GetLogging().EnableLogFile && c.GetLogging().Path != "" {
 		// Init zap logger
 		err = ZapLogger()
 		if err != nil {
@@ -152,6 +152,9 @@ func init() {
 	pflags.StringVar(&cfgFile, "config", "", "config file (default is $HOME/.luet.yaml)")
 	pflags.BoolP("debug", "d", false, "verbose output")
 	pflags.Bool("fatal", false, "Enables Warnings to exit")
+	pflags.Bool("enable-logfile", false, "Enable log to file")
+	pflags.StringP("logfile", "l", config.LuetCfg.GetLogging().Path,
+		"Logfile path. Empty value disable log to file.")
 
 	sameOwner := false
 	u, err := user.Current()
@@ -166,10 +169,13 @@ func init() {
 	pflags.Bool("same-owner", sameOwner, "Maintain same owner on uncompress.")
 	pflags.Int("concurrency", runtime.NumCPU(), "Concurrency")
 
-	config.LuetCfg.Viper.BindPFlag("general.same_owner", pflags.Lookup("same-owner"))
-	config.LuetCfg.Viper.BindPFlag("general.debug", pflags.Lookup("debug"))
+	config.LuetCfg.Viper.BindPFlag("logging.enable_logfile", pflags.Lookup("enable-logfile"))
+	config.LuetCfg.Viper.BindPFlag("logging.path", pflags.Lookup("logfile"))
+
 	config.LuetCfg.Viper.BindPFlag("general.concurrency", pflags.Lookup("concurrency"))
+	config.LuetCfg.Viper.BindPFlag("general.debug", pflags.Lookup("debug"))
 	config.LuetCfg.Viper.BindPFlag("general.fatal_warnings", pflags.Lookup("fatal"))
+	config.LuetCfg.Viper.BindPFlag("general.same_owner", pflags.Lookup("same-owner"))
 }
 
 // initConfig reads in config file and ENV variables if set.

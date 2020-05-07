@@ -4,8 +4,11 @@
 # Logging configuration section:
 # ---------------------------------------------
 # logging:
+#   # Enable loggging to file (if path is not empty)
+#   enable_logfile: false
+#
 #   Leave empty to skip logging to file.
-#   path: ""
+#   path: "/var/log/luet.log"
 #
 #   Set logging level: error|warning|info|debug
 #   level: "info"
