@@ -47,6 +47,7 @@ func validateWorker(i int,
 	defer wg.Done()
 
 	var depSolver solver.PackageSolver
+	var cacheDeps *pkg.InMemoryDatabase
 	brokenPkgs := 0
 	brokenDeps := 0
 	var errstr string
@@ -56,9 +57,14 @@ func validateWorker(i int,
 		depSolver = solver.NewSolver(pkg.NewInMemoryDatabase(false),
 			reciper.GetDatabase(),
 			emptyInstallationDb)
+
+		// Use Singleton in memory cache for speedup dependencies
+		// analysis
+		cacheDeps = pkg.NewInMemoryDatabase(true).(*pkg.InMemoryDatabase)
 	}
 
 	for p := range c {
+
 		found, err := reciper.GetDatabase().FindPackages(
 			&pkg.DefaultPackage{
 				Name:     p.GetName(),
@@ -119,11 +125,15 @@ func validateWorker(i int,
 				continue
 			}
 		}
-		Info("Checking package "+fmt.Sprintf("%s/%s-%s", p.GetCategory(), p.GetName(), p.GetVersion()), "with", len(p.GetRequires()), "dependencies.")
+
+		Info("Checking package "+
+			fmt.Sprintf("%s/%s-%s", p.GetCategory(), p.GetName(), p.GetVersion()),
+			"with", len(p.GetRequires()), "dependencies and", len(p.GetConflicts()), "conflicts.")
 
 		all := p.GetRequires()
 		all = append(all, p.GetConflicts()...)
-		for _, r := range all {
+		for idx, r := range all {
+
 			var deps pkg.Packages
 			var err error
 			if r.IsSelector() {
@@ -166,6 +176,21 @@ func validateWorker(i int,
 					fmt.Sprintf("%s/%s-%s", r.GetCategory(), r.GetName(), r.GetVersion()))
 
 				if withSolver {
+
+					Info(fmt.Sprintf("  :soap: [%2d/%2d] %s/%s-%s: %s/%s-%s",
+						idx+1, len(all),
+						p.GetCategory(), p.GetName(), p.GetVersion(),
+						r.GetCategory(), r.GetName(), r.GetVersion(),
+					))
+
+					// Check if the solver is already been done for the deep
+					_, err := cacheDeps.Get(r.HashFingerprint())
+					if err == nil {
+						Debug("  :direct_hit: Cache Hit for dep",
+							fmt.Sprintf("%s/%s-%s", r.GetCategory(), r.GetName(), r.GetVersion()))
+						continue
+					}
+
 					Spinner(32)
 					solution, err := depSolver.Install(pkg.Packages{r})
 					ass := solution.SearchByName(r.GetPackageName())
@@ -191,6 +216,9 @@ func validateWorker(i int,
 						brokenDeps++
 						validpkg = false
 					}
+
+					// Register the key
+					cacheDeps.Set(r.HashFingerprint(), "1")
 
 				}
 			}
