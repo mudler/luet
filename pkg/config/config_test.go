@@ -54,6 +54,13 @@ var _ = Describe("Config", func() {
 			defer os.Remove(tmpFile.Name())
 		})
 
+		It("Config1", func() {
+			cfg := config.LuetCfg
+
+			cfg.GetLogging().Color = false
+			Expect(cfg.GetLogging().Color).To(BeFalse())
+		})
+
 	})
 
 })

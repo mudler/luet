@@ -3,6 +3,7 @@ package logger
 import (
 	"fmt"
 	"os"
+	"regexp"
 
 	. "github.com/mudler/luet/pkg/config"
 
@@ -15,6 +16,7 @@ import (
 
 var s *spinner.Spinner = nil
 var z *zap.Logger = nil
+var aurora Aurora = nil
 
 func NewSpinner() {
 	if s == nil {
@@ -22,6 +24,16 @@ func NewSpinner() {
 			spinner.CharSets[LuetCfg.GetGeneral().SpinnerCharset],
 			LuetCfg.GetGeneral().GetSpinnerMs())
 	}
+}
+
+func InitAurora() {
+	if aurora == nil {
+		aurora = NewAurora(LuetCfg.GetLogging().Color)
+	}
+}
+
+func GetAurora() Aurora {
+	return aurora
 }
 
 func ZapLogger() error {
@@ -158,7 +170,7 @@ func msg(level string, withoutColor bool, msg ...interface{}) {
 
 	var levelMsg string
 
-	if withoutColor {
+	if withoutColor || !LuetCfg.GetLogging().Color {
 		levelMsg = message
 	} else {
 		switch level {
@@ -173,7 +185,12 @@ func msg(level string, withoutColor bool, msg ...interface{}) {
 		}
 	}
 
-	levelMsg = emoji.Sprint(levelMsg)
+	if LuetCfg.GetLogging().EnableEmoji {
+		levelMsg = emoji.Sprint(levelMsg)
+	} else {
+		re := regexp.MustCompile(`[:][\w]+[:]`)
+		levelMsg = re.ReplaceAllString(levelMsg, "")
+	}
 
 	if z != nil {
 		log2File(level, message)

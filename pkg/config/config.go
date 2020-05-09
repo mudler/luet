@@ -37,9 +37,20 @@ var LuetCfg = NewLuetConfig(v.GetViper())
 var AvailableResolvers = strings.Join([]string{solver.QLearningResolverType}, " ")
 
 type LuetLoggingConfig struct {
-	Path       string `mapstructure:"path"`
-	JsonFormat bool   `mapstructure:"json_format"`
-	Level      string `mapstructure:"level"`
+	// Path of the logfile
+	Path string `mapstructure:"path"`
+	// Enable/Disable logging to file
+	EnableLogFile bool `mapstructure:"enable_logfile"`
+	// Enable JSON format logging in file
+	JsonFormat bool `mapstructure:"json_format"`
+
+	// Log level
+	Level string `mapstructure:"level"`
+
+	// Enable emoji
+	EnableEmoji bool `mapstructure:"enable_emoji"`
+	// Enable/Disable color in logging
+	Color bool `mapstructure:"color"`
 }
 
 type LuetGeneralConfig struct {
@@ -205,8 +216,11 @@ func NewLuetConfig(viper *v.Viper) *LuetConfig {
 
 func GenDefault(viper *v.Viper) {
 	viper.SetDefault("logging.level", "info")
-	viper.SetDefault("logging.path", "")
+	viper.SetDefault("logging.enable_logfile", false)
+	viper.SetDefault("logging.path", "/var/log/luet.log")
 	viper.SetDefault("logging.json_format", false)
+	viper.SetDefault("logging.enable_emoji", true)
+	viper.SetDefault("logging.color", true)
 
 	viper.SetDefault("general.concurrency", runtime.NumCPU())
 	viper.SetDefault("general.debug", false)
@@ -318,9 +332,13 @@ func (c *LuetLoggingConfig) SetLogLevel(s string) {
 func (c *LuetLoggingConfig) String() string {
 	ans := fmt.Sprintf(`
 logging:
+  enable_logfile: %t
   path: %s
   json_format: %t
-  level: %s`, c.Path, c.JsonFormat, c.Level)
+  color: %t
+  enable_emoji: %t
+  level: %s`, c.EnableLogFile, c.Path, c.JsonFormat,
+		c.Color, c.EnableEmoji, c.Level)
 
 	return ans
 }
