@@ -35,7 +35,6 @@ import (
 	tree "github.com/mudler/luet/pkg/tree"
 
 	"github.com/ghodss/yaml"
-	. "github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 )
 
@@ -517,6 +516,7 @@ func (r *LuetSystemRepository) Client() Client {
 func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	var repoUpdated bool = false
 	var treefs, metafs string
+	aurora := GetAurora()
 
 	Debug("Sync of the repository", r.Name, "in progress...")
 	c := r.Client()
@@ -648,9 +648,10 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 		tsec, _ := strconv.ParseInt(repo.GetLastUpdate(), 10, 64)
 
 		InfoC(
-			Bold(Red(":house: Repository "+repo.GetName()+" revision: ")).String() +
-				Bold(Green(repo.GetRevision())).String() + " - " +
-				Bold(Green(time.Unix(tsec, 0).String())).String(),
+			aurora.Bold(
+				aurora.Red(":house: Repository "+repo.GetName()+" revision: ")).String() +
+				aurora.Bold(aurora.Green(repo.GetRevision())).String() + " - " +
+				aurora.Bold(aurora.Green(time.Unix(tsec, 0).String())).String(),
 		)
 
 	} else {
@@ -682,9 +683,10 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	repo.SetType(r.GetType())
 	repo.SetPriority(r.GetPriority())
 	InfoC(
-		Bold(Yellow(":information_source: Repository "+repo.GetName()+" priority: ")).String() +
-			Bold(Green(repo.GetPriority())).String() + " - type " +
-			Bold(Green(repo.GetType())).String(),
+		aurora.Bold(
+			aurora.Yellow(":information_source: Repository "+repo.GetName()+" priority: ")).String() +
+			aurora.Bold(aurora.Green(repo.GetPriority())).String() + " - type " +
+			aurora.Bold(aurora.Green(repo.GetType())).String(),
 	)
 	return repo, nil
 }

@@ -88,9 +88,10 @@ func LoadConfig(c *config.LuetConfig) error {
 		return err
 	}
 
-	Debug("Using config file:", c.Viper.ConfigFileUsed())
-
+	InitAurora()
 	NewSpinner()
+
+	Debug("Using config file:", c.Viper.ConfigFileUsed())
 
 	if c.GetLogging().EnableLogFile && c.GetLogging().Path != "" {
 		// Init zap logger
@@ -153,6 +154,8 @@ func init() {
 	pflags.BoolP("debug", "d", false, "verbose output")
 	pflags.Bool("fatal", false, "Enables Warnings to exit")
 	pflags.Bool("enable-logfile", false, "Enable log to file")
+	pflags.Bool("color", config.LuetCfg.GetLogging().Color, "Enable/Disable color.")
+	pflags.Bool("emoji", config.LuetCfg.GetLogging().EnableEmoji, "Enable/Disable emoji.")
 	pflags.StringP("logfile", "l", config.LuetCfg.GetLogging().Path,
 		"Logfile path. Empty value disable log to file.")
 
@@ -169,6 +172,8 @@ func init() {
 	pflags.Bool("same-owner", sameOwner, "Maintain same owner on uncompress.")
 	pflags.Int("concurrency", runtime.NumCPU(), "Concurrency")
 
+	config.LuetCfg.Viper.BindPFlag("logging.color", pflags.Lookup("color"))
+	config.LuetCfg.Viper.BindPFlag("logging.enable_emoji", pflags.Lookup("emoji"))
 	config.LuetCfg.Viper.BindPFlag("logging.enable_logfile", pflags.Lookup("enable-logfile"))
 	config.LuetCfg.Viper.BindPFlag("logging.path", pflags.Lookup("logfile"))
 
