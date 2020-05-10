@@ -29,8 +29,9 @@ import (
 )
 
 var installCmd = &cobra.Command{
-	Use:   "install <pkg1> <pkg2> ...",
-	Short: "Install a package",
+	Use:     "install <pkg1> <pkg2> ...",
+	Short:   "Install a package",
+	Aliases: []string{"i"},
 	PreRun: func(cmd *cobra.Command, args []string) {
 		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
 		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))

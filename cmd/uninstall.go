@@ -28,9 +28,10 @@ import (
 )
 
 var uninstallCmd = &cobra.Command{
-	Use:   "uninstall <pkg> <pkg2> ...",
-	Short: "Uninstall a package or a list of packages",
-	Long:  `Uninstall packages`,
+	Use:     "uninstall <pkg> <pkg2> ...",
+	Short:   "Uninstall a package or a list of packages",
+	Long:    `Uninstall packages`,
+	Aliases: []string{"rm", "un"},
 	PreRun: func(cmd *cobra.Command, args []string) {
 		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
 		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))

@@ -35,6 +35,7 @@ $> luet repo update
 # Update only repo1 and repo2
 $> luet repo update repo1 repo2
 `,
+		Aliases: []string{"up"},
 		PreRun: func(cmd *cobra.Command, args []string) {
 		},
 		Run: func(cmd *cobra.Command, args []string) {

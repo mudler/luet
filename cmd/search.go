@@ -39,9 +39,10 @@ type Results struct {
 }
 
 var searchCmd = &cobra.Command{
-	Use:   "search <term>",
-	Short: "Search packages",
-	Long:  `Search for installed and available packages`,
+	Use:     "search <term>",
+	Short:   "Search packages",
+	Long:    `Search for installed and available packages`,
+	Aliases: []string{"s"},
 	PreRun: func(cmd *cobra.Command, args []string) {
 		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
 		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))

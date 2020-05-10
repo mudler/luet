@@ -24,9 +24,10 @@ import (
 )
 
 var configCmd = &cobra.Command{
-	Use:   "config",
-	Short: "Print config",
-	Long:  `Show luet configuration`,
+	Use:     "config",
+	Short:   "Print config",
+	Long:    `Show luet configuration`,
+	Aliases: []string{"c"},
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(config.LuetCfg.GetLogging())
 		fmt.Println(config.LuetCfg.GetGeneral())

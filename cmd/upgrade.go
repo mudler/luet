@@ -27,8 +27,9 @@ import (
 )
 
 var upgradeCmd = &cobra.Command{
-	Use:   "upgrade",
-	Short: "Upgrades the system",
+	Use:     "upgrade",
+	Short:   "Upgrades the system",
+	Aliases: []string{"u"},
 	PreRun: func(cmd *cobra.Command, args []string) {
 		LuetCfg.Viper.BindPFlag("system.database_path", installCmd.Flags().Lookup("system-dbpath"))
 		LuetCfg.Viper.BindPFlag("system.rootfs", installCmd.Flags().Lookup("system-target"))
