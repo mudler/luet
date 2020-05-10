@@ -62,7 +62,7 @@ var buildCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		clean := viper.GetBool("clean")
-		src := viper.GetString("tree")
+		treePaths := viper.GetStringSlice("tree")
 		dst := viper.GetString("destination")
 		concurrency := LuetCfg.GetGeneral().Concurrency
 		backendType := viper.GetString("backend")
@@ -105,13 +105,20 @@ var buildCmd = &cobra.Command{
 
 		generalRecipe := tree.NewCompilerRecipe(db)
 
-		Info("Loading", src)
-		Info("Building in", dst)
-
-		err := generalRecipe.Load(src)
-		if err != nil {
-			Fatal("Error: " + err.Error())
+		if len(treePaths) <= 0 {
+			Fatal("No tree path supplied!")
 		}
+
+		for _, src := range treePaths {
+			Info("Loading tree", src)
+
+			err := generalRecipe.Load(src)
+			if err != nil {
+				Fatal("Error: " + err.Error())
+			}
+		}
+
+		Info("Building in", dst)
 
 		stype := LuetCfg.Viper.GetString("solver.type")
 		discount := LuetCfg.Viper.GetFloat64("solver.discount")
@@ -196,7 +203,7 @@ func init() {
 		Fatal(err)
 	}
 	buildCmd.Flags().Bool("clean", true, "Build all packages without considering the packages present in the build directory")
-	buildCmd.Flags().String("tree", path, "Source luet tree")
+	buildCmd.Flags().StringSliceP("tree", "t", []string{}, "Path of the tree to use.")
 	buildCmd.Flags().String("backend", "docker", "backend used (docker,img)")
 	buildCmd.Flags().Bool("privileged", false, "Privileged (Keep permissions)")
 	buildCmd.Flags().String("database", "memory", "database used for solving (memory,boltdb)")
