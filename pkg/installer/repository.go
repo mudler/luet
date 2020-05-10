@@ -176,12 +176,15 @@ func (f *LuetRepositoryFile) GetChecksums() compiler.Checksums {
 	return f.Checksums
 }
 
-func GenerateRepository(name, descr, t string, urls []string, priority int, src, treeDir string, db pkg.PackageDatabase) (Repository, error) {
+func GenerateRepository(name, descr, t string, urls []string, priority int, src string, treesDir []string, db pkg.PackageDatabase) (Repository, error) {
 
 	tr := tree.NewInstallerRecipe(db)
-	err := tr.Load(treeDir)
-	if err != nil {
-		return nil, err
+
+	for _, treeDir := range treesDir {
+		err := tr.Load(treeDir)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	art, err := buildPackageIndex(src, tr.GetDatabase())

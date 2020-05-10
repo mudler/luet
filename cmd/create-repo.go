@@ -50,7 +50,7 @@ var createrepoCmd = &cobra.Command{
 		var err error
 		var repo installer.Repository
 
-		tree := viper.GetString("tree")
+		treePaths := viper.GetStringSlice("tree")
 		dst := viper.GetString("output")
 		packages := viper.GetString("packages")
 		name := viper.GetString("name")
@@ -74,8 +74,8 @@ var createrepoCmd = &cobra.Command{
 				Fatal("Error: " + err.Error())
 			}
 
-			if tree == "" {
-				tree = lrepo.TreePath
+			if len(treePaths) <= 0 {
+				treePaths = []string{lrepo.TreePath}
 			}
 
 			if t == "" {
@@ -87,12 +87,12 @@ var createrepoCmd = &cobra.Command{
 				lrepo.Urls,
 				lrepo.Priority,
 				packages,
-				tree,
+				treePaths,
 				pkg.NewInMemoryDatabase(false))
 
 		} else {
 			repo, err = installer.GenerateRepository(name, descr, t, urls, 1, packages,
-				tree, pkg.NewInMemoryDatabase(false))
+				treePaths, pkg.NewInMemoryDatabase(false))
 		}
 
 		if err != nil {
@@ -131,7 +131,7 @@ func init() {
 		Fatal(err)
 	}
 	createrepoCmd.Flags().String("packages", path, "Packages folder (output from build)")
-	createrepoCmd.Flags().String("tree", path, "Source luet tree")
+	createrepoCmd.Flags().StringSliceP("tree", "t", []string{}, "Path of the source trees to use.")
 	createrepoCmd.Flags().String("output", path, "Destination folder")
 	createrepoCmd.Flags().String("name", "luet", "Repository name")
 	createrepoCmd.Flags().String("descr", "luet", "Repository description")
