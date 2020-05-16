@@ -360,6 +360,51 @@ var _ = Describe("Solver", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
+		It("Install only package requires", func() {
+
+			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			C := pkg.NewPackage("C", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{
+				Name:    "A",
+				Version: ">=1.0",
+			}}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("D", "1.9", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("B", "1.1", []*pkg.DefaultPackage{
+				&pkg.DefaultPackage{
+					Name:    "D",
+					Version: ">=0",
+				},
+			}, []*pkg.DefaultPackage{})
+
+			A := pkg.NewPackage("A", "1.2", []*pkg.DefaultPackage{
+				&pkg.DefaultPackage{
+					Name:    "D",
+					Version: ">=1.0",
+				},
+			}, []*pkg.DefaultPackage{})
+
+			for _, p := range []pkg.Package{A, B, C, D, E} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			s = NewSolver(dbInstalled, dbDefinitions, db)
+
+			solution, err := s.Install([]pkg.Package{C})
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
+			Expect(solution).ToNot(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
+			Expect(solution).ToNot(ContainElement(PackageAssert{Package: D, Value: false}))
+			Expect(solution).ToNot(ContainElement(PackageAssert{Package: E, Value: true}))
+
+			Expect(len(solution)).To(Equal(4))
+			Expect(err).ToNot(HaveOccurred())
+		})
+
 		It("Selects best version", func() {
 
 			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
