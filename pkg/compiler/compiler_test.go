@@ -615,6 +615,61 @@ var _ = Describe("Compiler", func() {
 		})
 	})
 
+	Context("Packages which conents are a package folder", func() {
+		It("Compiles it in parallel", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err := generalRecipe.Load("../../tests/fixtures/package_dir")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions())
+
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{
+				Name:     "dironly",
+				Category: "test",
+				Version:  "1.0",
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			spec2, err := compiler.FromPackage(&pkg.DefaultPackage{
+				Name:     "dironly_filter",
+				Category: "test",
+				Version:  "1.0",
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+			tmpdir2, err := ioutil.TempDir("", "tree2")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir2) // clean up
+
+			spec.SetOutputPath(tmpdir)
+			spec2.SetOutputPath(tmpdir2)
+
+			compiler.SetConcurrency(1)
+
+			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec, spec2))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(2))
+			Expect(len(artifacts[0].GetDependencies())).To(Equal(0))
+
+			Expect(helpers.Untar(spec.Rel("dironly-test-1.0.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(spec.Rel("test1"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("test2"))).To(BeTrue())
+
+			Expect(helpers.Untar(spec2.Rel("dironly_filter-test-1.0.package.tar"), tmpdir2, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(spec2.Rel("test5"))).To(BeTrue())
+			Expect(helpers.Exists(spec2.Rel("test6"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec2.Rel("artifact42"))).ToNot(BeTrue())
+		})
+	})
+
 	Context("Compression", func() {
 		It("Builds packages in gzip", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))

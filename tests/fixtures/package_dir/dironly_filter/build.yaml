@@ -1,0 +1,11 @@
+image: "alpine"
+prelude:
+  - mkdir /foo
+  - chmod +x generate.sh
+steps:
+  - echo artifact5 > /foo/test5
+  - echo artifact6 > /foo/test6
+  - ./generate.sh
+package_dir: /foo
+includes:
+- /test5

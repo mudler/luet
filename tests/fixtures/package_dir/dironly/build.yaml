@@ -1,0 +1,7 @@
+image: "alpine"
+prelude:
+  - mkdir /foo
+steps:
+  - echo artifact5 > /foo/test1
+  - echo artifact6 > /foo/test2
+package_dir: /foo

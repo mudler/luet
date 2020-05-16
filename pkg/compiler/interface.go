@@ -168,6 +168,9 @@ type CompilationSpec interface {
 
 	GetRetrieve() []string
 	CopyRetrieves(dest string) error
+
+	SetPackageDir(string)
+	GetPackageDir() string
 }
 
 type CompilationSpecs interface {

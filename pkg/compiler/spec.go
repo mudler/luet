@@ -95,6 +95,7 @@ type LuetCompilationSpec struct {
 	Seed            string                    `json:"seed"`
 	Package         *pkg.DefaultPackage       `json:"package"`
 	SourceAssertion solver.PackagesAssertions `json:"-"`
+	PackageDir      string                    `json:"package_dir" yaml:"package_dir"`
 
 	Retrieve []string `json:"retrieve"`
 
@@ -121,6 +122,14 @@ func (a *LuetCompilationSpec) SetSourceAssertion(as solver.PackagesAssertions) {
 }
 func (cs *LuetCompilationSpec) GetPackage() pkg.Package {
 	return cs.Package
+}
+
+func (cs *LuetCompilationSpec) GetPackageDir() string {
+	return cs.PackageDir
+}
+
+func (cs *LuetCompilationSpec) SetPackageDir(s string) {
+	cs.PackageDir = s
 }
 
 func (cs *LuetCompilationSpec) BuildSteps() []string {

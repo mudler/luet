@@ -357,8 +357,15 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 
 	var diffs []ArtifactLayer
 	var artifact Artifact
+	unpack := p.ImageUnpack()
 
-	if !p.ImageUnpack() {
+	// If package_dir was specified in the spec, we want to treat the content of the directory
+	// as the root of our archive.  ImageUnpack is implied to be true. override it
+	if p.GetPackageDir() != "" {
+		unpack = true
+	}
+
+	if !unpack {
 		// we have to get diffs only if spec is not unpacked
 		diffs, err = cs.Backend.Changes(p.Rel(p.GetPackage().GetFingerPrint()+"-builder.image.tar"), p.Rel(p.GetPackage().GetFingerPrint()+".image.tar"))
 		if err != nil {
@@ -395,7 +402,12 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		}
 	}
 
-	if p.ImageUnpack() {
+	if unpack {
+
+		if p.GetPackageDir() != "" {
+			Info(":tophat: Packing from output dir", p.GetPackageDir())
+			rootfs = filepath.Join(rootfs, p.GetPackageDir())
+		}
 
 		if len(p.GetIncludes()) > 0 {
 			// strip from includes
