@@ -163,7 +163,7 @@ type DefaultPackage struct {
 	Uri         []string `json:"uri,omitempty"`
 	License     string   `json:"license,omitempty"`
 
-	Labels map[string]string `json:labels,omitempty`
+	Labels map[string]string `json:"labels,omitempty"` // Affects YAML field names too.
 }
 
 // State represent the package state
@@ -287,7 +287,6 @@ func (p *DefaultPackage) Encode(db PackageDatabase) (string, error) {
 func (p *DefaultPackage) Yaml() ([]byte, error) {
 	j, err := p.JSON()
 	if err != nil {
-
 		return []byte{}, err
 	}
 	y, err := yaml.JSONToYAML(j)
