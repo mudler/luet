@@ -59,6 +59,7 @@ type Package interface {
 	SetCategory(string)
 
 	GetName() string
+	SetName(string)
 	GetCategory() string
 
 	GetVersion() string
@@ -98,6 +99,8 @@ type Package interface {
 	String() string
 	HumanReadableString() string
 	HashFingerprint() string
+
+	Clone() Package
 }
 
 type Tree interface {
@@ -337,6 +340,11 @@ func (p *DefaultPackage) GetCategory() string {
 func (p *DefaultPackage) SetCategory(s string) {
 	p.Category = s
 }
+
+func (p *DefaultPackage) SetName(s string) {
+	p.Name = s
+}
+
 func (p *DefaultPackage) GetUses() []string {
 	return p.UseFlags
 }

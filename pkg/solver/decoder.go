@@ -251,6 +251,34 @@ func (a PackagesAssertions) Less(i, j int) bool {
 
 }
 
+func (a PackagesAssertions) TrueLen() int {
+	count := 0
+	for _, ass := range a {
+		if ass.Value {
+			count++
+		}
+	}
+
+	return count
+}
+
+// HashFrom computes the assertion hash From a given package. It drops it from the assertions
+// and checks it's not the only one. if it's unique it marks it specially - so the hash
+// which is generated is unique for the selected package
+func (assertions PackagesAssertions) HashFrom(p pkg.Package) string {
+
+	var assertionhash string
+
+	// When we don't have any solution to hash for, we need to generate an UUID by ourselves
+	latestsolution := assertions.Drop(p)
+	if latestsolution.TrueLen() == 0 {
+		assertionhash = assertions.Mark(p).AssertionHash()
+	} else {
+		assertionhash = latestsolution.AssertionHash()
+	}
+	return assertionhash
+}
+
 func (assertions PackagesAssertions) AssertionHash() string {
 	var fingerprint string
 	for _, assertion := range assertions { // Note: Always order them first!
@@ -284,6 +312,21 @@ func (assertions PackagesAssertions) Cut(p pkg.Package) PackagesAssertions {
 				break
 			}
 		}
+	}
+	return ass
+}
+
+// Mark returns a new assertion with the package marked
+func (assertions PackagesAssertions) Mark(p pkg.Package) PackagesAssertions {
+	ass := PackagesAssertions{}
+
+	for _, a := range assertions {
+		if a.Package.Matches(p) {
+			marked := a.Package.Clone()
+			marked.SetName("@@" + marked.GetName())
+			a = PackageAssert{Package: marked.(*pkg.DefaultPackage), Value: a.Value, Hash: a.Hash}
+		}
+		ass = append(ass, a)
 	}
 	return ass
 }

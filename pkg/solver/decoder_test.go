@@ -19,6 +19,7 @@ import (
 	"strconv"
 
 	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/solver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -283,5 +284,111 @@ var _ = Describe("Decoder", func() {
 			Expect(orderY.Cut(Y).Drop(Y).AssertionHash()).To(Equal(orderZ.Cut(Z).Drop(Z).AssertionHash()))
 		})
 
+		It("HashFrom can be used equally", func() {
+
+			X := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			Y := pkg.NewPackage("Y", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
+			Z := pkg.NewPackage("Z", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
+
+			for _, p := range []pkg.Package{X, Y, Z} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			solution, err := s.Install([]pkg.Package{Y})
+			Expect(err).ToNot(HaveOccurred())
+
+			solution2, err := s.Install([]pkg.Package{Z})
+			Expect(err).ToNot(HaveOccurred())
+			orderY, err := solution.Order(dbDefinitions, Y.GetFingerPrint())
+			Expect(err).ToNot(HaveOccurred())
+			orderZ, err := solution2.Order(dbDefinitions, Z.GetFingerPrint())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(orderY.Cut(Y).Drop(Y)).To(Equal(orderZ.Cut(Z).Drop(Z)))
+
+			Expect(orderY.Cut(Y).HashFrom(Y)).To(Equal(orderZ.Cut(Z).HashFrom(Z)))
+		})
+
+		It("Unique hashes for single packages", func() {
+
+			X := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+			for _, p := range []pkg.Package{X, F, D} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			solution, err := s.Install([]pkg.Package{X})
+			Expect(err).ToNot(HaveOccurred())
+
+			solution2, err := s.Install([]pkg.Package{F})
+			Expect(err).ToNot(HaveOccurred())
+
+			solution3, err := s.Install([]pkg.Package{D})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(solution.AssertionHash()).ToNot(Equal(solution2.AssertionHash()))
+			Expect(solution3.AssertionHash()).To(Equal(solution.AssertionHash()))
+
+		})
+
+		It("Unique hashes for empty assertions", func() {
+			empty := solver.PackagesAssertions{}
+			empty2 := solver.PackagesAssertions{}
+
+			Expect(empty.AssertionHash()).To(Equal(empty2.AssertionHash()))
+		})
+
+		It("Unique hashes for single packages with HashFrom", func() {
+
+			X := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			D := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			Y := pkg.NewPackage("Y", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
+
+			empty := solver.PackagesAssertions{}
+
+			for _, p := range []pkg.Package{X, F, D, Y} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			solution, err := s.Install([]pkg.Package{X})
+			Expect(err).ToNot(HaveOccurred())
+
+			solution2, err := s.Install([]pkg.Package{F})
+			Expect(err).ToNot(HaveOccurred())
+
+			solution3, err := s.Install([]pkg.Package{D})
+			Expect(err).ToNot(HaveOccurred())
+
+			solution4, err := s.Install([]pkg.Package{Y})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(solution.HashFrom(X)).ToNot(Equal(solution2.HashFrom(F)))
+			Expect(solution3.HashFrom(D)).To(Equal(solution.HashFrom(X)))
+
+			Expect(empty.AssertionHash()).ToNot(Equal(solution3.HashFrom(D)))
+			Expect(empty.AssertionHash()).ToNot(Equal(solution2.HashFrom(F)))
+
+			Expect(solution4.Drop(Y).AssertionHash()).To(Equal(solution4.HashFrom(Y)))
+		})
 	})
 })

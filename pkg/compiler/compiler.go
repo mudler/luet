@@ -468,7 +468,7 @@ func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssert
 			nthsolution := dependencies.Cut(assertion.Package)
 
 			assertion.Hash = solver.PackageHash{
-				BuildHash:   nthsolution.Drop(assertion.Package).AssertionHash(),
+				BuildHash:   nthsolution.HashFrom(assertion.Package),
 				PackageHash: nthsolution.AssertionHash(),
 			}
 			assertions = append(assertions, assertion)
