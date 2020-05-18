@@ -176,7 +176,7 @@ func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*D
 		Version:          version,
 		PackageRequires:  requires,
 		PackageConflicts: conflicts,
-		Labels:           make(map[string]string, 0),
+		Labels:           nil,
 	}
 }
 
@@ -341,6 +341,9 @@ func (p *DefaultPackage) GetUses() []string {
 	return p.UseFlags
 }
 func (p *DefaultPackage) AddLabel(k, v string) {
+	if p.Labels == nil {
+		p.Labels = make(map[string]string, 0)
+	}
 	p.Labels[k] = v
 }
 func (p *DefaultPackage) GetLabels() map[string]string {
