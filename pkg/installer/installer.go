@@ -74,7 +74,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	syncedRepos.SyncDatabase(allRepos)
 	// compute a "big" world
 	solv := solver.NewResolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
-	uninstall, solution, err := solv.Upgrade(false)
+	uninstall, solution, err := solv.Upgrade(!l.Options.FullUninstall, l.Options.NoDeps)
 	if err != nil {
 		return errors.Wrap(err, "Failed solving solution for upgrade")
 	}

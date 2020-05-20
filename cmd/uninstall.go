@@ -57,7 +57,7 @@ var uninstallCmd = &cobra.Command{
 			rate := LuetCfg.Viper.GetFloat64("solver.rate")
 			attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
 			force := LuetCfg.Viper.GetBool("force")
-			nodeps := LuetCfg.Viper.GetBool("nodeps")
+			nodeps, _ := cmd.Flags().GetBool("nodeps")
 			full, _ := cmd.Flags().GetBool("full")
 			checkconflicts, _ := cmd.Flags().GetBool("conflictscheck")
 

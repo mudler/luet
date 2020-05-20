@@ -58,6 +58,8 @@ var upgradeCmd = &cobra.Command{
 		rate := LuetCfg.Viper.GetFloat64("solver.rate")
 		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
 		force := LuetCfg.Viper.GetBool("force")
+		nodeps, _ := cmd.Flags().GetBool("nodeps")
+		full, _ := cmd.Flags().GetBool("full")
 
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -70,6 +72,8 @@ var upgradeCmd = &cobra.Command{
 			Concurrency:   LuetCfg.GetGeneral().Concurrency,
 			SolverOptions: *LuetCfg.GetSolverOptions(),
 			Force:         force,
+			FullUninstall: full,
+			NoDeps:        nodeps,
 		})
 		inst.Repositories(repos)
 		_, err := inst.SyncRepositories(false)
@@ -103,6 +107,8 @@ func init() {
 	upgradeCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	upgradeCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	upgradeCmd.Flags().Bool("force", false, "Force upgrade by ignoring errors")
+	upgradeCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful! overrides checkconflicts and full!)")
+	upgradeCmd.Flags().Bool("full", true, "Attempts to remove as much packages as possible which aren't required (slow)")
 
 	RootCmd.AddCommand(upgradeCmd)
 }

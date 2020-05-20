@@ -1045,7 +1045,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			uninstall, solution, err := s.Upgrade(true)
+			uninstall, solution, err := s.Upgrade(true, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(len(uninstall)).To(Equal(1))

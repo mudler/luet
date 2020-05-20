@@ -36,7 +36,7 @@ type PackageSolver interface {
 	Conflicts(pack pkg.Package, lsp pkg.Packages) (bool, error)
 
 	World() pkg.Packages
-	Upgrade(checkconflicts bool) (pkg.Packages, PackagesAssertions, error)
+	Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error)
 
 	SetResolver(PackageResolver)
 
@@ -251,7 +251,7 @@ func (s *Solver) ConflictsWithInstalled(p pkg.Package) (bool, error) {
 	return s.ConflictsWith(p, s.Installed())
 }
 
-func (s *Solver) Upgrade(checkconflicts bool) (pkg.Packages, PackagesAssertions, error) {
+func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error) {
 
 	// First get candidates that needs to be upgraded..
 
@@ -280,6 +280,12 @@ func (s *Solver) Upgrade(checkconflicts bool) (pkg.Packages, PackagesAssertions,
 
 	s2 := NewSolver(installedcopy, s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
 	s2.SetResolver(s.Resolver)
+	if !full {
+		ass := PackagesAssertions{}
+		for _, i := range toInstall {
+			ass = append(ass, PackageAssert{Package: i.(*pkg.DefaultPackage), Value: true})
+		}
+	}
 
 	// Then try to uninstall the versions in the system, and store that tree
 	for _, p := range toUninstall {
@@ -288,11 +294,9 @@ func (s *Solver) Upgrade(checkconflicts bool) (pkg.Packages, PackagesAssertions,
 			return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't uninstall selected candidate "+p.GetFingerPrint())
 		}
 		for _, z := range r {
-			if conflicts, err := s2.Conflicts(z, toInstall); !conflicts {
-				err = installedcopy.RemovePackage(z)
-				if err != nil {
-					return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't remove copy of package targetted for removal")
-				}
+			err = installedcopy.RemovePackage(z)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't remove copy of package targetted for removal")
 			}
 		}
 	}
