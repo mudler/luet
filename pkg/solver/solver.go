@@ -277,8 +277,10 @@ func (s *Solver) Upgrade(checkconflicts bool) (pkg.Packages, PackagesAssertions,
 			}
 		}
 	}
+
 	s2 := NewSolver(installedcopy, s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
 	s2.SetResolver(s.Resolver)
+
 	// Then try to uninstall the versions in the system, and store that tree
 	for _, p := range toUninstall {
 		r, err := s.Uninstall(p, checkconflicts, false)
@@ -286,13 +288,15 @@ func (s *Solver) Upgrade(checkconflicts bool) (pkg.Packages, PackagesAssertions,
 			return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't uninstall selected candidate "+p.GetFingerPrint())
 		}
 		for _, z := range r {
-			err = installedcopy.RemovePackage(z)
-			if err != nil {
-				return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't remove copy of package targetted for removal")
+			if conflicts, err := s2.Conflicts(z, toInstall); !conflicts {
+				err = installedcopy.RemovePackage(z)
+				if err != nil {
+					return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't remove copy of package targetted for removal")
+				}
 			}
 		}
-
 	}
+
 	r, e := s2.Install(toInstall)
 	return toUninstall, r, e
 	// To that tree, ask to install the versions that should be upgraded, and try to solve
