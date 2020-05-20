@@ -26,11 +26,12 @@ import (
 	"strconv"
 	"strings"
 
+	version "github.com/mudler/luet/pkg/versioner"
+
 	gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	"github.com/crillab/gophersat/bf"
 	"github.com/ghodss/yaml"
 	"github.com/jinzhu/copier"
-	version "github.com/mudler/luet/pkg/versioner"
 	"github.com/pkg/errors"
 )
 

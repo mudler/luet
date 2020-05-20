@@ -22,6 +22,7 @@ import (
 	//"sort"
 
 	. "github.com/mudler/luet/pkg/logger"
+	spectooling "github.com/mudler/luet/pkg/spectooling"
 	tree "github.com/mudler/luet/pkg/tree"
 
 	"github.com/spf13/cobra"
@@ -54,7 +55,7 @@ func NewTreeBumpCommand() *cobra.Command {
 			}
 
 			if toStdout {
-				data, err := pack.Yaml()
+				data, err := spectooling.NewDefaultPackageSanitized(&pack).Yaml()
 				if err != nil {
 					Fatal("Error on yaml conversion: " + err.Error())
 				}

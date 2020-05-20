@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 
 	pkg "github.com/mudler/luet/pkg/package"
+	spectooling "github.com/mudler/luet/pkg/spectooling"
 	"github.com/pkg/errors"
 )
 
@@ -42,7 +43,7 @@ type Recipe struct {
 }
 
 func WriteDefinitionFile(p pkg.Package, definitionFilePath string) error {
-	data, err := p.Yaml()
+	data, err := spectooling.NewDefaultPackageSanitized(p).Yaml()
 	if err != nil {
 		return err
 	}
