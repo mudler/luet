@@ -16,6 +16,7 @@
 package installer
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -66,6 +67,8 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	if err != nil {
 		return err
 	}
+
+	Info(":thinking: Computing upgrade, please hang tight")
 	// First match packages against repositories by priority
 	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
@@ -76,10 +79,17 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 		return errors.Wrap(err, "Failed solving solution for upgrade")
 	}
 
+	Info("Marked for uninstall")
+	for _, p := range uninstall {
+		Info(fmt.Sprintf("- %s", p.HumanReadableString()))
+	}
+
+	Info("Marked for upgrade")
 	toInstall := pkg.Packages{}
 	for _, assertion := range solution {
 		// Be sure to filter from solutions packages already installed in the system
 		if _, err := s.Database.FindPackage(assertion.Package); err != nil && assertion.Value {
+			Info(fmt.Sprintf("- %s", assertion.Package.HumanReadableString()))
 			toInstall = append(toInstall, assertion.Package)
 		}
 	}
