@@ -36,14 +36,15 @@ import (
 )
 
 type LuetInstallerOptions struct {
-	SolverOptions               config.LuetSolverOptions
-	Concurrency                 int
-	NoDeps                      bool
-	OnlyDeps                    bool
-	Force                       bool
-	PreserveSystemEssentialData bool
-	FullUninstall               bool
-	CheckConflicts              bool
+	SolverOptions                             config.LuetSolverOptions
+	Concurrency                               int
+	NoDeps                                    bool
+	OnlyDeps                                  bool
+	Force                                     bool
+	PreserveSystemEssentialData               bool
+	FullUninstall, FullCleanUninstall         bool
+	CheckConflicts                            bool
+	SolverUpgrade, RemoveUnavailableOnUpgrade bool
 }
 
 type LuetInstaller struct {
@@ -74,9 +75,19 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	syncedRepos.SyncDatabase(allRepos)
 	// compute a "big" world
 	solv := solver.NewResolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
-	uninstall, solution, err := solv.Upgrade(!l.Options.FullUninstall, l.Options.NoDeps)
-	if err != nil {
-		return errors.Wrap(err, "Failed solving solution for upgrade")
+	var uninstall pkg.Packages
+	var solution solver.PackagesAssertions
+
+	if l.Options.SolverUpgrade {
+		uninstall, solution, err = solv.UpgradeUniverse(l.Options.RemoveUnavailableOnUpgrade)
+		if err != nil {
+			return errors.Wrap(err, "Failed solving solution for upgrade")
+		}
+	} else {
+		uninstall, solution, err = solv.Upgrade(!l.Options.FullUninstall, l.Options.NoDeps)
+		if err != nil {
+			return errors.Wrap(err, "Failed solving solution for upgrade")
+		}
 	}
 
 	Info("Marked for uninstall")
@@ -608,10 +619,20 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 	if !l.Options.NoDeps {
 		Info("Finding :package:", p.HumanReadableString(), "dependency graph :deciduous_tree:")
 		solv := solver.NewResolver(installedtmp, installedtmp, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
-		solution, err := solv.Uninstall(p, checkConflicts, full)
-		if err != nil && !l.Options.Force {
-			return errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
+		var solution pkg.Packages
+		var err error
+		if l.Options.FullCleanUninstall {
+			solution, err = solv.UninstallUniverse(pkg.Packages{p})
+			if err != nil {
+				return errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
+			}
+		} else {
+			solution, err = solv.Uninstall(p, checkConflicts, full)
+			if err != nil && !l.Options.Force {
+				return errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
+			}
 		}
+
 		for _, p := range solution {
 			Info("Uninstalling", p.HumanReadableString())
 			err := l.uninstall(p, s)

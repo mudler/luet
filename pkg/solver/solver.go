@@ -38,6 +38,9 @@ type PackageSolver interface {
 	World() pkg.Packages
 	Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error)
 
+	UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssertions, error)
+	UninstallUniverse(toremove pkg.Packages) (pkg.Packages, error)
+
 	SetResolver(PackageResolver)
 
 	Solve() (PackagesAssertions, error)
@@ -87,6 +90,16 @@ func (s *Solver) Installed() pkg.Packages {
 
 func (s *Solver) noRulesWorld() bool {
 	for _, p := range s.World() {
+		if len(p.GetConflicts()) != 0 || len(p.GetRequires()) != 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (s *Solver) noRulesInstalled() bool {
+	for _, p := range s.Installed() {
 		if len(p.GetConflicts()) != 0 || len(p.GetRequires()) != 0 {
 			return false
 		}
@@ -249,6 +262,163 @@ func (s *Solver) ConflictsWith(pack pkg.Package, lsp pkg.Packages) (bool, error)
 
 func (s *Solver) ConflictsWithInstalled(p pkg.Package) (bool, error) {
 	return s.ConflictsWith(p, s.Installed())
+}
+
+// UninstallUniverse takes a list of candidate package and return a list of packages that would be removed
+// in order to purge the candidate. Uses the solver to check constraints and nothing else
+//
+// It can be compared to the counterpart Uninstall as this method acts like a uninstall --full
+// it removes all the packages and its deps. taking also in consideration other packages that might have
+// revdeps
+func (s *Solver) UninstallUniverse(toremove pkg.Packages) (pkg.Packages, error) {
+
+	if s.noRulesInstalled() {
+		return s.getList(s.InstalledDatabase, toremove)
+	}
+
+	// resolve to packages from the db
+	toRemove, err := s.getList(s.InstalledDatabase, toremove)
+	if err != nil {
+		return nil, errors.Wrap(err, "Package not found in definition db")
+	}
+
+	var formulas []bf.Formula
+	r, err := s.BuildInstalled()
+	if err != nil {
+		return nil, errors.Wrap(err, "Package not found in definition db")
+	}
+
+	// SAT encode the clauses against the world
+	for _, p := range toRemove.Unique() {
+		encodedP, err := p.Encode(s.InstalledDatabase)
+		if err != nil {
+			return nil, errors.Wrap(err, "Package not found in definition db")
+		}
+		P := bf.Var(encodedP)
+		formulas = append(formulas, bf.And(bf.Not(P), r))
+	}
+
+	markedForRemoval := pkg.Packages{}
+	model := bf.Solve(bf.And(formulas...))
+	if model == nil {
+		return nil, errors.New("Failed finding a solution")
+	}
+	assertion, err := DecodeModel(model, s.InstalledDatabase)
+	if err != nil {
+		return nil, errors.Wrap(err, "while decoding model from solution")
+	}
+	for _, a := range assertion {
+		if !a.Value {
+			if p, err := s.InstalledDatabase.FindPackage(a.Package); err == nil {
+				markedForRemoval = append(markedForRemoval, p)
+			}
+
+		}
+	}
+	return markedForRemoval, nil
+}
+
+// UpgradeUniverse mark packages for removal and returns a solution. It considers
+// the Universe db as authoritative
+// See also on the subject: https://arxiv.org/pdf/1007.1021.pdf
+func (s *Solver) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssertions, error) {
+	// we first figure out which aren't up-to-date
+	// which has to be removed
+	// and which needs to be upgraded
+	notUptodate := pkg.Packages{}
+	removed := pkg.Packages{}
+	toUpgrade := pkg.Packages{}
+
+	// TODO: this is memory expensive, we need to optimize this
+	universe := pkg.NewInMemoryDatabase(false)
+	for _, p := range s.DefinitionDatabase.World() {
+		universe.CreatePackage(p)
+	}
+	for _, p := range s.Installed() {
+		universe.CreatePackage(p)
+	}
+
+	// Grab all the installed ones, see if they are eligible for update
+	for _, p := range s.Installed() {
+		available, err := universe.FindPackageVersions(p)
+		if err != nil {
+			removed = append(removed, p)
+		}
+		if len(available) == 0 {
+			continue
+		}
+
+		bestmatch := available.Best(nil)
+		// Found a better version available
+		if !bestmatch.Matches(p) {
+			notUptodate = append(notUptodate, p)
+			toUpgrade = append(toUpgrade, bestmatch)
+		}
+	}
+
+	// resolve to packages from the db to be able to encode correctly
+	oldPackages, err := s.getList(universe, notUptodate)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "couldn't get package marked for removal from universe")
+	}
+
+	updates, err := s.getList(universe, toUpgrade)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "couldn't get package marked for update from universe")
+	}
+
+	var formulas []bf.Formula
+
+	// Build constraints for the whole defdb
+	r, err := s.BuildWorld(true)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "couldn't build world constraints")
+	}
+
+	// Treat removed packages from universe as marked for deletion
+	if dropremoved {
+		oldPackages = append(oldPackages, removed...)
+	}
+
+	// SAT encode the clauses against the world
+	for _, p := range oldPackages.Unique() {
+		encodedP, err := p.Encode(universe)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "couldn't encode package")
+		}
+		P := bf.Var(encodedP)
+		formulas = append(formulas, bf.And(bf.Not(P), r))
+	}
+
+	for _, p := range updates {
+		encodedP, err := p.Encode(universe)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "couldn't encode package")
+		}
+		P := bf.Var(encodedP)
+		formulas = append(formulas, bf.And(P, r))
+	}
+
+	markedForRemoval := pkg.Packages{}
+	model := bf.Solve(bf.And(formulas...))
+	if model == nil {
+		return nil, nil, errors.New("Failed finding a solution")
+	}
+
+	assertion, err := DecodeModel(model, universe)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "while decoding model from solution")
+	}
+	for _, a := range assertion {
+		if !a.Value {
+			if p, err := s.InstalledDatabase.FindPackage(a.Package); err == nil {
+				markedForRemoval = append(markedForRemoval, p)
+			}
+
+		}
+
+	}
+	return markedForRemoval, assertion, nil
 }
 
 func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error) {

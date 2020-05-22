@@ -60,6 +60,7 @@ var uninstallCmd = &cobra.Command{
 			nodeps, _ := cmd.Flags().GetBool("nodeps")
 			full, _ := cmd.Flags().GetBool("full")
 			checkconflicts, _ := cmd.Flags().GetBool("conflictscheck")
+			fullClean, _ := cmd.Flags().GetBool("full-clean")
 
 			LuetCfg.GetSolverOptions().Type = stype
 			LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -69,12 +70,13 @@ var uninstallCmd = &cobra.Command{
 			Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 
 			inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-				Concurrency:    LuetCfg.GetGeneral().Concurrency,
-				SolverOptions:  *LuetCfg.GetSolverOptions(),
-				NoDeps:         nodeps,
-				Force:          force,
-				FullUninstall:  full,
-				CheckConflicts: checkconflicts,
+				Concurrency:        LuetCfg.GetGeneral().Concurrency,
+				SolverOptions:      *LuetCfg.GetSolverOptions(),
+				NoDeps:             nodeps,
+				Force:              force,
+				FullUninstall:      full,
+				FullCleanUninstall: fullClean,
+				CheckConflicts:     checkconflicts,
 			})
 
 			if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
@@ -107,6 +109,7 @@ func init() {
 	uninstallCmd.Flags().Bool("force", false, "Force uninstall")
 	uninstallCmd.Flags().Bool("full", false, "Attempts to remove as much packages as possible which aren't required (slow)")
 	uninstallCmd.Flags().Bool("conflictscheck", true, "Check if the package marked for deletion is required by other packages")
+	uninstallCmd.Flags().Bool("full-clean", false, "(experimental) Uninstall packages and all the other deps/revdeps of it.")
 
 	RootCmd.AddCommand(uninstallCmd)
 }

@@ -60,6 +60,8 @@ var upgradeCmd = &cobra.Command{
 		force := LuetCfg.Viper.GetBool("force")
 		nodeps, _ := cmd.Flags().GetBool("nodeps")
 		full, _ := cmd.Flags().GetBool("full")
+		universe, _ := cmd.Flags().GetBool("universe")
+		clean, _ := cmd.Flags().GetBool("clean")
 
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -69,11 +71,13 @@ var upgradeCmd = &cobra.Command{
 		Debug("Solver", LuetCfg.GetSolverOptions().String())
 
 		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-			Concurrency:   LuetCfg.GetGeneral().Concurrency,
-			SolverOptions: *LuetCfg.GetSolverOptions(),
-			Force:         force,
-			FullUninstall: full,
-			NoDeps:        nodeps,
+			Concurrency:                LuetCfg.GetGeneral().Concurrency,
+			SolverOptions:              *LuetCfg.GetSolverOptions(),
+			Force:                      force,
+			FullUninstall:              full,
+			NoDeps:                     nodeps,
+			SolverUpgrade:              universe,
+			RemoveUnavailableOnUpgrade: clean,
 		})
 		inst.Repositories(repos)
 		_, err := inst.SyncRepositories(false)
@@ -109,6 +113,8 @@ func init() {
 	upgradeCmd.Flags().Bool("force", false, "Force upgrade by ignoring errors")
 	upgradeCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful! overrides checkconflicts and full!)")
 	upgradeCmd.Flags().Bool("full", true, "Attempts to remove as much packages as possible which aren't required (slow)")
+	upgradeCmd.Flags().Bool("universe", false, "Use ONLY the SAT solver to compute upgrades (experimental)")
+	upgradeCmd.Flags().Bool("clean", false, "Try to drop removed packages (experimental, only when --universe is enabled)")
 
 	RootCmd.AddCommand(upgradeCmd)
 }

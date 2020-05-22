@@ -574,57 +574,366 @@ var _ = Describe("Solver", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("Uninstalls simple package correctly", func() {
+		Context("Uninstall", func() {
+			It("Uninstalls simple package correctly", func() {
 
-			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			for _, p := range []pkg.Package{A, B, C, D} {
-				_, err := dbDefinitions.CreatePackage(p)
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+				s = NewSolver(dbInstalled, dbDefinitions, db)
+
+				solution, err := s.Uninstall(A, true, true)
 				Expect(err).ToNot(HaveOccurred())
-			}
 
-			for _, p := range []pkg.Package{A, B, C, D} {
-				_, err := dbInstalled.CreatePackage(p)
+				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+
+				//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+				Expect(len(solution)).To(Equal(1))
+			})
+			It("Uninstalls simple package expanded correctly", func() {
+
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "1.2", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+				s = NewSolver(dbInstalled, dbDefinitions, db)
+
+				solution, err := s.Uninstall(&pkg.DefaultPackage{Name: "A", Version: ">1.0"}, true, true)
 				Expect(err).ToNot(HaveOccurred())
-			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
 
-			solution, err := s.Uninstall(A, true, true)
-			Expect(err).ToNot(HaveOccurred())
+				Expect(solution).To(ContainElement(A.IsFlagged(false)))
 
-			Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+				Expect(len(solution)).To(Equal(1))
+			})
+			It("Uninstalls simple packages not in world correctly", func() {
 
-			//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
-			Expect(len(solution)).To(Equal(1))
-		})
-		It("Uninstalls simple package expanded correctly", func() {
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			A := pkg.NewPackage("A", "1.2", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				for _, p := range []pkg.Package{B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
 
-			for _, p := range []pkg.Package{A, B, C, D} {
-				_, err := dbDefinitions.CreatePackage(p)
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+				solution, err := s.Uninstall(A, true, true)
 				Expect(err).ToNot(HaveOccurred())
-			}
 
-			for _, p := range []pkg.Package{A, B, C, D} {
-				_, err := dbInstalled.CreatePackage(p)
+				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+
+				//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+				Expect(len(solution)).To(Equal(1))
+			})
+
+			It("Uninstalls complex packages not in world correctly", func() {
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+
+				for _, p := range []pkg.Package{B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+				solution, err := s.Uninstall(A, true, true)
 				Expect(err).ToNot(HaveOccurred())
-			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
 
-			solution, err := s.Uninstall(&pkg.DefaultPackage{Name: "A", Version: ">1.0"}, true, true)
-			Expect(err).ToNot(HaveOccurred())
+				Expect(solution).To(ContainElement(A.IsFlagged(false)))
 
-			Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(len(solution)).To(Equal(1))
+			})
 
-			//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
-			Expect(len(solution)).To(Equal(1))
+			It("Uninstalls complex packages correctly, even if shared deps are required by system packages", func() {
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+				solution, err := s.Uninstall(A, true, true)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(solution).ToNot(ContainElement(B.IsFlagged(false)))
+
+				Expect(len(solution)).To(Equal(1))
+			})
+
+			It("Uninstalls complex packages in world correctly", func() {
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{C}, []*pkg.DefaultPackage{})
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				solution, err := s.Uninstall(A, true, true)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(solution).To(ContainElement(C.IsFlagged(false)))
+
+				Expect(len(solution)).To(Equal(2))
+			})
+
+			It("Uninstalls complex package correctly", func() {
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+				//	C // installed
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				solution, err := s.Uninstall(A, true, true)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(solution).To(ContainElement(B.IsFlagged(false)))
+				Expect(solution).To(ContainElement(D.IsFlagged(false)))
+
+				Expect(len(solution)).To(Equal(3))
+
+			})
+
+			It("UninstallUniverse simple package correctly", func() {
+
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+				s = NewSolver(dbInstalled, dbDefinitions, db)
+
+				solution, err := s.UninstallUniverse(pkg.Packages{A})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+
+				//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+				Expect(len(solution)).To(Equal(1))
+			})
+			It("UninstallUniverse simple package expanded correctly", func() {
+
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "1.2", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+				s = NewSolver(dbInstalled, dbDefinitions, db)
+
+				solution, err := s.UninstallUniverse(pkg.Packages{
+					&pkg.DefaultPackage{Name: "A", Version: ">1.0"}})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+
+				//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+				Expect(len(solution)).To(Equal(1))
+			})
+			It("UninstallUniverse simple packages not in world correctly", func() {
+
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+
+				for _, p := range []pkg.Package{B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+				solution, err := s.UninstallUniverse(pkg.Packages{A})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+
+				//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+				Expect(len(solution)).To(Equal(1))
+			})
+
+			It("UninstallUniverse complex packages not in world correctly", func() {
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+
+				for _, p := range []pkg.Package{B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+				solution, err := s.UninstallUniverse(pkg.Packages{A})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(solution).To(ContainElement(B.IsFlagged(false)))
+
+				Expect(len(solution)).To(Equal(2))
+			})
+
+			It("UninstallUniverse complex packages correctly, even if shared deps are required by system packages", func() {
+				// Here we diff a lot from standard Uninstall:
+				// all the packages that has reverse deps will be removed (aka --full)
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+				solution, err := s.UninstallUniverse(pkg.Packages{A})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(solution).To(ContainElement(B.IsFlagged(false)))
+				Expect(solution).To(ContainElement(C.IsFlagged(false)))
+
+				Expect(len(solution)).To(Equal(3))
+			})
+
+			It("UninstallUniverse complex packages in world correctly", func() {
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{C}, []*pkg.DefaultPackage{})
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				solution, err := s.UninstallUniverse(pkg.Packages{A})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(solution).To(ContainElement(C.IsFlagged(false)))
+
+				Expect(len(solution)).To(Equal(2))
+			})
+
+			It("UninstallUniverse complex package correctly", func() {
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+				//	C // installed
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				solution, err := s.UninstallUniverse(pkg.Packages{A})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(solution).To(ContainElement(B.IsFlagged(false)))
+				Expect(solution).To(ContainElement(D.IsFlagged(false)))
+
+				Expect(len(solution)).To(Equal(3))
+
+			})
+
 		})
 		It("Find conflicts", func() {
 
@@ -810,131 +1119,6 @@ var _ = Describe("Solver", func() {
 			Expect(val).ToNot(BeTrue())
 		})
 
-		It("Uninstalls simple packages not in world correctly", func() {
-
-			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-
-			for _, p := range []pkg.Package{B, C, D} {
-				_, err := dbDefinitions.CreatePackage(p)
-				Expect(err).ToNot(HaveOccurred())
-			}
-
-			for _, p := range []pkg.Package{A, B, C, D} {
-				_, err := dbInstalled.CreatePackage(p)
-				Expect(err).ToNot(HaveOccurred())
-			}
-			solution, err := s.Uninstall(A, true, true)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(solution).To(ContainElement(A.IsFlagged(false)))
-
-			//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
-			Expect(len(solution)).To(Equal(1))
-		})
-
-		It("Uninstalls complex packages not in world correctly", func() {
-			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
-
-			for _, p := range []pkg.Package{B, C, D} {
-				_, err := dbDefinitions.CreatePackage(p)
-				Expect(err).ToNot(HaveOccurred())
-			}
-
-			for _, p := range []pkg.Package{A, B, C, D} {
-				_, err := dbInstalled.CreatePackage(p)
-				Expect(err).ToNot(HaveOccurred())
-			}
-			solution, err := s.Uninstall(A, true, true)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(solution).To(ContainElement(A.IsFlagged(false)))
-
-			Expect(len(solution)).To(Equal(1))
-		})
-
-		It("Uninstalls complex packages correctly, even if shared deps are required by system packages", func() {
-			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
-			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
-
-			for _, p := range []pkg.Package{A, B, C, D} {
-				_, err := dbDefinitions.CreatePackage(p)
-				Expect(err).ToNot(HaveOccurred())
-			}
-
-			for _, p := range []pkg.Package{A, B, C, D} {
-				_, err := dbInstalled.CreatePackage(p)
-				Expect(err).ToNot(HaveOccurred())
-			}
-			solution, err := s.Uninstall(A, true, true)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(solution).To(ContainElement(A.IsFlagged(false)))
-			Expect(solution).ToNot(ContainElement(B.IsFlagged(false)))
-
-			Expect(len(solution)).To(Equal(1))
-		})
-
-		It("Uninstalls complex packages in world correctly", func() {
-			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{C}, []*pkg.DefaultPackage{})
-
-			for _, p := range []pkg.Package{A, B, C, D} {
-				_, err := dbDefinitions.CreatePackage(p)
-				Expect(err).ToNot(HaveOccurred())
-			}
-
-			for _, p := range []pkg.Package{A, C, D} {
-				_, err := dbInstalled.CreatePackage(p)
-				Expect(err).ToNot(HaveOccurred())
-			}
-
-			solution, err := s.Uninstall(A, true, true)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(solution).To(ContainElement(A.IsFlagged(false)))
-			Expect(solution).To(ContainElement(C.IsFlagged(false)))
-
-			Expect(len(solution)).To(Equal(2))
-		})
-
-		It("Uninstalls complex package correctly", func() {
-			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
-			//	C // installed
-
-			for _, p := range []pkg.Package{A, B, C, D} {
-				_, err := dbDefinitions.CreatePackage(p)
-				Expect(err).ToNot(HaveOccurred())
-			}
-
-			for _, p := range []pkg.Package{A, B, C, D} {
-				_, err := dbInstalled.CreatePackage(p)
-				Expect(err).ToNot(HaveOccurred())
-			}
-
-			solution, err := s.Uninstall(A, true, true)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(solution).To(ContainElement(A.IsFlagged(false)))
-			Expect(solution).To(ContainElement(B.IsFlagged(false)))
-			Expect(solution).To(ContainElement(D.IsFlagged(false)))
-
-			Expect(len(solution)).To(Equal(3))
-
-		})
-
 	})
 
 	Context("Conflict set", func() {
@@ -1057,6 +1241,31 @@ var _ = Describe("Solver", func() {
 			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: false}))
 			Expect(len(solution)).To(Equal(3))
 
+		})
+
+		It("UpgradeUniverse upgrades correctly", func() {
+			for _, p := range []pkg.Package{A1, B, C} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			uninstall, solution, err := s.UpgradeUniverse(true)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(uninstall)).To(Equal(1))
+			Expect(uninstall[0].GetName()).To(Equal("a"))
+			Expect(uninstall[0].GetVersion()).To(Equal("1.1"))
+
+			Expect(solution).To(ContainElement(PackageAssert{Package: A1, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: false}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: false}))
+
+			Expect(len(solution)).To(Equal(4))
 		})
 	})
 })
