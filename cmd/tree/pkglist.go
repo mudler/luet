@@ -22,8 +22,8 @@ import (
 
 	//. "github.com/mudler/luet/pkg/config"
 	"github.com/ghodss/yaml"
+	helpers "github.com/mudler/luet/cmd/helpers"
 	. "github.com/mudler/luet/pkg/config"
-	helpers "github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	tree "github.com/mudler/luet/pkg/tree"

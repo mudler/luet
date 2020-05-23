@@ -20,8 +20,8 @@ import (
 
 	installer "github.com/mudler/luet/pkg/installer"
 
+	helpers "github.com/mudler/luet/cmd/helpers"
 	. "github.com/mudler/luet/pkg/config"
-	helpers "github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
