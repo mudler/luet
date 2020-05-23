@@ -18,8 +18,8 @@ import (
 	"os"
 	"path/filepath"
 
+	helpers "github.com/mudler/luet/cmd/helpers"
 	. "github.com/mudler/luet/pkg/config"
-	helpers "github.com/mudler/luet/pkg/helpers"
 	installer "github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"

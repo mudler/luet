@@ -23,6 +23,7 @@ package tree_test
 import (
 	"io/ioutil"
 	"os"
+	"regexp"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -168,6 +169,25 @@ var _ = Describe("Tree", func() {
 
 			Expect(pack.HasLabel("label1")).To(Equal(true))
 			Expect(pack.HasLabel("label3")).To(Equal(false))
+		})
+	})
+
+	Context("Simple tree with annotations", func() {
+		It("Read tree with annotations", func() {
+			db := pkg.NewInMemoryDatabase(false)
+			generalRecipe := NewCompilerRecipe(db)
+			r := regexp.MustCompile("^label")
+
+			err := generalRecipe.Load("../../tests/fixtures/annotations")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().World())).To(Equal(1))
+			pack, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "pkgA", Category: "test", Version: "0.1"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(pack.HasAnnotation("label1")).To(Equal(true))
+			Expect(pack.HasAnnotation("label3")).To(Equal(false))
+			Expect(pack.MatchAnnotation(r)).To(Equal(true))
 		})
 	})
 

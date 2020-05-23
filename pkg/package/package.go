@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mudler/luet/pkg/helpers"
 	version "github.com/mudler/luet/pkg/versioner"
 
 	gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
@@ -93,6 +94,11 @@ type Package interface {
 	HasLabel(string) bool
 	MatchLabel(*regexp.Regexp) bool
 
+	AddAnnotation(string, string)
+	GetAnnotations() map[string]string
+	HasAnnotation(string) bool
+	MatchAnnotation(*regexp.Regexp) bool
+
 	IsSelector() bool
 	VersionMatchSelector(string, version.Versioner) (bool, error)
 	SelectorMatchVersion(string, version.Versioner) (bool, error)
@@ -158,7 +164,8 @@ type DefaultPackage struct {
 	IsSet            bool              `json:"set,omitempty"`      // Affects YAML field names too.
 	Provides         []*DefaultPackage `json:"provides,omitempty"` // Affects YAML field names too.
 
-	// TODO: Annotations?
+	// Annotations are used for core features/options
+	Annotations map[string]string `json:"annotations,omitempty"` // Affects YAML field names too
 
 	// Path is set only internally when tree is loaded from disk
 	Path string `json:"path,omitempty"`
@@ -240,25 +247,19 @@ func (p *DefaultPackage) IsSelector() bool {
 }
 
 func (p *DefaultPackage) HasLabel(label string) bool {
-	ans := false
-	for k, _ := range p.Labels {
-		if k == label {
-			ans = true
-			break
-		}
-	}
-	return ans
+	return helpers.MapHasKey(&p.Labels, label)
 }
 
 func (p *DefaultPackage) MatchLabel(r *regexp.Regexp) bool {
-	ans := false
-	for k, v := range p.Labels {
-		if r.MatchString(k + "=" + v) {
-			ans = true
-			break
-		}
-	}
-	return ans
+	return helpers.MapMatchRegex(&p.Labels, r)
+}
+
+func (p *DefaultPackage) HasAnnotation(label string) bool {
+	return helpers.MapHasKey(&p.Annotations, label)
+}
+
+func (p *DefaultPackage) MatchAnnotation(r *regexp.Regexp) bool {
+	return helpers.MapMatchRegex(&p.Annotations, r)
 }
 
 // AddUse adds a use to a package
@@ -355,8 +356,17 @@ func (p *DefaultPackage) AddLabel(k, v string) {
 	}
 	p.Labels[k] = v
 }
+func (p *DefaultPackage) AddAnnotation(k, v string) {
+	if p.Annotations == nil {
+		p.Annotations = make(map[string]string, 0)
+	}
+	p.Annotations[k] = v
+}
 func (p *DefaultPackage) GetLabels() map[string]string {
 	return p.Labels
+}
+func (p *DefaultPackage) GetAnnotations() map[string]string {
+	return p.Annotations
 }
 func (p *DefaultPackage) GetProvides() []*DefaultPackage {
 	return p.Provides

@@ -32,6 +32,8 @@ type DefaultPackageSanitized struct {
 	IsSet            bool                       `json:"set,omitempty" yaml:"set,omitempty"`
 	Provides         []*DefaultPackageSanitized `json:"provides,omitempty" yaml:"provides,omitempty"`
 
+	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+
 	// Path is set only internally when tree is loaded from disk
 	Path string `json:"path,omitempty" yaml:"path,omitempty"`
 
@@ -54,6 +56,7 @@ func NewDefaultPackageSanitized(p pkg.Package) *DefaultPackageSanitized {
 		Uri:         p.GetURI(),
 		License:     p.GetLicense(),
 		Labels:      p.GetLabels(),
+		Annotations: p.GetAnnotations(),
 	}
 
 	if p.GetRequires() != nil && len(p.GetRequires()) > 0 {
