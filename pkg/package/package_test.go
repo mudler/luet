@@ -46,6 +46,7 @@ var _ = Describe("Package", func() {
 		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
 		a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
 		a01 := NewPackage("A", "0.1", []*DefaultPackage{}, []*DefaultPackage{})
+		re := regexp.MustCompile("project[0-9][=].*")
 		It("Expands correctly", func() {
 			definitions := NewInMemoryDatabase(false)
 			for _, p := range []Package{a1, a11, a01} {
@@ -60,6 +61,8 @@ var _ = Describe("Package", func() {
 			Expect(len(lst)).To(Equal(2))
 			p := lst.Best(nil)
 			Expect(p).To(Equal(a11))
+			// Test annotation with null map
+			Expect(a.MatchAnnotation(re)).To(Equal(false))
 		})
 	})
 
@@ -87,6 +90,34 @@ var _ = Describe("Package", func() {
 			Expect(b.HasLabel("label2")).To(Equal(true))
 			Expect(b.MatchLabel(re)).To(Equal(true))
 			Expect(a.MatchLabel(re)).To(Equal(true))
+
+		})
+	})
+
+	Context("Find annotations on packages", func() {
+		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a.AddAnnotation("project1", "test1")
+		a.AddAnnotation("label2", "value1")
+		b := NewPackage("B", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		b.AddAnnotation("project2", "test2")
+		b.AddAnnotation("label2", "value1")
+		It("Expands correctly", func() {
+			var err error
+			definitions := NewInMemoryDatabase(false)
+			for _, p := range []Package{a, b} {
+				_, err = definitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			re := regexp.MustCompile("project[0-9][=].*")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(re).ToNot(BeNil())
+			Expect(a.HasAnnotation("label2")).To(Equal(true))
+			Expect(a.HasAnnotation("label3")).To(Equal(false))
+			Expect(a.HasAnnotation("project1")).To(Equal(true))
+			Expect(b.HasAnnotation("project2")).To(Equal(true))
+			Expect(b.HasAnnotation("label2")).To(Equal(true))
+			Expect(b.MatchAnnotation(re)).To(Equal(true))
+			Expect(a.MatchAnnotation(re)).To(Equal(true))
 
 		})
 	})
