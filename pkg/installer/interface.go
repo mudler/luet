@@ -70,6 +70,6 @@ type Repository interface {
 	SetPriority(int)
 	GetRepositoryFile(string) (LuetRepositoryFile, error)
 	SetRepositoryFile(string, LuetRepositoryFile)
-
+	SetName(p string)
 	Serialize() (*LuetSystemRepositoryMetadata, LuetSystemRepositorySerialized)
 }

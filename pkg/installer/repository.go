@@ -302,6 +302,11 @@ func (r *LuetSystemRepository) GetType() string {
 func (r *LuetSystemRepository) SetType(p string) {
 	r.LuetRepository.Type = p
 }
+
+func (r *LuetSystemRepository) SetName(p string) {
+	r.LuetRepository.Name = p
+}
+
 func (r *LuetSystemRepository) AddUrl(p string) {
 	r.LuetRepository.Urls = append(r.LuetRepository.Urls, p)
 }
@@ -685,6 +690,7 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	repo.SetAuthentication(r.GetAuthentication())
 	repo.SetType(r.GetType())
 	repo.SetPriority(r.GetPriority())
+	repo.SetName(r.GetName())
 	InfoC(
 		aurora.Bold(
 			aurora.Yellow(":information_source: Repository "+repo.GetName()+" priority: ")).String() +
