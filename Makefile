@@ -1,7 +1,7 @@
 
 # go tool nm ./luet | grep Commit
-LDFLAGS += -X "github.com/mudler/luet/cmd.BuildTime=$(shell date -u '+%Y-%m-%d %I:%M:%S %Z')"
-LDFLAGS += -X "github.com/mudler/luet/cmd.BuildCommit=$(shell git rev-parse HEAD)"
+override LDFLAGS += -X "github.com/mudler/luet/cmd.BuildTime=$(shell date -u '+%Y-%m-%d %I:%M:%S %Z')"
+override LDFLAGS += -X "github.com/mudler/luet/cmd.BuildCommit=$(shell git rev-parse HEAD)"
 
 NAME ?= luet
 PACKAGE_NAME ?= $(NAME)
@@ -9,7 +9,6 @@ PACKAGE_CONFLICT ?= $(PACKAGE_NAME)-beta
 REVISION := $(shell git rev-parse --short HEAD || echo dev)
 VERSION := $(shell git describe --tags || echo $(REVISION))
 VERSION := $(shell echo $(VERSION) | sed -e 's/^v//g')
-ITTERATION := $(shell date +%s)
 BUILD_PLATFORMS ?= -osarch="linux/amd64" -osarch="linux/386" -osarch="linux/arm"
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
@@ -65,6 +64,11 @@ deps:
 .PHONY: build
 build:
 	CGO_ENABLED=0 go build -ldflags '$(LDFLAGS)'
+
+.PHONY: build-small
+build-small:
+	@$(MAKE) LDFLAGS+="-s -w" build
+	upx --brute $(NAME)
 
 .PHONY: image
 image:
