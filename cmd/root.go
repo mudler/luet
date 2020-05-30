@@ -185,22 +185,38 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	// Luet support these priorities on read configuration file:
+	// - command line option (if available)
+	// - $PWD/.luet.yaml
+	// - $HOME/.luet.yaml
+	// - /etc/luet/luet.yaml
+	//
+	// Note: currently a single viper instance support only one config name.
 
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		Error(err)
-		os.Exit(1)
-	}
 	viper.SetEnvPrefix(LuetEnvPrefix)
 	viper.SetConfigType("yaml")
-	viper.SetConfigName(".luet") // name of config file (without extension)
-	if cfgFile != "" {           // enable ability to specify config file via flag
+
+	if cfgFile != "" { // enable ability to specify config file via flag
 		viper.SetConfigFile(cfgFile)
 	} else {
-		viper.AddConfigPath(dir)
-		viper.AddConfigPath(".")
-		viper.AddConfigPath("$HOME")
-		viper.AddConfigPath("/etc/luet")
+		// Retrieve pwd directory
+		pwdDir, err := os.Getwd()
+		if err != nil {
+			Error(err)
+			os.Exit(1)
+		}
+		homeDir := helpers.GetHomeDir()
+
+		if helpers.Exists(filepath.Join(pwdDir, ".luet.yaml")) || (homeDir != "" && helpers.Exists(filepath.Join(homeDir, ".luet.yaml"))) {
+			viper.AddConfigPath(".")
+			if homeDir != "" {
+				viper.AddConfigPath(homeDir)
+			}
+			viper.SetConfigName(".luet")
+		} else {
+			viper.SetConfigName("luet")
+			viper.AddConfigPath("/etc/luet")
+		}
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
