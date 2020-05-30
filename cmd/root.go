@@ -159,17 +159,13 @@ func init() {
 	pflags.StringP("logfile", "l", config.LuetCfg.GetLogging().Path,
 		"Logfile path. Empty value disable log to file.")
 
-	sameOwner := false
-	u, err := user.Current()
-	// os/user doesn't work in from scratch environments
+	// os/user doesn't work in from scratch environments.
+	// Check if i can retrieve user informations.
+	_, err := user.Current()
 	if err != nil {
 		Warning("failed to retrieve user identity:", err.Error())
-		sameOwner = true
 	}
-	if u != nil && u.Uid == "0" {
-		sameOwner = true
-	}
-	pflags.Bool("same-owner", sameOwner, "Maintain same owner on uncompress.")
+	pflags.Bool("same-owner", config.LuetCfg.GetGeneral().SameOwner, "Maintain same owner on uncompress.")
 	pflags.Int("concurrency", runtime.NumCPU(), "Concurrency")
 
 	config.LuetCfg.Viper.BindPFlag("logging.color", pflags.Lookup("color"))
