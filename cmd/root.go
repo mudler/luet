@@ -159,17 +159,13 @@ func init() {
 	pflags.StringP("logfile", "l", config.LuetCfg.GetLogging().Path,
 		"Logfile path. Empty value disable log to file.")
 
-	sameOwner := false
-	u, err := user.Current()
-	// os/user doesn't work in from scratch environments
+	// os/user doesn't work in from scratch environments.
+	// Check if i can retrieve user informations.
+	_, err := user.Current()
 	if err != nil {
 		Warning("failed to retrieve user identity:", err.Error())
-		sameOwner = true
 	}
-	if u != nil && u.Uid == "0" {
-		sameOwner = true
-	}
-	pflags.Bool("same-owner", sameOwner, "Maintain same owner on uncompress.")
+	pflags.Bool("same-owner", config.LuetCfg.GetGeneral().SameOwner, "Maintain same owner on uncompress.")
 	pflags.Int("concurrency", runtime.NumCPU(), "Concurrency")
 
 	config.LuetCfg.Viper.BindPFlag("logging.color", pflags.Lookup("color"))
@@ -185,22 +181,38 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	// Luet support these priorities on read configuration file:
+	// - command line option (if available)
+	// - $PWD/.luet.yaml
+	// - $HOME/.luet.yaml
+	// - /etc/luet/luet.yaml
+	//
+	// Note: currently a single viper instance support only one config name.
 
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		Error(err)
-		os.Exit(1)
-	}
 	viper.SetEnvPrefix(LuetEnvPrefix)
 	viper.SetConfigType("yaml")
-	viper.SetConfigName(".luet") // name of config file (without extension)
-	if cfgFile != "" {           // enable ability to specify config file via flag
+
+	if cfgFile != "" { // enable ability to specify config file via flag
 		viper.SetConfigFile(cfgFile)
 	} else {
-		viper.AddConfigPath(dir)
-		viper.AddConfigPath(".")
-		viper.AddConfigPath("$HOME")
-		viper.AddConfigPath("/etc/luet")
+		// Retrieve pwd directory
+		pwdDir, err := os.Getwd()
+		if err != nil {
+			Error(err)
+			os.Exit(1)
+		}
+		homeDir := helpers.GetHomeDir()
+
+		if helpers.Exists(filepath.Join(pwdDir, ".luet.yaml")) || (homeDir != "" && helpers.Exists(filepath.Join(homeDir, ".luet.yaml"))) {
+			viper.AddConfigPath(".")
+			if homeDir != "" {
+				viper.AddConfigPath(homeDir)
+			}
+			viper.SetConfigName(".luet")
+		} else {
+			viper.SetConfigName("luet")
+			viper.AddConfigPath("/etc/luet")
+		}
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match

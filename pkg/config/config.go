@@ -231,7 +231,7 @@ func GenDefault(viper *v.Viper) {
 
 	u, err := user.Current()
 	// os/user doesn't work in from scratch environments
-	if err != nil || u.Uid == "0" {
+	if err != nil || (u != nil && u.Uid == "0") {
 		viper.SetDefault("general.same_owner", true)
 	} else {
 		viper.SetDefault("general.same_owner", false)

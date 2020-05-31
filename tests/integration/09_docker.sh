@@ -61,7 +61,7 @@ testInstall() {
     docker rm luet-runtime-test || true
     docker run --name luet-runtime-test \
        -ti -v /tmp:/tmp \
-       -v $tmpdir/luet.yaml:/etc/luet/.luet.yaml:ro \
+       -v $tmpdir/luet.yaml:/etc/luet/luet.yaml:ro \
        luet:test install seed/alpine
     installst=$?
     assertEquals 'install test successfully' "0" "$installst"
