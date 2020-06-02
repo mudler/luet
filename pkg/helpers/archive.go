@@ -17,6 +17,7 @@ package helpers
 
 import (
 	"archive/tar"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -47,6 +48,67 @@ func Tar(src, dest string) error {
 		return err
 	}
 	return err
+}
+
+type TarModifierWrapperFunc func(path, dst string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error)
+type TarModifierWrapper struct {
+	DestinationPath string
+	Modifier        TarModifierWrapperFunc
+}
+
+func NewTarModifierWrapper(dst string, modifier TarModifierWrapperFunc) *TarModifierWrapper {
+	return &TarModifierWrapper{
+		DestinationPath: dst,
+		Modifier:        modifier,
+	}
+}
+
+func (m *TarModifierWrapper) GetModifier() archive.TarModifierFunc {
+	return func(path string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
+		return m.Modifier(m.DestinationPath, path, header, content)
+	}
+}
+
+func UntarProtect(src, dst string, sameOwner bool, protectedFiles []string, modifier *TarModifierWrapper) error {
+	var ans error
+
+	if len(protectedFiles) <= 0 {
+		return Untar(src, dst, sameOwner)
+	}
+
+	// POST: we have files to protect. I create a ReplaceFileTarWrapper
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	// Create modifier map
+	mods := make(map[string]archive.TarModifierFunc)
+	for _, file := range protectedFiles {
+		mods[file] = modifier.GetModifier()
+	}
+
+	replacerArchive := archive.ReplaceFileTarWrapper(in, mods)
+
+	if sameOwner {
+		// PRE: i have root privileged.
+
+		opts := &archive.TarOptions{
+			// NOTE: NoLchown boolean is used for chmod of the symlink
+			// Probably it's needed set this always to true.
+			NoLchown:        true,
+			ExcludePatterns: []string{"dev/"}, // prevent 'operation not permitted'
+			ContinueOnError: true,
+		}
+
+		ans = archive.Untar(replacerArchive, dst, opts)
+	} else {
+		// TODO
+		ans = errors.New("Not implemented")
+	}
+
+	return ans
 }
 
 // Untar just a wrapper around the docker functions
