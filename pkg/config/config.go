@@ -204,6 +204,8 @@ type LuetConfig struct {
 	ConfigProtectConfDir []string         `mapstructure:"config_protect_confdir"`
 	CacheRepositories    []LuetRepository `mapstructure:"repetitors"`
 	SystemRepositories   []LuetRepository `mapstructure:"repositories"`
+
+	ConfigProtectConfFiles []ConfigProtectConfFile
 }
 
 func NewLuetConfig(viper *v.Viper) *LuetConfig {
@@ -212,7 +214,7 @@ func NewLuetConfig(viper *v.Viper) *LuetConfig {
 	}
 
 	GenDefault(viper)
-	return &LuetConfig{Viper: viper}
+	return &LuetConfig{Viper: viper, ConfigProtectConfFiles: nil}
 }
 
 func GenDefault(viper *v.Viper) {
@@ -273,6 +275,18 @@ func (c *LuetConfig) GetSystem() *LuetSystemConfig {
 
 func (c *LuetConfig) GetSolverOptions() *LuetSolverOptions {
 	return &c.Solver
+}
+
+func (c *LuetConfig) GetConfigProtectConfFiles() []ConfigProtectConfFile {
+	return c.ConfigProtectConfFiles
+}
+
+func (c *LuetConfig) AddConfigProtectConfFile(file *ConfigProtectConfFile) {
+	if c.ConfigProtectConfFiles == nil {
+		c.ConfigProtectConfFiles = []ConfigProtectConfFile{*file}
+	} else {
+		c.ConfigProtectConfFiles = append(c.ConfigProtectConfFiles, *file)
+	}
 }
 
 func (c *LuetConfig) GetSystemRepository(name string) (*LuetRepository, error) {

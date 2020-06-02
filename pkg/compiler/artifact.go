@@ -18,6 +18,8 @@ package compiler
 import (
 	"archive/tar"
 	"bufio"
+	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -277,8 +279,70 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 	return errors.New("Compression type must be supplied")
 }
 
+func tarModifierWrapperFunc(dst, path string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
+	// If the destination path already exists I rename target file name with postfix.
+	var destPath string
+
+	// Read data. TODO: We need change archive callback to permit to return a Reader
+	buffer := bytes.Buffer{}
+	if content != nil {
+		if _, err := buffer.ReadFrom(content); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	switch header.Typeflag {
+	case tar.TypeReg:
+		destPath = filepath.Join(dst, path)
+	default:
+		// Nothing to do. I return original reader
+		return header, buffer.Bytes(), nil
+	}
+
+	// Check if exists
+	if helpers.Exists(destPath) {
+		for i := 1; i < 1000; i++ {
+			name := filepath.Join(dst, filepath.Join(filepath.Dir(path), fmt.Sprintf("_cfg%04d_%s", i, filepath.Base(path))))
+			if helpers.Exists(name) {
+				continue
+			}
+			return &tar.Header{Mode: header.Mode, Typeflag: header.Typeflag, Name: name}, buffer.Bytes(), nil
+		}
+	}
+
+	return header, buffer.Bytes(), nil
+}
+
+func (a *PackageArtifact) GetProtectFiles() []string {
+	ans := []string{}
+
+	if LuetCfg.GetConfigProtectConfFiles() != nil && len(LuetCfg.GetConfigProtectConfFiles()) > 0 {
+		for _, file := range a.Files {
+
+			for _, conf := range LuetCfg.GetConfigProtectConfFiles() {
+				for _, dir := range conf.Directories {
+					if match, _ := filepath.Match(fmt.Sprintf("%s/*", dir), file); match {
+						ans = append(ans, file)
+						goto nextFile
+					}
+				}
+			}
+
+		nextFile:
+		}
+	}
+
+	return ans
+}
+
 // Unpack Untar and decompress (TODO) to the given path
 func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
+
+	// Create
+	protectedFiles := a.GetProtectFiles()
+
+	tarModifier := helpers.NewTarModifierWrapper(dst, tarModifierWrapperFunc)
+
 	switch a.CompressionType {
 	case GZip:
 		// Create the uncompressed archive
@@ -307,15 +371,16 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 			return errors.Wrap(err, "Cannot copy to "+a.GetPath()+".uncompressed")
 		}
 
-		err = helpers.Untar(a.GetPath()+".uncompressed", dst,
-			LuetCfg.GetGeneral().SameOwner)
+		err = helpers.UntarProtect(a.GetPath()+".uncompressed", dst,
+			LuetCfg.GetGeneral().SameOwner, protectedFiles, tarModifier)
 		if err != nil {
 			return err
 		}
 		return nil
 	// Defaults to tar only (covers when "none" is supplied)
 	default:
-		return helpers.Untar(a.GetPath(), dst, LuetCfg.GetGeneral().SameOwner)
+		return helpers.UntarProtect(a.GetPath(), dst, LuetCfg.GetGeneral().SameOwner,
+			protectedFiles, tarModifier)
 	}
 	return errors.New("Compression type must be supplied")
 }
