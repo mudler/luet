@@ -97,6 +97,13 @@ func (*SimpleImg) CopyImage(src, dst string) error {
 	return nil
 }
 
+func (*SimpleImg) ImageExists(imagename string) bool {
+	// NOOP: not implemented
+	// TODO: Since img doesn't have an inspect command,
+	// we need to parse the ls output manually
+	return false
+}
+
 func (s *SimpleImg) ImageDefinitionToTar(opts compiler.CompilerBackendOptions) error {
 	if err := s.BuildImage(opts); err != nil {
 		return errors.Wrap(err, "Failed building image")

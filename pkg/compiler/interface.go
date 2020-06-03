@@ -82,6 +82,8 @@ type CompilerBackend interface {
 	DownloadImage(opts CompilerBackendOptions) error
 
 	Push(opts CompilerBackendOptions) error
+
+	ImageExists(string) bool
 }
 
 type Artifact interface {

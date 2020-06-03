@@ -229,8 +229,16 @@ func (cs *LuetCompiler) stripIncludesFromRootfs(includes []string, rootfs string
 }
 
 func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage string, concurrency int, keepPermissions, keepImg bool, p CompilationSpec) (Artifact, error) {
+	fp := p.GetPackage().HashFingerprint()
+	if buildertaggedImage == "" {
+		buildertaggedImage = cs.ImageRepository + "-" + fp + "-builder"
+	}
+	if packageImage == "" {
+		packageImage = cs.ImageRepository + "-" + fp
+	}
 	if !cs.Clean {
-		if art, err := LoadArtifactFromYaml(p); err == nil {
+		exists := cs.Backend.ImageExists(buildertaggedImage) && cs.Backend.ImageExists(packageImage)
+		if art, err := LoadArtifactFromYaml(p); err == nil && exists {
 			Debug("Artifact reloaded. Skipping build")
 			return art, err
 		}
@@ -263,14 +271,6 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		if err != nil {
 			Warning("Failed copying retrieves", err.Error())
 		}
-	}
-
-	fp := p.GetPackage().HashFingerprint()
-	if buildertaggedImage == "" {
-		buildertaggedImage = cs.ImageRepository + "-" + fp + "-builder"
-	}
-	if packageImage == "" {
-		packageImage = cs.ImageRepository + "-" + fp
 	}
 
 	Info(pkgTag, "Generating :whale: definition for builder image from", image)

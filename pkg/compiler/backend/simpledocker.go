@@ -90,6 +90,19 @@ func (*SimpleDocker) DownloadImage(opts compiler.CompilerBackendOptions) error {
 	return nil
 }
 
+func (*SimpleDocker) ImageExists(imagename string) bool {
+	buildarg := []string{"inspect", "--type=image", imagename}
+	Debug(":whale: Checking existance of docker image: " + imagename)
+	cmd := exec.Command("docker", buildarg...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		Warning("Image not present")
+		Debug(out)
+		return false
+	}
+	return true
+}
+
 func (*SimpleDocker) RemoveImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	buildarg := []string{"rmi", name}
