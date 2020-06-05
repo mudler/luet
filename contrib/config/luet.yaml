@@ -73,7 +73,15 @@
 #   - /etc/luet/repos.conf.d
 #
 #
-# ---------------------------------------------
+# ------------------------------------------------
+# Config protect configuration files directories.
+# -----------------------------------------------
+# Define the list of directories where load
+# configuration files with the list of config
+# protect paths.
+# config_protect_confdir:
+#   - /etc/luet/config.protect.d
+#
 # System repositories
 # ---------------------------------------------
 # In alternative to define repositories files
