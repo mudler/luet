@@ -291,22 +291,31 @@ func tarModifierWrapperFunc(dst, path string, header *tar.Header, content io.Rea
 		}
 	}
 
-	switch header.Typeflag {
-	case tar.TypeReg:
-		destPath = filepath.Join(dst, path)
-	default:
-		// Nothing to do. I return original reader
-		return header, buffer.Bytes(), nil
-	}
+	// If file is not present on archive but is defined on mods
+	// I receive the callback. Prevent nil exception.
+	if header != nil {
+		switch header.Typeflag {
+		case tar.TypeReg:
+			destPath = filepath.Join(dst, path)
+		default:
+			// Nothing to do. I return original reader
+			return header, buffer.Bytes(), nil
+		}
 
-	// Check if exists
-	if helpers.Exists(destPath) {
-		for i := 1; i < 1000; i++ {
-			name := filepath.Join(dst, filepath.Join(filepath.Dir(path), fmt.Sprintf("_cfg%04d_%s", i, filepath.Base(path))))
-			if helpers.Exists(name) {
-				continue
+		// Check if exists
+		if helpers.Exists(destPath) {
+			for i := 1; i < 1000; i++ {
+				name := filepath.Join(dst, filepath.Join(filepath.Dir(path), fmt.Sprintf("._cfg%04d_%s", i, filepath.Base(path))))
+				if helpers.Exists(name) {
+					continue
+				}
+				return &tar.Header{
+					Mode:       header.Mode,
+					Typeflag:   header.Typeflag,
+					PAXRecords: header.PAXRecords,
+					Name:       name,
+				}, buffer.Bytes(), nil
 			}
-			return &tar.Header{Mode: header.Mode, Typeflag: header.Typeflag, Name: name}, buffer.Bytes(), nil
 		}
 	}
 
