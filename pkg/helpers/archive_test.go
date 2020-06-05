@@ -115,7 +115,7 @@ var _ = Describe("Helpers Archive", func() {
 			mods["file-1"] = tarModifier.GetModifier()
 			mods["file-9999"] = tarModifier.GetModifier()
 
-			replacerArchive := ReplaceFileTarWrapper(sourceArchive, mods)
+			replacerArchive := archive.ReplaceFileTarWrapper(sourceArchive, mods)
 			//replacerArchive := archive.ReplaceFileTarWrapper(sourceArchive, mods)
 			opts := &archive.TarOptions{
 				// NOTE: NoLchown boolean is used for chmod of the symlink
