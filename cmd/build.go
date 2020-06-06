@@ -78,7 +78,7 @@ var buildCmd = &cobra.Command{
 		nodeps := viper.GetBool("nodeps")
 		onlydeps := viper.GetBool("onlydeps")
 		keepExportedImages := viper.GetBool("keep-exported-images")
-		full := viper.GetBool("full")
+		full, _ := cmd.Flags().GetBool("full")
 
 		compilerSpecs := compiler.NewLuetCompilationspecs()
 		var compilerBackend compiler.CompilerBackend
