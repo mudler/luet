@@ -16,11 +16,15 @@
 
 package config
 
+import (
+	"fmt"
+)
+
 type ConfigProtectConfFile struct {
 	Filename string
 
-	Name        string   `mapstructure:"name"`
-	Directories []string `mapstructure:"dirs"`
+	Name        string   `mapstructure:"name" yaml:"name" json:"name"`
+	Directories []string `mapstructure:"dirs" yaml:"dirs" json:"dirs"`
 }
 
 func NewConfigProtectConfFile(filename string) *ConfigProtectConfFile {
@@ -29,4 +33,9 @@ func NewConfigProtectConfFile(filename string) *ConfigProtectConfFile {
 		Name:        "",
 		Directories: []string{},
 	}
+}
+
+func (c *ConfigProtectConfFile) String() string {
+	return fmt.Sprintf("[%s] filename: %s, dirs: %s", c.Name, c.Filename,
+		c.Directories)
 }
