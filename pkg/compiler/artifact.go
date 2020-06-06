@@ -305,10 +305,14 @@ func tarModifierWrapperFunc(dst, path string, header *tar.Header, content io.Rea
 		// Check if exists
 		if helpers.Exists(destPath) {
 			for i := 1; i < 1000; i++ {
-				name := filepath.Join(dst, filepath.Join(filepath.Dir(path), fmt.Sprintf("._cfg%04d_%s", i, filepath.Base(path))))
+				name := filepath.Join(filepath.Join(filepath.Dir(path),
+					fmt.Sprintf("._cfg%04d_%s", i, filepath.Base(path))))
+
 				if helpers.Exists(name) {
 					continue
 				}
+				Info(fmt.Sprintf("Found protected file %s. Creating %s.", destPath,
+					filepath.Join(dst, name)))
 				return &tar.Header{
 					Mode:       header.Mode,
 					Typeflag:   header.Typeflag,
@@ -326,11 +330,13 @@ func (a *PackageArtifact) GetProtectFiles() []string {
 	ans := []string{}
 
 	if LuetCfg.GetConfigProtectConfFiles() != nil && len(LuetCfg.GetConfigProtectConfFiles()) > 0 {
-		for _, file := range a.Files {
 
+		for _, file := range a.Files {
 			for _, conf := range LuetCfg.GetConfigProtectConfFiles() {
 				for _, dir := range conf.Directories {
-					if match, _ := filepath.Match(fmt.Sprintf("%s/*", dir), file); match {
+					// Note file is without / at begin.
+					if strings.HasPrefix("/"+file, filepath.Clean(dir)) {
+						// docker archive modifier works with path without / at begin.
 						ans = append(ans, file)
 						goto nextFile
 					}
