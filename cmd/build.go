@@ -153,6 +153,8 @@ var buildCmd = &cobra.Command{
 				Fatal(err.Error())
 			}
 			for _, spec := range specs {
+				Info(":package: Selecting ", spec.GetPackage().GetName(), spec.GetPackage().GetVersion())
+
 				compilerSpecs.Add(spec)
 			}
 		} else if !all {
