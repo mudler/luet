@@ -1,0 +1,5 @@
+category: "test"
+name: "a"
+version: "1.0"
+annotations:
+  config_protect: "/opt/etc"

@@ -1,0 +1,9 @@
+image: "alpine"
+prelude:
+  - echo foo > /test
+  - echo bar > /test2
+steps:
+  - echo c > /c
+  - echo c > /cd
+  - mkdir /opt/etc
+  - echo config > /opt/etc/conf

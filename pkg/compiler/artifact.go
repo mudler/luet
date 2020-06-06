@@ -36,6 +36,7 @@ import (
 	. "github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
+	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
@@ -337,6 +338,16 @@ func (a *PackageArtifact) GetProtectFiles() []string {
 					// Note file is without / at begin.
 					if strings.HasPrefix("/"+file, filepath.Clean(dir)) {
 						// docker archive modifier works with path without / at begin.
+						ans = append(ans, file)
+						goto nextFile
+					}
+				}
+			}
+
+			if a.CompileSpec.GetPackage().HasAnnotation(string(pkg.ConfigProtectAnnnotation)) {
+				dir, ok := a.CompileSpec.GetPackage().GetAnnotations()[string(pkg.ConfigProtectAnnnotation)]
+				if ok {
+					if strings.HasPrefix("/"+file, filepath.Clean(dir)) {
 						ans = append(ans, file)
 						goto nextFile
 					}
