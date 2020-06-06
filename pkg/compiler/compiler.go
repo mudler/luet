@@ -448,6 +448,53 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	return artifact, nil
 }
 
+func (cs *LuetCompiler) FromDatabase(db pkg.PackageDatabase, minimum bool, dst string) ([]CompilationSpec, error) {
+	compilerSpecs := NewLuetCompilationspecs()
+
+	w := db.World()
+
+	for _, p := range w {
+		spec, err := cs.FromPackage(p)
+		if err != nil {
+			return nil, err
+		}
+		if dst != "" {
+			spec.SetOutputPath(dst)
+		}
+		compilerSpecs.Add(spec)
+	}
+
+	switch minimum {
+	case true:
+		return cs.ComputeMinimumCompilableSet(compilerSpecs.Unique().All()...)
+	default:
+		return compilerSpecs.Unique().All(), nil
+	}
+}
+
+// ComputeMinimumCompilableSet strips specs that are eventually compiled by leafs
+func (cs *LuetCompiler) ComputeMinimumCompilableSet(p ...CompilationSpec) ([]CompilationSpec, error) {
+	// Generate a set with all the deps of the provided specs
+	// we will use that set to remove the deps from the list of provided compilation specs
+	allDependencies := solver.PackagesAssertions{} // Get all packages that will be in deps
+	result := []CompilationSpec{}
+	for _, spec := range p {
+		ass, err := cs.ComputeDepTree(spec)
+		if err != nil {
+			return result, errors.Wrap(err, "computin specs deptree")
+		}
+
+		allDependencies = append(allDependencies, ass.Drop(spec.GetPackage())...)
+	}
+
+	for _, spec := range p {
+		if found := allDependencies.Search(spec.GetPackage().GetFingerPrint()); found == nil {
+			result = append(result, spec)
+		}
+	}
+	return result, nil
+}
+
 func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssertions, error) {
 
 	s := solver.NewResolver(pkg.NewInMemoryDatabase(false), cs.Database, pkg.NewInMemoryDatabase(false), cs.Options.SolverOptions.Resolver())

@@ -28,9 +28,10 @@ type Compiler interface {
 	CompileParallel(keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
 	CompileWithReverseDeps(keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error)
 	ComputeDepTree(p CompilationSpec) (solver.PackagesAssertions, error)
+	ComputeMinimumCompilableSet(p ...CompilationSpec) ([]CompilationSpec, error)
 	SetConcurrency(i int)
 	FromPackage(pkg.Package) (CompilationSpec, error)
-
+	FromDatabase(db pkg.PackageDatabase, minimum bool, dst string) ([]CompilationSpec, error)
 	SetBackend(CompilerBackend)
 	GetBackend() CompilerBackend
 	SetCompressionType(t CompressionImplementation)

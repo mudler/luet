@@ -78,6 +78,7 @@ var buildCmd = &cobra.Command{
 		nodeps := viper.GetBool("nodeps")
 		onlydeps := viper.GetBool("onlydeps")
 		keepExportedImages := viper.GetBool("keep-exported-images")
+		full := viper.GetBool("full")
 
 		compilerSpecs := compiler.NewLuetCompilationspecs()
 		var compilerBackend compiler.CompilerBackend
@@ -146,7 +147,15 @@ var buildCmd = &cobra.Command{
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), opts)
 		luetCompiler.SetConcurrency(concurrency)
 		luetCompiler.SetCompressionType(compiler.CompressionImplementation(compressionType))
-		if !all {
+		if full {
+			specs, err := luetCompiler.FromDatabase(generalRecipe.GetDatabase(), true, dst)
+			if err != nil {
+				Fatal(err.Error())
+			}
+			for _, spec := range specs {
+				compilerSpecs.Add(spec)
+			}
+		} else if !all {
 			for _, a := range args {
 
 				pack, err := helpers.ParsePackageStr(a)
@@ -208,7 +217,9 @@ func init() {
 	buildCmd.Flags().Bool("privileged", false, "Privileged (Keep permissions)")
 	buildCmd.Flags().String("database", "memory", "database used for solving (memory,boltdb)")
 	buildCmd.Flags().Bool("revdeps", false, "Build with revdeps")
-	buildCmd.Flags().Bool("all", false, "Build all packages in the tree")
+	buildCmd.Flags().Bool("all", false, "Build all specfiles in the tree")
+	buildCmd.Flags().Bool("full", false, "Build all packages (optimized)")
+
 	buildCmd.Flags().String("destination", path, "Destination folder")
 	buildCmd.Flags().String("compression", "none", "Compression alg: none, gzip")
 	buildCmd.Flags().String("image-repository", "luet/cache", "Default base image string for generated image")

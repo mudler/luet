@@ -706,6 +706,25 @@ var _ = Describe("Compiler", func() {
 		})
 	})
 
+	Context("Compilation of whole tree", func() {
+		It("doesn't include dependencies that would be compiled anyway", func() {
+			// As some specs are dependent from each other, don't pull it in if they would
+			// be eventually
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err := generalRecipe.Load("../../tests/fixtures/includeimage")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions())
+
+			specs, err := compiler.FromDatabase(generalRecipe.GetDatabase(), true, "")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(specs)).To(Equal(1))
+
+			Expect(specs[0].GetPackage().GetFingerPrint()).To(Equal("b-test-1.0"))
+		})
+	})
+
 	Context("File list", func() {
 		It("is generated after the compilation process and annotated in the metadata", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
