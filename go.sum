@@ -10,6 +10,8 @@ github.com/Luet-lab/moby v17.12.0-ce-rc1.0.20200418091245-6e0951be974d+incompati
 github.com/Luet-lab/moby v17.12.0-ce-rc1.0.20200418091245-6e0951be974d+incompatible/go.mod h1:/XyFFC7lL96pE2kKmar2jd4LKxWzy1MmbiDHV0nK3bU=
 github.com/Luet-lab/moby v17.12.0-ce-rc1.0.20200418093736-b2b0766ef22c+incompatible h1:0cMtxRtHURUYiWHyJ7FOwd+wH5kPNGjXlDf48ovuLlw=
 github.com/Luet-lab/moby v17.12.0-ce-rc1.0.20200418093736-b2b0766ef22c+incompatible/go.mod h1:/XyFFC7lL96pE2kKmar2jd4LKxWzy1MmbiDHV0nK3bU=
+github.com/Luet-lab/moby v17.12.0-ce-rc1.0.20200605210607-749178b8f80d+incompatible h1:YddBuPhhRLoz7uhSJ3Zm//e62jQeTW/qXEZrk5I4qsk=
+github.com/Luet-lab/moby v17.12.0-ce-rc1.0.20200605210607-749178b8f80d+incompatible/go.mod h1:/XyFFC7lL96pE2kKmar2jd4LKxWzy1MmbiDHV0nK3bU=
 github.com/Microsoft/go-winio v0.4.11 h1:zoIOcVf0xPN1tnMVbTtEdI+P8OofVk3NObnwOQ6nK2Q=
 github.com/Microsoft/go-winio v0.4.11/go.mod h1:VhR8bwka0BXejwEJY73c50VrPtXAaKcyvVC4A4RozmA=
 github.com/Microsoft/go-winio v0.4.15-0.20190919025122-fc70bd9a86b5/go.mod h1:tTuCMEN+UleMWgg9dVx4Hu52b1bJo+59jBh3ajtinzw=
