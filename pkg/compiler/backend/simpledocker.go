@@ -97,7 +97,7 @@ func (*SimpleDocker) ImageExists(imagename string) bool {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		Warning("Image not present")
-		Debug(out)
+		Debug(string(out))
 		return false
 	}
 	return true
