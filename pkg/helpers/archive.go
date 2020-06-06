@@ -17,7 +17,7 @@ package helpers
 
 import (
 	"archive/tar"
-	"errors"
+	"bytes"
 	"io"
 	"os"
 	"path/filepath"
@@ -89,10 +89,10 @@ func UntarProtect(src, dst string, sameOwner bool, protectedFiles []string, modi
 		mods[file] = modifier.GetModifier()
 	}
 
-	replacerArchive := archive.ReplaceFileTarWrapper(in, mods)
-
 	if sameOwner {
 		// PRE: i have root privileged.
+
+		replacerArchive := archive.ReplaceFileTarWrapper(in, mods)
 
 		opts := &archive.TarOptions{
 			// NOTE: NoLchown boolean is used for chmod of the symlink
@@ -104,11 +104,90 @@ func UntarProtect(src, dst string, sameOwner bool, protectedFiles []string, modi
 
 		ans = archive.Untar(replacerArchive, dst, opts)
 	} else {
-		// TODO
-		ans = errors.New("Not implemented")
+		ans = unTarIgnoreOwner(dst, in, mods)
 	}
 
 	return ans
+}
+
+func unTarIgnoreOwner(dest string, in io.ReadCloser, mods map[string]archive.TarModifierFunc) error {
+	tr := tar.NewReader(in)
+	for {
+		header, err := tr.Next()
+
+		var data []byte
+		var headerReplaced = false
+
+		switch {
+		case err == io.EOF:
+			goto tarEof
+		case err != nil:
+			return err
+		case header == nil:
+			continue
+		}
+
+		// the target location where the dir/file should be created
+		target := filepath.Join(dest, header.Name)
+		if mods != nil {
+			modifier, ok := mods[header.Name]
+			if ok {
+				header, data, err = modifier(header.Name, header, tr)
+				if err != nil {
+					return err
+				}
+
+				// Override target path
+				target = filepath.Join(dest, header.Name)
+				headerReplaced = true
+			}
+
+		}
+
+		// Check the file type
+		switch header.Typeflag {
+
+		// if its a dir and it doesn't exist create it
+		case tar.TypeDir:
+			if _, err := os.Stat(target); err != nil {
+				if err := os.MkdirAll(target, 0755); err != nil {
+					return err
+				}
+			}
+
+			// handle creation of file
+		case tar.TypeReg:
+
+			f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+			if err != nil {
+				return err
+			}
+
+			// copy over contents
+			if headerReplaced {
+				_, err = io.Copy(f, bytes.NewReader(data))
+			} else {
+				_, err = io.Copy(f, tr)
+			}
+			if err != nil {
+				return err
+			}
+
+			// manually close here after each file operation; defering would cause each
+			// file close to wait until all operations have completed.
+			f.Close()
+
+		case tar.TypeSymlink:
+			source := header.Linkname
+			err := os.Symlink(source, target)
+			if err != nil {
+				return err
+			}
+		}
+	}
+tarEof:
+
+	return nil
 }
 
 // Untar just a wrapper around the docker functions
@@ -134,62 +213,7 @@ func Untar(src, dest string, sameOwner bool) error {
 
 		ans = archive.Untar(in, dest, opts)
 	} else {
-
-		// TODO: replace with https://github.com/mholt/archiver ?
-		var fileReader io.ReadCloser = in
-
-		tr := tar.NewReader(fileReader)
-		for {
-			header, err := tr.Next()
-
-			switch {
-			case err == io.EOF:
-				goto tarEof
-			case err != nil:
-				return err
-			case header == nil:
-				continue
-			}
-
-			// the target location where the dir/file should be created
-			target := filepath.Join(dest, header.Name)
-
-			// Check the file type
-			switch header.Typeflag {
-
-			// if its a dir and it doesn't exist create it
-			case tar.TypeDir:
-				if _, err := os.Stat(target); err != nil {
-					if err := os.MkdirAll(target, 0755); err != nil {
-						return err
-					}
-				}
-
-				// handle creation of file
-			case tar.TypeReg:
-				f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-				if err != nil {
-					return err
-				}
-
-				// copy over contents
-				if _, err := io.Copy(f, tr); err != nil {
-					return err
-				}
-
-				// manually close here after each file operation; defering would cause each
-				// file close to wait until all operations have completed.
-				f.Close()
-
-			case tar.TypeSymlink:
-				source := header.Linkname
-				err := os.Symlink(source, target)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	tarEof:
+		ans = unTarIgnoreOwner(dest, in, nil)
 	}
 
 	return ans
