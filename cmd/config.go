@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	config "github.com/mudler/luet/pkg/config"
+	installer "github.com/mudler/luet/pkg/installer"
 
 	"github.com/spf13/cobra"
 )
@@ -52,6 +53,23 @@ var configCmd = &cobra.Command{
 			}
 		}
 
+		if len(config.LuetCfg.ConfigProtectConfDir) > 0 {
+
+			// Load config protect configs
+			installer.LoadConfigProtectConfs(config.LuetCfg)
+
+			fmt.Println("config_protect_confdir:")
+			for _, dir := range config.LuetCfg.ConfigProtectConfDir {
+				fmt.Println("  - ", dir)
+			}
+
+			if len(config.LuetCfg.GetConfigProtectConfFiles()) > 0 {
+				fmt.Println("protect_conf_files:")
+				for _, file := range config.LuetCfg.GetConfigProtectConfFiles() {
+					fmt.Println("  - ", file.String())
+				}
+			}
+		}
 	},
 }
 

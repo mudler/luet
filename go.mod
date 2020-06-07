@@ -46,4 +46,4 @@ require (
 	mvdan.cc/sh/v3 v3.0.0-beta1
 )
 
-replace github.com/docker/docker => github.com/Luet-lab/moby v17.12.0-ce-rc1.0.20200418093736-b2b0766ef22c+incompatible
+replace github.com/docker/docker => github.com/Luet-lab/moby v17.12.0-ce-rc1.0.20200605210607-749178b8f80d+incompatible
