@@ -24,11 +24,11 @@ import (
 	"strings"
 
 	"github.com/marcsauter/single"
+	extensions "github.com/mudler/cobra-extensions"
 	config "github.com/mudler/luet/pkg/config"
 	helpers "github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	repo "github.com/mudler/luet/pkg/repository"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -133,15 +133,6 @@ func Execute() {
 	}
 
 	if err := RootCmd.Execute(); err != nil {
-		if len(os.Args) > 0 {
-			for _, c := range RootCmd.Commands() {
-				if c.Name() == os.Args[1] {
-					os.Exit(-1) // Something failed
-				}
-			}
-			// Try to load a bin from path.
-			helpers.Exec("luet-"+os.Args[1], os.Args[1:], os.Environ())
-		}
 		fmt.Println(err)
 		os.Exit(-1)
 	}
@@ -177,6 +168,15 @@ func init() {
 	config.LuetCfg.Viper.BindPFlag("general.debug", pflags.Lookup("debug"))
 	config.LuetCfg.Viper.BindPFlag("general.fatal_warnings", pflags.Lookup("fatal"))
 	config.LuetCfg.Viper.BindPFlag("general.same_owner", pflags.Lookup("same-owner"))
+
+	// Extensions must be binary with the "luet-" prefix to be able to be shown in the help.
+	// we also accept extensions in the relative path where luet is being started, "extensions/"
+	exts := extensions.Discover("luet", "extensions")
+	for _, ex := range exts {
+		cobraCmd := ex.CobraCommand()
+		RootCmd.AddCommand(cobraCmd)
+	}
+
 }
 
 // initConfig reads in config file and ENV variables if set.
