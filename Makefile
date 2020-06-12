@@ -68,7 +68,7 @@ build:
 .PHONY: build-small
 build-small:
 	@$(MAKE) LDFLAGS+="-s -w" build
-	upx --brute $(NAME)
+	upx --brute -1 $(NAME)
 
 .PHONY: image
 image:
