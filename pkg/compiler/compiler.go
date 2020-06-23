@@ -229,13 +229,30 @@ func (cs *LuetCompiler) stripIncludesFromRootfs(includes []string, rootfs string
 }
 
 func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage string, concurrency int, keepPermissions, keepImg bool, p CompilationSpec) (Artifact, error) {
-	fp := p.GetPackage().HashFingerprint()
+
+	pkgTag := ":package:  " + p.GetPackage().GetName()
+
+	// Use packageImage as salt into the fp being used
+	// so the hash is unique also in cases where
+	// some package deps does have completely different
+	// depgraphs
+	// TODO: As the salt contains the packageImage ( in registry/organization/imagename:tag format)
+	// the images hashes are broken with registry mirrors.
+	// We should use the image tag, or pass by the package assertion hash which is unique
+	// and identifies the deptree of the package.
+
+	fp := p.GetPackage().HashFingerprint(packageImage)
+
 	if buildertaggedImage == "" {
 		buildertaggedImage = cs.ImageRepository + "-" + fp + "-builder"
+		Debug(pkgTag, "Creating intermediary image", buildertaggedImage, "from", image)
 	}
+
+	// TODO:  Cleanup, not actually hit
 	if packageImage == "" {
 		packageImage = cs.ImageRepository + "-" + fp
 	}
+
 	if !cs.Clean {
 		exists := cs.Backend.ImageExists(buildertaggedImage) && cs.Backend.ImageExists(packageImage)
 		if art, err := LoadArtifactFromYaml(p); err == nil && exists {
@@ -243,7 +260,6 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 			return art, err
 		}
 	}
-	pkgTag := ":package:  " + p.GetPackage().GetName()
 
 	p.SetSeedImage(image) // In this case, we ignore the build deps as we suppose that the image has them - otherwise we recompose the tree with a solver,
 	// and we build all the images first.
@@ -513,7 +529,6 @@ func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssert
 	for _, assertion := range dependencies { //highly dependent on the order
 		if assertion.Value {
 			nthsolution := dependencies.Cut(assertion.Package)
-
 			assertion.Hash = solver.PackageHash{
 				BuildHash:   nthsolution.HashFrom(assertion.Package),
 				PackageHash: nthsolution.AssertionHash(),

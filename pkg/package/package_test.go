@@ -36,8 +36,8 @@ var _ = Describe("Package", func() {
 		})
 
 		It("Generates packages fingerprint's hashes", func() {
-			Expect(a.HashFingerprint()).ToNot(Equal(a1.HashFingerprint()))
-			Expect(a.HashFingerprint()).To(Equal("c64caa391b79adb598ad98e261aa79a0"))
+			Expect(a.HashFingerprint("")).ToNot(Equal(a1.HashFingerprint("")))
+			Expect(a.HashFingerprint("")).To(Equal("76972ef6991ec6102f33b401105c1351"))
 		})
 	})
 

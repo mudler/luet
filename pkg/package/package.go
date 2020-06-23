@@ -105,7 +105,7 @@ type Package interface {
 
 	String() string
 	HumanReadableString() string
-	HashFingerprint() string
+	HashFingerprint(string) string
 
 	Clone() Package
 }
@@ -205,9 +205,9 @@ func (p *DefaultPackage) GetFingerPrint() string {
 	return fmt.Sprintf("%s-%s-%s", p.Name, p.Category, p.Version)
 }
 
-func (p *DefaultPackage) HashFingerprint() string {
+func (p *DefaultPackage) HashFingerprint(salt string) string {
 	h := md5.New()
-	io.WriteString(h, p.GetFingerPrint())
+	io.WriteString(h, fmt.Sprintf("%s-%s",p.GetFingerPrint(),salt))
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 

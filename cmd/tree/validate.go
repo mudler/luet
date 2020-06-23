@@ -184,7 +184,7 @@ func validateWorker(i int,
 					))
 
 					// Check if the solver is already been done for the deep
-					_, err := cacheDeps.Get(r.HashFingerprint())
+					_, err := cacheDeps.Get(r.HashFingerprint(""))
 					if err == nil {
 						Debug("  :direct_hit: Cache Hit for dep",
 							fmt.Sprintf("%s/%s-%s", r.GetCategory(), r.GetName(), r.GetVersion()))
@@ -218,7 +218,7 @@ func validateWorker(i int,
 					}
 
 					// Register the key
-					cacheDeps.Set(r.HashFingerprint(), "1")
+					cacheDeps.Set(r.HashFingerprint(""), "1")
 
 				}
 			}
