@@ -74,10 +74,6 @@ build-small:
 image:
 	docker build --rm -t luet/base .
 
-.PHONY: gox-build
-gox-build:
-	CGO_ENABLED=0 gox $(BUILD_PLATFORMS) -ldflags '$(LDFLAGS)' -output="release/$(NAME)-$(VERSION)-{{.OS}}-{{.Arch}}"
-
 .PHONY: lint
 lint:
 	golint ./... | grep -v "be unexported"
@@ -94,4 +90,4 @@ test-docker:
 
 .PHONY: multiarch-build
 multiarch-build:
-	gox $(BUILD_PLATFORMS) -ldflags '$(LDFLAGS)' -output="release/$(NAME)-$(VERSION)-{{.OS}}-{{.Arch}}"
+	CGO_ENABLED=0 gox $(BUILD_PLATFORMS) -ldflags '$(LDFLAGS)' -output="release/$(NAME)-$(VERSION)-{{.OS}}-{{.Arch}}"
