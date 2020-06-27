@@ -77,9 +77,9 @@ func NewTreePkglistCommand() *cobra.Command {
 			}
 
 			revdeps, _ := cmd.Flags().GetBool("revdeps")
-			rdeps, _ := cmd.Flags().GetBool("rdeps")
-			if revdeps && rdeps {
-				Fatal("Both revdeps and rdeps option used. Choice only one.")
+			deps, _ := cmd.Flags().GetBool("deps")
+			if revdeps && deps {
+				Fatal("Both revdeps and deps option used. Choice only one.")
 			}
 
 		},
@@ -92,7 +92,7 @@ func NewTreePkglistCommand() *cobra.Command {
 			buildtime, _ := cmd.Flags().GetBool("buildtime")
 			full, _ := cmd.Flags().GetBool("full")
 			revdeps, _ := cmd.Flags().GetBool("revdeps")
-			rdeps, _ := cmd.Flags().GetBool("rdeps")
+			deps, _ := cmd.Flags().GetBool("deps")
 
 			out, _ := cmd.Flags().GetString("output")
 			if out != "terminal" {
@@ -113,7 +113,7 @@ func NewTreePkglistCommand() *cobra.Command {
 				}
 			}
 
-			if rdeps {
+			if deps {
 				emptyInstallationDb := pkg.NewInMemoryDatabase(false)
 
 				depSolver = solver.NewSolver(pkg.NewInMemoryDatabase(false),
@@ -185,7 +185,7 @@ func NewTreePkglistCommand() *cobra.Command {
 								Path:     revdep.GetPath(),
 							})
 						}
-					} else if rdeps {
+					} else if deps {
 
 						Spinner(32)
 						solution, err := depSolver.Install(pkg.Packages{p})
@@ -263,7 +263,7 @@ func NewTreePkglistCommand() *cobra.Command {
 	ans.Flags().BoolP("buildtime", "b", false, "Build time match")
 	ans.Flags().StringP("output", "o", "terminal", "Output format ( Defaults: terminal, available: json,yaml )")
 	ans.Flags().Bool("revdeps", false, "Search package reverse dependencies")
-	ans.Flags().Bool("rdeps", false, "Search package runtime dependencies")
+	ans.Flags().Bool("deps", false, "Search package dependencies")
 
 	ans.Flags().BoolP("verbose", "v", false, "Add package version")
 	ans.Flags().BoolP("full", "f", false, "Show package detail")
