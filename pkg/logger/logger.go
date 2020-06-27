@@ -78,23 +78,25 @@ func Spinner(i int) {
 		i = 43
 	}
 
-	if !s.Active() {
+	if s != nil && !s.Active() {
 		//	s.UpdateCharSet(spinner.CharSets[i])
 		s.Start() // Start the spinner
 	}
 }
 
 func SpinnerText(suffix, prefix string) {
-	s.Lock()
-	defer s.Unlock()
-	if LuetCfg.GetGeneral().Debug {
-		fmt.Println(fmt.Sprintf("%s %s",
-			Bold(Cyan(prefix)).String(),
-			Bold(Magenta(suffix)).BgBlack().String(),
-		))
-	} else {
-		s.Suffix = Bold(Magenta(suffix)).BgBlack().String()
-		s.Prefix = Bold(Cyan(prefix)).String()
+	if s != nil {
+		s.Lock()
+		defer s.Unlock()
+		if LuetCfg.GetGeneral().Debug {
+			fmt.Println(fmt.Sprintf("%s %s",
+				Bold(Cyan(prefix)).String(),
+				Bold(Magenta(suffix)).BgBlack().String(),
+			))
+		} else {
+			s.Suffix = Bold(Magenta(suffix)).BgBlack().String()
+			s.Prefix = Bold(Cyan(prefix)).String()
+		}
 	}
 }
 
@@ -108,7 +110,9 @@ func SpinnerStop() {
 	if 2 > confLevel {
 		return
 	}
-	s.Stop()
+	if s != nil {
+		s.Stop()
+	}
 }
 
 func level2Number(level string) int {

@@ -88,8 +88,12 @@ func LoadConfig(c *config.LuetConfig) error {
 		return err
 	}
 
+	noSpinner := c.Viper.GetBool("no_spinner")
+
 	InitAurora()
-	NewSpinner()
+	if !noSpinner {
+		NewSpinner()
+	}
 
 	Debug("Using config file:", c.Viper.ConfigFileUsed())
 
@@ -145,6 +149,7 @@ func init() {
 	pflags.BoolP("debug", "d", false, "verbose output")
 	pflags.Bool("fatal", false, "Enables Warnings to exit")
 	pflags.Bool("enable-logfile", false, "Enable log to file")
+	pflags.Bool("no-spinner", false, "Disable spinner.")
 	pflags.Bool("color", config.LuetCfg.GetLogging().Color, "Enable/Disable color.")
 	pflags.Bool("emoji", config.LuetCfg.GetLogging().EnableEmoji, "Enable/Disable emoji.")
 	pflags.StringP("logfile", "l", config.LuetCfg.GetLogging().Path,
@@ -168,6 +173,8 @@ func init() {
 	config.LuetCfg.Viper.BindPFlag("general.debug", pflags.Lookup("debug"))
 	config.LuetCfg.Viper.BindPFlag("general.fatal_warnings", pflags.Lookup("fatal"))
 	config.LuetCfg.Viper.BindPFlag("general.same_owner", pflags.Lookup("same-owner"))
+	// Currently I maintain this only from cli.
+	config.LuetCfg.Viper.BindPFlag("no_spinner", pflags.Lookup("no-spinner"))
 
 	// Extensions must be binary with the "luet-" prefix to be able to be shown in the help.
 	// we also accept extensions in the relative path where luet is being started, "extensions/"
