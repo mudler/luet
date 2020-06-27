@@ -26,6 +26,7 @@ import (
 	. "github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/solver"
 	tree "github.com/mudler/luet/pkg/tree"
 
 	"github.com/spf13/cobra"
@@ -74,15 +75,24 @@ func NewTreePkglistCommand() *cobra.Command {
 			if len(t) == 0 {
 				Fatal("Mandatory tree param missing.")
 			}
+
+			revdeps, _ := cmd.Flags().GetBool("revdeps")
+			rdeps, _ := cmd.Flags().GetBool("rdeps")
+			if revdeps && rdeps {
+				Fatal("Both revdeps and rdeps option used. Choice only one.")
+			}
+
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			var results TreeResults
+			var depSolver solver.PackageSolver
 
 			treePath, _ := cmd.Flags().GetStringArray("tree")
 			verbose, _ := cmd.Flags().GetBool("verbose")
 			buildtime, _ := cmd.Flags().GetBool("buildtime")
 			full, _ := cmd.Flags().GetBool("full")
 			revdeps, _ := cmd.Flags().GetBool("revdeps")
+			rdeps, _ := cmd.Flags().GetBool("rdeps")
 
 			out, _ := cmd.Flags().GetString("output")
 			if out != "terminal" {
@@ -95,11 +105,21 @@ func NewTreePkglistCommand() *cobra.Command {
 			} else {
 				reciper = tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
 			}
+
 			for _, t := range treePath {
 				err := reciper.Load(t)
 				if err != nil {
 					Fatal("Error on load tree ", err)
 				}
+			}
+
+			if rdeps {
+				emptyInstallationDb := pkg.NewInMemoryDatabase(false)
+
+				depSolver = solver.NewSolver(pkg.NewInMemoryDatabase(false),
+					reciper.GetDatabase(),
+					emptyInstallationDb)
+
 			}
 
 			regExcludes, err := helpers.CreateRegexArray(excludes)
@@ -146,15 +166,8 @@ func NewTreePkglistCommand() *cobra.Command {
 				}
 
 				if addPkg {
-					if !revdeps {
-						plist = append(plist, pkgstr)
-						results.Packages = append(results.Packages, TreePackageResult{
-							Name:     p.GetName(),
-							Version:  p.GetVersion(),
-							Category: p.GetCategory(),
-							Path:     p.GetPath(),
-						})
-					} else {
+					if revdeps {
+
 						visited := make(map[string]interface{})
 						for _, revdep := range p.ExpandedRevdeps(reciper.GetDatabase(), visited) {
 							if full {
@@ -172,7 +185,53 @@ func NewTreePkglistCommand() *cobra.Command {
 								Path:     revdep.GetPath(),
 							})
 						}
+					} else if rdeps {
+
+						Spinner(32)
+						solution, err := depSolver.Install(pkg.Packages{p})
+						if err != nil {
+							Fatal(err.Error())
+						}
+						SpinnerStop()
+
+						for _, pa := range solution {
+
+							if pa.Value {
+								// Exclude itself
+								if pa.Package.GetName() == p.GetName() && pa.Package.GetCategory() == p.GetCategory() {
+									continue
+								}
+
+								if full {
+									pkgstr = pkgDetail(pa.Package)
+								} else if verbose {
+									pkgstr = pa.Package.HumanReadableString()
+								} else {
+									pkgstr = fmt.Sprintf("%s/%s", pa.Package.GetCategory(), pa.Package.GetName())
+								}
+								plist = append(plist, pkgstr)
+								results.Packages = append(results.Packages, TreePackageResult{
+									Name:     pa.Package.GetName(),
+									Version:  pa.Package.GetVersion(),
+									Category: pa.Package.GetCategory(),
+									Path:     pa.Package.GetPath(),
+								})
+							}
+
+						}
+
+					} else {
+
+						plist = append(plist, pkgstr)
+						results.Packages = append(results.Packages, TreePackageResult{
+							Name:     p.GetName(),
+							Version:  p.GetVersion(),
+							Category: p.GetCategory(),
+							Path:     p.GetPath(),
+						})
+
 					}
+
 				}
 			}
 
@@ -204,6 +263,7 @@ func NewTreePkglistCommand() *cobra.Command {
 	ans.Flags().BoolP("buildtime", "b", false, "Build time match")
 	ans.Flags().StringP("output", "o", "terminal", "Output format ( Defaults: terminal, available: json,yaml )")
 	ans.Flags().Bool("revdeps", false, "Search package reverse dependencies")
+	ans.Flags().Bool("rdeps", false, "Search package runtime dependencies")
 
 	ans.Flags().BoolP("verbose", "v", false, "Add package version")
 	ans.Flags().BoolP("full", "f", false, "Show package detail")
