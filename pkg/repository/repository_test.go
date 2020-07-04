@@ -35,12 +35,22 @@ var _ = Describe("Repository", func() {
 
 		It("Chec Load Repository 1", func() {
 			Expect(err).Should(BeNil())
-			Expect(len(cfg.SystemRepositories)).Should(Equal(1))
+			Expect(len(cfg.SystemRepositories)).Should(Equal(2))
 			Expect(cfg.SystemRepositories[0].Name).Should(Equal("test1"))
 			Expect(cfg.SystemRepositories[0].Priority).Should(Equal(999))
 			Expect(cfg.SystemRepositories[0].Type).Should(Equal("disk"))
 			Expect(len(cfg.SystemRepositories[0].Urls)).Should(Equal(1))
 			Expect(cfg.SystemRepositories[0].Urls[0]).Should(Equal("tests/repos/test1"))
+		})
+
+		It("Chec Load Repository 2", func() {
+			Expect(err).Should(BeNil())
+			Expect(len(cfg.SystemRepositories)).Should(Equal(2))
+			Expect(cfg.SystemRepositories[1].Name).Should(Equal("test2"))
+			Expect(cfg.SystemRepositories[1].Priority).Should(Equal(1000))
+			Expect(cfg.SystemRepositories[1].Type).Should(Equal("disk"))
+			Expect(len(cfg.SystemRepositories[1].Urls)).Should(Equal(1))
+			Expect(cfg.SystemRepositories[1].Urls[0]).Should(Equal("tests/repos/test2"))
 		})
 	})
 })

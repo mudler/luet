@@ -28,7 +28,7 @@ import (
 )
 
 func LoadRepositories(c *LuetConfig) error {
-	var regexRepo = regexp.MustCompile(`.yml$`)
+	var regexRepo = regexp.MustCompile(`.yml$|.yaml$`)
 
 	for _, rdir := range c.RepositoriesConfDir {
 		Debug("Parsing Repository Directory", rdir, "...")
