@@ -192,6 +192,11 @@ func NewTreePkglistCommand() *cobra.Command {
 						if err != nil {
 							Fatal(err.Error())
 						}
+						ass := solution.SearchByName(p.GetPackageName())
+						solution, err = solution.Order(reciper.GetDatabase(), ass.Package.GetFingerPrint())
+						if err != nil {
+							Fatal(err.Error())
+						}
 						SpinnerStop()
 
 						for _, pa := range solution {
@@ -251,7 +256,9 @@ func NewTreePkglistCommand() *cobra.Command {
 				}
 				fmt.Println(string(j2))
 			default:
-				sort.Strings(plist)
+				if !deps {
+					sort.Strings(plist)
+				}
 				for _, p := range plist {
 					fmt.Println(p)
 				}
