@@ -36,15 +36,15 @@ import (
 )
 
 type LuetInstallerOptions struct {
-	SolverOptions                             config.LuetSolverOptions
-	Concurrency                               int
-	NoDeps                                    bool
-	OnlyDeps                                  bool
-	Force                                     bool
-	PreserveSystemEssentialData               bool
-	FullUninstall, FullCleanUninstall         bool
-	CheckConflicts                            bool
-	SolverUpgrade, RemoveUnavailableOnUpgrade bool
+	SolverOptions                                                  config.LuetSolverOptions
+	Concurrency                                                    int
+	NoDeps                                                         bool
+	OnlyDeps                                                       bool
+	Force                                                          bool
+	PreserveSystemEssentialData                                    bool
+	FullUninstall, FullCleanUninstall                              bool
+	CheckConflicts                                                 bool
+	SolverUpgrade, RemoveUnavailableOnUpgrade, UpgradeNewRevisions bool
 }
 
 type LuetInstaller struct {
@@ -90,18 +90,55 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 		}
 	}
 
-	Info("Marked for uninstall")
+	if len(uninstall) > 0 {
+		Info("Packages marked for uninstall:")
+	}
+
 	for _, p := range uninstall {
 		Info(fmt.Sprintf("- %s", p.HumanReadableString()))
 	}
 
-	Info("Marked for upgrade")
+	if len(solution) > 0 {
+		Info("Packages marked for upgrade:")
+	}
+
 	toInstall := pkg.Packages{}
 	for _, assertion := range solution {
 		// Be sure to filter from solutions packages already installed in the system
 		if _, err := s.Database.FindPackage(assertion.Package); err != nil && assertion.Value {
 			Info(fmt.Sprintf("- %s", assertion.Package.HumanReadableString()))
 			toInstall = append(toInstall, assertion.Package)
+		}
+	}
+
+	if l.Options.UpgradeNewRevisions {
+		Info("Checking packages with new revisions available")
+		for _, p := range s.Database.World() {
+			matches := syncedRepos.PackageMatches(pkg.Packages{p})
+			if len(matches) == 0 {
+				// Package missing. the user should run luet upgrade --universe
+				Info("Installed packages seems to be missing from remote repositories.")
+				Info("It is suggested to run 'luet upgrade --universe'")
+				continue
+			}
+			for _, artefact := range matches[0].Repo.GetIndex() {
+				if artefact.GetCompileSpec().GetPackage() == nil {
+					return errors.New("Package in compilespec empty")
+
+				}
+				if artefact.GetCompileSpec().GetPackage().Matches(p) && artefact.GetCompileSpec().GetPackage().GetBuildTimestamp() != p.GetBuildTimestamp() {
+					toInstall = append(toInstall, matches[0].Package).Unique()
+					uninstall = append(uninstall, p).Unique()
+					Info(
+						fmt.Sprintf("- %s ( %s vs %s ) repo: %s (date: %s)",
+							p.HumanReadableString(),
+							artefact.GetCompileSpec().GetPackage().GetBuildTimestamp(),
+							p.GetBuildTimestamp(),
+							matches[0].Repo.GetName(),
+							matches[0].Repo.GetLastUpdate(),
+						))
+				}
+			}
 		}
 	}
 
@@ -349,6 +386,7 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *Sy
 
 			}
 			if matches[0].Package.Matches(artefact.GetCompileSpec().GetPackage()) {
+				currentPack.SetBuildTimestamp(artefact.GetCompileSpec().GetPackage().GetBuildTimestamp())
 				// Filter out already installed
 				if _, err := s.Database.FindPackage(currentPack); err != nil {
 					toInstall[currentPack.GetFingerPrint()] = ArtifactMatch{Package: currentPack, Artifact: artefact, Repository: matches[0].Repo}

@@ -107,6 +107,9 @@ type Package interface {
 	HumanReadableString() string
 	HashFingerprint(string) string
 
+	SetBuildTimestamp(s string)
+	GetBuildTimestamp() string
+
 	Clone() Package
 }
 
@@ -170,9 +173,10 @@ type DefaultPackage struct {
 	// Path is set only internally when tree is loaded from disk
 	Path string `json:"path,omitempty"`
 
-	Description string   `json:"description,omitempty"`
-	Uri         []string `json:"uri,omitempty"`
-	License     string   `json:"license,omitempty"`
+	Description    string   `json:"description,omitempty"`
+	Uri            []string `json:"uri,omitempty"`
+	License        string   `json:"license,omitempty"`
+	BuildTimestamp string   `json:"buildtimestamp,omitempty"`
 
 	Labels map[string]string `json:"labels,omitempty"` // Affects YAML field names too.
 }
@@ -207,7 +211,7 @@ func (p *DefaultPackage) GetFingerPrint() string {
 
 func (p *DefaultPackage) HashFingerprint(salt string) string {
 	h := md5.New()
-	io.WriteString(h, fmt.Sprintf("%s-%s",p.GetFingerPrint(),salt))
+	io.WriteString(h, fmt.Sprintf("%s-%s", p.GetFingerPrint(), salt))
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
@@ -227,6 +231,16 @@ func FromString(s string) Package {
 
 func (p *DefaultPackage) GetPackageName() string {
 	return fmt.Sprintf("%s-%s", p.Name, p.Category)
+}
+
+// GetBuildTimestamp returns the package build timestamp
+func (p *DefaultPackage) GetBuildTimestamp() string {
+	return p.BuildTimestamp
+}
+
+// SetBuildTimestamp sets the package Build timestamp
+func (p *DefaultPackage) SetBuildTimestamp(s string) {
+	p.BuildTimestamp = s
 }
 
 // GetPath returns the path where the definition file was found

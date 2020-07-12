@@ -62,6 +62,7 @@ var upgradeCmd = &cobra.Command{
 		full, _ := cmd.Flags().GetBool("full")
 		universe, _ := cmd.Flags().GetBool("universe")
 		clean, _ := cmd.Flags().GetBool("clean")
+		sync, _ := cmd.Flags().GetBool("sync")
 
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -78,6 +79,7 @@ var upgradeCmd = &cobra.Command{
 			NoDeps:                     nodeps,
 			SolverUpgrade:              universe,
 			RemoveUnavailableOnUpgrade: clean,
+			UpgradeNewRevisions:        sync,
 		})
 		inst.Repositories(repos)
 		_, err := inst.SyncRepositories(false)
@@ -115,6 +117,7 @@ func init() {
 	upgradeCmd.Flags().Bool("full", true, "Attempts to remove as much packages as possible which aren't required (slow)")
 	upgradeCmd.Flags().Bool("universe", false, "Use ONLY the SAT solver to compute upgrades (experimental)")
 	upgradeCmd.Flags().Bool("clean", false, "Try to drop removed packages (experimental, only when --universe is enabled)")
+	upgradeCmd.Flags().Bool("sync", false, "Upgrade packages with new revisions (experimental)")
 
 	RootCmd.AddCommand(upgradeCmd)
 }

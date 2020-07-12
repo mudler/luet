@@ -23,6 +23,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
@@ -454,6 +455,8 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	}
 
 	artifact.SetFiles(filelist)
+
+	artifact.GetCompileSpec().GetPackage().SetBuildTimestamp(time.Now().String())
 
 	err = artifact.WriteYaml(p.GetOutputPath())
 	if err != nil {
