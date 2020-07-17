@@ -79,6 +79,7 @@ var buildCmd = &cobra.Command{
 		onlydeps := viper.GetBool("onlydeps")
 		keepExportedImages := viper.GetBool("keep-exported-images")
 		full, _ := cmd.Flags().GetBool("full")
+		skip, _ := cmd.Flags().GetBool("skip-if-metadata-exists")
 
 		compilerSpecs := compiler.NewLuetCompilationspecs()
 		var compilerBackend compiler.CompilerBackend
@@ -143,6 +144,7 @@ var buildCmd = &cobra.Command{
 		opts.OnlyDeps = onlydeps
 		opts.NoDeps = nodeps
 		opts.KeepImageExport = keepExportedImages
+		opts.SkipIfMetadataExists = skip
 
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), opts)
 		luetCompiler.SetConcurrency(concurrency)
@@ -231,6 +233,7 @@ func init() {
 	buildCmd.Flags().Bool("nodeps", false, "Build only the target packages, skipping deps (it works only if you already built the deps locally, or by using --pull) ")
 	buildCmd.Flags().Bool("onlydeps", false, "Build only package dependencies")
 	buildCmd.Flags().Bool("keep-exported-images", false, "Keep exported images used during building")
+	buildCmd.Flags().Bool("skip-if-metadata-exists", false, "Skip package if metadata exists")
 
 	buildCmd.Flags().String("solver-type", "", "Solver strategy")
 	buildCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")

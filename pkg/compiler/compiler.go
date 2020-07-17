@@ -256,7 +256,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 
 	if !cs.Clean {
 		exists := cs.Backend.ImageExists(buildertaggedImage) && cs.Backend.ImageExists(packageImage)
-		if art, err := LoadArtifactFromYaml(p); err == nil && exists {
+		if art, err := LoadArtifactFromYaml(p); err == nil && (cs.Options.SkipIfMetadataExists || exists) {
 			Debug("Artifact reloaded. Skipping build")
 			return art, err
 		}

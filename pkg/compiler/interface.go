@@ -52,9 +52,10 @@ type CompilerOptions struct {
 	Clean                    bool
 	KeepImageExport          bool
 
-	OnlyDeps      bool
-	NoDeps        bool
-	SolverOptions config.LuetSolverOptions
+	OnlyDeps             bool
+	NoDeps               bool
+	SolverOptions        config.LuetSolverOptions
+	SkipIfMetadataExists bool
 }
 
 func NewDefaultCompilerOptions() *CompilerOptions {
