@@ -32,6 +32,7 @@ type PackageResult struct {
 	Category   string `json:"category"`
 	Version    string `json:"version"`
 	Repository string `json:"repository"`
+	Hidden     bool   `json:"hidden"`
 }
 
 type Results struct {
@@ -58,6 +59,9 @@ var searchCmd = &cobra.Command{
 		if len(args) != 1 {
 			Fatal("Wrong number of arguments (expected 1)")
 		}
+
+		hidden, _ := cmd.Flags().GetBool("hidden")
+
 		installed := LuetCfg.Viper.GetBool("installed")
 		stype := LuetCfg.Viper.GetString("solver.type")
 		discount := LuetCfg.Viper.GetFloat64("solver.discount")
@@ -114,25 +118,31 @@ var searchCmd = &cobra.Command{
 			}
 			for _, m := range matches {
 				if !revdeps {
-					Info(fmt.Sprintf(":file_folder:%s", m.Repo.GetName()), fmt.Sprintf(":package:%s", m.Package.HumanReadableString()))
-					results.Packages = append(results.Packages,
-						PackageResult{
-							Name:       m.Package.GetName(),
-							Version:    m.Package.GetVersion(),
-							Category:   m.Package.GetCategory(),
-							Repository: m.Repo.GetName(),
-						})
+					if !m.Package.IsHidden() || m.Package.IsHidden() && hidden {
+						Info(fmt.Sprintf(":file_folder:%s", m.Repo.GetName()), fmt.Sprintf(":package:%s", m.Package.HumanReadableString()))
+						results.Packages = append(results.Packages,
+							PackageResult{
+								Name:       m.Package.GetName(),
+								Version:    m.Package.GetVersion(),
+								Category:   m.Package.GetCategory(),
+								Repository: m.Repo.GetName(),
+								Hidden:     m.Package.IsHidden(),
+							})
+					}
 				} else {
 					visited := make(map[string]interface{})
 					for _, revdep := range m.Package.ExpandedRevdeps(m.Repo.GetTree().GetDatabase(), visited) {
-						Info(fmt.Sprintf(":file_folder:%s", m.Repo.GetName()), fmt.Sprintf(":package:%s", revdep.HumanReadableString()))
-						results.Packages = append(results.Packages,
-							PackageResult{
-								Name:       revdep.GetName(),
-								Version:    revdep.GetVersion(),
-								Category:   revdep.GetCategory(),
-								Repository: m.Repo.GetName(),
-							})
+						if !revdep.IsHidden() || revdep.IsHidden() && hidden {
+							Info(fmt.Sprintf(":file_folder:%s", m.Repo.GetName()), fmt.Sprintf(":package:%s", revdep.HumanReadableString()))
+							results.Packages = append(results.Packages,
+								PackageResult{
+									Name:       revdep.GetName(),
+									Version:    revdep.GetVersion(),
+									Category:   revdep.GetCategory(),
+									Repository: m.Repo.GetName(),
+									Hidden:     revdep.IsHidden(),
+								})
+						}
 					}
 				}
 			}
@@ -162,26 +172,32 @@ var searchCmd = &cobra.Command{
 
 			for _, pack := range iMatches {
 				if !revdeps {
-					Info(fmt.Sprintf(":package:%s", pack.HumanReadableString()))
-					results.Packages = append(results.Packages,
-						PackageResult{
-							Name:       pack.GetName(),
-							Version:    pack.GetVersion(),
-							Category:   pack.GetCategory(),
-							Repository: "system",
-						})
+					if !pack.IsHidden() || pack.IsHidden() && hidden {
+						Info(fmt.Sprintf(":package:%s", pack.HumanReadableString()))
+						results.Packages = append(results.Packages,
+							PackageResult{
+								Name:       pack.GetName(),
+								Version:    pack.GetVersion(),
+								Category:   pack.GetCategory(),
+								Repository: "system",
+								Hidden:     pack.IsHidden(),
+							})
+					}
 				} else {
 					visited := make(map[string]interface{})
 
 					for _, revdep := range pack.ExpandedRevdeps(system.Database, visited) {
-						Info(fmt.Sprintf(":package:%s", pack.HumanReadableString()))
-						results.Packages = append(results.Packages,
-							PackageResult{
-								Name:       revdep.GetName(),
-								Version:    revdep.GetVersion(),
-								Category:   revdep.GetCategory(),
-								Repository: "system",
-							})
+						if !revdep.IsHidden() || revdep.IsHidden() && hidden {
+							Info(fmt.Sprintf(":package:%s", pack.HumanReadableString()))
+							results.Packages = append(results.Packages,
+								PackageResult{
+									Name:       revdep.GetName(),
+									Version:    revdep.GetVersion(),
+									Category:   revdep.GetCategory(),
+									Repository: "system",
+									Hidden:     revdep.IsHidden(),
+								})
+						}
 					}
 				}
 			}
@@ -223,5 +239,7 @@ func init() {
 	searchCmd.Flags().Bool("by-label", false, "Search packages through label")
 	searchCmd.Flags().Bool("by-label-regex", false, "Search packages through label regex")
 	searchCmd.Flags().Bool("revdeps", false, "Search package reverse dependencies")
+	searchCmd.Flags().Bool("hidden", false, "Include hidden packages")
+
 	RootCmd.AddCommand(searchCmd)
 }

@@ -42,8 +42,7 @@ type Package interface {
 	Encode(PackageDatabase) (string, error)
 
 	BuildFormula(PackageDatabase, PackageDatabase) ([]bf.Formula, error)
-	IsFlagged(bool) Package
-	Flagged() bool
+
 	GetFingerPrint() string
 	GetPackageName() string
 	Requires([]*DefaultPackage) Package
@@ -99,6 +98,7 @@ type Package interface {
 	HasAnnotation(string) bool
 	MatchAnnotation(*regexp.Regexp) bool
 
+	IsHidden() bool
 	IsSelector() bool
 	VersionMatchSelector(string, version.Versioner) (bool, error)
 	SelectorMatchVersion(string, version.Versioner) (bool, error)
@@ -164,8 +164,8 @@ type DefaultPackage struct {
 	State            State             `json:"state,omitempty"`
 	PackageRequires  []*DefaultPackage `json:"requires"`           // Affects YAML field names too.
 	PackageConflicts []*DefaultPackage `json:"conflicts"`          // Affects YAML field names too.
-	IsSet            bool              `json:"set,omitempty"`      // Affects YAML field names too.
 	Provides         []*DefaultPackage `json:"provides,omitempty"` // Affects YAML field names too.
+	Hidden           bool              `json:"hidden,omitempty"`   // Affects YAML field names too.
 
 	// Annotations are used for core features/options
 	Annotations map[string]string `json:"annotations,omitempty"` // Affects YAML field names too
@@ -260,6 +260,10 @@ func (p *DefaultPackage) IsSelector() bool {
 	return strings.ContainsAny(p.GetVersion(), "<>=")
 }
 
+func (p *DefaultPackage) IsHidden() bool {
+	return p.Hidden
+}
+
 func (p *DefaultPackage) HasLabel(label string) bool {
 	return helpers.MapHasKey(&p.Labels, label)
 }
@@ -314,15 +318,6 @@ func (p *DefaultPackage) Yaml() ([]byte, error) {
 		return []byte{}, err
 	}
 	return y, nil
-}
-
-func (p *DefaultPackage) IsFlagged(b bool) Package {
-	p.IsSet = b
-	return p
-}
-
-func (p *DefaultPackage) Flagged() bool {
-	return p.IsSet
 }
 
 func (p *DefaultPackage) GetName() string {
@@ -763,7 +758,6 @@ func (p *DefaultPackage) Explain() {
 	fmt.Println("Name: ", p.GetName())
 	fmt.Println("Category: ", p.GetCategory())
 	fmt.Println("Version: ", p.GetVersion())
-	fmt.Println("Installed: ", p.IsSet)
 
 	for _, req := range p.GetRequires() {
 		fmt.Println("\t-> ", req)

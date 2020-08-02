@@ -29,7 +29,6 @@ type DefaultPackageSanitized struct {
 	UseFlags         []string                   `json:"use_flags,omitempty" yaml:"use_flags,omitempty"`
 	PackageRequires  []*DefaultPackageSanitized `json:"requires,omitempty" yaml:"requires,omitempty"`
 	PackageConflicts []*DefaultPackageSanitized `json:"conflicts,omitempty" yaml:"conflicts,omitempty"`
-	IsSet            bool                       `json:"set,omitempty" yaml:"set,omitempty"`
 	Provides         []*DefaultPackageSanitized `json:"provides,omitempty" yaml:"provides,omitempty"`
 
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
@@ -40,6 +39,7 @@ type DefaultPackageSanitized struct {
 	Description string   `json:"description,omitempty" yaml:"description,omitempty"`
 	Uri         []string `json:"uri,omitempty" yaml:"uri,omitempty"`
 	License     string   `json:"license,omitempty" yaml:"license,omitempty"`
+	Hidden      bool     `json:"hidden,omitempty" yaml:"hidden,omitempty"`
 
 	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
 }
@@ -50,7 +50,7 @@ func NewDefaultPackageSanitized(p pkg.Package) *DefaultPackageSanitized {
 		Version:     p.GetVersion(),
 		Category:    p.GetCategory(),
 		UseFlags:    p.GetUses(),
-		IsSet:       p.Flagged(),
+		Hidden:      p.IsHidden(),
 		Path:        p.GetPath(),
 		Description: p.GetDescription(),
 		Uri:         p.GetURI(),
@@ -68,6 +68,7 @@ func NewDefaultPackageSanitized(p pkg.Package) *DefaultPackageSanitized {
 					Name:     r.Name,
 					Version:  r.Version,
 					Category: r.Category,
+					Hidden:   r.IsHidden(),
 				},
 			)
 		}
@@ -82,6 +83,7 @@ func NewDefaultPackageSanitized(p pkg.Package) *DefaultPackageSanitized {
 					Name:     c.Name,
 					Version:  c.Version,
 					Category: c.Category,
+					Hidden:   c.IsHidden(),
 				},
 			)
 		}
@@ -96,6 +98,7 @@ func NewDefaultPackageSanitized(p pkg.Package) *DefaultPackageSanitized {
 					Name:     prov.Name,
 					Version:  prov.Version,
 					Category: prov.Category,
+					Hidden:   prov.IsHidden(),
 				},
 			)
 		}

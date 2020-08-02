@@ -532,7 +532,7 @@ func (s *Solver) Uninstall(c pkg.Package, checkconflicts, full bool) (pkg.Packag
 	for _, a := range asserts {
 		if a.Value {
 			if !checkconflicts {
-				res = append(res, a.Package.IsFlagged(false))
+				res = append(res, a.Package)
 				continue
 			}
 
@@ -543,7 +543,7 @@ func (s *Solver) Uninstall(c pkg.Package, checkconflicts, full bool) (pkg.Packag
 
 			// If doesn't conflict with installed we just consider it for removal and look for the next one
 			if !c {
-				res = append(res, a.Package.IsFlagged(false))
+				res = append(res, a.Package)
 				continue
 			}
 
@@ -553,7 +553,7 @@ func (s *Solver) Uninstall(c pkg.Package, checkconflicts, full bool) (pkg.Packag
 				return nil, err
 			}
 			if !c {
-				res = append(res, a.Package.IsFlagged(false))
+				res = append(res, a.Package)
 			}
 
 		}
