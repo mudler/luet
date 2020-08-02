@@ -596,7 +596,7 @@ var _ = Describe("Solver", func() {
 				solution, err := s.Uninstall(A, true, true)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(solution).To(ContainElement(A))
 
 				//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
 				Expect(len(solution)).To(Equal(1))
@@ -622,7 +622,7 @@ var _ = Describe("Solver", func() {
 				solution, err := s.Uninstall(&pkg.DefaultPackage{Name: "A", Version: ">1.0"}, true, true)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(solution).To(ContainElement(A))
 
 				//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
 				Expect(len(solution)).To(Equal(1))
@@ -646,7 +646,7 @@ var _ = Describe("Solver", func() {
 				solution, err := s.Uninstall(A, true, true)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(solution).To(ContainElement(A))
 
 				//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
 				Expect(len(solution)).To(Equal(1))
@@ -670,7 +670,7 @@ var _ = Describe("Solver", func() {
 				solution, err := s.Uninstall(A, true, true)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(solution).To(ContainElement(A))
 
 				Expect(len(solution)).To(Equal(1))
 			})
@@ -693,8 +693,8 @@ var _ = Describe("Solver", func() {
 				solution, err := s.Uninstall(A, true, true)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(A.IsFlagged(false)))
-				Expect(solution).ToNot(ContainElement(B.IsFlagged(false)))
+				Expect(solution).To(ContainElement(A))
+				Expect(solution).ToNot(ContainElement(B))
 
 				Expect(len(solution)).To(Equal(1))
 			})
@@ -718,8 +718,8 @@ var _ = Describe("Solver", func() {
 				solution, err := s.Uninstall(A, true, true)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(A.IsFlagged(false)))
-				Expect(solution).To(ContainElement(C.IsFlagged(false)))
+				Expect(solution).To(ContainElement(A))
+				Expect(solution).To(ContainElement(C))
 
 				Expect(len(solution)).To(Equal(2))
 			})
@@ -744,9 +744,9 @@ var _ = Describe("Solver", func() {
 				solution, err := s.Uninstall(A, true, true)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(A.IsFlagged(false)))
-				Expect(solution).To(ContainElement(B.IsFlagged(false)))
-				Expect(solution).To(ContainElement(D.IsFlagged(false)))
+				Expect(solution).To(ContainElement(A))
+				Expect(solution).To(ContainElement(B))
+				Expect(solution).To(ContainElement(D))
 
 				Expect(len(solution)).To(Equal(3))
 
@@ -773,7 +773,7 @@ var _ = Describe("Solver", func() {
 				solution, err := s.UninstallUniverse(pkg.Packages{A})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(solution).To(ContainElement(A))
 
 				//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
 				Expect(len(solution)).To(Equal(1))
@@ -800,7 +800,7 @@ var _ = Describe("Solver", func() {
 					&pkg.DefaultPackage{Name: "A", Version: ">1.0"}})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(solution).To(ContainElement(A))
 
 				//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
 				Expect(len(solution)).To(Equal(1))
@@ -824,7 +824,7 @@ var _ = Describe("Solver", func() {
 				solution, err := s.UninstallUniverse(pkg.Packages{A})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(A.IsFlagged(false)))
+				Expect(solution).To(ContainElement(A))
 
 				//	Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
 				Expect(len(solution)).To(Equal(1))
@@ -848,8 +848,8 @@ var _ = Describe("Solver", func() {
 				solution, err := s.UninstallUniverse(pkg.Packages{A})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(A.IsFlagged(false)))
-				Expect(solution).To(ContainElement(B.IsFlagged(false)))
+				Expect(solution).To(ContainElement(A))
+				Expect(solution).To(ContainElement(B))
 
 				Expect(len(solution)).To(Equal(2))
 			})
@@ -874,9 +874,9 @@ var _ = Describe("Solver", func() {
 				solution, err := s.UninstallUniverse(pkg.Packages{A})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(A.IsFlagged(false)))
-				Expect(solution).To(ContainElement(B.IsFlagged(false)))
-				Expect(solution).To(ContainElement(C.IsFlagged(false)))
+				Expect(solution).To(ContainElement(A))
+				Expect(solution).To(ContainElement(B))
+				Expect(solution).To(ContainElement(C))
 
 				Expect(len(solution)).To(Equal(3))
 			})
@@ -900,8 +900,8 @@ var _ = Describe("Solver", func() {
 				solution, err := s.UninstallUniverse(pkg.Packages{A})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(A.IsFlagged(false)))
-				Expect(solution).To(ContainElement(C.IsFlagged(false)))
+				Expect(solution).To(ContainElement(A))
+				Expect(solution).To(ContainElement(C))
 
 				Expect(len(solution)).To(Equal(2))
 			})
@@ -926,9 +926,9 @@ var _ = Describe("Solver", func() {
 				solution, err := s.UninstallUniverse(pkg.Packages{A})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(A.IsFlagged(false)))
-				Expect(solution).To(ContainElement(B.IsFlagged(false)))
-				Expect(solution).To(ContainElement(D.IsFlagged(false)))
+				Expect(solution).To(ContainElement(A))
+				Expect(solution).To(ContainElement(B))
+				Expect(solution).To(ContainElement(D))
 
 				Expect(len(solution)).To(Equal(3))
 

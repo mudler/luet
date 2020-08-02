@@ -314,7 +314,6 @@ var _ = Describe("Package", func() {
 
 			Expect(p.GetVersion()).To(Equal(a.GetVersion()))
 			Expect(p.GetName()).To(Equal(a.GetName()))
-			Expect(p.Flagged()).To(Equal(a.Flagged()))
 			Expect(p.GetFingerPrint()).To(Equal(a.GetFingerPrint()))
 			Expect(len(p.GetConflicts())).To(Equal(len(a.GetConflicts())))
 			Expect(len(p.GetRequires())).To(Equal(len(a.GetRequires())))
@@ -374,7 +373,6 @@ var _ = Describe("Package", func() {
 			a2 := a.Clone()
 			Expect(a2.GetVersion()).To(Equal(a.GetVersion()))
 			Expect(a2.GetName()).To(Equal(a.GetName()))
-			Expect(a2.Flagged()).To(Equal(a.Flagged()))
 			Expect(a2.GetFingerPrint()).To(Equal(a.GetFingerPrint()))
 			Expect(len(a2.GetConflicts())).To(Equal(len(a.GetConflicts())))
 			Expect(len(a2.GetRequires())).To(Equal(len(a.GetRequires())))
