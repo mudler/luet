@@ -6,10 +6,10 @@ go:
 env:
   - "GO15VENDOREXPERIMENT=1"
 before_install:
-  - sudo apt-get install -y libcap2-bin
-  - sudo make deps
+  - sudo -E apt-get install -y libcap2-bin
+  - sudo -E make deps
 script:
-  - sudo make multiarch-build test-integration test-coverage
+  - sudo -E make multiarch-build test-integration test-coverage
 after_success:
   - |
       if [ -n "$TRAVIS_TAG" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
