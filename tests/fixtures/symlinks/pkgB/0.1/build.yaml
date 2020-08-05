@@ -1,0 +1,8 @@
+image: "alpine"
+unpack: true
+includes:
+- /file3
+prelude:
+- echo "test" > /file2
+steps:
+- ln -s /file2 /file3

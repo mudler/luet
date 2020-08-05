@@ -1,0 +1,5 @@
+image: "alpine"
+prelude:
+- echo "test" > /file2
+steps:
+- ln -s /file2 /file1
