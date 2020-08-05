@@ -372,7 +372,6 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	}
 	//	}
 
-	var diffs []ArtifactLayer
 	var artifact Artifact
 	unpack := p.ImageUnpack()
 
@@ -380,14 +379,6 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	// as the root of our archive.  ImageUnpack is implied to be true. override it
 	if p.GetPackageDir() != "" {
 		unpack = true
-	}
-
-	if !unpack {
-		// we have to get diffs only if spec is not unpacked
-		diffs, err = cs.Backend.Changes(p.Rel(p.GetPackage().GetFingerPrint()+"-builder.image.tar"), p.Rel(p.GetPackage().GetFingerPrint()+".image.tar"))
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not generate changes from layers")
-		}
 	}
 
 	rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
@@ -432,6 +423,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		}
 		artifact = NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
 		artifact.SetCompressionType(cs.CompressionType)
+
 		err = artifact.Compress(rootfs, concurrency)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while creating package archive")
@@ -440,7 +432,10 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		artifact.SetCompileSpec(p)
 	} else {
 		Info(pkgTag, "Generating delta")
-
+		diffs, err := cs.Backend.Changes(p.Rel(p.GetPackage().GetFingerPrint()+"-builder.image.tar"), p.Rel(p.GetPackage().GetFingerPrint()+".image.tar"))
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not generate changes from layers")
+		}
 		artifact, err = ExtractArtifactFromDelta(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions, p.GetIncludes(), cs.CompressionType)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not generate deltas")

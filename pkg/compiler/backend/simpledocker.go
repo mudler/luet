@@ -16,7 +16,6 @@
 package backend
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -222,64 +221,9 @@ func (*SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPer
 	return nil
 }
 
-// 	container-diff diff daemon://luet/base alpine --type=file -j
-// [
-//   {
-//     "Image1": "luet/base",
-//     "Image2": "alpine",
-//     "DiffType": "File",
-//     "Diff": {
-//       "Adds": null,
-//       "Dels": [
-//         {
-//           "Name": "/luetbuild",
-//           "Size": 5830706
-//         },
-//         {
-//           "Name": "/luetbuild/Dockerfile",
-//           "Size": 50
-//         },
-//         {
-//           "Name": "/luetbuild/output1",
-//           "Size": 5830656
-//         }
-//       ],
-//       "Mods": null
-//     }
-//   }
-// ]
-// Changes uses container-diff (https://github.com/GoogleContainerTools/container-diff) for retrieving out layer diffs
-func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLayer, error) {
-	tmpdiffs, err := config.LuetCfg.GetSystem().TempDir("tmpdiffs")
-	if err != nil {
-		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while creating tempdir for rootfs")
-	}
-	defer os.RemoveAll(tmpdiffs) // clean up
-	var errorBuffer bytes.Buffer
-
-	diffargs := []string{"diff", fromImage, toImage, "-v", "error", "-q", "--type=file", "-j", "-n", "-c", tmpdiffs}
-	cmd := exec.Command("container-diff", diffargs...)
-	cmd.Stderr = &errorBuffer
-	out, err := cmd.Output()
-
-	if string(errorBuffer.Bytes()) != "" {
-		Warning("container-diff errored with: " + string(errorBuffer.Bytes()))
-	}
-
-	if err != nil {
-		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed Resolving layer diffs: "+string(out))
-	}
-
-	if config.LuetCfg.GetGeneral().ShowBuildOutput {
-		Info(string(out))
-	}
-
-	var diffs []compiler.ArtifactLayer
-
-	err = json.Unmarshal(out, &diffs)
-	if err != nil {
-		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Failed unmarshalling json response: "+string(out))
-	}
+// Changes retrieves changes between image layers
+func (d *SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLayer, error) {
+	diffs, err := GenerateChanges(d, fromImage, toImage)
 
 	if config.LuetCfg.GetGeneral().Debug {
 		summary := compiler.ComputeArtifactLayerSummary(diffs)
@@ -292,5 +236,5 @@ func (*SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLaye
 		}
 	}
 
-	return diffs, nil
+	return diffs, err
 }

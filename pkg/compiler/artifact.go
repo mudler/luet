@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	system "github.com/Luet-lab/moby/pkg/system"
 	gzip "github.com/klauspost/pgzip"
 
 	//"strconv"
@@ -477,6 +478,27 @@ type CopyJob struct {
 	Artifact string
 }
 
+func copyXattr(srcPath, dstPath, attr string) error {
+	data, err := system.Lgetxattr(srcPath, attr)
+	if err != nil {
+		return err
+	}
+	if data != nil {
+		if err := system.Lsetxattr(dstPath, attr, data, 0); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func doCopyXattrs(srcPath, dstPath string) error {
+	if err := copyXattr(srcPath, dstPath, "security.capability"); err != nil {
+		return err
+	}
+
+	return copyXattr(srcPath, dstPath, "trusted.overlay.opaque")
+}
+
 func worker(i int, wg *sync.WaitGroup, s <-chan CopyJob) {
 	defer wg.Done()
 
@@ -490,10 +512,13 @@ func worker(i int, wg *sync.WaitGroup, s <-chan CopyJob) {
 		// 	continue
 		// }
 
-		if !helpers.Exists(job.Dst) {
+		_, err := os.Lstat(job.Dst)
+		if err != nil {
+			fmt.Println("Copying ", job.Src)
 			if err := helpers.CopyFile(job.Src, job.Dst); err != nil {
 				Warning("Error copying", job, err)
 			}
+			doCopyXattrs(job.Src, job.Dst)
 		}
 	}
 }
@@ -550,19 +575,33 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 					}
 				}
 			}
+			for _, a := range l.Diffs.Changes {
+				Debug("File ", a.Name, " changed")
+			}
+			for _, a := range l.Diffs.Deletions {
+				Debug("File ", a.Name, " deleted")
+			}
 		}
 	} else {
 		// Otherwise just grab all
 		for _, l := range layers {
 			// Consider d.Additions (and d.Changes? - warn at least) only
 			for _, a := range l.Diffs.Additions {
+				Debug("File ", a.Name, " added")
 				toCopy <- CopyJob{Src: filepath.Join(src, a.Name), Dst: filepath.Join(archive, a.Name), Artifact: a.Name}
+			}
+			for _, a := range l.Diffs.Changes {
+				Debug("File ", a.Name, " changed")
+			}
+			for _, a := range l.Diffs.Deletions {
+				Debug("File ", a.Name, " deleted")
 			}
 		}
 	}
 
 	close(toCopy)
 	wg.Wait()
+
 	a := NewPackageArtifact(dst)
 	a.SetCompressionType(t)
 	err = a.Compress(archive, concurrency)
