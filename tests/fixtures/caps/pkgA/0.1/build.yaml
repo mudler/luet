@@ -1,0 +1,9 @@
+image: "alpine"
+prelude:
+- apk add libcap
+unpack: true
+includes:
+  - /file1
+steps:
+- echo "test" > /file1
+- setcap cap_net_raw+ep /file1
