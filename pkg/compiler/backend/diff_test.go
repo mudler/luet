@@ -23,15 +23,20 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Docker backend", func() {
+var _ = Describe("Docker image diffs", func() {
 	var b compiler.CompilerBackend
 
 	BeforeEach(func() {
 		b = NewSimpleDockerBackend()
 	})
 
-	Context("Simple Docker backend satisfies main interface functionalities", func() {
-		It("Builds and generate tars", func() {
+	Context("Generate diffs from docker images", func() {
+		It("Detect no changes", func() {
+			err := b.DownloadImage(compiler.CompilerBackendOptions{
+				ImageName: "alpine:latest",
+			})
+			Expect(err).ToNot(HaveOccurred())
+
 			layers, err := GenerateChanges(b, "alpine:latest", "alpine:latest")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(layers)).To(Equal(1))
@@ -40,7 +45,16 @@ var _ = Describe("Docker backend", func() {
 			Expect(len(layers[0].Diffs.Deletions)).To(Equal(0))
 		})
 
-		It("Builds and generate tars", func() {
+		It("Detects additions and changed files", func() {
+			err := b.DownloadImage(compiler.CompilerBackendOptions{
+				ImageName: "quay.io/mocaccino/micro",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			err = b.DownloadImage(compiler.CompilerBackendOptions{
+				ImageName: "quay.io/mocaccino/extra",
+			})
+			Expect(err).ToNot(HaveOccurred())
+
 			layers, err := GenerateChanges(b, "quay.io/mocaccino/micro", "quay.io/mocaccino/extra")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(layers)).To(Equal(1))
