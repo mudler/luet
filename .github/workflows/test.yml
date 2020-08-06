@@ -18,4 +18,4 @@ jobs:
     - name: setup-docker
       uses: docker-practice/actions-setup-docker@0.0.1
     - name: Test
-      run: sudo make multiarch-build test-integration test-coverage
+      run: sudo make deps multiarch-build test-integration test-coverage

@@ -12,7 +12,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Test
-        run: sudo make test-integration test-coverage
+        run: sudo make deps test-integration test-coverage
       - name: Build
         run: make multiarch-build 
       - name: Release
