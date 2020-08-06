@@ -17,5 +17,5 @@ jobs:
       uses: actions/checkout@v2
     - name: setup-docker
       uses: docker-practice/actions-setup-docker@0.0.1
-    - name: Test
-      run: sudo make deps multiarch-build test-integration test-coverage
+    - name: Tests
+      run: sudo -E env "PATH=$PATH" make deps multiarch-build test-integration test-coverage
