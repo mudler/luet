@@ -60,19 +60,15 @@ testInstall() {
     docker build --rm --no-cache -t luet:test .
     docker rm luet-runtime-test || true
     docker run --name luet-runtime-test \
-       -ti -v /tmp:/tmp \
+       -v /tmp:/tmp \
        -v $tmpdir/luet.yaml:/etc/luet/luet.yaml:ro \
        luet:test install seed/alpine
     installst=$?
     assertEquals 'install test successfully' "0" "$installst"
 
     docker commit luet-runtime-test luet-runtime-test-image
-    test=$(docker run --rm -t --entrypoint /bin/sh luet-runtime-test-image -c 'echo "ftw"')
+    test=$(docker run --rm --entrypoint /bin/sh luet-runtime-test-image -c 'echo "ftw"')
     assertContains 'generated image runs successfully' "$test" "ftw"
-   # docker rm luet-runtime-test || true
-   # docker rmi luet-runtime-test-image || true
-
-   # docker rmi luet:test || true
 }
 
 # Load shUnit2.
