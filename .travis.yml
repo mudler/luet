@@ -10,10 +10,10 @@ before_install:
   - sudo -E env "PATH=$PATH" make deps
 script:
   - sudo -E env "PATH=$PATH" make multiarch-build test-integration test-coverage
-after_success:
-  - |
-      if [ -n "$TRAVIS_TAG" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-        sudo -E env "PATH=$PATH" git config --global user.name "Deployer" && git config --global user.email foo@bar.com
-        sudo -E env "PATH=$PATH" go get github.com/tcnksm/ghr
-        sudo -E env "PATH=$PATH" ghr -u mudler -r luet --replace $TRAVIS_TAG release/
-      fi
+#after_success:
+#  - |
+#      if [ -n "$TRAVIS_TAG" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+#        sudo -E env "PATH=$PATH" git config --global user.name "Deployer" && git config --global user.email foo@bar.com
+#        sudo -E env "PATH=$PATH" go get github.com/tcnksm/ghr
+#        sudo -E env "PATH=$PATH" ghr -u mudler -r luet --replace $TRAVIS_TAG release/
+#      fi
