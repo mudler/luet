@@ -16,6 +16,12 @@
 #   Enable JSON log format instead of console mode.
 #   json_format: false.
 #
+#   Disable/Enable color
+#   color: true
+#
+#   Enable/Disable emoji
+#   enable_emoji: true
+#
 # ---------------------------------------------
 # General configuration section:
 # ---------------------------------------------
