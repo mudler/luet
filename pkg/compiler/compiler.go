@@ -553,7 +553,8 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 
 	if len(p.GetPackage().GetRequires()) == 0 && p.GetImage() == "" {
 		Error("Package with no deps and no seed image supplied, bailing out")
-		return nil, errors.New("Package " + p.GetPackage().GetFingerPrint() + "with no deps and no seed image supplied, bailing out")
+		return nil, errors.New("Package " + p.GetPackage().GetFingerPrint() +
+			" with no deps and no seed image supplied, bailing out")
 	}
 
 	targetAssertion := p.GetSourceAssertion().Search(p.GetPackage().GetFingerPrint())
