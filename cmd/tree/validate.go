@@ -442,9 +442,9 @@ func NewTreeValidateCommand() *cobra.Command {
 
 			// fmt.Println("Broken packages:", brokenPkgs, "(", brokenDeps, "deps ).")
 			if len(stringerrs) != 0 {
+				Error(fmt.Sprintf("Found %d broken packages and %d broken deps.",
+					opts.BrokenPkgs, opts.BrokenDeps))
 				Fatal("Errors: " + strconv.Itoa(len(stringerrs)))
-				//	if brokenPkgs > 0 {
-				//os.Exit(1)
 			} else {
 				Info("All good! :white_check_mark:")
 				os.Exit(0)
