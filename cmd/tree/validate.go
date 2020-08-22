@@ -35,236 +35,380 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func validateWorker(i int,
-	wg *sync.WaitGroup,
-	c <-chan pkg.Package,
-	reciper tree.Builder,
-	withSolver bool,
-	regExcludes, regMatches []*regexp.Regexp,
-	excludes, matches []string,
-	errs chan error) {
+type ValidateOpts struct {
+	WithSolver    bool
+	OnlyRuntime   bool
+	OnlyBuildtime bool
+	RegExcludes   []*regexp.Regexp
+	RegMatches    []*regexp.Regexp
+	Excludes      []string
+	Matches       []string
 
-	defer wg.Done()
+	// Runtime validate stuff
+	RuntimeCacheDeps *pkg.InMemoryDatabase
+	RuntimeReciper   *tree.InstallerRecipe
+
+	// Buildtime validate stuff
+	BuildtimeCacheDeps *pkg.InMemoryDatabase
+	BuildtimeReciper   *tree.CompilerRecipe
+
+	Mutex      sync.Mutex
+	BrokenPkgs int
+	BrokenDeps int
+}
+
+func (o *ValidateOpts) IncrBrokenPkgs() {
+	o.Mutex.Lock()
+	defer o.Mutex.Unlock()
+	o.BrokenPkgs++
+}
+
+func (o *ValidateOpts) IncrBrokenDeps() {
+	o.Mutex.Lock()
+	defer o.Mutex.Unlock()
+	o.BrokenDeps++
+}
+
+func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, reciper tree.Builder, cacheDeps *pkg.InMemoryDatabase) error {
+	var errstr string
+	var ans error
 
 	var depSolver solver.PackageSolver
-	var cacheDeps *pkg.InMemoryDatabase
-	brokenPkgs := 0
-	brokenDeps := 0
-	var errstr string
 
-	emptyInstallationDb := pkg.NewInMemoryDatabase(false)
-	if withSolver {
+	if opts.WithSolver {
+		emptyInstallationDb := pkg.NewInMemoryDatabase(false)
 		depSolver = solver.NewSolver(pkg.NewInMemoryDatabase(false),
 			reciper.GetDatabase(),
 			emptyInstallationDb)
-
-		// Use Singleton in memory cache for speedup dependencies
-		// analysis
-		cacheDeps = pkg.NewInMemoryDatabase(true).(*pkg.InMemoryDatabase)
 	}
 
-	for p := range c {
+	found, err := reciper.GetDatabase().FindPackages(
+		&pkg.DefaultPackage{
+			Name:     p.GetName(),
+			Category: p.GetCategory(),
+			Version:  ">=0",
+		},
+	)
 
-		found, err := reciper.GetDatabase().FindPackages(
-			&pkg.DefaultPackage{
-				Name:     p.GetName(),
-				Category: p.GetCategory(),
-				Version:  ">=0",
-			},
+	if err != nil || len(found) < 1 {
+		if err != nil {
+			errstr = err.Error()
+		} else {
+			errstr = "No packages"
+		}
+		Error(fmt.Sprintf("[%9s] %s/%s-%s: Broken. No versions could be found by database %s",
+			checkType,
+			p.GetCategory(), p.GetName(), p.GetVersion(),
+			errstr,
+		))
+
+		opts.IncrBrokenDeps()
+
+		return errors.New(
+			fmt.Sprintf("[%9s] %s/%s-%s: Broken. No versions could be found by database %s",
+				checkType,
+				p.GetCategory(), p.GetName(), p.GetVersion(),
+				errstr,
+			))
+	}
+
+	// Ensure that we use the right package from right recipier for deps
+	pReciper, err := reciper.GetDatabase().FindPackage(
+		&pkg.DefaultPackage{
+			Name:     p.GetName(),
+			Category: p.GetCategory(),
+			Version:  p.GetVersion(),
+		},
+	)
+	if err != nil {
+		errstr = fmt.Sprintf("[%9s] %s/%s-%s: Error on retrieve package - %s.",
+			checkType,
+			p.GetCategory(), p.GetName(), p.GetVersion(),
+			err.Error(),
 		)
+		Error(errstr)
 
-		if err != nil || len(found) < 1 {
+		return errors.New(errstr)
+	}
+	p = pReciper
+
+	pkgstr := fmt.Sprintf("%s/%s-%s", p.GetCategory(), p.GetName(),
+		p.GetVersion())
+
+	validpkg := true
+
+	if len(opts.Matches) > 0 {
+		matched := false
+		for _, rgx := range opts.RegMatches {
+			if rgx.MatchString(pkgstr) {
+				matched = true
+				break
+			}
+		}
+
+		if !matched {
+			return nil
+		}
+	}
+
+	if len(opts.Excludes) > 0 {
+		excluded := false
+		for _, rgx := range opts.RegExcludes {
+			if rgx.MatchString(pkgstr) {
+				excluded = true
+				break
+			}
+		}
+
+		if excluded {
+			return nil
+		}
+	}
+
+	Info(fmt.Sprintf("[%9s] Checking package ", checkType)+
+		fmt.Sprintf("%s/%s-%s", p.GetCategory(), p.GetName(), p.GetVersion()),
+		"with", len(p.GetRequires()), "dependencies and", len(p.GetConflicts()), "conflicts.")
+
+	all := p.GetRequires()
+	all = append(all, p.GetConflicts()...)
+	for idx, r := range all {
+
+		var deps pkg.Packages
+		var err error
+		if r.IsSelector() {
+			deps, err = reciper.GetDatabase().FindPackages(
+				&pkg.DefaultPackage{
+					Name:     r.GetName(),
+					Category: r.GetCategory(),
+					Version:  r.GetVersion(),
+				},
+			)
+		} else {
+			deps = append(deps, r)
+		}
+
+		if err != nil || len(deps) < 1 {
 			if err != nil {
 				errstr = err.Error()
 			} else {
 				errstr = "No packages"
 			}
-			Error(fmt.Sprintf("%s/%s-%s: Broken. No versions could be found by database %s",
+			Error(fmt.Sprintf("[%9s] %s/%s-%s: Broken Dep %s/%s-%s - %s",
+				checkType,
 				p.GetCategory(), p.GetName(), p.GetVersion(),
+				r.GetCategory(), r.GetName(), r.GetVersion(),
 				errstr,
 			))
 
-			errs <- errors.New(
-				fmt.Sprintf("%s/%s-%s: Broken. No versions could be found by database %s",
-					p.GetCategory(), p.GetName(), p.GetVersion(),
-					errstr,
-				))
+			opts.IncrBrokenDeps()
 
-			brokenPkgs++
-		}
-
-		pkgstr := fmt.Sprintf("%s/%s-%s", p.GetCategory(), p.GetName(),
-			p.GetVersion())
-
-		validpkg := true
-
-		if len(matches) > 0 {
-			matched := false
-			for _, rgx := range regMatches {
-				if rgx.MatchString(pkgstr) {
-					matched = true
-					break
-				}
-			}
-
-			if !matched {
-				continue
-			}
-		}
-
-		if len(excludes) > 0 {
-			excluded := false
-			for _, rgx := range regExcludes {
-				if rgx.MatchString(pkgstr) {
-					excluded = true
-					break
-				}
-			}
-
-			if excluded {
-				continue
-			}
-		}
-
-		Info("Checking package "+
-			fmt.Sprintf("%s/%s-%s", p.GetCategory(), p.GetName(), p.GetVersion()),
-			"with", len(p.GetRequires()), "dependencies and", len(p.GetConflicts()), "conflicts.")
-
-		all := p.GetRequires()
-		all = append(all, p.GetConflicts()...)
-		for idx, r := range all {
-
-			var deps pkg.Packages
-			var err error
-			if r.IsSelector() {
-				deps, err = reciper.GetDatabase().FindPackages(
-					&pkg.DefaultPackage{
-						Name:     r.GetName(),
-						Category: r.GetCategory(),
-						Version:  r.GetVersion(),
-					},
-				)
-			} else {
-				deps = append(deps, r)
-			}
-
-			if err != nil || len(deps) < 1 {
-				if err != nil {
-					errstr = err.Error()
-				} else {
-					errstr = "No packages"
-				}
-				Error(fmt.Sprintf("%s/%s-%s: Broken Dep %s/%s-%s - %s",
+			ans = errors.New(
+				fmt.Sprintf("[%9s] %s/%s-%s: Broken Dep %s/%s-%s - %s",
+					checkType,
 					p.GetCategory(), p.GetName(), p.GetVersion(),
 					r.GetCategory(), r.GetName(), r.GetVersion(),
-					errstr,
+					errstr))
+
+			validpkg = false
+
+		} else {
+
+			Debug(fmt.Sprintf("[%9s] Find packages for dep", checkType),
+				fmt.Sprintf("%s/%s-%s", r.GetCategory(), r.GetName(), r.GetVersion()))
+
+			if opts.WithSolver {
+
+				Info(fmt.Sprintf("[%9s]  :soap: [%2d/%2d] %s/%s-%s: %s/%s-%s",
+					checkType,
+					idx+1, len(all),
+					p.GetCategory(), p.GetName(), p.GetVersion(),
+					r.GetCategory(), r.GetName(), r.GetVersion(),
 				))
 
-				errs <- errors.New(
-					fmt.Sprintf("%s/%s-%s: Broken Dep %s/%s-%s - %s",
+				// Check if the solver is already been done for the deep
+				_, err := cacheDeps.Get(r.HashFingerprint(""))
+				if err == nil {
+					Debug(fmt.Sprintf("[%9s]  :direct_hit: Cache Hit for dep", checkType),
+						fmt.Sprintf("%s/%s-%s", r.GetCategory(), r.GetName(), r.GetVersion()))
+					continue
+				}
+
+				Spinner(32)
+				solution, err := depSolver.Install(pkg.Packages{r})
+				ass := solution.SearchByName(r.GetPackageName())
+				if err == nil {
+					_, err = solution.Order(reciper.GetDatabase(), ass.Package.GetFingerPrint())
+				}
+				SpinnerStop()
+
+				if err != nil {
+
+					Error(fmt.Sprintf("[%9s] %s/%s-%s: solver broken for dep %s/%s-%s - %s",
+						checkType,
 						p.GetCategory(), p.GetName(), p.GetVersion(),
 						r.GetCategory(), r.GetName(), r.GetVersion(),
-						errstr))
-
-				brokenDeps++
-
-				validpkg = false
-
-			} else {
-
-				Debug("Find packages for dep",
-					fmt.Sprintf("%s/%s-%s", r.GetCategory(), r.GetName(), r.GetVersion()))
-
-				if withSolver {
-
-					Info(fmt.Sprintf("  :soap: [%2d/%2d] %s/%s-%s: %s/%s-%s",
-						idx+1, len(all),
-						p.GetCategory(), p.GetName(), p.GetVersion(),
-						r.GetCategory(), r.GetName(), r.GetVersion(),
+						err.Error(),
 					))
 
-					// Check if the solver is already been done for the deep
-					_, err := cacheDeps.Get(r.HashFingerprint(""))
-					if err == nil {
-						Debug("  :direct_hit: Cache Hit for dep",
-							fmt.Sprintf("%s/%s-%s", r.GetCategory(), r.GetName(), r.GetVersion()))
-						continue
-					}
-
-					Spinner(32)
-					solution, err := depSolver.Install(pkg.Packages{r})
-					ass := solution.SearchByName(r.GetPackageName())
-					if err == nil {
-						_, err = solution.Order(reciper.GetDatabase(), ass.Package.GetFingerPrint())
-					}
-					SpinnerStop()
-
-					if err != nil {
-
-						Error(fmt.Sprintf("%s/%s-%s: solver broken for dep %s/%s-%s - %s",
+					ans = errors.New(
+						fmt.Sprintf("[%9s] %s/%s-%s: solver broken for Dep %s/%s-%s - %s",
+							checkType,
 							p.GetCategory(), p.GetName(), p.GetVersion(),
 							r.GetCategory(), r.GetName(), r.GetVersion(),
-							err.Error(),
-						))
+							err.Error()))
 
-						errs <- errors.New(
-							fmt.Sprintf("%s/%s-%s: solver broken for Dep %s/%s-%s - %s",
-								p.GetCategory(), p.GetName(), p.GetVersion(),
-								r.GetCategory(), r.GetName(), r.GetVersion(),
-								err.Error()))
-
-						brokenDeps++
-						validpkg = false
-					}
-
-					// Register the key
-					cacheDeps.Set(r.HashFingerprint(""), "1")
-
+					opts.IncrBrokenDeps()
+					validpkg = false
 				}
+
+				// Register the key
+				cacheDeps.Set(r.HashFingerprint(""), "1")
+
+			}
+		}
+
+	}
+
+	if !validpkg {
+		opts.IncrBrokenPkgs()
+	}
+
+	return ans
+}
+
+func validateWorker(i int,
+	wg *sync.WaitGroup,
+	c <-chan pkg.Package,
+	opts *ValidateOpts,
+	errs chan error) {
+
+	defer wg.Done()
+
+	for p := range c {
+
+		if opts.OnlyBuildtime {
+			// Check buildtime compiler/deps
+			err := validatePackage(p, "buildtime", opts, opts.BuildtimeReciper, opts.BuildtimeCacheDeps)
+			if err != nil {
+				errs <- err
+			}
+		} else if opts.OnlyRuntime {
+
+			// Check runtime installer/deps
+			err := validatePackage(p, "runtime", opts, opts.RuntimeReciper, opts.RuntimeCacheDeps)
+			if err != nil {
+				errs <- err
+			}
+
+		} else {
+
+			// Check runtime installer/deps
+			err := validatePackage(p, "runtime", opts, opts.RuntimeReciper, opts.RuntimeCacheDeps)
+			if err != nil {
+				errs <- err
+				return
+			}
+
+			// Check buildtime compiler/deps
+			err = validatePackage(p, "buildtime", opts, opts.BuildtimeReciper, opts.BuildtimeCacheDeps)
+			if err != nil {
+				errs <- err
 			}
 
 		}
 
-		if !validpkg {
-			brokenPkgs++
+	}
+}
+
+func initOpts(opts *ValidateOpts, onlyRuntime, onlyBuildtime, withSolver bool, treePaths []string) {
+	var err error
+
+	opts.OnlyBuildtime = onlyBuildtime
+	opts.OnlyRuntime = onlyRuntime
+	opts.WithSolver = withSolver
+	opts.RuntimeReciper = nil
+	opts.BuildtimeReciper = nil
+	opts.BrokenPkgs = 0
+	opts.BrokenDeps = 0
+
+	if onlyBuildtime {
+		opts.BuildtimeReciper = (tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))).(*tree.CompilerRecipe)
+	} else if onlyRuntime {
+		opts.RuntimeReciper = (tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))).(*tree.InstallerRecipe)
+	} else {
+		opts.BuildtimeReciper = (tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))).(*tree.CompilerRecipe)
+		opts.RuntimeReciper = (tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))).(*tree.InstallerRecipe)
+	}
+
+	opts.RuntimeCacheDeps = pkg.NewInMemoryDatabase(false).(*pkg.InMemoryDatabase)
+	opts.BuildtimeCacheDeps = pkg.NewInMemoryDatabase(false).(*pkg.InMemoryDatabase)
+
+	for _, treePath := range treePaths {
+		Info(fmt.Sprintf("Loading :deciduous_tree: %s...", treePath))
+		if opts.BuildtimeReciper != nil {
+			err = opts.BuildtimeReciper.Load(treePath)
+			if err != nil {
+				Fatal("Error on load tree ", err)
+			}
+		}
+		if opts.RuntimeReciper != nil {
+			err = opts.RuntimeReciper.Load(treePath)
+			if err != nil {
+				Fatal("Error on load tree ", err)
+			}
 		}
 	}
+
+	opts.RegExcludes, err = helpers.CreateRegexArray(opts.Excludes)
+	if err != nil {
+		Fatal(err.Error())
+	}
+	opts.RegMatches, err = helpers.CreateRegexArray(opts.Matches)
+	if err != nil {
+		Fatal(err.Error())
+	}
+
 }
 
 func NewTreeValidateCommand() *cobra.Command {
 	var excludes []string
 	var matches []string
 	var treePaths []string
+	var opts ValidateOpts
 
 	var ans = &cobra.Command{
 		Use:   "validate [OPTIONS]",
 		Short: "Validate a tree or a list of packages",
 		Args:  cobra.OnlyValidArgs,
 		PreRun: func(cmd *cobra.Command, args []string) {
+			onlyRuntime, _ := cmd.Flags().GetBool("only-runtime")
+			onlyBuildtime, _ := cmd.Flags().GetBool("only-buildtime")
+
 			if len(treePaths) < 1 {
 				Fatal("Mandatory tree param missing.")
 			}
+			if onlyRuntime && onlyBuildtime {
+				Fatal("Both --only-runtime and --only-buildtime options are not possibile.")
+			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			var reciper tree.Builder
+
 			concurrency := LuetCfg.GetGeneral().Concurrency
 
 			withSolver, _ := cmd.Flags().GetBool("with-solver")
+			onlyRuntime, _ := cmd.Flags().GetBool("only-runtime")
+			onlyBuildtime, _ := cmd.Flags().GetBool("only-buildtime")
 
-			reciper := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
-			for _, treePath := range treePaths {
-				err := reciper.Load(treePath)
-				if err != nil {
-					Fatal("Error on load tree ", err)
-				}
-			}
+			opts.Excludes = excludes
+			opts.Matches = matches
+			initOpts(&opts, onlyRuntime, onlyBuildtime, withSolver, treePaths)
 
-			regExcludes, err := helpers.CreateRegexArray(excludes)
-			if err != nil {
-				Fatal(err.Error())
-			}
-			regMatches, err := helpers.CreateRegexArray(matches)
-			if err != nil {
-				Fatal(err.Error())
+			// We need at least one valid reciper for get list of the packages.
+			if onlyBuildtime {
+				reciper = opts.BuildtimeReciper
+			} else {
+				reciper = opts.RuntimeReciper
 			}
 
 			all := make(chan pkg.Package)
@@ -274,9 +418,7 @@ func NewTreeValidateCommand() *cobra.Command {
 
 			for i := 0; i < concurrency; i++ {
 				wg.Add(1)
-				go validateWorker(i, wg, all,
-					reciper, withSolver, regExcludes, regMatches, excludes, matches,
-					errs)
+				go validateWorker(i, wg, all, &opts, errs)
 			}
 			for _, p := range reciper.GetDatabase().World() {
 				all <- p
@@ -300,9 +442,9 @@ func NewTreeValidateCommand() *cobra.Command {
 
 			// fmt.Println("Broken packages:", brokenPkgs, "(", brokenDeps, "deps ).")
 			if len(stringerrs) != 0 {
+				Error(fmt.Sprintf("Found %d broken packages and %d broken deps.",
+					opts.BrokenPkgs, opts.BrokenDeps))
 				Fatal("Errors: " + strconv.Itoa(len(stringerrs)))
-				//	if brokenPkgs > 0 {
-				//os.Exit(1)
 			} else {
 				Info("All good! :white_check_mark:")
 				os.Exit(0)
@@ -310,6 +452,8 @@ func NewTreeValidateCommand() *cobra.Command {
 		},
 	}
 
+	ans.Flags().Bool("only-runtime", false, "Check only runtime dependencies.")
+	ans.Flags().Bool("only-buildtime", false, "Check only buildtime dependencies.")
 	ans.Flags().BoolP("with-solver", "s", false,
 		"Enable check of requires also with solver.")
 	ans.Flags().StringSliceVarP(&treePaths, "tree", "t", []string{},
