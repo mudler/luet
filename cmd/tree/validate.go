@@ -55,6 +55,8 @@ type ValidateOpts struct {
 	Mutex      sync.Mutex
 	BrokenPkgs int
 	BrokenDeps int
+
+	Errors []error
 }
 
 func (o *ValidateOpts) IncrBrokenPkgs() {
@@ -67,6 +69,12 @@ func (o *ValidateOpts) IncrBrokenDeps() {
 	o.Mutex.Lock()
 	defer o.Mutex.Unlock()
 	o.BrokenDeps++
+}
+
+func (o *ValidateOpts) AddError(err error) {
+	o.Mutex.Lock()
+	defer o.Mutex.Unlock()
+	o.Errors = append(o.Errors, err)
 }
 
 func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, reciper tree.Builder, cacheDeps *pkg.InMemoryDatabase) error {
@@ -279,8 +287,7 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 func validateWorker(i int,
 	wg *sync.WaitGroup,
 	c <-chan pkg.Package,
-	opts *ValidateOpts,
-	errs chan error) {
+	opts *ValidateOpts) {
 
 	defer wg.Done()
 
@@ -290,14 +297,16 @@ func validateWorker(i int,
 			// Check buildtime compiler/deps
 			err := validatePackage(p, "buildtime", opts, opts.BuildtimeReciper, opts.BuildtimeCacheDeps)
 			if err != nil {
-				errs <- err
+				opts.AddError(err)
+				continue
 			}
 		} else if opts.OnlyRuntime {
 
 			// Check runtime installer/deps
 			err := validatePackage(p, "runtime", opts, opts.RuntimeReciper, opts.RuntimeCacheDeps)
 			if err != nil {
-				errs <- err
+				opts.AddError(err)
+				continue
 			}
 
 		} else {
@@ -305,14 +314,14 @@ func validateWorker(i int,
 			// Check runtime installer/deps
 			err := validatePackage(p, "runtime", opts, opts.RuntimeReciper, opts.RuntimeCacheDeps)
 			if err != nil {
-				errs <- err
-				return
+				opts.AddError(err)
+				continue
 			}
 
 			// Check buildtime compiler/deps
 			err = validatePackage(p, "buildtime", opts, opts.BuildtimeReciper, opts.BuildtimeCacheDeps)
 			if err != nil {
-				errs <- err
+				opts.AddError(err)
 			}
 
 		}
@@ -412,13 +421,12 @@ func NewTreeValidateCommand() *cobra.Command {
 			}
 
 			all := make(chan pkg.Package)
-			errs := make(chan error)
 
 			var wg = new(sync.WaitGroup)
 
 			for i := 0; i < concurrency; i++ {
 				wg.Add(1)
-				go validateWorker(i, wg, all, &opts, errs)
+				go validateWorker(i, wg, all, &opts)
 			}
 			for _, p := range reciper.GetDatabase().World() {
 				all <- p
@@ -428,11 +436,10 @@ func NewTreeValidateCommand() *cobra.Command {
 			// Wait separately and once done close the channel
 			go func() {
 				wg.Wait()
-				close(errs)
 			}()
 
 			stringerrs := []string{}
-			for e := range errs {
+			for _, e := range opts.Errors {
 				stringerrs = append(stringerrs, e.Error())
 			}
 			sort.Strings(stringerrs)
