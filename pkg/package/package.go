@@ -64,6 +64,7 @@ type Package interface {
 	GetCategory() string
 
 	GetVersion() string
+	SetVersion(string)
 	RequiresContains(PackageDatabase, Package) (bool, error)
 	Matches(m Package) bool
 	BumpBuildVersion() error
@@ -326,6 +327,9 @@ func (p *DefaultPackage) GetName() string {
 
 func (p *DefaultPackage) GetVersion() string {
 	return p.Version
+}
+func (p *DefaultPackage) SetVersion(v string) {
+	p.Version = v
 }
 func (p *DefaultPackage) GetDescription() string {
 	return p.Description
