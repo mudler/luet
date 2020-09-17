@@ -21,6 +21,7 @@
 package tree
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -70,10 +71,12 @@ func (r *InstallerRecipe) Save(path string) error {
 
 func (r *InstallerRecipe) Load(path string) error {
 
-	// tmpfile, err := ioutil.TempFile("", "luet")
-	// if err != nil {
-	// 	return err
-	// }
+	if !helpers.Exists(path) {
+		return errors.New(fmt.Sprintf(
+			"Path %s doesn't exit.", path,
+		))
+	}
+
 	r.SourcePath = append(r.SourcePath, path)
 
 	//r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
