@@ -17,15 +17,26 @@ func Mount(device, target, mType, options string) error {
 	return mount(device, target, mType, uintptr(flag), data)
 }
 
-// Unmount lazily unmounts a filesystem on supported platforms, otherwise
-// does a normal unmount.
+// Unmount lazily unmounts a filesystem on supported platforms, otherwise does
+// a normal unmount.  If target is not a mount point, no error is returned.
 func Unmount(target string) error {
 	return unmount(target, mntDetach)
 }
 
-// RecursiveUnmount unmounts the target and all mounts underneath, starting with
-// the deepsest mount first.
+// RecursiveUnmount unmounts the target and all mounts underneath, starting
+// with the deepest mount first. The argument does not have to be a mount
+// point itself.
 func RecursiveUnmount(target string) error {
+	// Fast path, works if target is a mount point that can be unmounted.
+	// On Linux, mntDetach flag ensures a recursive unmount.  For other
+	// platforms, if there are submounts, we'll get EBUSY (and fall back
+	// to the slow path). NOTE we do not ignore EINVAL here as target might
+	// not be a mount point itself (but there can be mounts underneath).
+	if err := unmountBare(target, mntDetach); err == nil {
+		return nil
+	}
+
+	// Slow path: get all submounts, sort, unmount one by one.
 	mounts, err := mountinfo.GetMounts(mountinfo.PrefixFilter(target))
 	if err != nil {
 		return err
