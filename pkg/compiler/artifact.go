@@ -516,7 +516,7 @@ func worker(i int, wg *sync.WaitGroup, s <-chan CopyJob) {
 
 		_, err := os.Lstat(job.Dst)
 		if err != nil {
-			fmt.Println("Copying ", job.Src)
+			Debug("Copying ", job.Src)
 			if err := helpers.CopyFile(job.Src, job.Dst); err != nil {
 				Warning("Error copying", job, err)
 			}
