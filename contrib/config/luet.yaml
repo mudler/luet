@@ -88,6 +88,11 @@
 # config_protect_confdir:
 #   - /etc/luet/config.protect.d
 #
+# Permit to ignore rules defined on
+# config protect confdir and packages
+# annotation.
+# config_protect_skip: false
+#
 # System repositories
 # ---------------------------------------------
 # In alternative to define repositories files
