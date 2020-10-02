@@ -331,7 +331,9 @@ func tarModifierWrapperFunc(dst, path string, header *tar.Header, content io.Rea
 func (a *PackageArtifact) GetProtectFiles() []string {
 	ans := []string{}
 
-	if LuetCfg.GetConfigProtectConfFiles() != nil && len(LuetCfg.GetConfigProtectConfFiles()) > 0 {
+	if !LuetCfg.ConfigProtectSkip &&
+		LuetCfg.GetConfigProtectConfFiles() != nil &&
+		len(LuetCfg.GetConfigProtectConfFiles()) > 0 {
 
 		for _, file := range a.Files {
 			for _, conf := range LuetCfg.GetConfigProtectConfFiles() {

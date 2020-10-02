@@ -152,6 +152,8 @@ func init() {
 	pflags.Bool("no-spinner", false, "Disable spinner.")
 	pflags.Bool("color", config.LuetCfg.GetLogging().Color, "Enable/Disable color.")
 	pflags.Bool("emoji", config.LuetCfg.GetLogging().EnableEmoji, "Enable/Disable emoji.")
+	pflags.Bool("skip-config-protect", config.LuetCfg.ConfigProtectSkip,
+		"Disable config protect analysis.")
 	pflags.StringP("logfile", "l", config.LuetCfg.GetLogging().Path,
 		"Logfile path. Empty value disable log to file.")
 
@@ -175,6 +177,7 @@ func init() {
 	config.LuetCfg.Viper.BindPFlag("general.same_owner", pflags.Lookup("same-owner"))
 	// Currently I maintain this only from cli.
 	config.LuetCfg.Viper.BindPFlag("no_spinner", pflags.Lookup("no-spinner"))
+	config.LuetCfg.Viper.BindPFlag("config_protect_skip", pflags.Lookup("skip-config-protect"))
 
 	// Extensions must be binary with the "luet-" prefix to be able to be shown in the help.
 	// we also accept extensions in the relative path where luet is being started, "extensions/"
