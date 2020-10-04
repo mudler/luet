@@ -108,6 +108,27 @@ var _ = Describe("Compiler", func() {
 		})
 	})
 
+	Context("Templated packages",func(){
+		It("Renders", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+			tmpdir, err := ioutil.TempDir("", "package")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			err = generalRecipe.Load("../../tests/fixtures/templates")
+			Expect(err).ToNot(HaveOccurred())
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
+			pkg ,err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			spec, err := compiler.FromPackage(pkg)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(spec.GetImage()).To(Equal("b:bar"))
+		})
+	})
+
 	Context("Reconstruct image tree", func() {
 		It("Compiles it", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))

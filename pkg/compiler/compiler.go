@@ -17,9 +17,11 @@ package compiler
 
 import (
 	"fmt"
+	"github.com/ghodss/yaml"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
 	"regexp"
 	"strings"
 	"sync"
@@ -34,6 +36,7 @@ import (
 )
 
 const BuildFile = "build.yaml"
+const DefinitionFile = "definition.yaml"
 
 type LuetCompiler struct {
 	*tree.CompilerRecipe
@@ -641,6 +644,8 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	}
 }
 
+type templatedata map[string]interface{}
+
 func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 
 	pack, err := cs.Database.FindPackageCandidate(p)
@@ -652,12 +657,28 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 	if !helpers.Exists(buildFile) {
 		return nil, errors.New("No build file present for " + p.GetFingerPrint())
 	}
-
-	dat, err := ioutil.ReadFile(buildFile)
+	defFile := pack.Rel(DefinitionFile)
+	if !helpers.Exists(defFile) {
+		return nil, errors.New("No build file present for " + p.GetFingerPrint())
+	}
+	def, err := ioutil.ReadFile(defFile)
 	if err != nil {
 		return nil, err
 	}
-	return NewLuetCompilationSpec(dat, pack)
+
+	build, err := ioutil.ReadFile(buildFile)
+	if err != nil {
+		return nil, err
+	}
+	var values templatedata
+	if err = yaml.Unmarshal(def, &values); err != nil {
+		return nil, err
+	}
+	out, err := helpers.RenderHelm(string(build), values)
+	if err != nil {
+		return nil, err
+	}
+	return NewLuetCompilationSpec([]byte(out), pack)
 }
 
 func (cs *LuetCompiler) GetBackend() CompilerBackend {

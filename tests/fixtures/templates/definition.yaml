@@ -1,0 +1,5 @@
+category: "test"
+name: "b"
+version: "1.0"
+test:
+  foo: "bar"
