@@ -17,10 +17,11 @@ package compiler
 
 import (
 	"fmt"
-	"github.com/ghodss/yaml"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/ghodss/yaml"
 
 	"regexp"
 	"strings"
@@ -232,7 +233,7 @@ func (cs *LuetCompiler) stripIncludesFromRootfs(includes []string, rootfs string
 	return nil
 }
 
-func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage string, concurrency int, keepPermissions, keepImg bool, p CompilationSpec) (Artifact, error) {
+func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage string, concurrency int, keepPermissions, keepImg bool, p CompilationSpec, generateArtifact bool) (Artifact, error) {
 
 	pkgTag := ":package:  " + p.GetPackage().GetName()
 
@@ -339,12 +340,6 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		Destination:    p.Rel(p.GetPackage().GetFingerPrint() + ".image.tar"),
 	}
 
-	// if !keepPackageImg {
-	// 	err = cs.Backend.ImageDefinitionToTar(runnerOpts)
-	// 	if err != nil {
-	// 		return nil, errors.Wrap(err, "Could not export image to tar")
-	// 	}
-	// } else {
 	buildPackageImage := true
 	if cs.Options.PullFirst {
 		//Best effort pull
@@ -373,7 +368,6 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 			return nil, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
 		}
 	}
-	//	}
 
 	var artifact Artifact
 	unpack := p.ImageUnpack()
@@ -413,8 +407,11 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		}
 	}
 
-	if unpack {
+	if !generateArtifact {
+		return &PackageArtifact{}, nil
+	}
 
+	if unpack {
 		if p.GetPackageDir() != "" {
 			Info(":tophat: Packing from output dir", p.GetPackageDir())
 			rootfs = filepath.Join(rootfs, p.GetPackageDir())
@@ -566,7 +563,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	// - If image is set we just generate a plain dockerfile
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
 	if p.GetImage() != "" {
-		return cs.compileWithImage(p.GetImage(), "", targetPackageHash, concurrency, keepPermissions, cs.KeepImg, p)
+		return cs.compileWithImage(p.GetImage(), "", targetPackageHash, concurrency, keepPermissions, cs.KeepImg, p, true)
 	}
 
 	// - If image is not set, we read a base_image. Then we will build one image from it to kick-off our build based
@@ -580,6 +577,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	depsN := 0
 	currentN := 0
 
+	packageDeps := !cs.Options.PackageTargetOnly
 	if !cs.Options.NoDeps {
 		Info(":deciduous_tree: Build dependencies for " + p.GetPackage().HumanReadableString())
 		for _, assertion := range dependencies { //highly dependent on the order
@@ -605,7 +603,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 			lastHash = currentPackageImageHash
 			if compileSpec.GetImage() != "" {
 				Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().HumanReadableString()+" from image")
-				artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec)
+				artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec, packageDeps)
 				if err != nil {
 					return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().HumanReadableString())
 				}
@@ -615,7 +613,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 			}
 
 			Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().HumanReadableString()+" from tree")
-			artifact, err := cs.compileWithImage(buildImageHash, "", currentPackageImageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec)
+			artifact, err := cs.compileWithImage(buildImageHash, "", currentPackageImageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec, packageDeps)
 			if err != nil {
 				return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().HumanReadableString())
 				//	deperrs = append(deperrs, err)
@@ -631,7 +629,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 
 	if !cs.Options.OnlyDeps {
 		Info(":package:", p.GetPackage().HumanReadableString(), ":cyclone:  Building package target from:", lastHash)
-		artifact, err := cs.compileWithImage(lastHash, "", targetPackageHash, concurrency, keepPermissions, cs.KeepImg, p)
+		artifact, err := cs.compileWithImage(lastHash, "", targetPackageHash, concurrency, keepPermissions, cs.KeepImg, p, true)
 		if err != nil {
 			return artifact, err
 		}

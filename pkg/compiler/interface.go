@@ -56,6 +56,8 @@ type CompilerOptions struct {
 	NoDeps               bool
 	SolverOptions        config.LuetSolverOptions
 	SkipIfMetadataExists bool
+
+	PackageTargetOnly bool
 }
 
 func NewDefaultCompilerOptions() *CompilerOptions {
