@@ -318,8 +318,10 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		}
 	}
 
-	if err = cs.Backend.ExportImage(builderOpts); err != nil {
-		return nil, errors.Wrap(err, "Could not export image")
+	if generateArtifact {
+		if err = cs.Backend.ExportImage(builderOpts); err != nil {
+			return nil, errors.Wrap(err, "Could not export image")
+		}
 	}
 
 	if !cs.Options.KeepImageExport {
@@ -354,8 +356,10 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		}
 	}
 
-	if err := cs.Backend.ExportImage(runnerOpts); err != nil {
-		return nil, errors.Wrap(err, "Failed exporting image")
+	if generateArtifact {
+		if err := cs.Backend.ExportImage(runnerOpts); err != nil {
+			return nil, errors.Wrap(err, "Failed exporting image")
+		}
 	}
 
 	if !cs.Options.KeepImageExport {
