@@ -56,6 +56,10 @@ func NewDatabaseRemoveCommand() *cobra.Command {
 				if err := systemDB.RemovePackage(pack); err != nil {
 					Fatal("Failed removing ", a, ": ", err.Error())
 				}
+
+				if err := systemDB.RemovePackageFiles(pack); err != nil {
+					Fatal("Failed removing files for ", a, ": ", err.Error())
+				}
 			}
 
 		},
