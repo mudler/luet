@@ -265,6 +265,8 @@ func buildPackageIndex(path string, db pkg.PackageDatabase) ([]compiler.Artifact
 		// We want to include packages that are ONLY referenced in the tree.
 		// the ones which aren't should be deleted. (TODO: by another cli command?)
 		if _, notfound := db.FindPackage(artifact.GetCompileSpec().GetPackage()); notfound != nil {
+			Info(fmt.Sprintf("Package %s not found in tree. Ignoring it.",
+				artifact.GetCompileSpec().GetPackage().HumanReadableString()))
 			return nil
 		}
 
