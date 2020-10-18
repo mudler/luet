@@ -28,7 +28,7 @@ import (
 )
 
 var convertCmd = &cobra.Command{
-	Use:   "convert",
+	Use:   "convert [portage-tree] [luet-tree]",
 	Short: "convert other package manager tree into luet",
 	Long:  `Parses external PM and produces a luet parsable tree`,
 	PreRun: func(cmd *cobra.Command, args []string) {

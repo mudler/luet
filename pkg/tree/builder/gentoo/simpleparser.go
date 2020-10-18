@@ -353,6 +353,12 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string) (pkg.Packages, error) {
 		return pkg.Packages{}, err
 	}
 
+	// Retrieve slot
+	slot, ok := vars["SLOT"]
+	if ok && slot.String() != "0" {
+		pack.SetCategory(fmt.Sprintf("%s-%s", gp.Category, slot.String()))
+	}
+
 	// TODO: Handle this a bit better
 	iuse, ok := vars["IUSE"]
 	if ok {
@@ -417,6 +423,7 @@ func (ep *SimpleEbuildParser) ScanEbuild(path string) (pkg.Packages, error) {
 		for _, d := range gRDEPEND.GetDependencies() {
 
 			//TODO: Resolve to db or create a new one.
+			//TODO: handle SLOT too.
 			dep := &pkg.DefaultPackage{
 				Name:     d.Dep.Name,
 				Version:  d.Dep.Version + d.Dep.VersionSuffix,
