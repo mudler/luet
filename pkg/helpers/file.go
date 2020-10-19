@@ -93,7 +93,7 @@ func ensureDir(fileName string) {
 // of the source file. The file mode will be copied from the source and
 // the copied data is synced/flushed to stable storage.
 func CopyFile(src, dst string) (err error) {
-	return copy.Copy(src, dst)
+	return copy.Copy(src, dst, copy.Options{OnSymlink: func(string) copy.SymlinkAction { return copy.Shallow }})
 }
 
 func IsDirectory(path string) (bool, error) {
@@ -110,5 +110,5 @@ func IsDirectory(path string) (bool, error) {
 func CopyDir(src string, dst string) (err error) {
 	src = filepath.Clean(src)
 	dst = filepath.Clean(dst)
-	return copy.Copy(src, dst)
+	return copy.Copy(src, dst, copy.Options{OnSymlink: func(string) copy.SymlinkAction { return copy.Shallow }})
 }

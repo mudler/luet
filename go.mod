@@ -27,7 +27,7 @@ require (
 	github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.0
-	github.com/otiai10/copy v1.0.2
+	github.com/otiai10/copy v1.2.1-0.20200916181228-26f84a0b1578
 	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/philopon/go-toposort v0.0.0-20170620085441-9be86dbd762f
 	github.com/pkg/errors v0.9.1
