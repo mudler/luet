@@ -274,7 +274,7 @@ github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
 # github.com/opencontainers/runtime-spec v1.0.1
 github.com/opencontainers/runtime-spec/specs-go
-# github.com/otiai10/copy v1.0.2
+# github.com/otiai10/copy v1.2.1-0.20200916181228-26f84a0b1578
 github.com/otiai10/copy
 # github.com/pelletier/go-toml v1.6.0
 github.com/pelletier/go-toml
