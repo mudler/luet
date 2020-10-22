@@ -59,10 +59,7 @@ func NewDatabaseCreateCommand() *cobra.Command {
 					systemDB = pkg.NewInMemoryDatabase(true)
 				}
 
-				files, err := art.FileList()
-				if err != nil {
-					Fatal("Failed getting file list for ", a, ": ", err.Error())
-				}
+				files := art.GetFiles()
 
 				if _, err := systemDB.CreatePackage(art.GetCompileSpec().GetPackage()); err != nil {
 					Fatal("Failed to create ", a, ": ", err.Error())
