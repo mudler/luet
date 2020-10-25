@@ -152,9 +152,9 @@ var buildCmd = &cobra.Command{
 
 		var solverOpts solver.Options
 		if concurrent {
-			solverOpts = solver.Options{Type: solver.ParallelSimple}
+			solverOpts = solver.Options{Type: solver.ParallelSimple, Concurrency: concurrency}
 		} else {
-			solverOpts = solver.Options{Type: solver.SingleCoreSimple}
+			solverOpts = solver.Options{Type: solver.SingleCoreSimple, Concurrency: concurrency}
 		}
 
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), opts, solverOpts)
