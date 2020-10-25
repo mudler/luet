@@ -82,9 +82,9 @@ var installCmd = &cobra.Command{
 		LuetCfg.GetSolverOptions().MaxAttempts = attempts
 
 		if concurrent {
-			LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
-		} else {
 			LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple
+		} else {
+			LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
 		}
 
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())

@@ -69,9 +69,9 @@ var uninstallCmd = &cobra.Command{
 			LuetCfg.GetSolverOptions().Discount = float32(discount)
 			LuetCfg.GetSolverOptions().MaxAttempts = attempts
 			if concurrent {
-				LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
-			} else {
 				LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple
+			} else {
+				LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
 			}
 			Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 
