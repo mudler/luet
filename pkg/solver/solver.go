@@ -26,6 +26,13 @@ import (
 	pkg "github.com/mudler/luet/pkg/package"
 )
 
+type SolverType int
+
+const (
+	SingleCoreSimple = 0
+	ParallelSimple   = iota
+)
+
 // PackageSolver is an interface to a generic package solving algorithm
 type PackageSolver interface {
 	SetDefinitionDatabase(pkg.PackageDatabase)
@@ -56,16 +63,30 @@ type Solver struct {
 	Resolver PackageResolver
 }
 
-// NewSolver accepts as argument two lists of packages, the first is the initial set,
-// the second represent all the known packages.
-func NewSolver(installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, solverdb pkg.PackageDatabase) PackageSolver {
-	return NewResolver(installed, definitiondb, solverdb, &DummyPackageResolver{})
+type Options struct {
+	Type        SolverType
+	Concurrency int
 }
 
-// NewReSolver accepts as argument two lists of packages, the first is the initial set,
+// NewSolver accepts as argument two lists of packages, the first is the initial set,
 // the second represent all the known packages.
-func NewResolver(installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, solverdb pkg.PackageDatabase, re PackageResolver) PackageSolver {
-	return &Solver{InstalledDatabase: installed, DefinitionDatabase: definitiondb, SolverDatabase: solverdb, Resolver: re}
+func NewSolver(t Options, installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, solverdb pkg.PackageDatabase) PackageSolver {
+	return NewResolver(t, installed, definitiondb, solverdb, &DummyPackageResolver{})
+}
+
+// NewResolver accepts as argument two lists of packages, the first is the initial set,
+// the second represent all the known packages.
+// Using constructors as in the future we foresee warmups for hot-restore solver cache
+func NewResolver(t Options, installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, solverdb pkg.PackageDatabase, re PackageResolver) PackageSolver {
+	var s PackageSolver
+	switch t.Type {
+	case SingleCoreSimple:
+		s = &Solver{InstalledDatabase: installed, DefinitionDatabase: definitiondb, SolverDatabase: solverdb, Resolver: re}
+	case ParallelSimple:
+		s = &Parallel{InstalledDatabase: installed, DefinitionDatabase: definitiondb, ParallelDatabase: solverdb, Resolver: re, Concurrency: t.Concurrency}
+	}
+
+	return s
 }
 
 // SetDefinitionDatabase is a setter for the definition Database
@@ -448,7 +469,7 @@ func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAsser
 		}
 	}
 
-	s2 := NewSolver(installedcopy, s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
+	s2 := NewSolver(Options{Type: SingleCoreSimple}, installedcopy, s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
 	s2.SetResolver(s.Resolver)
 	if !full {
 		ass := PackagesAssertions{}
@@ -522,7 +543,7 @@ func (s *Solver) Uninstall(c pkg.Package, checkconflicts, full bool) (pkg.Packag
 		}
 	}
 
-	s2 := NewSolver(pkg.NewInMemoryDatabase(false), s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
+	s2 := NewSolver(Options{Type: SingleCoreSimple}, pkg.NewInMemoryDatabase(false), s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
 	s2.SetResolver(s.Resolver)
 	// Get the requirements to install the candidate
 	asserts, err := s2.Install(pkg.Packages{candidate})

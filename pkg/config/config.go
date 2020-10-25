@@ -64,10 +64,11 @@ type LuetGeneralConfig struct {
 }
 
 type LuetSolverOptions struct {
-	Type        string  `mapstructure:"type"`
-	LearnRate   float32 `mapstructure:"rate"`
-	Discount    float32 `mapstructure:"discount"`
-	MaxAttempts int     `mapstructure:"max_attempts"`
+	Type           string            `mapstructure:"type"`
+	LearnRate      float32           `mapstructure:"rate"`
+	Discount       float32           `mapstructure:"discount"`
+	MaxAttempts    int               `mapstructure:"max_attempts"`
+	Implementation solver.SolverType `mapstructure:"implementation"`
 }
 
 func (opts LuetSolverOptions) Resolver() solver.PackageResolver {

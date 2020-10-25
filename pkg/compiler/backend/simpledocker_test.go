@@ -18,6 +18,7 @@ package backend_test
 import (
 	. "github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/compiler/backend"
+	"github.com/mudler/luet/pkg/solver"
 
 	"io/ioutil"
 	"os"
@@ -40,7 +41,7 @@ var _ = Describe("Docker backend", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase(), NewDefaultCompilerOptions())
+			compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
 

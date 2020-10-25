@@ -28,13 +28,13 @@ var _ = Describe("Solver", func() {
 	db := pkg.NewInMemoryDatabase(false)
 	dbInstalled := pkg.NewInMemoryDatabase(false)
 	dbDefinitions := pkg.NewInMemoryDatabase(false)
-	s := NewSolver(dbInstalled, dbDefinitions, db)
+	s := NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 	BeforeEach(func() {
 		db = pkg.NewInMemoryDatabase(false)
 		dbInstalled = pkg.NewInMemoryDatabase(false)
 		dbDefinitions = pkg.NewInMemoryDatabase(false)
-		s = NewSolver(dbInstalled, dbDefinitions, db)
+		s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 	})
 	Context("Simple set", func() {
 		It("Solves correctly if the selected package has no requirements or conflicts and we have nothing installed yet", func() {
@@ -52,7 +52,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(err).ToNot(HaveOccurred())
@@ -75,7 +75,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{B})
 			Expect(err).ToNot(HaveOccurred())
@@ -101,7 +101,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(err).ToNot(HaveOccurred())
@@ -130,7 +130,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(err).ToNot(HaveOccurred())
@@ -156,7 +156,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(err).ToNot(HaveOccurred())
@@ -181,7 +181,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
@@ -209,7 +209,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
@@ -236,7 +236,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
@@ -263,7 +263,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{C})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
@@ -291,7 +291,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{&pkg.DefaultPackage{Name: "c", Version: ">1.0", Category: "test"}})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
@@ -317,7 +317,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
@@ -345,7 +345,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A, B})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
@@ -391,7 +391,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{C})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
@@ -431,7 +431,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A, B})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
@@ -476,7 +476,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A2, B})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A2, Value: true}))
@@ -514,7 +514,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A2})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A2, Value: true}))
@@ -555,7 +555,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			s = NewSolver(dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 			solution, err := s.Install([]pkg.Package{A2})
 			Expect(solution).To(ContainElement(PackageAssert{Package: A2, Value: true}))
@@ -591,7 +591,7 @@ var _ = Describe("Solver", func() {
 					_, err := dbInstalled.CreatePackage(p)
 					Expect(err).ToNot(HaveOccurred())
 				}
-				s = NewSolver(dbInstalled, dbDefinitions, db)
+				s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 				solution, err := s.Uninstall(A, true, true)
 				Expect(err).ToNot(HaveOccurred())
@@ -617,7 +617,7 @@ var _ = Describe("Solver", func() {
 					_, err := dbInstalled.CreatePackage(p)
 					Expect(err).ToNot(HaveOccurred())
 				}
-				s = NewSolver(dbInstalled, dbDefinitions, db)
+				s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 				solution, err := s.Uninstall(&pkg.DefaultPackage{Name: "A", Version: ">1.0"}, true, true)
 				Expect(err).ToNot(HaveOccurred())
@@ -768,7 +768,7 @@ var _ = Describe("Solver", func() {
 					_, err := dbInstalled.CreatePackage(p)
 					Expect(err).ToNot(HaveOccurred())
 				}
-				s = NewSolver(dbInstalled, dbDefinitions, db)
+				s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 				solution, err := s.UninstallUniverse(pkg.Packages{A})
 				Expect(err).ToNot(HaveOccurred())
@@ -794,7 +794,7 @@ var _ = Describe("Solver", func() {
 					_, err := dbInstalled.CreatePackage(p)
 					Expect(err).ToNot(HaveOccurred())
 				}
-				s = NewSolver(dbInstalled, dbDefinitions, db)
+				s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 				solution, err := s.UninstallUniverse(pkg.Packages{
 					&pkg.DefaultPackage{Name: "A", Version: ">1.0"}})

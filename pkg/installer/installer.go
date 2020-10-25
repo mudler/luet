@@ -77,7 +77,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
 	// compute a "big" world
-	solv := solver.NewResolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
+	solv := solver.NewResolver(solver.Options{Type: l.Options.SolverOptions.Implementation, Concurrency: l.Options.Concurrency}, s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
 	var uninstall pkg.Packages
 	var solution solver.PackagesAssertions
 
@@ -357,7 +357,7 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *Sy
 	var solution solver.PackagesAssertions
 
 	if !l.Options.NoDeps {
-		solv := solver.NewResolver(s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
+		solv := solver.NewResolver(solver.Options{Type: l.Options.SolverOptions.Implementation, Concurrency: l.Options.Concurrency}, s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
 		solution, err = solv.Install(p)
 		if err != nil && !l.Options.Force {
 			return errors.Wrap(err, "Failed solving solution for package")
@@ -662,7 +662,7 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 
 	if !l.Options.NoDeps {
 		Info("Finding :package:", p.HumanReadableString(), "dependency graph :deciduous_tree:")
-		solv := solver.NewResolver(installedtmp, installedtmp, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
+		solv := solver.NewResolver(solver.Options{Type: l.Options.SolverOptions.Implementation, Concurrency: l.Options.Concurrency}, installedtmp, installedtmp, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
 		var solution pkg.Packages
 		var err error
 		if l.Options.FullCleanUninstall {

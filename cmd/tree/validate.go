@@ -85,7 +85,7 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 
 	if opts.WithSolver {
 		emptyInstallationDb := pkg.NewInMemoryDatabase(false)
-		depSolver = solver.NewSolver(pkg.NewInMemoryDatabase(false),
+		depSolver = solver.NewSolver(solver.Options{Type: solver.SingleCoreSimple},pkg.NewInMemoryDatabase(false),
 			reciper.GetDatabase(),
 			emptyInstallationDb)
 	}

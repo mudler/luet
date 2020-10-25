@@ -22,6 +22,7 @@ import (
 	installer "github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/solver"
 
 	"github.com/spf13/cobra"
 )
@@ -63,11 +64,17 @@ var upgradeCmd = &cobra.Command{
 		universe, _ := cmd.Flags().GetBool("universe")
 		clean, _ := cmd.Flags().GetBool("clean")
 		sync, _ := cmd.Flags().GetBool("sync")
+		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
 		LuetCfg.GetSolverOptions().Discount = float32(discount)
 		LuetCfg.GetSolverOptions().MaxAttempts = attempts
+		if concurrent {
+			LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
+		} else {
+			LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple
+		}
 
 		Debug("Solver", LuetCfg.GetSolverOptions().String())
 
@@ -118,6 +125,7 @@ func init() {
 	upgradeCmd.Flags().Bool("universe", false, "Use ONLY the SAT solver to compute upgrades (experimental)")
 	upgradeCmd.Flags().Bool("clean", false, "Try to drop removed packages (experimental, only when --universe is enabled)")
 	upgradeCmd.Flags().Bool("sync", false, "Upgrade packages with new revisions (experimental)")
+	upgradeCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
 
 	RootCmd.AddCommand(upgradeCmd)
 }

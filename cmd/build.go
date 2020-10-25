@@ -24,6 +24,7 @@ import (
 	. "github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/solver"
 	tree "github.com/mudler/luet/pkg/tree"
 
 	"github.com/spf13/cobra"
@@ -81,6 +82,7 @@ var buildCmd = &cobra.Command{
 		onlyTarget, _ := cmd.Flags().GetBool("only-target-package")
 		full, _ := cmd.Flags().GetBool("full")
 		skip, _ := cmd.Flags().GetBool("skip-if-metadata-exists")
+		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 
 		compilerSpecs := compiler.NewLuetCompilationspecs()
 		var compilerBackend compiler.CompilerBackend
@@ -148,7 +150,14 @@ var buildCmd = &cobra.Command{
 		opts.SkipIfMetadataExists = skip
 		opts.PackageTargetOnly = onlyTarget
 
-		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), opts)
+		var solverOpts solver.Options
+		if concurrent {
+			solverOpts = solver.Options{Type: solver.SingleCoreSimple}
+		} else {
+			solverOpts = solver.Options{Type: solver.ParallelSimple}
+		}
+
+		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), opts, solverOpts)
 		luetCompiler.SetConcurrency(concurrency)
 		luetCompiler.SetCompressionType(compiler.CompressionImplementation(compressionType))
 		if full {
@@ -241,6 +250,7 @@ func init() {
 	buildCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
 	buildCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	buildCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
+	buildCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
 
 	RootCmd.AddCommand(buildCmd)
 }

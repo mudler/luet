@@ -23,6 +23,7 @@ import (
 	installer "github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/solver"
 
 	"github.com/spf13/cobra"
 )
@@ -61,12 +62,17 @@ var uninstallCmd = &cobra.Command{
 			full, _ := cmd.Flags().GetBool("full")
 			checkconflicts, _ := cmd.Flags().GetBool("conflictscheck")
 			fullClean, _ := cmd.Flags().GetBool("full-clean")
+			concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 
 			LuetCfg.GetSolverOptions().Type = stype
 			LuetCfg.GetSolverOptions().LearnRate = float32(rate)
 			LuetCfg.GetSolverOptions().Discount = float32(discount)
 			LuetCfg.GetSolverOptions().MaxAttempts = attempts
-
+			if concurrent {
+				LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
+			} else {
+				LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple
+			}
 			Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 
 			inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
@@ -110,6 +116,7 @@ func init() {
 	uninstallCmd.Flags().Bool("full", false, "Attempts to remove as much packages as possible which aren't required (slow)")
 	uninstallCmd.Flags().Bool("conflictscheck", true, "Check if the package marked for deletion is required by other packages")
 	uninstallCmd.Flags().Bool("full-clean", false, "(experimental) Uninstall packages and all the other deps/revdeps of it.")
+	uninstallCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
 
 	RootCmd.AddCommand(uninstallCmd)
 }

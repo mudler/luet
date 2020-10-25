@@ -28,13 +28,13 @@ var _ = Describe("Resolver", func() {
 	db := pkg.NewInMemoryDatabase(false)
 	dbInstalled := pkg.NewInMemoryDatabase(false)
 	dbDefinitions := pkg.NewInMemoryDatabase(false)
-	s := NewSolver(dbInstalled, dbDefinitions, db)
+	s := NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 	BeforeEach(func() {
 		db = pkg.NewInMemoryDatabase(false)
 		dbInstalled = pkg.NewInMemoryDatabase(false)
 		dbDefinitions = pkg.NewInMemoryDatabase(false)
-		s = NewSolver(dbInstalled, dbDefinitions, db)
+		s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 	})
 
 	Context("Conflict set", func() {

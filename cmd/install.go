@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 
 	installer "github.com/mudler/luet/pkg/installer"
+	"github.com/mudler/luet/pkg/solver"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
 	. "github.com/mudler/luet/pkg/config"
@@ -73,10 +74,18 @@ var installCmd = &cobra.Command{
 		force := LuetCfg.Viper.GetBool("force")
 		nodeps := LuetCfg.Viper.GetBool("nodeps")
 		onlydeps := LuetCfg.Viper.GetBool("onlydeps")
+		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
+
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
 		LuetCfg.GetSolverOptions().Discount = float32(discount)
 		LuetCfg.GetSolverOptions().MaxAttempts = attempts
+
+		if concurrent {
+			LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
+		} else {
+			LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple
+		}
 
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 
@@ -121,6 +130,7 @@ func init() {
 	installCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful!)")
 	installCmd.Flags().Bool("onlydeps", false, "Consider **only** package dependencies")
 	installCmd.Flags().Bool("force", false, "Skip errors and keep going (potentially harmful)")
+	installCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
 
 	RootCmd.AddCommand(installCmd)
 }

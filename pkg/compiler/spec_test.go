@@ -23,6 +23,7 @@ import (
 	. "github.com/mudler/luet/pkg/compiler"
 	helpers "github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/solver"
 	"github.com/mudler/luet/pkg/tree"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -61,7 +62,7 @@ var _ = Describe("Spec", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase(), NewDefaultCompilerOptions())
+			compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
 
@@ -114,7 +115,7 @@ RUN echo bar > /test2`))
 
 		Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-		compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase(), NewDefaultCompilerOptions())
+		compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 		spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.0"})
 		Expect(err).ToNot(HaveOccurred())
 

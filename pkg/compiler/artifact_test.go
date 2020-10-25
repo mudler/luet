@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	. "github.com/mudler/luet/pkg/compiler/backend"
+	"github.com/mudler/luet/pkg/solver"
 
 	. "github.com/mudler/luet/pkg/compiler"
 	helpers "github.com/mudler/luet/pkg/helpers"
@@ -41,7 +42,7 @@ var _ = Describe("Artifact", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase(), NewDefaultCompilerOptions())
+			compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
 

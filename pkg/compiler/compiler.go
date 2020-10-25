@@ -48,9 +48,10 @@ type LuetCompiler struct {
 	Concurrency               int
 	CompressionType           CompressionImplementation
 	Options                   CompilerOptions
+	SolverOptions             solver.Options
 }
 
-func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase, opt *CompilerOptions) Compiler {
+func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase, opt *CompilerOptions, solvopts solver.Options) Compiler {
 	// The CompilerRecipe will gives us a tree with only build deps listed.
 	return &LuetCompiler{
 		Backend: backend,
@@ -65,6 +66,7 @@ func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase, opt *Compi
 		Concurrency:     opt.Concurrency,
 		Clean:           opt.Clean,
 		Options:         *opt,
+		SolverOptions:   solvopts,
 	}
 }
 
@@ -511,7 +513,7 @@ func (cs *LuetCompiler) ComputeMinimumCompilableSet(p ...CompilationSpec) ([]Com
 
 func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssertions, error) {
 
-	s := solver.NewResolver(pkg.NewInMemoryDatabase(false), cs.Database, pkg.NewInMemoryDatabase(false), cs.Options.SolverOptions.Resolver())
+	s := solver.NewResolver(cs.SolverOptions, pkg.NewInMemoryDatabase(false), cs.Database, pkg.NewInMemoryDatabase(false), cs.Options.SolverOptions.Resolver())
 
 	solution, err := s.Install(pkg.Packages{p.GetPackage()})
 	if err != nil {
