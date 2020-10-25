@@ -70,6 +70,9 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	}
 
 	Info(":thinking: Computing upgrade, please hang tight")
+
+	Spinner(32)
+	defer SpinnerStop()
 	// First match packages against repositories by priority
 	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
@@ -79,6 +82,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	var solution solver.PackagesAssertions
 
 	if l.Options.SolverUpgrade {
+
 		uninstall, solution, err = solv.UpgradeUniverse(l.Options.RemoveUnavailableOnUpgrade)
 		if err != nil {
 			return errors.Wrap(err, "Failed solving solution for upgrade")
@@ -88,7 +92,9 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 		if err != nil {
 			return errors.Wrap(err, "Failed solving solution for upgrade")
 		}
+
 	}
+	SpinnerStop()
 
 	if len(uninstall) > 0 {
 		Info("Packages marked for uninstall:")
