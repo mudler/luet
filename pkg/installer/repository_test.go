@@ -28,6 +28,7 @@ import (
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/installer"
 	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/solver"
 	"github.com/mudler/luet/pkg/tree"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -48,7 +49,7 @@ var _ = Describe("Repository", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -116,11 +117,11 @@ var _ = Describe("Repository", func() {
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(1))
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 			spec2, err := compiler2.FromPackage(&pkg.DefaultPackage{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())

@@ -24,6 +24,8 @@ import (
 	compiler "github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/helpers"
+	solver "github.com/mudler/luet/pkg/solver"
+
 	. "github.com/mudler/luet/pkg/installer"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/tree"
@@ -47,7 +49,7 @@ var _ = Describe("Installer", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -163,7 +165,7 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
 			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(),
-				generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+				generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -281,7 +283,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -399,7 +401,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -486,7 +488,7 @@ urls:
 
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(1))
 
-			c = compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			c = compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 
 			spec, err = c.FromPackage(&pkg.DefaultPackage{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -545,7 +547,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -663,8 +665,8 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 			Expect(len(generalRecipeNewRepo.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
-			c2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipeNewRepo.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			c2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipeNewRepo.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -795,7 +797,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -912,7 +914,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -1017,7 +1019,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -1109,7 +1111,7 @@ urls:
 
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(3))
 
-			c = compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase(), compiler.NewDefaultCompilerOptions())
+			c = compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
 
 			spec, err = c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.1"})
 			Expect(err).ToNot(HaveOccurred())
