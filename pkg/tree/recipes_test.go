@@ -117,7 +117,7 @@ var _ = Describe("Recipe", func() {
 				}) // Note: the definition depends on pinentry-base without an explicit version
 				Expect(err).ToNot(HaveOccurred())
 
-				s := solver.NewSolver(pkg.NewInMemoryDatabase(false), tree, tree)
+				s := solver.NewSolver(solver.Options{Type: solver.SingleCoreSimple}, pkg.NewInMemoryDatabase(false), tree, tree)
 				solution, err := s.Install([]pkg.Package{pack})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(solution)).To(Equal(33))

@@ -319,8 +319,8 @@ func (db *BoltDatabase) World() Packages {
 		return Packages([]Package{})
 	}
 	models := make([]Package, len(packs))
-	for i, v := range packs {
-		models[i] = &v
+	for i, _ := range packs {
+		models[i] = &packs[i]
 	}
 
 	return Packages(models)

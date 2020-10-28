@@ -40,6 +40,9 @@ var _ = Describe("Database  benchmark", func() {
 			tmpfile, _ = ioutil.TempFile(os.TempDir(), "tests")
 			defer os.Remove(tmpfile.Name()) // clean up
 			db = NewBoltDatabase(tmpfile.Name())
+			if os.Getenv("BENCHMARK_TESTS") != "true" {
+				Skip("BENCHMARK_TESTS not enabled")
+			}
 		})
 
 		Measure("it should be fast in computing world from a 50000 dataset", func(b Benchmarker) {
@@ -54,9 +57,9 @@ var _ = Describe("Database  benchmark", func() {
 				Expect(len(packs)).To(Equal(50000))
 			})
 
-			Ω(runtime.Seconds()).Should(BeNumerically("<", 5), "World() shouldn't take too long.")
+			Ω(runtime.Seconds()).Should(BeNumerically("<", 30), "World() shouldn't take too long.")
 
-		}, 10)
+		}, 1)
 
 		Measure("it should be fast in computing world from a 100000 dataset", func(b Benchmarker) {
 			for i := 0; i < 100000; i++ {
@@ -70,9 +73,9 @@ var _ = Describe("Database  benchmark", func() {
 				Expect(len(packs)).To(Equal(100000))
 			})
 
-			Ω(runtime.Seconds()).Should(BeNumerically("<", 5), "World() shouldn't take too long.")
+			Ω(runtime.Seconds()).Should(BeNumerically("<", 30), "World() shouldn't take too long.")
 
-		}, 2)
+		}, 1)
 	})
 
 	Context("InMemory", func() {
@@ -88,6 +91,9 @@ var _ = Describe("Database  benchmark", func() {
 			tmpfile, _ = ioutil.TempFile(os.TempDir(), "tests")
 			defer os.Remove(tmpfile.Name()) // clean up
 			db = NewInMemoryDatabase(false)
+			if os.Getenv("BENCHMARK_TESTS") != "true" {
+				Skip("BENCHMARK_TESTS not enabled")
+			}
 		})
 
 		Measure("it should be fast in computing world from a 100000 dataset", func(b Benchmarker) {
@@ -103,8 +109,8 @@ var _ = Describe("Database  benchmark", func() {
 				Expect(len(packs)).To(Equal(100000))
 			})
 
-			Ω(runtime.Seconds()).Should(BeNumerically("<", 5), "World() shouldn't take too long.")
+			Ω(runtime.Seconds()).Should(BeNumerically("<", 10), "World() shouldn't take too long.")
 
-		}, 10)
+		}, 2)
 	})
 })

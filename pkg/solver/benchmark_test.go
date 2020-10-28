@@ -16,17 +16,16 @@
 package solver_test
 
 import (
-	"strconv"
-
 	pkg "github.com/mudler/luet/pkg/package"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
+	"strconv"
 
 	. "github.com/mudler/luet/pkg/solver"
 )
 
 var _ = Describe("Solver Benchmarks", func() {
-
 	db := pkg.NewInMemoryDatabase(false)
 	dbInstalled := pkg.NewInMemoryDatabase(false)
 	dbDefinitions := pkg.NewInMemoryDatabase(false)
@@ -38,6 +37,9 @@ var _ = Describe("Solver Benchmarks", func() {
 			dbInstalled = pkg.NewInMemoryDatabase(false)
 			dbDefinitions = pkg.NewInMemoryDatabase(false)
 			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
+			if os.Getenv("BENCHMARK_TESTS") != "true" {
+				Skip("BENCHMARK_TESTS not enabled")
+			}
 		})
 		Measure("it should be fast in resolution from a 50000 dataset", func(b Benchmarker) {
 
@@ -59,7 +61,7 @@ var _ = Describe("Solver Benchmarks", func() {
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				for i := 0; i < 2; i++ {
+				for i := 0; i < 1; i++ {
 					C := pkg.NewPackage("C"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 					G := pkg.NewPackage("G"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 					H := pkg.NewPackage("H"+strconv.Itoa(i), "", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
@@ -80,7 +82,7 @@ var _ = Describe("Solver Benchmarks", func() {
 			})
 
 			Ω(runtime.Seconds()).Should(BeNumerically("<", 120), "Install() shouldn't take too long.")
-		}, 5)
+		}, 1)
 	})
 
 	Context("Complex data sets - Parallel", func() {
@@ -89,6 +91,9 @@ var _ = Describe("Solver Benchmarks", func() {
 			dbInstalled = pkg.NewInMemoryDatabase(false)
 			dbDefinitions = pkg.NewInMemoryDatabase(false)
 			s = NewSolver(Options{Type: ParallelSimple, Concurrency: 10}, dbInstalled, dbDefinitions, db)
+			if os.Getenv("BENCHMARK_TESTS") != "true" {
+				Skip("BENCHMARK_TESTS not enabled")
+			}
 		})
 		Measure("it should be fast in resolution from a 50000 dataset", func(b Benchmarker) {
 			runtime := b.Time("runtime", func() {
@@ -108,7 +113,7 @@ var _ = Describe("Solver Benchmarks", func() {
 					_, err := dbInstalled.CreatePackage(C)
 					Expect(err).ToNot(HaveOccurred())
 				}
-				for i := 0; i < 2; i++ {
+				for i := 0; i < 1; i++ {
 					C := pkg.NewPackage("C"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 					G := pkg.NewPackage("G"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 					H := pkg.NewPackage("H"+strconv.Itoa(i), "", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
@@ -131,7 +136,7 @@ var _ = Describe("Solver Benchmarks", func() {
 			})
 
 			Ω(runtime.Seconds()).Should(BeNumerically("<", 70), "Install() shouldn't take too long.")
-		}, 5)
+		}, 1)
 	})
 
 })

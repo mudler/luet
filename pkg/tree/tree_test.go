@@ -59,7 +59,7 @@ var _ = Describe("Tree", func() {
 				Expect(len(CfromD.GetRequires()) != 0).To(BeTrue())
 				Expect(CfromD.GetRequires()[0].GetName()).To(Equal("b"))
 
-				s := solver.NewSolver(pkg.NewInMemoryDatabase(false), generalRecipe.GetDatabase(), db)
+				s := solver.NewSolver(solver.Options{Type: solver.SingleCoreSimple}, pkg.NewInMemoryDatabase(false), generalRecipe.GetDatabase(), db)
 				pack, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
 				Expect(err).ToNot(HaveOccurred())
 
@@ -131,7 +131,7 @@ var _ = Describe("Tree", func() {
 				Expect(len(CfromD.GetRequires()) != 0).To(BeTrue())
 				Expect(CfromD.GetRequires()[0].GetName()).To(Equal("b"))
 
-				s := solver.NewSolver(pkg.NewInMemoryDatabase(false), generalRecipe.GetDatabase(), db)
+				s := solver.NewSolver(solver.Options{Type: solver.SingleCoreSimple}, pkg.NewInMemoryDatabase(false), generalRecipe.GetDatabase(), db)
 
 				Dd, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
 				Expect(err).ToNot(HaveOccurred())
