@@ -333,7 +333,7 @@ func ParsePackageStr(pkg string) (*GentooPackage, error) {
 		ans.Condition = PkgCondNot
 	}
 
-	regexVerString := fmt.Sprintf("[-](%s|%s|%s|%s|%s|%s)((%s|%s|%s|%s|%s|%s|%s)+)*",
+	regexVerString := fmt.Sprintf("[-](%s|%s|%s|%s|%s|%s)((%s|%s|%s|%s|%s|%s||%s)+)*",
 		// Version regex
 		// 1.1
 		"[0-9]+[.][0-9]+[a-z]*",
@@ -354,8 +354,8 @@ func ParsePackageStr(pkg string) (*GentooPackage, error) {
 		"_rc[0-9]+",
 		// handle also rc without number
 		"_rc",
-		"_alpha",
-		"_beta",
+		"_alpha[0-9-a-z]*",
+		"_beta[0-9-a-z]*",
 	)
 
 	words := strings.Split(pkg, "/")

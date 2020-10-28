@@ -31,7 +31,7 @@ github.com/Microsoft/hcsshim/internal/timeout
 github.com/Microsoft/hcsshim/internal/vmcompute
 github.com/Microsoft/hcsshim/internal/wclayer
 github.com/Microsoft/hcsshim/osversion
-# github.com/Sabayon/pkgs-checker v0.6.3-0.20200912135508-97c41780e9b6
+# github.com/Sabayon/pkgs-checker v0.7.2
 github.com/Sabayon/pkgs-checker/pkg/gentoo
 # github.com/apex/log v1.1.1
 github.com/apex/log
