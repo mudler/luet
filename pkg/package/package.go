@@ -656,7 +656,7 @@ func (pack *DefaultPackage) buildFormula(definitiondb PackageDatabase, db Packag
 					C = bf.Var(encodedC)
 					// Or the Candidate is true, or all the others might be not true
 					// This forces the CDCL sat implementation to look first at a solution with C=true
-					formulas = append(formulas, bf.Or(bf.Not(A), bf.Or(bf.Or(C, bf.Or(priorityConstraints...)), bf.Or(bf.Not(C), bf.Or(priorityALO...)))))
+					formulas = append(formulas, bf.Or(bf.Not(A), bf.Or(bf.And(C, bf.Or(priorityConstraints...)), bf.And(bf.Not(C), bf.Or(priorityALO...)))))
 				}
 
 				// AMO - At most one
