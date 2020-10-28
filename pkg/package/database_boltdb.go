@@ -162,26 +162,17 @@ func (db *BoltDatabase) GetAllPackages(packages chan Package) error {
 		return err
 	}
 	defer bolt.Close()
-	// Fetching records one by one (useful when the bucket contains a lot of records)
-	//query := bolt.Select()
-
-	var packs []Package
+	var packs []DefaultPackage
 	err = bolt.All(&packs)
 	if err != nil {
 		return err
 	}
 
 	for _, r := range packs {
-		packages <- r
+		packages <- &r
 	}
 
 	return nil
-
-	// return query.Each(new(DefaultPackage), func(record interface{}) error {
-	// 	u := record.(*DefaultPackage)
-	// 	packages <- u
-	// 	return err
-	// })
 }
 
 // Encode encodes the package to string.
@@ -316,16 +307,23 @@ func (db *BoltDatabase) RemovePackage(p Package) error {
 }
 
 func (db *BoltDatabase) World() Packages {
+	var packs []DefaultPackage
 
-	var all []Package
-	// FIXME: This should all be locked in the db - for now forbid the solver to be run in threads.
-	for _, k := range db.GetPackages() {
-		pack, err := db.GetPackage(k)
-		if err == nil {
-			all = append(all, pack)
-		}
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
+	if err != nil {
+		return Packages([]Package{})
 	}
-	return Packages(all)
+	defer bolt.Close()
+	err = bolt.All(&packs)
+	if err != nil {
+		return Packages([]Package{})
+	}
+	models := make([]Package, len(packs))
+	for i, v := range packs {
+		models[i] = &v
+	}
+
+	return Packages(models)
 }
 
 func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
@@ -390,11 +388,7 @@ func (db *BoltDatabase) FindPackageVersions(p Package) (Packages, error) {
 func (db *BoltDatabase) FindPackageLabel(labelKey string) (Packages, error) {
 	var ans []Package
 
-	for _, k := range db.GetPackages() {
-		pack, err := db.GetPackage(k)
-		if err != nil {
-			return ans, err
-		}
+	for _, pack := range db.World() {
 		if pack.HasLabel(labelKey) {
 			ans = append(ans, pack)
 		}
@@ -410,11 +404,7 @@ func (db *BoltDatabase) FindPackageLabelMatch(pattern string) (Packages, error) 
 		return nil, errors.New("Invalid regex " + pattern + "!")
 	}
 
-	for _, k := range db.GetPackages() {
-		pack, err := db.GetPackage(k)
-		if err != nil {
-			return ans, err
-		}
+	for _, pack := range db.World() {
 		if pack.MatchLabel(re) {
 			ans = append(ans, pack)
 		}
@@ -431,12 +421,7 @@ func (db *BoltDatabase) FindPackageMatch(pattern string) (Packages, error) {
 		return nil, errors.New("Invalid regex " + pattern + "!")
 	}
 
-	for _, k := range db.GetPackages() {
-		pack, err := db.GetPackage(k)
-		if err != nil {
-			return ans, err
-		}
-
+	for _, pack := range db.World() {
 		if re.MatchString(pack.HumanReadableString()) {
 			ans = append(ans, pack)
 		}
