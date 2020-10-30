@@ -79,13 +79,13 @@ var _ = Describe("Resolver", func() {
 				solution, err := s.Install([]pkg.Package{D, F}) // D and F should go as they have no deps. A/E should be filtered by QLearn
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(len(solution)).To(Equal(6))
+				Expect(len(solution)).To(Equal(3))
 
-				Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: false}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: false}))
+				Expect(solution).ToNot(ContainElement(PackageAssert{Package: A, Value: true}))
+				Expect(solution).ToNot(ContainElement(PackageAssert{Package: B, Value: true}))
 				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
 				Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: E, Value: false}))
+				Expect(solution).ToNot(ContainElement(PackageAssert{Package: E, Value: true}))
 				Expect(solution).To(ContainElement(PackageAssert{Package: F, Value: true}))
 
 			})
@@ -112,12 +112,12 @@ var _ = Describe("Resolver", func() {
 				solution, err := s.Install([]pkg.Package{A, D})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: false}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: false}))
+				Expect(solution).ToNot(ContainElement(PackageAssert{Package: A, Value: true}))
+				Expect(solution).ToNot(ContainElement(PackageAssert{Package: B, Value: true}))
 				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
 				Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
 
-				Expect(len(solution)).To(Equal(4))
+				Expect(len(solution)).To(Equal(2))
 			})
 
 			It("will find out that we can install D and F by ignoring E and A", func() {
@@ -142,13 +142,13 @@ var _ = Describe("Resolver", func() {
 				solution, err := s.Install([]pkg.Package{A, D, E, F}) // D and F should go as they have no deps. A/E should be filtered by QLearn
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: false}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: false}))
+				Expect(solution).ToNot(ContainElement(PackageAssert{Package: A, Value: true}))
+				Expect(solution).ToNot(ContainElement(PackageAssert{Package: B, Value: true}))
 				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true})) // Was already installed
 				Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: E, Value: false}))
+				Expect(solution).ToNot(ContainElement(PackageAssert{Package: E, Value: true}))
 				Expect(solution).To(ContainElement(PackageAssert{Package: F, Value: true}))
-				Expect(len(solution)).To(Equal(6))
+				Expect(len(solution)).To(Equal(3))
 
 			})
 		})

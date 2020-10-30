@@ -120,7 +120,7 @@ var _ = Describe("Recipe", func() {
 				s := solver.NewSolver(solver.Options{Type: solver.SingleCoreSimple}, pkg.NewInMemoryDatabase(false), tree, tree)
 				solution, err := s.Install([]pkg.Package{pack})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(len(solution)).To(Equal(33))
+				Expect(len(solution)).To(Equal(14))
 
 				var allSol string
 				for _, sol := range solution {

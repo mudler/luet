@@ -40,6 +40,7 @@ import (
 // FIXME: Currently some of the methods are returning DefaultPackages due to JSON serialization of the package
 type Package interface {
 	Encode(PackageDatabase) (string, error)
+	Related(definitiondb PackageDatabase) Packages
 
 	BuildFormula(PackageDatabase, PackageDatabase) ([]bf.Formula, error)
 
@@ -449,6 +450,48 @@ func (p *DefaultPackage) Revdeps(definitiondb PackageDatabase) Packages {
 	}
 
 	return versionsInWorld
+}
+
+func walkPackage(p Package, definitiondb PackageDatabase, visited map[string]interface{}) Packages {
+	var versionsInWorld Packages
+	if _, ok := visited[p.HumanReadableString()]; ok {
+		return versionsInWorld
+	}
+	visited[p.HumanReadableString()] = true
+
+	revdepvisited := make(map[string]interface{})
+	revdeps := p.ExpandedRevdeps(definitiondb, revdepvisited)
+	for _, r := range revdeps {
+		versionsInWorld = append(versionsInWorld, r)
+	}
+
+	if !p.IsSelector() {
+		versionsInWorld = append(versionsInWorld, p)
+	}
+
+	for _, re := range p.GetRequires() {
+		versions, _ := re.Expand(definitiondb)
+		for _, r := range versions {
+
+			versionsInWorld = append(versionsInWorld, r)
+			versionsInWorld = append(versionsInWorld, walkPackage(r, definitiondb, visited)...)
+		}
+
+	}
+	for _, re := range p.GetConflicts() {
+		versions, _ := re.Expand(definitiondb)
+		for _, r := range versions {
+
+			versionsInWorld = append(versionsInWorld, r)
+			versionsInWorld = append(versionsInWorld, walkPackage(r, definitiondb, visited)...)
+
+		}
+	}
+	return versionsInWorld.Unique()
+}
+
+func (p *DefaultPackage) Related(definitiondb PackageDatabase) Packages {
+	return walkPackage(p, definitiondb, map[string]interface{}{})
 }
 
 // ExpandedRevdeps returns the package reverse dependencies,

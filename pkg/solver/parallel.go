@@ -113,12 +113,26 @@ func (s *Parallel) buildParallelFormula(formulas []bf.Formula, packages pkg.Pack
 	wg.Wait()
 	close(results)
 	wg2.Wait()
-	return bf.And(formulas...), nil
+
+	if len(formulas) != 0 {
+		return bf.And(formulas...), nil
+	}
+	return bf.True, nil
 }
 
 func (s *Parallel) BuildInstalled() (bf.Formula, error) {
 	var formulas []bf.Formula
-	return s.buildParallelFormula(formulas, s.Installed())
+
+	var packages pkg.Packages
+	for _, p := range s.Installed() {
+		packages = append(packages, p)
+		for _, dep := range p.Related(s.DefinitionDatabase) {
+			packages = append(packages, dep)
+		}
+
+	}
+
+	return s.buildParallelFormula(formulas, packages)
 }
 
 // BuildWorld builds the formula which olds the requirements from the package definitions
@@ -134,8 +148,61 @@ func (s *Parallel) BuildWorld(includeInstalled bool) (bf.Formula, error) {
 		//f = bf.And(f, solvable)
 		formulas = append(formulas, solvable)
 	}
-
 	return s.buildParallelFormula(formulas, s.World())
+}
+
+// BuildWorld builds the formula which olds the requirements from the package definitions
+// which are available (global state)
+func (s *Parallel) BuildPartialWorld(includeInstalled bool) (bf.Formula, error) {
+	var formulas []bf.Formula
+	// NOTE: This block should be enabled in case of very old systems with outdated world sets
+	if includeInstalled {
+		solvable, err := s.BuildInstalled()
+		if err != nil {
+			return nil, err
+		}
+		//f = bf.And(f, solvable)
+		formulas = append(formulas, solvable)
+	}
+
+	var wg = new(sync.WaitGroup)
+	var wg2 = new(sync.WaitGroup)
+	var packages pkg.Packages
+
+	all := make(chan pkg.Package)
+	results := make(chan pkg.Package, 1)
+	for i := 0; i < s.Concurrency; i++ {
+		wg.Add(1)
+		go func(wg *sync.WaitGroup, c <-chan pkg.Package) {
+			defer wg.Done()
+			for p := range c {
+				for _, dep := range p.Related(s.DefinitionDatabase) {
+					results <- dep
+				}
+
+			}
+		}(wg, all)
+	}
+	wg2.Add(1)
+	go func() {
+		defer wg2.Done()
+		for t := range results {
+			packages = append(packages, t)
+		}
+	}()
+
+	for _, p := range s.Wanted {
+		all <- p
+	}
+
+	close(all)
+	wg.Wait()
+	close(results)
+	wg2.Wait()
+
+	return s.buildParallelFormula(formulas, packages)
+
+	//return s.buildParallelFormula(formulas, s.World())
 }
 
 func (s *Parallel) getList(db pkg.PackageDatabase, lsp pkg.Packages) (pkg.Packages, error) {
@@ -370,12 +437,11 @@ func (s *Parallel) UninstallUniverse(toremove pkg.Packages) (pkg.Packages, error
 // the Universe db as authoritative
 // See also on the subject: https://arxiv.org/pdf/1007.1021.pdf
 func (s *Parallel) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssertions, error) {
+	var formulas []bf.Formula
 	// we first figure out which aren't up-to-date
 	// which has to be removed
 	// and which needs to be upgraded
-	notUptodate := pkg.Packages{}
 	removed := pkg.Packages{}
-	toUpgrade := pkg.Packages{}
 
 	// TODO: this is memory expensive, we need to optimize this
 	universe := pkg.NewInMemoryDatabase(false)
@@ -387,11 +453,17 @@ func (s *Parallel) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAsse
 		universe.CreatePackage(p)
 	}
 
+	// Build constraints for the whole defdb
+	r, err := s.BuildWorld(true)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "couldn't build world constraints")
+	}
+
 	var wg = new(sync.WaitGroup)
 	var wg2 = new(sync.WaitGroup)
 
 	all := make(chan pkg.Package)
-	results := make(chan []pkg.Package, 1)
+	results := make(chan bf.Formula, 1)
 	for i := 0; i < s.Concurrency; i++ {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, c <-chan pkg.Package) {
@@ -408,7 +480,12 @@ func (s *Parallel) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAsse
 				bestmatch := available.Best(nil)
 				// Found a better version available
 				if !bestmatch.Matches(p) {
-					results <- []pkg.Package{p, bestmatch}
+					encodedP, _ := p.Encode(universe)
+					P := bf.Var(encodedP)
+					results <- bf.And(bf.Not(P), r)
+					encodedP, _ = bestmatch.Encode(universe)
+					P = bf.Var(encodedP)
+					results <- bf.And(P, r)
 				}
 			}
 		}(wg, all)
@@ -418,8 +495,7 @@ func (s *Parallel) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAsse
 	go func() {
 		defer wg2.Done()
 		for t := range results {
-			notUptodate = append(notUptodate, t[0])
-			toUpgrade = append(toUpgrade, t[1])
+			formulas = append(formulas, t)
 		}
 	}()
 
@@ -433,50 +509,24 @@ func (s *Parallel) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAsse
 	close(results)
 	wg2.Wait()
 
-	// resolve to packages from the db to be able to encode correctly
-	oldPackages, err := s.getList(universe, notUptodate)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't get package marked for removal from universe")
-	}
-
-	updates, err := s.getList(universe, toUpgrade)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't get package marked for update from universe")
-	}
-
-	var formulas []bf.Formula
-
-	// Build constraints for the whole defdb
-	r, err := s.BuildWorld(true)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't build world constraints")
-	}
-
 	// Treat removed packages from universe as marked for deletion
 	if dropremoved {
-		oldPackages = append(oldPackages, removed...)
-	}
 
-	// SAT encode the clauses against the world
-	for _, p := range oldPackages.Unique() {
-		encodedP, err := p.Encode(universe)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "couldn't encode package")
+		// SAT encode the clauses against the world
+		for _, p := range removed {
+			encodedP, err := p.Encode(universe)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "couldn't encode package")
+			}
+			P := bf.Var(encodedP)
+			formulas = append(formulas, bf.And(bf.Not(P), r))
 		}
-		P := bf.Var(encodedP)
-		formulas = append(formulas, bf.And(bf.Not(P), r))
-	}
-
-	for _, p := range updates {
-		encodedP, err := p.Encode(universe)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "couldn't encode package")
-		}
-		P := bf.Var(encodedP)
-		formulas = append(formulas, bf.And(P, r))
 	}
 
 	markedForRemoval := pkg.Packages{}
+	if len(formulas) == 0 {
+		return pkg.Packages{}, PackagesAssertions{}, nil
+	}
 	model := bf.Solve(bf.And(formulas...))
 	if model == nil {
 		return nil, nil, errors.New("Failed finding a solution")
@@ -506,7 +556,6 @@ func (s *Parallel) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAss
 
 	toUninstall := pkg.Packages{}
 	toInstall := pkg.Packages{}
-
 	availableCache := map[string]pkg.Packages{}
 	for _, p := range s.DefinitionDatabase.World() {
 		// Each one, should be expanded
@@ -577,7 +626,9 @@ func (s *Parallel) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAss
 			}
 		}
 	}
-
+	if len(toInstall) == 0 {
+		return toUninstall, PackagesAssertions{}, nil
+	}
 	r, e := s2.Install(toInstall)
 	return toUninstall, r, e
 	// To that tree, ask to install the versions that should be upgraded, and try to solve
@@ -673,7 +724,8 @@ func (s *Parallel) Uninstall(c pkg.Package, checkconflicts, full bool) (pkg.Pack
 // BuildFormula builds the main solving formula that is evaluated by the sat Parallel.
 func (s *Parallel) BuildFormula() (bf.Formula, error) {
 	var formulas []bf.Formula
-	r, err := s.BuildWorld(false)
+
+	r, err := s.BuildPartialWorld(false)
 	if err != nil {
 		return nil, err
 	}

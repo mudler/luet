@@ -214,12 +214,10 @@ var _ = Describe("Decoder", func() {
 			hash2 := solution.AssertionHash()
 
 			//	Expect(len(solution)).To(Equal(6))
-			Expect(solution[0].Package.GetName()).To(Equal("A"))
-			Expect(solution[1].Package.GetName()).To(Equal("G"))
-			Expect(solution[2].Package.GetName()).To(Equal("H"))
-			Expect(solution[3].Package.GetName()).To(Equal("D"))
-			Expect(solution[4].Package.GetName()).To(Equal("B"))
-			Expect(solution[0].Value).ToNot(BeTrue())
+			Expect(solution[0].Package.GetName()).To(Equal("G"))
+			Expect(solution[1].Package.GetName()).To(Equal("H"))
+			Expect(solution[2].Package.GetName()).To(Equal("D"))
+			Expect(solution[3].Package.GetName()).To(Equal("B"))
 
 			Expect(hash).ToNot(Equal(""))
 			Expect(hash2).ToNot(Equal(""))

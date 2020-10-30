@@ -150,22 +150,13 @@ func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fin
 
 	orderedAssertions := PackagesAssertions{}
 	unorderedAssertions := PackagesAssertions{}
-	fingerprints := []string{}
 
 	tmpMap := map[string]PackageAssert{}
 	graph := topsort.NewGraph()
-
 	for _, a := range assertions {
 		graph.AddNode(a.Package.GetFingerPrint())
 		tmpMap[a.Package.GetFingerPrint()] = a
-		fingerprints = append(fingerprints, a.Package.GetFingerPrint())
 		unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
-
-		if a.Value {
-			unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
-		} else {
-			orderedAssertions = append(orderedAssertions, a) // Keep last the ones which are not meant to be installed
-		}
 	}
 
 	sort.Sort(unorderedAssertions)
@@ -200,8 +191,11 @@ func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fin
 	for _, res := range result {
 		a, ok := tmpMap[res]
 		if !ok {
-			return nil, errors.New("fail looking for " + res)
-			//	continue
+			//return nil, errors.New("fail looking for " + res)
+			// Since now we don't return the entire world as part of assertions
+			// if we don't find any reference must be because fingerprint we are analyzing (which is the one we are ordering against)
+			// is not part of the assertions, thus we can omit it from the result
+			continue
 		}
 		orderedAssertions = append(orderedAssertions, a)
 		//	orderedAssertions = append(PackagesAssertions{a}, orderedAssertions...) // push upfront

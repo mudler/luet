@@ -69,30 +69,24 @@ var _ = Describe("Tree", func() {
 				solution, err = solution.Order(generalRecipe.GetDatabase(), pack.GetFingerPrint())
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(solution[0].Package.GetName()).To(Equal("a"))
-				Expect(solution[0].Value).To(BeFalse())
+				Expect(solution[0].Package.GetName()).To(Equal("b"))
+				Expect(solution[0].Value).To(BeTrue())
 
-				Expect(solution[1].Package.GetName()).To(Equal("b"))
+				Expect(solution[1].Package.GetName()).To(Equal("c"))
 				Expect(solution[1].Value).To(BeTrue())
 
-				Expect(solution[2].Package.GetName()).To(Equal("c"))
+				Expect(solution[2].Package.GetName()).To(Equal("d"))
 				Expect(solution[2].Value).To(BeTrue())
-
-				Expect(solution[3].Package.GetName()).To(Equal("d"))
-				Expect(solution[3].Value).To(BeTrue())
-				Expect(len(solution)).To(Equal(4))
+				Expect(len(solution)).To(Equal(3))
 
 				newsolution := solution.Drop(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
-				Expect(len(newsolution)).To(Equal(3))
+				Expect(len(newsolution)).To(Equal(2))
 
-				Expect(newsolution[0].Package.GetName()).To(Equal("a"))
-				Expect(newsolution[0].Value).To(BeFalse())
+				Expect(newsolution[0].Package.GetName()).To(Equal("b"))
+				Expect(newsolution[0].Value).To(BeTrue())
 
-				Expect(newsolution[1].Package.GetName()).To(Equal("b"))
+				Expect(newsolution[1].Package.GetName()).To(Equal("c"))
 				Expect(newsolution[1].Value).To(BeTrue())
-
-				Expect(newsolution[2].Package.GetName()).To(Equal("c"))
-				Expect(newsolution[2].Value).To(BeTrue())
 
 			}
 		})
@@ -146,11 +140,11 @@ var _ = Describe("Tree", func() {
 
 				base, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "base", Category: "layer", Version: "0.2"})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(solution).To(ContainElement(solver.PackageAssert{Package: pack.(*pkg.DefaultPackage), Value: false}))
+				Expect(solution).ToNot(ContainElement(solver.PackageAssert{Package: pack.(*pkg.DefaultPackage), Value: true}))
 				Expect(solution).To(ContainElement(solver.PackageAssert{Package: D.(*pkg.DefaultPackage), Value: true}))
-				Expect(solution).To(ContainElement(solver.PackageAssert{Package: extra.(*pkg.DefaultPackage), Value: false}))
-				Expect(solution).To(ContainElement(solver.PackageAssert{Package: base.(*pkg.DefaultPackage), Value: false}))
-				Expect(len(solution)).To(Equal(6))
+				Expect(solution).ToNot(ContainElement(solver.PackageAssert{Package: extra.(*pkg.DefaultPackage), Value: true}))
+				Expect(solution).ToNot(ContainElement(solver.PackageAssert{Package: base.(*pkg.DefaultPackage), Value: true}))
+				Expect(len(solution)).To(Equal(3))
 			}
 		})
 	})

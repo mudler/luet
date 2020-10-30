@@ -131,7 +131,15 @@ func (s *Solver) noRulesInstalled() bool {
 
 func (s *Solver) BuildInstalled() (bf.Formula, error) {
 	var formulas []bf.Formula
+	var packages pkg.Packages
 	for _, p := range s.Installed() {
+		packages = append(packages, p)
+		for _, dep := range p.Related(s.DefinitionDatabase) {
+			packages = append(packages, dep)
+		}
+	}
+
+	for _, p := range packages {
 		solvable, err := p.BuildFormula(s.DefinitionDatabase, s.SolverDatabase)
 		if err != nil {
 			return nil, err
@@ -159,6 +167,7 @@ func (s *Solver) BuildWorld(includeInstalled bool) (bf.Formula, error) {
 	}
 
 	for _, p := range s.World() {
+
 		solvable, err := p.BuildFormula(s.DefinitionDatabase, s.SolverDatabase)
 		if err != nil {
 			return nil, err
@@ -166,6 +175,44 @@ func (s *Solver) BuildWorld(includeInstalled bool) (bf.Formula, error) {
 		formulas = append(formulas, solvable...)
 	}
 	return bf.And(formulas...), nil
+}
+
+// BuildWorld builds the formula which olds the requirements from the package definitions
+// which are available (global state)
+func (s *Solver) BuildPartialWorld(includeInstalled bool) (bf.Formula, error) {
+	var formulas []bf.Formula
+	// NOTE: This block shouldf be enabled in case of very old systems with outdated world sets
+	if includeInstalled {
+		solvable, err := s.BuildInstalled()
+		if err != nil {
+			return nil, err
+		}
+		//f = bf.And(f, solvable)
+		formulas = append(formulas, solvable)
+	}
+
+	var packages pkg.Packages
+	for _, p := range s.Wanted {
+		//	packages = append(packages, p)
+		for _, dep := range p.Related(s.DefinitionDatabase) {
+			packages = append(packages, dep)
+		}
+
+	}
+
+	for _, p := range packages {
+		solvable, err := p.BuildFormula(s.DefinitionDatabase, s.SolverDatabase)
+		if err != nil {
+			return nil, err
+		}
+		formulas = append(formulas, solvable...)
+	}
+
+	if len(formulas) != 0 {
+		return bf.And(formulas...), nil
+	}
+	return bf.True, nil
+
 }
 
 func (s *Solver) getList(db pkg.PackageDatabase, lsp pkg.Packages) (pkg.Packages, error) {
@@ -377,17 +424,6 @@ func (s *Solver) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssert
 		}
 	}
 
-	// resolve to packages from the db to be able to encode correctly
-	oldPackages, err := s.getList(universe, notUptodate)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't get package marked for removal from universe")
-	}
-
-	updates, err := s.getList(universe, toUpgrade)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't get package marked for update from universe")
-	}
-
 	var formulas []bf.Formula
 
 	// Build constraints for the whole defdb
@@ -398,11 +434,11 @@ func (s *Solver) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssert
 
 	// Treat removed packages from universe as marked for deletion
 	if dropremoved {
-		oldPackages = append(oldPackages, removed...)
+		notUptodate = append(notUptodate, removed...)
 	}
 
 	// SAT encode the clauses against the world
-	for _, p := range oldPackages.Unique() {
+	for _, p := range notUptodate.Unique() {
 		encodedP, err := p.Encode(universe)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "couldn't encode package")
@@ -411,7 +447,7 @@ func (s *Solver) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssert
 		formulas = append(formulas, bf.And(bf.Not(P), r))
 	}
 
-	for _, p := range updates {
+	for _, p := range toUpgrade {
 		encodedP, err := p.Encode(universe)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "couldn't encode package")
@@ -421,6 +457,10 @@ func (s *Solver) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssert
 	}
 
 	markedForRemoval := pkg.Packages{}
+
+	if len(formulas) == 0 {
+		return pkg.Packages{}, PackagesAssertions{}, nil
+	}
 	model := bf.Solve(bf.And(formulas...))
 	if model == nil {
 		return nil, nil, errors.New("Failed finding a solution")
@@ -477,7 +517,6 @@ func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAsser
 			ass = append(ass, PackageAssert{Package: i.(*pkg.DefaultPackage), Value: true})
 		}
 	}
-
 	// Then try to uninstall the versions in the system, and store that tree
 	for _, p := range toUninstall {
 		r, err := s.Uninstall(p, checkconflicts, false)
@@ -491,7 +530,9 @@ func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAsser
 			}
 		}
 	}
-
+	if len(toInstall) == 0 {
+		return toUninstall, PackagesAssertions{}, nil
+	}
 	r, e := s2.Install(toInstall)
 	return toUninstall, r, e
 	// To that tree, ask to install the versions that should be upgraded, and try to solve
@@ -587,16 +628,18 @@ func (s *Solver) Uninstall(c pkg.Package, checkconflicts, full bool) (pkg.Packag
 // BuildFormula builds the main solving formula that is evaluated by the sat solver.
 func (s *Solver) BuildFormula() (bf.Formula, error) {
 	var formulas []bf.Formula
-	r, err := s.BuildWorld(false)
+	r, err := s.BuildPartialWorld(false)
 	if err != nil {
 		return nil, err
 	}
+
 	for _, wanted := range s.Wanted {
 		encodedW, err := wanted.Encode(s.SolverDatabase)
 		if err != nil {
 			return nil, err
 		}
 		W := bf.Var(encodedW)
+		//	allW = append(allW, W)
 		installedWorld := s.Installed()
 		//TODO:Optimize
 		if len(installedWorld) == 0 {
@@ -614,8 +657,8 @@ func (s *Solver) BuildFormula() (bf.Formula, error) {
 		}
 
 	}
-	formulas = append(formulas, r)
 
+	formulas = append(formulas, r)
 	return bf.And(formulas...), nil
 }
 
