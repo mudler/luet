@@ -74,7 +74,8 @@ testFullInstall() {
 testInstallAgain() {
     output=$(luet install --solver-type qlearning --config $tmpdir/luet.yaml test/d test/f test/e test/a)
     installst=$?
-    assertEquals 'install test successfully' "$installst" "0"
+    echo "$output"
+    assertEquals 'install test successfully' "0" "$installst"
     assertNotContains 'contains warning' "$output" 'Filtering out'
     assertTrue 'package D installed' "[ -e '$tmpdir/testrootfs/d' ]"
     assertTrue 'package F installed' "[ -e '$tmpdir/testrootfs/f' ]"

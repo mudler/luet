@@ -237,7 +237,7 @@ func (cs *LuetCompiler) stripIncludesFromRootfs(includes []string, rootfs string
 
 func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage string, concurrency int, keepPermissions, keepImg bool, p CompilationSpec, generateArtifact bool) (Artifact, error) {
 
-	pkgTag := ":package:  " + p.GetPackage().GetName()
+	pkgTag := ":package: " + p.GetPackage().HumanReadableString()
 
 	// Use packageImage as salt into the fp being used
 	// so the hash is unique also in cases where
@@ -296,7 +296,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		}
 	}
 
-	Info(pkgTag, "Generating :whale: definition for builder image from", image)
+	Info(pkgTag, ":whale: Generating 'builder' image definition from", image)
 
 	// First we create the builder image
 	p.WriteBuildImageDefinition(filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+"-builder.dockerfile"))
@@ -433,7 +433,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 
 		artifact.SetCompileSpec(p)
 	} else {
-		Info(pkgTag, "Generating delta")
+		Info(pkgTag, ":hammer: Generating delta")
 		diffs, err := cs.Backend.Changes(p.Rel(p.GetPackage().GetFingerPrint()+"-builder.image.tar"), p.Rel(p.GetPackage().GetFingerPrint()+".image.tar"))
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not generate changes from layers")
@@ -589,8 +589,8 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 
 		for _, assertion := range dependencies { //highly dependent on the order
 			currentN++
-			pkgTag := fmt.Sprintf(":package:  %d/%d %s ⤑ %s", currentN, depsN, p.GetPackage().HumanReadableString(), assertion.Package.HumanReadableString())
-			Info(pkgTag, "   :zap:  Building dependency")
+			pkgTag := fmt.Sprintf(":package: %d/%d %s ⤑ :hammer: build %s", currentN, depsN, p.GetPackage().HumanReadableString(), assertion.Package.HumanReadableString())
+			Info(pkgTag, " starts")
 			compileSpec, err := cs.FromPackage(assertion.Package)
 			if err != nil {
 				return nil, errors.Wrap(err, "Error while generating compilespec for "+assertion.Package.GetName())
@@ -622,7 +622,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 				//		break // stop at first error
 			}
 			departifacts = append(departifacts, artifact)
-			Info(pkgTag, ":collision: Done")
+			Info(pkgTag, ":white_check_mark: Done")
 		}
 
 	} else if len(dependencies) > 0 {
@@ -630,7 +630,8 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	}
 
 	if !cs.Options.OnlyDeps {
-		Info(":package:", p.GetPackage().HumanReadableString(), ":cyclone:  Building package target from:", lastHash)
+		Info(":rocket: All dependencies are satisfied, building package requested by the user", p.GetPackage().HumanReadableString())
+		Info(":package:", p.GetPackage().HumanReadableString(), " Using image: ", lastHash)
 		artifact, err := cs.compileWithImage(lastHash, "", targetPackageHash, concurrency, keepPermissions, cs.KeepImg, p, true)
 		if err != nil {
 			return artifact, err

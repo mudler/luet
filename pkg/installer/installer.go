@@ -69,8 +69,10 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 		return err
 	}
 
-	Info(":thinking: Computing upgrade, please hang tight")
-
+	Info(":thinking: Computing upgrade, please hang tight... :zzz:")
+	if l.Options.UpgradeNewRevisions {
+		Info(":memo: note: will consider new build revisions while upgrading")
+	}
 	Spinner(32)
 	defer SpinnerStop()
 	// First match packages against repositories by priority
@@ -97,7 +99,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	SpinnerStop()
 
 	if len(uninstall) > 0 {
-		Info("Packages marked for uninstall:")
+		Info(":recycle: Packages marked for uninstall:")
 	}
 
 	for _, p := range uninstall {
@@ -105,7 +107,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	}
 
 	if len(solution) > 0 {
-		Info("Packages marked for upgrade:")
+		Info(":zap: Packages marked for upgrade:")
 	}
 
 	toInstall := pkg.Packages{}
@@ -118,13 +120,13 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	}
 
 	if l.Options.UpgradeNewRevisions {
-		Info("Checking packages with new revisions available")
+		Info(":mag: Checking packages with new revisions available")
 		for _, p := range s.Database.World() {
 			matches := syncedRepos.PackageMatches(pkg.Packages{p})
 			if len(matches) == 0 {
 				// Package missing. the user should run luet upgrade --universe
-				Info("Installed packages seems to be missing from remote repositories.")
-				Info("It is suggested to run 'luet upgrade --universe'")
+				Info(":warning: Installed packages seems to be missing from remote repositories.")
+				Info(":warning: It is suggested to run 'luet upgrade --universe'")
 				continue
 			}
 			for _, artefact := range matches[0].Repo.GetIndex() {
@@ -293,7 +295,7 @@ func (l *LuetInstaller) Reclaim(s *System) error {
 					if err != nil {
 						return err
 					}
-					Info("Found package:", p.HumanReadableString())
+					Info(":mag: Found package:", p.HumanReadableString())
 					toMerge = append(toMerge, ArtifactMatch{Artifact: artefact, Package: p})
 					break FILES
 				}
@@ -314,7 +316,7 @@ func (l *LuetInstaller) Reclaim(s *System) error {
 			return errors.Wrap(err, "Failed creating package")
 		}
 		s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: pack.GetFingerPrint(), Files: match.Artifact.GetFiles()})
-		Info("Reclaimed package:", pack.HumanReadableString())
+		Info(":zap: Reclaimed package:", pack.HumanReadableString())
 	}
 	Info("Done!")
 
@@ -396,7 +398,7 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *Sy
 				// Filter out already installed
 				if _, err := s.Database.FindPackage(currentPack); err != nil {
 					toInstall[currentPack.GetFingerPrint()] = ArtifactMatch{Package: currentPack, Artifact: artefact, Repository: matches[0].Repo}
-					Info("\t:package:", currentPack.HumanReadableString(), "from repository", matches[0].Repo.GetName())
+					Info("\t:package:", currentPack.HumanReadableString(), ":cloud:", matches[0].Repo.GetName())
 				}
 				break A
 			}
@@ -467,12 +469,12 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *Sy
 						return errors.Wrap(err, "Error getting package "+ass.Package.HumanReadableString())
 					}
 					if helpers.Exists(treePackage.Rel(tree.FinalizerFile)) {
-						Info("Executing finalizer for " + ass.Package.HumanReadableString())
 						finalizerRaw, err := ioutil.ReadFile(treePackage.Rel(tree.FinalizerFile))
 						if err != nil && !l.Options.Force {
 							return errors.Wrap(err, "Error reading file "+treePackage.Rel(tree.FinalizerFile))
 						}
 						if _, exists := executedFinalizer[ass.Package.GetFingerPrint()]; !exists {
+							Info("Executing finalizer for " + ass.Package.HumanReadableString())
 							finalizer, err := NewLuetFinalizerFromYaml(finalizerRaw)
 							if err != nil && !l.Options.Force {
 								return errors.Wrap(err, "Error reading finalizer "+treePackage.Rel(tree.FinalizerFile))
@@ -496,12 +498,12 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *Sy
 				return errors.Wrap(err, "Error getting package "+c.Package.HumanReadableString())
 			}
 			if helpers.Exists(treePackage.Rel(tree.FinalizerFile)) {
-				Info("Executing finalizer for " + c.Package.HumanReadableString())
 				finalizerRaw, err := ioutil.ReadFile(treePackage.Rel(tree.FinalizerFile))
 				if err != nil && !l.Options.Force {
 					return errors.Wrap(err, "Error reading file "+treePackage.Rel(tree.FinalizerFile))
 				}
 				if _, exists := executedFinalizer[c.Package.GetFingerPrint()]; !exists {
+					Info(":shell: Executing finalizer for " + c.Package.HumanReadableString())
 					finalizer, err := NewLuetFinalizerFromYaml(finalizerRaw)
 					if err != nil && !l.Options.Force {
 						return errors.Wrap(err, "Error reading finalizer "+treePackage.Rel(tree.FinalizerFile))
@@ -630,7 +632,7 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 		return errors.Wrap(err, "Failed removing package from database")
 	}
 
-	Info(p.GetFingerPrint(), "Removed")
+	Info(":recycle:", p.GetFingerPrint(), "Removed :heavy_check_mark:")
 	return nil
 }
 
@@ -638,7 +640,7 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 	Spinner(32)
 	defer SpinnerStop()
 
-	Info("Uninstalling :package:", p.HumanReadableString(), "hang tight")
+	Info(":recycle: Uninstalling :package:", p.HumanReadableString(), "hang tight")
 
 	// compute uninstall from all world - remove packages in parallel - run uninstall finalizer (in order) TODO - mark the uninstallation in db
 	// Get installed definition
@@ -661,7 +663,7 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 	}
 
 	if !l.Options.NoDeps {
-		Info("Finding :package:", p.HumanReadableString(), "dependency graph :deciduous_tree:")
+		Info(":mag: Finding :package:", p.HumanReadableString(), "dependency graph :deciduous_tree:")
 		solv := solver.NewResolver(solver.Options{Type: l.Options.SolverOptions.Implementation, Concurrency: l.Options.Concurrency}, installedtmp, installedtmp, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
 		var solution pkg.Packages
 		var err error
@@ -678,19 +680,19 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 		}
 
 		for _, p := range solution {
-			Info("Uninstalling", p.HumanReadableString())
+			Info(":recycle: Uninstalling", p.HumanReadableString())
 			err := l.uninstall(p, s)
 			if err != nil && !l.Options.Force {
 				return errors.Wrap(err, "Uninstall failed")
 			}
 		}
 	} else {
-		Info("Uninstalling", p.HumanReadableString(), "without deps")
+		Info(":recycle: Uninstalling", p.HumanReadableString(), "without deps")
 		err := l.uninstall(p, s)
 		if err != nil && !l.Options.Force {
 			return errors.Wrap(err, "Uninstall failed")
 		}
-		Info(":package:", p.HumanReadableString(), "uninstalled")
+		Info(":recycle: :package:", p.HumanReadableString(), "uninstalled :heavy_check_mark:")
 	}
 	return nil
 

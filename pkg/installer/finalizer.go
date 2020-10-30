@@ -47,7 +47,7 @@ func (f *LuetFinalizer) RunInstall(s *System) error {
 
 	for _, c := range f.Install {
 		toRun := append(args, c)
-		Info("Executing finalizer on ", s.Target, cmd, toRun)
+		Info(":shell: Executing finalizer on ", s.Target, cmd, toRun)
 		if s.Target == "/" {
 			cmd := exec.Command(cmd, toRun...)
 			stdoutStderr, err := cmd.CombinedOutput()

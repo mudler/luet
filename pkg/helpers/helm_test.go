@@ -24,7 +24,7 @@ import (
 var _ = Describe("Helpers", func() {
 	Context("RenderHelm", func() {
 		It("Renders templates", func() {
-			out, err := RenderHelm("{{.Values.Test}}",map[string]interface{}{"Test":"foo"})
+			out, err := RenderHelm("{{.Values.Test}}", map[string]interface{}{"Test": "foo"})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(out).To(Equal("foo"))
 		})
