@@ -17,10 +17,12 @@ package solver_test
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 
 	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/tests/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -144,13 +146,17 @@ var _ = Describe("Solver Benchmarks", func() {
 	Context("Complex data sets - Parallel Upgrades", func() {
 		BeforeEach(func() {
 			db = pkg.NewInMemoryDatabase(false)
-			dbInstalled = pkg.NewInMemoryDatabase(false)
+			//	dbInstalled = pkg.NewInMemoryDatabase(false)
 			dbDefinitions = pkg.NewInMemoryDatabase(false)
 			s = NewSolver(Options{Type: ParallelSimple, Concurrency: 100}, dbInstalled, dbDefinitions, db)
 			if os.Getenv("BENCHMARK_TESTS") != "true" {
 				Skip("BENCHMARK_TESTS not enabled")
 			}
+			tmpfile, _ := ioutil.TempFile(os.TempDir(), "tests")
+			defer os.Remove(tmpfile.Name()) // clean up
+			dbInstalled = pkg.NewBoltDatabase(tmpfile.Name())
 		})
+
 		Measure("it should be fast in resolution from a 10000*8 dataset", func(b Benchmarker) {
 			runtime := b.Time("runtime", func() {
 				for i := 2; i < 10000; i++ {
@@ -199,6 +205,48 @@ var _ = Describe("Solver Benchmarks", func() {
 				Expect(ass).To(ContainElement(PackageAssert{Package: A, Value: true}))
 
 				Expect(len(packages)).To(Equal(5))
+				//	Expect(len(solution)).To(Equal(6))
+
+			})
+
+			Ω(runtime.Seconds()).Should(BeNumerically("<", 70), "Install() shouldn't take too long.")
+		}, 1)
+
+		Measure("it should be fast in installation with 12000 packages installed and 2000*8 available", func(b Benchmarker) {
+			runtime := b.Time("runtime", func() {
+				for i := 0; i < 2000; i++ {
+					C := pkg.NewPackage("C", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+					E := pkg.NewPackage("E", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+					F := pkg.NewPackage("F", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+					G := pkg.NewPackage("G", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+					H := pkg.NewPackage("H", strconv.Itoa(i), []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
+					D := pkg.NewPackage("D", strconv.Itoa(i), []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
+					B := pkg.NewPackage("B", strconv.Itoa(i), []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+					A := pkg.NewPackage("A", strconv.Itoa(i), []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+					for _, p := range []pkg.Package{A, B, C, D, E, F, G} {
+						_, err := dbDefinitions.CreatePackage(p)
+						Expect(err).ToNot(HaveOccurred())
+					}
+					fmt.Println("Creating package, run", i)
+				}
+
+				for i := 0; i < 12000; i++ {
+					x := helpers.RandomPackage()
+					_, err := dbInstalled.CreatePackage(x)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				G := pkg.NewPackage("G", strconv.Itoa(50000), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				H := pkg.NewPackage("H", strconv.Itoa(50000), []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", strconv.Itoa(50000), []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", strconv.Itoa(50000), []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", strconv.Itoa(50000), []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+
+				ass, err := s.Install([]pkg.Package{A})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(ass).To(ContainElement(PackageAssert{Package: pkg.NewPackage("A", "50000", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{}), Value: true}))
+				//Expect(ass).To(Equal(5))
 				//	Expect(len(solution)).To(Equal(6))
 
 			})
