@@ -627,9 +627,24 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 			continue
 		}
 
-		err := os.Remove(target)
+		fi, err := os.Stat(target)
 		if err != nil {
-			Warning("Failed removing file (not present in the system target ?)", target)
+			Warning("Failed removing file (not present in the system target ?)", target, err.Error())
+			continue
+		}
+		switch mode := fi.Mode(); {
+		case mode.IsDir():
+			files, err := ioutil.ReadDir(target)
+			if err != nil {
+				Warning("Failed reading target", target, err.Error())
+			}
+			if len(files) != 0 {
+				continue
+			}
+		}
+
+		if err = os.Remove(target); err != nil {
+			Warning("Failed removing file (not present in the system target ?)", target, err.Error())
 		}
 	}
 	err = s.Database.RemovePackageFiles(p)
