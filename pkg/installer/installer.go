@@ -359,30 +359,39 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *Sy
 	var solution solver.PackagesAssertions
 
 	if !l.Options.NoDeps {
+		Info(":deciduous_tree: Computing installation, hang tight")
 		solv := solver.NewResolver(solver.Options{Type: l.Options.SolverOptions.Implementation, Concurrency: l.Options.Concurrency}, s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
 		solution, err = solv.Install(p)
+		/// TODO: PackageAssertions needs to be a map[fingerprint]pack so lookup is in O(1)
 		if err != nil && !l.Options.Force {
 			return errors.Wrap(err, "Failed solving solution for package")
 		}
+		Info(":deciduous_tree: Finished calculating dependencies")
 		// Gathers things to install
+		Info(":deciduous_tree: Checking for packages already installed, and prepare for installation")
 		for _, assertion := range solution {
 			if assertion.Value {
+				if _, err := s.Database.FindPackage(assertion.Package); err == nil {
+					// skip matching if it is installed already
+					continue
+				}
 				packagesToInstall = append(packagesToInstall, assertion.Package)
 			}
 		}
 	} else if !l.Options.OnlyDeps {
 		for _, currentPack := range p {
+			if _, err := s.Database.FindPackage(currentPack); err == nil {
+				// skip matching if it is installed already
+				continue
+			}
 			packagesToInstall = append(packagesToInstall, currentPack)
 		}
 	}
-	Info(":deciduous_tree: Finding packages to install")
+	Info(":deciduous_tree: Finding packages to install from :cloud:")
 	// Gathers things to install
 	for _, currentPack := range packagesToInstall {
 		// Check if package is already installed.
-		if _, err := s.Database.FindPackage(currentPack); err == nil {
-			// skip matching if it is installed already
-			continue
-		}
+
 		matches := syncedRepos.PackageMatches(pkg.Packages{currentPack})
 		if len(matches) == 0 {
 			return errors.New("Failed matching solutions against repository for " + currentPack.HumanReadableString() + " where are definitions coming from?!")
