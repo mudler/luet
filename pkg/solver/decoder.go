@@ -163,7 +163,7 @@ func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fin
 	// Build a topological graph
 	for _, a := range unorderedAssertions {
 		currentPkg := a.Package
-		added := map[string][]*pkg.DefaultPackage{}
+		added := map[string]interface{}{}
 	REQUIRES:
 		for _, requiredDef := range currentPkg.GetRequires() {
 			if def, err := definitiondb.FindPackage(requiredDef); err == nil { // Provides: Get a chance of being override here
@@ -181,16 +181,7 @@ func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fin
 			}
 			// Expand also here, as we need to order them (or instead the solver should give back the dep correctly?)
 			graph.AddEdge(currentPkg.GetFingerPrint(), requiredDef.GetFingerPrint())
-
-			// The following is optional - it doesn't change the "correctness" of the solver results
-			// Here we add an extra edge between deps that share common dependendencies.
-			// This makes the link more stronger and balances the graph so it doesn't show
-			// different results for the same query, as they could be shuffled as don't have a direct connection.
-			for _, d := range added[currentPkg.GetFingerPrint()] {
-				graph.AddEdge(d.GetFingerPrint(), requiredDef.GetFingerPrint())
-			}
-			added[currentPkg.GetFingerPrint()] = append(added[currentPkg.GetFingerPrint()], requiredDef)
-
+			added[requiredDef.GetFingerPrint()] = nil
 		}
 	}
 	result, err := graph.TopSort(fingerprint)

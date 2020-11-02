@@ -388,37 +388,5 @@ var _ = Describe("Decoder", func() {
 
 			Expect(solution4.Drop(Y).AssertionHash()).To(Equal(solution4.HashFrom(Y)))
 		})
-		for index := 0; index < 300; index++ { // Just to make sure we don't have false positives
-
-			It("Always same solution", func() {
-
-				X := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				Y := pkg.NewPackage("Y", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
-				Z := pkg.NewPackage("Z", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
-				W := pkg.NewPackage("W", "", []*pkg.DefaultPackage{Z, Y}, []*pkg.DefaultPackage{})
-
-				for _, p := range []pkg.Package{X, Y, Z} {
-					_, err := dbDefinitions.CreatePackage(p)
-					Expect(err).ToNot(HaveOccurred())
-				}
-
-				for _, p := range []pkg.Package{} {
-					_, err := dbInstalled.CreatePackage(p)
-					Expect(err).ToNot(HaveOccurred())
-				}
-
-				solution, err := s.Install([]pkg.Package{W})
-				Expect(err).ToNot(HaveOccurred())
-
-				orderW, err := solution.Order(dbDefinitions, W.GetFingerPrint())
-				Expect(err).ToNot(HaveOccurred())
-				Expect(orderW[0].Package.GetName()).To(Equal("X"))
-				Expect(orderW[1].Package.GetName()).To(Equal("Y"))
-				Expect(orderW[2].Package.GetName()).To(Equal("Z"))
-				Expect(orderW[3].Package.GetName()).To(Equal("W"))
-			})
-
-		}
-
 	})
 })
