@@ -16,6 +16,7 @@ package topsort
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -98,6 +99,7 @@ func (n node) edges() []string {
 	for k := range n {
 		keys = append(keys, k)
 	}
+	sort.Strings(keys)
 	return keys
 }
 
