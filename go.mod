@@ -25,6 +25,7 @@ require (
 	github.com/moby/sys/mount v0.1.1-0.20200320164225-6154f11e6840 // indirect
 	github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
 	github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87
+	github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.0
 	github.com/otiai10/copy v1.2.1-0.20200916181228-26f84a0b1578
@@ -33,7 +34,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.6.3
-	github.com/stevenle/topsort v0.0.0-20130922064739-8130c1d7596b
 	go.etcd.io/bbolt v1.3.4
 	go.uber.org/atomic v1.5.1 // indirect
 	go.uber.org/multierr v1.4.0 // indirect
