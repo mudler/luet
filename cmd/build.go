@@ -15,9 +15,11 @@
 package cmd
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 
+	"github.com/ghodss/yaml"
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
@@ -83,7 +85,13 @@ var buildCmd = &cobra.Command{
 		full, _ := cmd.Flags().GetBool("full")
 		skip, _ := cmd.Flags().GetBool("skip-if-metadata-exists")
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
+		var results Results
 
+		out, _ := cmd.Flags().GetString("output")
+		if out != "terminal" {
+			LuetCfg.GetLogging().SetLogLevel("error")
+		}
+		pretend, _ := cmd.Flags().GetBool("pretend")
 		compilerSpecs := compiler.NewLuetCompilationspecs()
 		var compilerBackend compiler.CompilerBackend
 		var db pkg.PackageDatabase
@@ -205,9 +213,58 @@ var buildCmd = &cobra.Command{
 		if revdeps {
 			artifact, errs = luetCompiler.CompileWithReverseDeps(privileged, compilerSpecs)
 
+		} else if pretend {
+			toCalculate := []compiler.CompilationSpec{}
+			if full {
+				var err error
+				toCalculate, err = luetCompiler.ComputeMinimumCompilableSet(compilerSpecs.All()...)
+				if err != nil {
+					errs = append(errs, err)
+				}
+			} else {
+				toCalculate = compilerSpecs.All()
+			}
+
+			for _, sp := range toCalculate {
+				packs, err := luetCompiler.ComputeDepTree(sp)
+				if err != nil {
+					errs = append(errs, err)
+				}
+				for _, p := range packs {
+					results.Packages = append(results.Packages,
+						PackageResult{
+							Name:       p.Package.GetName(),
+							Version:    p.Package.GetVersion(),
+							Category:   p.Package.GetCategory(),
+							Repository: "",
+							Hidden:     p.Package.IsHidden(),
+							Target:     sp.GetPackage().HumanReadableString(),
+						})
+				}
+			}
+
+			y, err := yaml.Marshal(results)
+			if err != nil {
+				fmt.Printf("err: %v\n", err)
+				return
+			}
+			switch out {
+			case "yaml":
+				fmt.Println(string(y))
+			case "json":
+				j2, err := yaml.YAMLToJSON(y)
+				if err != nil {
+					fmt.Printf("err: %v\n", err)
+					return
+				}
+				fmt.Println(string(j2))
+			case "terminal":
+				for _, p := range results.Packages {
+					Info(p.String())
+				}
+			}
 		} else {
 			artifact, errs = luetCompiler.CompileParallel(privileged, compilerSpecs)
-
 		}
 		if len(errs) != 0 {
 			for _, e := range errs {
@@ -251,6 +308,10 @@ func init() {
 	buildCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	buildCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	buildCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
+
+	buildCmd.Flags().Bool("pretend", false, "Just print what packages will be compiled")
+
+	buildCmd.Flags().StringP("output", "o", "terminal", "Output format ( Defaults: terminal, available: json,yaml )")
 
 	RootCmd.AddCommand(buildCmd)
 }

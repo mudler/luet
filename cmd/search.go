@@ -32,11 +32,16 @@ type PackageResult struct {
 	Category   string `json:"category"`
 	Version    string `json:"version"`
 	Repository string `json:"repository"`
+	Target     string `json:"target"`
 	Hidden     bool   `json:"hidden"`
 }
 
 type Results struct {
 	Packages []PackageResult `json:"packages"`
+}
+
+func (r PackageResult) String() string {
+	return fmt.Sprintf("%s/%s-%s required for %s", r.Category, r.Name, r.Version, r.Target)
 }
 
 var searchCmd = &cobra.Command{
