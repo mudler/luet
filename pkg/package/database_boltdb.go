@@ -374,6 +374,11 @@ func (db *BoltDatabase) FindPackages(p Package) (Packages, error) {
 
 // FindPackageVersions return the list of the packages beloging to cat/name
 func (db *BoltDatabase) FindPackageVersions(p Package) (Packages, error) {
+	// Provides: Treat as the replaced package here
+	if provided, err := db.getProvide(p); err == nil {
+		p = provided
+	}
+
 	var versionsInWorld []Package
 	for _, w := range db.World() {
 		if w.GetName() != p.GetName() || w.GetCategory() != p.GetCategory() {

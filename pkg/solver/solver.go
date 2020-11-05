@@ -495,14 +495,20 @@ func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAsser
 		availableCache[p.GetName()+p.GetCategory()] = append(availableCache[p.GetName()+p.GetCategory()], p)
 	}
 
+	// we do this in memory so we take into account of provides
+	universe := pkg.NewInMemoryDatabase(false)
+	for _, p := range s.DefinitionDatabase.World() {
+		universe.CreatePackage(p)
+	}
+
 	installedcopy := pkg.NewInMemoryDatabase(false)
 
 	for _, p := range s.InstalledDatabase.World() {
 		installedcopy.CreatePackage(p)
-		packages, ok := availableCache[p.GetName()+p.GetCategory()]
-		if ok && len(packages) != 0 {
+		packages, err := universe.FindPackageVersions(p)
+		if err == nil && len(packages) != 0 {
 			best := packages.Best(nil)
-			if best.GetVersion() != p.GetVersion() {
+			if !best.Matches(p) {
 				toUninstall = append(toUninstall, p)
 				toInstall = append(toInstall, best)
 			}

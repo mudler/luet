@@ -1209,7 +1209,6 @@ var _ = Describe("Solver", func() {
 		})
 	})
 	Context("Upgrades", func() {
-
 		C := pkg.NewPackage("c", "1.5", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "a", Version: ">=1.0", Category: "test"}}, []*pkg.DefaultPackage{})
 		C.SetCategory("test")
 		B := pkg.NewPackage("b", "1.0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -1218,6 +1217,17 @@ var _ = Describe("Solver", func() {
 		A.SetCategory("test")
 		A1 := pkg.NewPackage("a", "1.2", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "b", Version: "1.0", Category: "test"}}, []*pkg.DefaultPackage{})
 		A1.SetCategory("test")
+
+		BeforeEach(func() {
+			C = pkg.NewPackage("c", "1.5", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "a", Version: ">=1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+			C.SetCategory("test")
+			B = pkg.NewPackage("b", "1.0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B.SetCategory("test")
+			A = pkg.NewPackage("a", "1.1", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "b", Version: "1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+			A.SetCategory("test")
+			A1 = pkg.NewPackage("a", "1.2", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "b", Version: "1.0", Category: "test"}}, []*pkg.DefaultPackage{})
+			A1.SetCategory("test")
+		})
 
 		It("upgrades correctly", func() {
 			for _, p := range []pkg.Package{A1, B, C} {
@@ -1240,7 +1250,31 @@ var _ = Describe("Solver", func() {
 			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
 			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: false}))
 			Expect(len(solution)).To(Equal(3))
+		})
 
+		It("upgrades correctly with provides", func() {
+			B.SetProvides([]*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "a", Version: ">=0", Category: "test"}, &pkg.DefaultPackage{Name: "c", Version: ">=0", Category: "test"}})
+
+			for _, p := range []pkg.Package{A1, B} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, C} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			uninstall, solution, err := s.Upgrade(true, true)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(uninstall)).To(Equal(2))
+			Expect(uninstall[1].GetName()).To(Equal("c"))
+			Expect(uninstall[1].GetVersion()).To(Equal("1.5"))
+			Expect(uninstall[0].GetName()).To(Equal("a"))
+			Expect(uninstall[0].GetVersion()).To(Equal("1.1"))
+
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(len(solution)).To(Equal(1))
 		})
 
 		It("UpgradeUniverse upgrades correctly", func() {

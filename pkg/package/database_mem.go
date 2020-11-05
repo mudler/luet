@@ -225,6 +225,11 @@ func (db *InMemoryDatabase) FindPackage(p Package) (Package, error) {
 
 // FindPackages return the list of the packages beloging to cat/name
 func (db *InMemoryDatabase) FindPackageVersions(p Package) (Packages, error) {
+	// Provides: Treat as the replaced package here
+	if provided, err := db.getProvide(p); err == nil {
+		p = provided
+	}
+
 	versions, ok := db.CacheNoVersion[p.GetPackageName()]
 	if !ok {
 		return nil, errors.New("No versions found for package")
