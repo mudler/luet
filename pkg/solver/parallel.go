@@ -556,10 +556,11 @@ func (s *Parallel) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAss
 
 	toUninstall := pkg.Packages{}
 	toInstall := pkg.Packages{}
-	availableCache := map[string]pkg.Packages{}
+
+	// we do this in memory so we take into account of provides
+	universe := pkg.NewInMemoryDatabase(false)
 	for _, p := range s.DefinitionDatabase.World() {
-		// Each one, should be expanded
-		availableCache[p.GetName()+p.GetCategory()] = append(availableCache[p.GetName()+p.GetCategory()], p)
+		universe.CreatePackage(p)
 	}
 
 	installedcopy := pkg.NewInMemoryDatabase(false)
@@ -575,10 +576,10 @@ func (s *Parallel) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAss
 			defer wg.Done()
 			for p := range c {
 				installedcopy.CreatePackage(p)
-				packages, ok := availableCache[p.GetName()+p.GetCategory()]
-				if ok && len(packages) != 0 {
+				packages, err := universe.FindPackageVersions(p)
+				if err == nil && len(packages) != 0 {
 					best := packages.Best(nil)
-					if best.GetVersion() != p.GetVersion() {
+					if !best.Matches(p) {
 						results <- []pkg.Package{p, best}
 					}
 				}

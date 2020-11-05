@@ -489,12 +489,6 @@ func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAsser
 	toUninstall := pkg.Packages{}
 	toInstall := pkg.Packages{}
 
-	availableCache := map[string]pkg.Packages{}
-	for _, p := range s.DefinitionDatabase.World() {
-		// Each one, should be expanded
-		availableCache[p.GetName()+p.GetCategory()] = append(availableCache[p.GetName()+p.GetCategory()], p)
-	}
-
 	// we do this in memory so we take into account of provides
 	universe := pkg.NewInMemoryDatabase(false)
 	for _, p := range s.DefinitionDatabase.World() {
