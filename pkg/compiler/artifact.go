@@ -347,7 +347,8 @@ func (a *PackageArtifact) GetProtectFiles() []string {
 		cp := NewConfigProtect(annotationDir)
 		cp.Map(a.Files)
 
-		ans = cp.GetProtectFiles()
+		// NOTE: for unpack we need files path without initial /
+		ans = cp.GetProtectFiles(false)
 	}
 
 	return ans
