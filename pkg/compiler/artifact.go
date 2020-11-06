@@ -334,12 +334,15 @@ func (a *PackageArtifact) GetProtectFiles() []string {
 
 	if !LuetCfg.ConfigProtectSkip {
 
-		if a.CompileSpec.GetPackage().HasAnnotation(string(pkg.ConfigProtectAnnnotation)) {
+		// a.CompileSpec could be nil when artifact.Unpack is used for tree tarball
+		if a.CompileSpec != nil &&
+			a.CompileSpec.GetPackage().HasAnnotation(string(pkg.ConfigProtectAnnnotation)) {
 			dir, ok := a.CompileSpec.GetPackage().GetAnnotations()[string(pkg.ConfigProtectAnnnotation)]
 			if ok {
 				annotationDir = dir
 			}
 		}
+		// TODO: check if skip this if we have a.CompileSpec nil
 
 		cp := NewConfigProtect(annotationDir)
 		cp.Map(a.Files)
