@@ -91,18 +91,26 @@ func (c *ConfigProtect) Map(files []string) {
 		}
 	nextFile:
 	}
+
 }
 
 func (c *ConfigProtect) Protected(file string) bool {
+	if file[0:1] != "/" {
+		file = "/" + file
+	}
 	_, ans := c.MapProtected[file]
 	return ans
 }
 
-func (c *ConfigProtect) GetProtectFiles() []string {
+func (c *ConfigProtect) GetProtectFiles(withSlash bool) []string {
 	ans := []string{}
 
 	for key, _ := range c.MapProtected {
-		ans = append(ans, key)
+		if withSlash {
+			ans = append(ans, key)
+		} else {
+			ans = append(ans, key[1:])
+		}
 	}
 	return ans
 }
