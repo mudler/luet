@@ -78,6 +78,9 @@ var upgradeCmd = &cobra.Command{
 
 		Debug("Solver", LuetCfg.GetSolverOptions().String())
 
+		// Load config protect configs
+		installer.LoadConfigProtectConfs(LuetCfg)
+
 		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
 			Concurrency:                LuetCfg.GetGeneral().Concurrency,
 			SolverOptions:              *LuetCfg.GetSolverOptions(),
