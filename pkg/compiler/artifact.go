@@ -332,9 +332,7 @@ func (a *PackageArtifact) GetProtectFiles() []string {
 	ans := []string{}
 	annotationDir := ""
 
-	if !LuetCfg.ConfigProtectSkip &&
-		LuetCfg.GetConfigProtectConfFiles() != nil &&
-		len(LuetCfg.GetConfigProtectConfFiles()) > 0 {
+	if !LuetCfg.ConfigProtectSkip {
 
 		if a.CompileSpec.GetPackage().HasAnnotation(string(pkg.ConfigProtectAnnnotation)) {
 			dir, ok := a.CompileSpec.GetPackage().GetAnnotations()[string(pkg.ConfigProtectAnnnotation)]
