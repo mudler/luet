@@ -48,6 +48,9 @@ type ConfigProtect struct {
 }
 
 func NewConfigProtect(annotationDir string) *ConfigProtect {
+	if len(annotationDir) > 0 && annotationDir[0:1] != "/" {
+		annotationDir = "/" + annotationDir
+	}
 	return &ConfigProtect{
 		AnnotationDir: annotationDir,
 		MapProtected:  make(map[string]bool, 0),
