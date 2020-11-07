@@ -6,6 +6,8 @@ go:
 env:
   global:
     - "GO15VENDOREXPERIMENT=1"
+  jobs:
+    - "DOCKER_BUILDKIT=0"
     - "DOCKER_BUILDKIT=1"
 before_install:
   - sudo rm -rf /var/lib/apt/lists/*

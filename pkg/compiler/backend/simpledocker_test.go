@@ -102,7 +102,7 @@ RUN echo bar > /test2`))
 			Expect(helpers.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
 
 			artifacts := []ArtifactNode{}
-			if os.Getenv("DOCKER_BUILDKIT") != "" {
+			if os.Getenv("DOCKER_BUILDKIT") == "1" {
 				artifacts = append(artifacts, ArtifactNode{Name: "/etc/resolv.conf", Size: 0})
 			}
 			artifacts = append(artifacts, ArtifactNode{Name: "/test", Size: 4})
