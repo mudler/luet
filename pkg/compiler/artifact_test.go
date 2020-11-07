@@ -118,6 +118,7 @@ RUN echo bar > /test2`))
 					ToImage:   filepath.Join(tmpdir, "output2.tar"),
 					Diffs: ArtifactDiffs{
 						Additions: []ArtifactNode{
+							{Name: "/etc/resolv.conf", Size: 0},
 							{Name: "/test", Size: 4},
 							{Name: "/test2", Size: 4},
 						},
