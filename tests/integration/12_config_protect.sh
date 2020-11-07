@@ -36,9 +36,9 @@ testRepo() {
 testConfig() {
     mkdir $tmpdir/testrootfs
 
-    mkdir $tmpdir/config.protect.d
+    mkdir $tmpdir/testrootfs/etc/luet/config.protect.d -p
 
-    cat <<EOF > $tmpdir/config.protect.d/conf1.yml
+    cat <<EOF > $tmpdir/testrootfs/etc/luet/config.protect.d/conf1.yml
 name: "protect1"
 dirs:
 - /etc/
@@ -52,7 +52,8 @@ system:
   database_path: "/"
   database_engine: "boltdb"
 config_protect_confdir:
-    - $tmpdir/config.protect.d
+    - /etc/luet/config.protect.d
+config_from_host: false
 repositories:
    - name: "main"
      type: "disk"

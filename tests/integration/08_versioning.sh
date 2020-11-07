@@ -50,6 +50,7 @@ system:
   rootfs: $tmpdir/testrootfs
   database_path: "/"
   database_engine: "boltdb"
+config_from_host: true
 repositories:
    - name: "main"
      type: "disk"

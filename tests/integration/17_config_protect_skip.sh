@@ -52,6 +52,7 @@ system:
   database_path: "/"
   database_engine: "boltdb"
 config_protect_skip: true
+config_from_host: true
 config_protect_confdir:
     - $tmpdir/config.protect.d
 repositories:
