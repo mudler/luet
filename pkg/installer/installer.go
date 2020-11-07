@@ -636,7 +636,7 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 		target := filepath.Join(s.Target, f)
 
 		if !config.LuetCfg.ConfigProtectSkip && cp.Protected(f) {
-			Debug("Protected file found", f)
+			Debug("Preserving protected file:", f)
 			continue
 		}
 
