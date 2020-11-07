@@ -30,11 +30,15 @@ import (
 
 func LoadRepositories(c *LuetConfig) error {
 	var regexRepo = regexp.MustCompile(`.yml$|.yaml$`)
+	var err error
+	rootfs := ""
 
 	// Respect the rootfs param on read repositories
-	rootfs, err := c.GetSystem().GetRootFsAbs()
-	if err != nil {
-		return err
+	if !c.ConfigFromHost {
+		rootfs, err = c.GetSystem().GetRootFsAbs()
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, rdir := range c.RepositoriesConfDir {

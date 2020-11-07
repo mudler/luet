@@ -30,11 +30,16 @@ import (
 
 func LoadConfigProtectConfs(c *LuetConfig) error {
 	var regexConfs = regexp.MustCompile(`.yml$`)
+	var err error
+
+	rootfs := ""
 
 	// Respect the rootfs param on read repositories
-	rootfs, err := c.GetSystem().GetRootFsAbs()
-	if err != nil {
-		return err
+	if !c.ConfigFromHost {
+		rootfs, err = c.GetSystem().GetRootFsAbs()
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, cdir := range c.ConfigProtectConfDir {

@@ -69,6 +69,7 @@
 #   Default $TMPDIR/tmpluet
 #   tmpdir_base: "/tmp/tmpluet"
 #
+#
 # ---------------------------------------------
 # Repositories configurations directories.
 # ---------------------------------------------
@@ -92,6 +93,11 @@
 # config protect confdir and packages
 # annotation.
 # config_protect_skip: false
+#
+# The paths used for load repositories and config
+# protects are based on host rootfs.
+# If set to false rootfs path is used as prefix.
+# config_from_host: true
 #
 # System repositories
 # ---------------------------------------------

@@ -208,6 +208,7 @@ type LuetConfig struct {
 	RepositoriesConfDir  []string         `mapstructure:"repos_confdir"`
 	ConfigProtectConfDir []string         `mapstructure:"config_protect_confdir"`
 	ConfigProtectSkip    bool             `mapstructure:"config_protect_skip"`
+	ConfigFromHost       bool             `mapstructure:"config_from_host"`
 	CacheRepositories    []LuetRepository `mapstructure:"repetitors"`
 	SystemRepositories   []LuetRepository `mapstructure:"repositories"`
 
@@ -255,6 +256,8 @@ func GenDefault(viper *v.Viper) {
 	viper.SetDefault("repos_confdir", []string{"/etc/luet/repos.conf.d"})
 	viper.SetDefault("config_protect_confdir", []string{"/etc/luet/config.protect.d"})
 	viper.SetDefault("config_protect_skip", false)
+	// TODO: Set default to false when we are ready for migration.
+	viper.SetDefault("config_from_host", true)
 	viper.SetDefault("cache_repositories", []string{})
 	viper.SetDefault("system_repositories", []string{})
 
