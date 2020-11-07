@@ -19,6 +19,7 @@ package installer
 import (
 	"io/ioutil"
 	"path"
+	"path/filepath"
 	"regexp"
 
 	"github.com/ghodss/yaml"
@@ -30,7 +31,15 @@ import (
 func LoadConfigProtectConfs(c *LuetConfig) error {
 	var regexConfs = regexp.MustCompile(`.yml$`)
 
+	// Respect the rootfs param on read repositories
+	rootfs, err := c.GetSystem().GetRootFsAbs()
+	if err != nil {
+		return err
+	}
+
 	for _, cdir := range c.ConfigProtectConfDir {
+		cdir = filepath.Join(rootfs, cdir)
+
 		Debug("Parsing Config Protect Directory", cdir, "...")
 
 		files, err := ioutil.ReadDir(cdir)
