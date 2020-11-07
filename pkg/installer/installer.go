@@ -610,16 +610,37 @@ func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan Arti
 }
 
 func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
+	var cp *config.ConfigProtect
+	annotationDir := ""
+
 	files, err := s.Database.GetPackageFiles(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed getting installed files")
 	}
 
+	if !config.LuetCfg.ConfigProtectSkip {
+
+		if p.HasAnnotation(string(pkg.ConfigProtectAnnnotation)) {
+			dir, ok := p.GetAnnotations()[string(pkg.ConfigProtectAnnnotation)]
+			if ok {
+				annotationDir = dir
+			}
+		}
+
+		cp = config.NewConfigProtect(annotationDir)
+		cp.Map(files)
+	}
+
 	// Remove from target
 	for _, f := range files {
 		target := filepath.Join(s.Target, f)
-		Debug("Removing", target)
 
+		if !config.LuetCfg.ConfigProtectSkip && cp.Protected(f) {
+			Debug("Preserving protected file:", f)
+			continue
+		}
+
+		Debug("Removing", target)
 		if l.Options.PreserveSystemEssentialData &&
 			strings.HasPrefix(f, config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()) ||
 			strings.HasPrefix(f, config.LuetCfg.GetSystem().GetSystemRepoDatabaseDirPath()) {

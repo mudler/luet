@@ -112,15 +112,19 @@ RUN echo bar > /test2`))
 			diffs, err := b.Changes(filepath.Join(tmpdir2, "output1.tar"), filepath.Join(tmpdir, "output2.tar"))
 			Expect(err).ToNot(HaveOccurred())
 
+			artifacts := []ArtifactNode{}
+			if os.Getenv("DOCKER_BUILDKIT") == "1" {
+				artifacts = append(artifacts, ArtifactNode{Name: "/etc/resolv.conf", Size: 0})
+			}
+			artifacts = append(artifacts, ArtifactNode{Name: "/test", Size: 4})
+			artifacts = append(artifacts, ArtifactNode{Name: "/test2", Size: 4})
+
 			Expect(diffs).To(Equal(
 				[]ArtifactLayer{{
 					FromImage: filepath.Join(tmpdir2, "output1.tar"),
 					ToImage:   filepath.Join(tmpdir, "output2.tar"),
 					Diffs: ArtifactDiffs{
-						Additions: []ArtifactNode{
-							{Name: "/test", Size: 4},
-							{Name: "/test2", Size: 4},
-						},
+						Additions: artifacts,
 					},
 				}}))
 			err = b.ExtractRootfs(CompilerBackendOptions{SourcePath: filepath.Join(tmpdir, "output2.tar"), Destination: rootfs}, false)

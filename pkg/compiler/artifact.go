@@ -330,35 +330,25 @@ func tarModifierWrapperFunc(dst, path string, header *tar.Header, content io.Rea
 
 func (a *PackageArtifact) GetProtectFiles() []string {
 	ans := []string{}
+	annotationDir := ""
 
-	if !LuetCfg.ConfigProtectSkip &&
-		LuetCfg.GetConfigProtectConfFiles() != nil &&
-		len(LuetCfg.GetConfigProtectConfFiles()) > 0 {
+	if !LuetCfg.ConfigProtectSkip {
 
-		for _, file := range a.Files {
-			for _, conf := range LuetCfg.GetConfigProtectConfFiles() {
-				for _, dir := range conf.Directories {
-					// Note file is without / at begin.
-					if strings.HasPrefix("/"+file, filepath.Clean(dir)) {
-						// docker archive modifier works with path without / at begin.
-						ans = append(ans, file)
-						goto nextFile
-					}
-				}
+		// a.CompileSpec could be nil when artifact.Unpack is used for tree tarball
+		if a.CompileSpec != nil &&
+			a.CompileSpec.GetPackage().HasAnnotation(string(pkg.ConfigProtectAnnnotation)) {
+			dir, ok := a.CompileSpec.GetPackage().GetAnnotations()[string(pkg.ConfigProtectAnnnotation)]
+			if ok {
+				annotationDir = dir
 			}
-
-			if a.CompileSpec.GetPackage().HasAnnotation(string(pkg.ConfigProtectAnnnotation)) {
-				dir, ok := a.CompileSpec.GetPackage().GetAnnotations()[string(pkg.ConfigProtectAnnnotation)]
-				if ok {
-					if strings.HasPrefix("/"+file, filepath.Clean(dir)) {
-						ans = append(ans, file)
-						goto nextFile
-					}
-				}
-			}
-
-		nextFile:
 		}
+		// TODO: check if skip this if we have a.CompileSpec nil
+
+		cp := NewConfigProtect(annotationDir)
+		cp.Map(a.Files)
+
+		// NOTE: for unpack we need files path without initial /
+		ans = cp.GetProtectFiles(false)
 	}
 
 	return ans
