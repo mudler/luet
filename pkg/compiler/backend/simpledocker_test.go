@@ -101,15 +101,19 @@ RUN echo bar > /test2`))
 			Expect(b.ImageDefinitionToTar(opts)).ToNot(HaveOccurred())
 			Expect(helpers.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
 
+			artifacts := []ArtifactNode{}
+			if os.Getenv("DOCKER_BUILDKIT") != "" {
+				artifacts = append(artifacts, ArtifactNode{Name: "/etc/resolv.conf", Size: 0})
+			}
+			artifacts = append(artifacts, ArtifactNode{Name: "/test", Size: 4})
+			artifacts = append(artifacts, ArtifactNode{Name: "/test2", Size: 4})
+
 			Expect(b.Changes(filepath.Join(tmpdir2, "output1.tar"), filepath.Join(tmpdir, "output2.tar"))).To(Equal(
 				[]ArtifactLayer{{
 					FromImage: filepath.Join(tmpdir2, "output1.tar"),
 					ToImage:   filepath.Join(tmpdir, "output2.tar"),
 					Diffs: ArtifactDiffs{
-						Additions: []ArtifactNode{
-							{Name: "/test", Size: 4},
-							{Name: "/test2", Size: 4},
-						},
+						Additions: artifacts,
 					},
 				}}))
 
