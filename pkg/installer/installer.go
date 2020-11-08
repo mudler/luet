@@ -663,7 +663,7 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 				Warning("Failed reading folder", target, err.Error())
 			}
 			if len(files) != 0 {
-				Warning("Preserving not-empty folder", target, err.Error())
+				Warning("Preserving not-empty folder", target)
 				continue
 			}
 		}
