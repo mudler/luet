@@ -1,0 +1,14 @@
+requires:
+- category: "layer"
+  name: "seed"
+  version: "1.0"
+prelude:
+  - echo foo > /test
+  - echo bar > /test2
+steps:
+  - echo artifact5 > /test5
+  - echo artifact6 > /test6
+  - echo artifact43 > /marvin
+unpack: true
+excludes:
+- marvin
