@@ -631,8 +631,10 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 		cp.Map(files)
 	}
 
+	toRemove, notPresent := helpers.OrderFiles(s.Target, files)
+
 	// Remove from target
-	for _, f := range files {
+	for _, f := range toRemove {
 		target := filepath.Join(s.Target, f)
 
 		if !config.LuetCfg.ConfigProtectSkip && cp.Protected(f) {
@@ -650,10 +652,7 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 
 		fi, err := os.Lstat(target)
 		if err != nil {
-			Warning("File not present in the system target ?", target, err.Error())
-			if err = os.Remove(target); err != nil {
-				Warning("Failed removing file", target, err.Error())
-			}
+			Warning("File not found (it was before?) ", err.Error())
 			continue
 		}
 		switch mode := fi.Mode(); {
@@ -663,15 +662,29 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 				Warning("Failed reading folder", target, err.Error())
 			}
 			if len(files) != 0 {
-				Warning("Preserving not-empty folder", target)
+				Debug("Preserving not-empty folder", target)
 				continue
 			}
 		}
 
 		if err = os.Remove(target); err != nil {
-			Warning("Failed removing file (not present in the system target ?)", target, err.Error())
+			Warning("Failed removing file (maybe not present in the system target anymore ?)", target, err.Error())
 		}
 	}
+
+	for _, f := range notPresent {
+		target := filepath.Join(s.Target, f)
+
+		if !config.LuetCfg.ConfigProtectSkip && cp.Protected(f) {
+			Debug("Preserving protected file:", f)
+			continue
+		}
+
+		if err = os.Remove(target); err != nil {
+			Debug("Failed removing file (not present in the system target)", target, err.Error())
+		}
+	}
+
 	err = s.Database.RemovePackageFiles(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed removing package files from database")

@@ -24,6 +24,37 @@ import (
 	copy "github.com/otiai10/copy"
 )
 
+func OrderFiles(target string, files []string) ([]string, []string) {
+
+	var newFiles []string
+	var notPresent []string
+
+	for _, f := range files {
+		target := filepath.Join(target, f)
+		fi, err := os.Lstat(target)
+		if err != nil {
+			notPresent = append(notPresent, f)
+			continue
+		}
+		if m := fi.Mode(); !m.IsDir() {
+			newFiles = append(newFiles, f)
+		}
+	}
+
+	for _, f := range files {
+		target := filepath.Join(target, f)
+		fi, err := os.Lstat(target)
+		if err != nil {
+			continue
+		}
+		if m := fi.Mode(); m.IsDir() {
+			newFiles = append(newFiles, f)
+		}
+	}
+
+	return newFiles, notPresent
+}
+
 func ListDir(dir string) ([]string, error) {
 	content := []string{}
 

@@ -16,6 +16,10 @@
 package helpers_test
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+
 	. "github.com/mudler/luet/pkg/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,6 +30,35 @@ var _ = Describe("Helpers", func() {
 		It("Detect existing and not-existing files", func() {
 			Expect(Exists("../../tests/fixtures/buildtree/app-admin/enman/1.4.0/build.yaml")).To(BeTrue())
 			Expect(Exists("../../tests/fixtures/buildtree/app-admin/enman/1.4.0/build.yaml.not.exists")).To(BeFalse())
+		})
+	})
+
+	Context("Orders dir and files correctly", func() {
+		It("puts files first and folders at end", func() {
+			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(testDir)
+
+			err = ioutil.WriteFile(filepath.Join(testDir, "foo"), []byte("test\n"), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = ioutil.WriteFile(filepath.Join(testDir, "baz"), []byte("test\n"), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = os.MkdirAll(filepath.Join(testDir, "bar"), 0755)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(filepath.Join(testDir, "bar", "foo"), []byte("test\n"), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = os.MkdirAll(filepath.Join(testDir, "baz2"), 0755)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(filepath.Join(testDir, "baz2", "foo"), []byte("test\n"), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			ordered, notExisting := OrderFiles(testDir, []string{"bar", "baz", "bar/foo", "baz2", "foo", "baz2/foo", "notexisting"})
+
+			Expect(ordered).To(Equal([]string{"baz", "bar/foo", "foo", "baz2/foo", "bar", "baz2"}))
+			Expect(notExisting).To(Equal([]string{"notexisting"}))
 		})
 	})
 })
