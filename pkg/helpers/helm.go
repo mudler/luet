@@ -1,7 +1,10 @@
 package helpers
 
 import (
+	"io/ioutil"
+
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/engine"
@@ -30,4 +33,27 @@ func RenderHelm(template string, values map[string]interface{}) (string, error) 
 	}
 
 	return out["templates"], nil
+}
+
+type templatedata map[string]interface{}
+
+func RenderFiles(toTemplate, valuesFile string) (string, error) {
+	raw, err := ioutil.ReadFile(toTemplate)
+	if err != nil {
+		return "", errors.Wrap(err, "reading file "+toTemplate)
+	}
+
+	if !Exists(valuesFile) {
+		return "", errors.Wrap(err, "file not existing "+valuesFile)
+	}
+	def, err := ioutil.ReadFile(valuesFile)
+	if err != nil {
+		return "", errors.Wrap(err, "reading file "+valuesFile)
+	}
+
+	var values templatedata
+	if err = yaml.Unmarshal(def, &values); err != nil {
+		return "", errors.Wrap(err, "unmarshalling file "+toTemplate)
+	}
+	return RenderHelm(string(raw), values)
 }

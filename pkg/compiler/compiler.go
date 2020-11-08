@@ -21,8 +21,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ghodss/yaml"
-
 	"regexp"
 	"strings"
 	"sync"
@@ -456,7 +454,6 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	}
 
 	artifact.SetFiles(filelist)
-
 	artifact.GetCompileSpec().GetPackage().SetBuildTimestamp(time.Now().String())
 
 	err = artifact.WriteYaml(p.GetOutputPath())
@@ -658,31 +655,11 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 		return nil, err
 	}
 
-	buildFile := pack.Rel(BuildFile)
-	if !helpers.Exists(buildFile) {
-		return nil, errors.New("No build file present for " + p.GetFingerPrint())
-	}
-	defFile := pack.Rel(DefinitionFile)
-	if !helpers.Exists(defFile) {
-		return nil, errors.New("No build file present for " + p.GetFingerPrint())
-	}
-	def, err := ioutil.ReadFile(defFile)
+	out, err := helpers.RenderFiles(pack.Rel(BuildFile), pack.Rel(DefinitionFile))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "rendering file "+pack.Rel(BuildFile))
 	}
 
-	build, err := ioutil.ReadFile(buildFile)
-	if err != nil {
-		return nil, err
-	}
-	var values templatedata
-	if err = yaml.Unmarshal(def, &values); err != nil {
-		return nil, err
-	}
-	out, err := helpers.RenderHelm(string(build), values)
-	if err != nil {
-		return nil, err
-	}
 	return NewLuetCompilationSpec([]byte(out), pack)
 }
 

@@ -1,0 +1,2 @@
+install:
+- echo "{{.Values.name}}" > /tmp/foo
