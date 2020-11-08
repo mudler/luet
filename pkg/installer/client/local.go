@@ -83,8 +83,20 @@ func (c *LocalClient) DownloadFile(name string) (string, error) {
 	var err error
 	var file *os.File = nil
 
+	rootfs := ""
+
+	if !config.LuetCfg.ConfigFromHost {
+		rootfs, err = config.LuetCfg.GetSystem().GetRootFsAbs()
+		if err != nil {
+			return "", err
+		}
+	}
+
 	ok := false
 	for _, uri := range c.RepoData.Urls {
+
+		uri = filepath.Join(rootfs, uri)
+
 		Info("Downloading file", name, "from", uri)
 		file, err = config.LuetCfg.GetSystem().TempFile("localclient")
 		if err != nil {
