@@ -147,6 +147,7 @@ type ArtifactLayersSummary struct {
 type CompilationSpec interface {
 	ImageUnpack() bool // tells if the definition is just an image
 	GetIncludes() []string
+	GetExcludes() []string
 
 	RenderBuildImage() (string, error)
 	WriteBuildImageDefinition(string) error

@@ -130,7 +130,7 @@ RUN echo bar > /test2`))
 			err = b.ExtractRootfs(CompilerBackendOptions{SourcePath: filepath.Join(tmpdir, "output2.tar"), Destination: rootfs}, false)
 			Expect(err).ToNot(HaveOccurred())
 
-			artifact, err := ExtractArtifactFromDelta(rootfs, filepath.Join(tmpdir, "package.tar"), diffs, 2, false, []string{}, None)
+			artifact, err := ExtractArtifactFromDelta(rootfs, filepath.Join(tmpdir, "package.tar"), diffs, 2, false, []string{}, []string{}, None)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Exists(filepath.Join(tmpdir, "package.tar"))).To(BeTrue())
 			err = helpers.Untar(artifact.GetPath(), unpacked, false)

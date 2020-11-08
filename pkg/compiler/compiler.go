@@ -181,7 +181,7 @@ func (cs *LuetCompiler) CompileParallel(keepPermissions bool, ps CompilationSpec
 	return artifacts, allErrors
 }
 
-func (cs *LuetCompiler) stripIncludesFromRootfs(includes []string, rootfs string) error {
+func (cs *LuetCompiler) stripFromRootfs(includes []string, rootfs string, include bool) error {
 	var includeRegexp []*regexp.Regexp
 	for _, i := range includes {
 		r, e := regexp.Compile(i)
@@ -213,7 +213,7 @@ func (cs *LuetCompiler) stripIncludesFromRootfs(includes []string, rootfs string
 			}
 		}
 
-		if !match {
+		if include && !match || !include && match {
 			toRemove = append(toRemove, currentpath)
 		}
 
@@ -421,7 +421,11 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 
 		if len(p.GetIncludes()) > 0 {
 			// strip from includes
-			cs.stripIncludesFromRootfs(p.GetIncludes(), rootfs)
+			cs.stripFromRootfs(p.GetIncludes(), rootfs, true)
+		}
+		if len(p.GetExcludes()) > 0 {
+			// strip from includes
+			cs.stripFromRootfs(p.GetExcludes(), rootfs, false)
 		}
 		artifact = NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
 		artifact.SetCompressionType(cs.CompressionType)
@@ -438,7 +442,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not generate changes from layers")
 		}
-		artifact, err = ExtractArtifactFromDelta(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions, p.GetIncludes(), cs.CompressionType)
+		artifact, err = ExtractArtifactFromDelta(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions, p.GetIncludes(), p.GetExcludes(), cs.CompressionType)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not generate deltas")
 		}

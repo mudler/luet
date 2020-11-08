@@ -102,6 +102,7 @@ type LuetCompilationSpec struct {
 	OutputPath string   `json:"-"` // Where the build processfiles go
 	Unpack     bool     `json:"unpack"`
 	Includes   []string `json:"includes"`
+	Excludes   []string `json:"excludes"`
 }
 
 func NewLuetCompilationSpec(b []byte, p pkg.Package) (CompilationSpec, error) {
@@ -146,6 +147,10 @@ func (cs *LuetCompilationSpec) GetPreBuildSteps() []string {
 
 func (cs *LuetCompilationSpec) GetIncludes() []string {
 	return cs.Includes
+}
+
+func (cs *LuetCompilationSpec) GetExcludes() []string {
+	return cs.Excludes
 }
 
 func (cs *LuetCompilationSpec) GetRetrieve() []string {

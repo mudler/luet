@@ -516,7 +516,7 @@ func worker(i int, wg *sync.WaitGroup, s <-chan CopyJob) {
 }
 
 // ExtractArtifactFromDelta extracts deltas from ArtifactLayer from an image in tar format
-func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurrency int, keepPerms bool, includes []string, t CompressionImplementation) (Artifact, error) {
+func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurrency int, keepPerms bool, includes []string, excludes []string, t CompressionImplementation) (Artifact, error) {
 
 	archive, err := LuetCfg.GetSystem().TempDir("archive")
 	if err != nil {
@@ -546,7 +546,8 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 	}
 
 	// Handle includes in spec. If specified they filter what gets in the package
-	if len(includes) > 0 {
+
+	if len(includes) > 0 && len(excludes) == 0 {
 		var includeRegexp []*regexp.Regexp
 		for _, i := range includes {
 			r, e := regexp.Compile(i)
@@ -574,6 +575,81 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 				Debug("File ", a.Name, " deleted")
 			}
 		}
+
+	} else if len(includes) == 0 && len(excludes) != 0 {
+		var excludeRegexp []*regexp.Regexp
+		for _, i := range excludes {
+			r, e := regexp.Compile(i)
+			if e != nil {
+				Warning("Failed compiling regex:", e)
+				continue
+			}
+			excludeRegexp = append(excludeRegexp, r)
+		}
+		for _, l := range layers {
+			// Consider d.Additions (and d.Changes? - warn at least) only
+		ADD:
+			for _, a := range l.Diffs.Additions {
+				for _, i := range excludeRegexp {
+					if i.MatchString(a.Name) {
+						continue ADD
+					}
+				}
+				toCopy <- CopyJob{Src: filepath.Join(src, a.Name), Dst: filepath.Join(archive, a.Name), Artifact: a.Name}
+			}
+			for _, a := range l.Diffs.Changes {
+				Debug("File ", a.Name, " changed")
+			}
+			for _, a := range l.Diffs.Deletions {
+				Debug("File ", a.Name, " deleted")
+			}
+		}
+
+	} else if len(includes) != 0 && len(excludes) != 0 {
+
+		var includeRegexp []*regexp.Regexp
+		for _, i := range includes {
+			r, e := regexp.Compile(i)
+			if e != nil {
+				Warning("Failed compiling regex:", e)
+				continue
+			}
+			includeRegexp = append(includeRegexp, r)
+		}
+		var excludeRegexp []*regexp.Regexp
+		for _, i := range excludes {
+			r, e := regexp.Compile(i)
+			if e != nil {
+				Warning("Failed compiling regex:", e)
+				continue
+			}
+			excludeRegexp = append(excludeRegexp, r)
+		}
+
+		for _, l := range layers {
+			// Consider d.Additions (and d.Changes? - warn at least) only
+		EXCLUDES:
+			for _, a := range l.Diffs.Additions {
+				for _, i := range includeRegexp {
+					if i.MatchString(a.Name) {
+						for _, e := range excludeRegexp {
+							if e.MatchString(a.Name) {
+								continue EXCLUDES
+							}
+						}
+						toCopy <- CopyJob{Src: filepath.Join(src, a.Name), Dst: filepath.Join(archive, a.Name), Artifact: a.Name}
+						continue EXCLUDES
+					}
+				}
+			}
+			for _, a := range l.Diffs.Changes {
+				Debug("File ", a.Name, " changed")
+			}
+			for _, a := range l.Diffs.Deletions {
+				Debug("File ", a.Name, " deleted")
+			}
+		}
+
 	} else {
 		// Otherwise just grab all
 		for _, l := range layers {
