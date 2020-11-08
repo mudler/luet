@@ -97,7 +97,7 @@ type LuetSystemConfig struct {
 	TmpDirBase     string `yaml:"tmpdir_base" mapstructure:"tmpdir_base"`
 }
 
-func (sc LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
+func (sc *LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
 	dbpath := filepath.Join(sc.Rootfs, sc.DatabasePath)
 	dbpath = filepath.Join(dbpath, "repos/"+name)
 	err := os.MkdirAll(dbpath, os.ModePerm)
@@ -107,7 +107,7 @@ func (sc LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
 	return dbpath
 }
 
-func (sc LuetSystemConfig) GetSystemRepoDatabaseDirPath() string {
+func (sc *LuetSystemConfig) GetSystemRepoDatabaseDirPath() string {
 	dbpath := filepath.Join(sc.Rootfs,
 		sc.DatabasePath)
 	err := os.MkdirAll(dbpath, os.ModePerm)
@@ -117,7 +117,7 @@ func (sc LuetSystemConfig) GetSystemRepoDatabaseDirPath() string {
 	return dbpath
 }
 
-func (sc LuetSystemConfig) GetSystemPkgsCacheDirPath() (ans string) {
+func (sc *LuetSystemConfig) GetSystemPkgsCacheDirPath() (ans string) {
 	var cachepath string
 	if sc.PkgsCachePath != "" {
 		cachepath = sc.PkgsCachePath
@@ -133,6 +133,10 @@ func (sc LuetSystemConfig) GetSystemPkgsCacheDirPath() (ans string) {
 	}
 
 	return
+}
+
+func (sc *LuetSystemConfig) GetRootFsAbs() (string, error) {
+	return filepath.Abs(sc.Rootfs)
 }
 
 type LuetRepository struct {
@@ -204,6 +208,7 @@ type LuetConfig struct {
 	RepositoriesConfDir  []string         `mapstructure:"repos_confdir"`
 	ConfigProtectConfDir []string         `mapstructure:"config_protect_confdir"`
 	ConfigProtectSkip    bool             `mapstructure:"config_protect_skip"`
+	ConfigFromHost       bool             `mapstructure:"config_from_host"`
 	CacheRepositories    []LuetRepository `mapstructure:"repetitors"`
 	SystemRepositories   []LuetRepository `mapstructure:"repositories"`
 
@@ -251,6 +256,8 @@ func GenDefault(viper *v.Viper) {
 	viper.SetDefault("repos_confdir", []string{"/etc/luet/repos.conf.d"})
 	viper.SetDefault("config_protect_confdir", []string{"/etc/luet/config.protect.d"})
 	viper.SetDefault("config_protect_skip", false)
+	// TODO: Set default to false when we are ready for migration.
+	viper.SetDefault("config_from_host", true)
 	viper.SetDefault("cache_repositories", []string{})
 	viper.SetDefault("system_repositories", []string{})
 

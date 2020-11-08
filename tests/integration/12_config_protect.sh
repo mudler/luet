@@ -11,18 +11,19 @@ oneTimeTearDown() {
 }
 
 testBuild() {
-    mkdir $tmpdir/testbuild
-    luet build --tree "$ROOT_DIR/tests/fixtures/config_protect" --destination $tmpdir/testbuild --compression gzip test/a
+    mkdir $tmpdir/testrootfs/testbuild -p
+    luet build --tree "$ROOT_DIR/tests/fixtures/config_protect" \
+      --destination $tmpdir/testrootfs/testbuild --compression gzip test/a
     buildst=$?
     assertEquals 'builds successfully' "$buildst" "0"
-    assertTrue 'create package' "[ -e '$tmpdir/testbuild/a-test-1.0.package.tar.gz' ]"
+    assertTrue 'create package' "[ -e '$tmpdir/testrootfs/testbuild/a-test-1.0.package.tar.gz' ]"
 }
 
 testRepo() {
     assertTrue 'no repository' "[ ! -e '$tmpdir/testbuild/repository.yaml' ]"
     luet create-repo --tree "$ROOT_DIR/tests/fixtures/config_protect" \
-    --output $tmpdir/testbuild \
-    --packages $tmpdir/testbuild \
+    --output $tmpdir/testrootfs/testbuild \
+    --packages $tmpdir/testrootfs/testbuild \
     --name "test" \
     --descr "Test Repo" \
     --urls $tmpdir/testrootfs \
@@ -30,15 +31,14 @@ testRepo() {
 
     createst=$?
     assertEquals 'create repo successfully' "$createst" "0"
-    assertTrue 'create repository' "[ -e '$tmpdir/testbuild/repository.yaml' ]"
+    assertTrue 'create repository' "[ -e '$tmpdir/testrootfs/testbuild/repository.yaml' ]"
 }
 
 testConfig() {
-    mkdir $tmpdir/testrootfs
 
-    mkdir $tmpdir/config.protect.d
+    mkdir $tmpdir/testrootfs/etc/luet/config.protect.d -p
 
-    cat <<EOF > $tmpdir/config.protect.d/conf1.yml
+    cat <<EOF > $tmpdir/testrootfs/etc/luet/config.protect.d/conf1.yml
 name: "protect1"
 dirs:
 - /etc/
@@ -52,13 +52,14 @@ system:
   database_path: "/"
   database_engine: "boltdb"
 config_protect_confdir:
-    - $tmpdir/config.protect.d
+    - /etc/luet/config.protect.d
+config_from_host: false
 repositories:
    - name: "main"
      type: "disk"
      enable: true
      urls:
-       - "$tmpdir/testbuild"
+       - "/testbuild"
 EOF
     luet config --config $tmpdir/luet.yaml
     res=$?

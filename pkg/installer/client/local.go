@@ -38,8 +38,16 @@ func NewLocalClient(r RepoData) *LocalClient {
 func (c *LocalClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Artifact, error) {
 	var err error
 
+	rootfs := ""
 	artifactName := path.Base(artifact.GetPath())
 	cacheFile := filepath.Join(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), artifactName)
+
+	if !config.LuetCfg.ConfigFromHost {
+		rootfs, err = config.LuetCfg.GetSystem().GetRootFsAbs()
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// Check if file is already in cache
 	if helpers.Exists(cacheFile) {
@@ -47,6 +55,9 @@ func (c *LocalClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Art
 	} else {
 		ok := false
 		for _, uri := range c.RepoData.Urls {
+
+			uri = filepath.Join(rootfs, uri)
+
 			Info("Downloading artifact", artifactName, "from", uri)
 
 			//defer os.Remove(file.Name())
@@ -72,8 +83,20 @@ func (c *LocalClient) DownloadFile(name string) (string, error) {
 	var err error
 	var file *os.File = nil
 
+	rootfs := ""
+
+	if !config.LuetCfg.ConfigFromHost {
+		rootfs, err = config.LuetCfg.GetSystem().GetRootFsAbs()
+		if err != nil {
+			return "", err
+		}
+	}
+
 	ok := false
 	for _, uri := range c.RepoData.Urls {
+
+		uri = filepath.Join(rootfs, uri)
+
 		Info("Downloading file", name, "from", uri)
 		file, err = config.LuetCfg.GetSystem().TempFile("localclient")
 		if err != nil {

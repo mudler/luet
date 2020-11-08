@@ -19,6 +19,7 @@ package repository
 import (
 	"io/ioutil"
 	"path"
+	"path/filepath"
 	"regexp"
 
 	"github.com/ghodss/yaml"
@@ -29,8 +30,21 @@ import (
 
 func LoadRepositories(c *LuetConfig) error {
 	var regexRepo = regexp.MustCompile(`.yml$|.yaml$`)
+	var err error
+	rootfs := ""
+
+	// Respect the rootfs param on read repositories
+	if !c.ConfigFromHost {
+		rootfs, err = c.GetSystem().GetRootFsAbs()
+		if err != nil {
+			return err
+		}
+	}
 
 	for _, rdir := range c.RepositoriesConfDir {
+
+		rdir = filepath.Join(rootfs, rdir)
+
 		Debug("Parsing Repository Directory", rdir, "...")
 
 		files, err := ioutil.ReadDir(rdir)

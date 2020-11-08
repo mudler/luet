@@ -54,6 +54,7 @@ system:
   database_engine: "boltdb"
 config_protect_confdir:
     - $tmpdir/config.protect.d
+config_from_host: true
 repositories:
    - name: "main"
      type: "disk"
