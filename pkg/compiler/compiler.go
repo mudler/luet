@@ -281,7 +281,7 @@ func (cs *LuetCompiler) unpackDelta(rootfs string, concurrency int, keepPermissi
 }
 
 func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImage string,
-	concurrency int, keepPermissions, keepImg bool,
+	concurrency int, keepPermissions bool,
 	p CompilationSpec) (CompilerBackendOptions, CompilerBackendOptions, error) {
 
 	var runnerOpts, builderOpts CompilerBackendOptions
@@ -339,9 +339,14 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	Info(pkgTag, ":whale: Generating 'builder' image definition from", image)
 
 	// First we create the builder image
-	p.WriteBuildImageDefinition(filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+"-builder.dockerfile"))
+	if err := p.WriteBuildImageDefinition(filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+"-builder.dockerfile")); err != nil {
+		return builderOpts, runnerOpts, errors.Wrap(err, "Could not generate image definition")
+	}
+
 	// Then we write the step image, which uses the builder one
-	p.WriteStepImageDefinition(buildertaggedImage, filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+".dockerfile"))
+	if err := p.WriteStepImageDefinition(buildertaggedImage, filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+".dockerfile")); err != nil {
+		return builderOpts, runnerOpts, errors.Wrap(err, "Could not generate image definition")
+	}
 
 	builderOpts = CompilerBackendOptions{
 		ImageName:      buildertaggedImage,
@@ -356,57 +361,34 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 		Destination:    p.Rel(p.GetPackage().GetFingerPrint() + ".image.tar"),
 	}
 
-	buildBuilderImage := true
-	if cs.Options.PullFirst {
-		if err := cs.Backend.DownloadImage(builderOpts); err == nil {
-			buildBuilderImage = false
-		}
-	}
-
-	if buildBuilderImage {
-		if err := cs.Backend.BuildImage(builderOpts); err != nil {
-			return builderOpts, runnerOpts, errors.Wrap(err, "Could not build image: "+image+" "+builderOpts.DockerFileName)
-		}
-		if cs.Options.Push {
-			if err = cs.Backend.Push(builderOpts); err != nil {
-				return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
+	buildAndPush := func(opts CompilerBackendOptions) error {
+		buildImage := true
+		if cs.Options.PullFirst {
+			if err := cs.Backend.DownloadImage(opts); err == nil {
+				buildImage = false
 			}
 		}
-	}
-
-	if !keepImg {
-		defer func() {
-			// We keep them around, so to not reload them from the tar (which should be the "correct way") and we automatically share the same layers
-			err = cs.Backend.RemoveImage(builderOpts)
-			if err != nil {
-				Warning("Could not remove image ", builderOpts.ImageName)
+		if buildImage {
+			if err := cs.Backend.BuildImage(opts); err != nil {
+				return errors.Wrap(err, "Could not build image: "+image+" "+opts.DockerFileName)
 			}
-			err = cs.Backend.RemoveImage(runnerOpts)
-			if err != nil {
-				Warning("Could not remove image ", builderOpts.ImageName)
-			}
-		}()
-	}
-
-	buildPackageImage := true
-	if cs.Options.PullFirst {
-		//Best effort pull
-		if err := cs.Backend.DownloadImage(runnerOpts); err == nil {
-			buildPackageImage = false
-		}
-	}
-
-	if buildPackageImage {
-		if err := cs.Backend.BuildImage(runnerOpts); err != nil {
-			return builderOpts, runnerOpts, errors.Wrap(err, "Failed building image for "+runnerOpts.ImageName+" "+runnerOpts.DockerFileName)
-		}
-		if cs.Options.Push {
-			err = cs.Backend.Push(runnerOpts)
-			if err != nil {
-				return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
+			if cs.Options.Push {
+				if err = cs.Backend.Push(opts); err != nil {
+					return errors.Wrap(err, "Could not push image: "+image+" "+opts.DockerFileName)
+				}
 			}
 		}
+		return nil
 	}
+
+	if err := buildAndPush(builderOpts); err != nil {
+		return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
+	}
+
+	if err := buildAndPush(runnerOpts); err != nil {
+		return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
+	}
+
 	return builderOpts, runnerOpts, nil
 }
 
@@ -492,9 +474,21 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		}
 	}
 
-	builderOpts, runnerOpts, err := cs.buildPackageImage(image, buildertaggedImage, packageImage, concurrency, keepPermissions, keepImg, p)
+	builderOpts, runnerOpts, err := cs.buildPackageImage(image, buildertaggedImage, packageImage, concurrency, keepPermissions, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed building package image")
+	}
+
+	if !keepImg {
+		defer func() {
+			// We keep them around, so to not reload them from the tar (which should be the "correct way") and we automatically share the same layers
+			if err := cs.Backend.RemoveImage(builderOpts); err != nil {
+				Warning("Could not remove image ", builderOpts.ImageName)
+			}
+			if err := cs.Backend.RemoveImage(runnerOpts); err != nil {
+				Warning("Could not remove image ", runnerOpts.ImageName)
+			}
+		}()
 	}
 
 	if !generateArtifact {
