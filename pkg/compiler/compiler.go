@@ -353,13 +353,14 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 			return nil, errors.Wrap(err, "Failed building image for "+runnerOpts.ImageName+" "+runnerOpts.DockerFileName)
 		}
 	}
+	if generateArtifact {
+		if err := cs.Backend.ExportImage(runnerOpts); err != nil {
+			return nil, errors.Wrap(err, "Failed exporting image")
+		}
 
-	if err := cs.Backend.ExportImage(runnerOpts); err != nil {
-		return nil, errors.Wrap(err, "Failed exporting image")
-	}
-
-	if !cs.Options.KeepImageExport {
-		defer os.Remove(runnerOpts.Destination)
+		if !cs.Options.KeepImageExport {
+			defer os.Remove(runnerOpts.Destination)
+		}
 	}
 
 	if cs.Options.Push && buildPackageImage {
@@ -378,18 +379,20 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 		unpack = true
 	}
 
-	rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
-	if err != nil {
-		return nil, errors.Wrap(err, "Could not create tempdir")
-	}
-	defer os.RemoveAll(rootfs) // clean up
+	if generateArtifact {
+		rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not create tempdir")
+		}
+		defer os.RemoveAll(rootfs) // clean up
 
-	// TODO: Compression and such
-	err = cs.Backend.ExtractRootfs(CompilerBackendOptions{
-		ImageName:  packageImage,
-		SourcePath: runnerOpts.Destination, Destination: rootfs}, keepPermissions)
-	if err != nil {
-		return nil, errors.Wrap(err, "Could not extract rootfs")
+		// TODO: Compression and such
+		err = cs.Backend.ExtractRootfs(CompilerBackendOptions{
+			ImageName:  packageImage,
+			SourcePath: runnerOpts.Destination, Destination: rootfs}, keepPermissions)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not extract rootfs")
+		}
 	}
 
 	if !keepImg {
