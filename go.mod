@@ -25,7 +25,7 @@ require (
 	github.com/moby/sys/mount v0.1.1-0.20200320164225-6154f11e6840 // indirect
 	github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
 	github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87
-	github.com/mudler/go-pluggable v0.0.0-20201113172133-2b1db55e5ff0
+	github.com/mudler/go-pluggable v0.0.0-20201113184918-d36448fc8f82
 	github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3

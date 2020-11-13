@@ -517,8 +517,8 @@ github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d h1:fKh+rvw
 github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d/go.mod h1:puRUWSwyecW2V355tKncwPVPRAjQBduPsFjG0mrV/Nw=
 github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87 h1:mGz7T8KvmHH0gLWPI5tQne8xl2cO3T8wrrb6Aa16Jxo=
 github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87/go.mod h1:1w4zI1LYXDeiUXqedPcrT5eQJnmKR6dbg5iJMgSIP/Y=
-github.com/mudler/go-pluggable v0.0.0-20201113172133-2b1db55e5ff0 h1:UR5db9V1ppo6GTbxwPXaf3N7wJhiENW1vxpcm18TzBg=
-github.com/mudler/go-pluggable v0.0.0-20201113172133-2b1db55e5ff0/go.mod h1:4P/ULate+2QxoAQtojaRjyO5VGMhV0KLnSdAS8nuBbo=
+github.com/mudler/go-pluggable v0.0.0-20201113184918-d36448fc8f82 h1:Hkefw2tzoKATVUTFsCtDlUnY180+OE851qGbq45ATxk=
+github.com/mudler/go-pluggable v0.0.0-20201113184918-d36448fc8f82/go.mod h1:4P/ULate+2QxoAQtojaRjyO5VGMhV0KLnSdAS8nuBbo=
 github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290 h1:426hFyXMpXeqIeGJn2cGAW9ogvM2Jf+Jv23gtVPvBLM=
 github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290/go.mod h1:uP5BBgFxq2wNWo7n1vnY5SSbgL0WDshVJrOO12tZ/lA=
 github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
