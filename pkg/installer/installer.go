@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/mudler/luet/pkg/bus"
 	compiler "github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
@@ -451,6 +452,7 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *Sy
 		if err != nil && !l.Options.Force {
 			return errors.Wrap(err, "Failed creating package")
 		}
+		bus.Manager.Publish(bus.EventPackageInstall, c)
 	}
 	var toFinalize []pkg.Package
 	if !l.Options.NoDeps {
@@ -654,6 +656,8 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed removing package from database")
 	}
+
+	bus.Manager.Publish(bus.EventPackageUnInstall, p)
 
 	Info(":recycle:", p.GetFingerPrint(), "Removed :heavy_check_mark:")
 	return nil

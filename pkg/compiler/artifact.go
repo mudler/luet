@@ -34,6 +34,7 @@ import (
 	"strings"
 	"sync"
 
+	bus "github.com/mudler/luet/pkg/bus"
 	. "github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
@@ -170,6 +171,8 @@ func (a *PackageArtifact) WriteYaml(dst string) error {
 		return errors.Wrap(err, "While marshalling for PackageArtifact YAML")
 	}
 
+	bus.Manager.Publish(bus.EventPackagePreBuildArtifact, a)
+
 	mangle, err := NewPackageArtifactFromYaml(data)
 	if err != nil {
 		return errors.Wrap(err, "Generated invalid artifact")
@@ -191,6 +194,7 @@ func (a *PackageArtifact) WriteYaml(dst string) error {
 		return errors.Wrap(err, "While writing PackageArtifact YAML")
 	}
 	//a.CompileSpec.GetPackage().SetPath(p)
+	bus.Manager.Publish(bus.EventPackagePostBuildArtifact, a)
 
 	return nil
 }

@@ -24,6 +24,8 @@ import (
 	"strings"
 
 	"github.com/marcsauter/single"
+	bus "github.com/mudler/luet/pkg/bus"
+
 	extensions "github.com/mudler/cobra-extensions"
 	config "github.com/mudler/luet/pkg/config"
 	helpers "github.com/mudler/luet/pkg/helpers"
@@ -67,6 +69,18 @@ var RootCmd = &cobra.Command{
 		err = config.LuetCfg.GetSystem().InitTmpDir()
 		if err != nil {
 			Fatal("failed on init tmp basedir:", err.Error())
+		}
+
+		viper.BindPFlag("plugin", cmd.Flags().Lookup("plugin"))
+
+		plugin := viper.GetStringSlice("plugin")
+
+		bus.Manager.Load(plugin...).Register()
+		if len(bus.Manager.Plugins) != 0 {
+			Info(":lollipop:Enabled plugins:")
+			for _, p := range bus.Manager.Plugins {
+				Info("\t:arrow_right:", p.Name)
+			}
 		}
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
@@ -156,6 +170,7 @@ func init() {
 		"Disable config protect analysis.")
 	pflags.StringP("logfile", "l", config.LuetCfg.GetLogging().Path,
 		"Logfile path. Empty value disable log to file.")
+	pflags.StringSlice("plugin", []string{}, "A list of runtime plugins to load")
 
 	// os/user doesn't work in from scratch environments.
 	// Check if i can retrieve user informations.
@@ -175,6 +190,8 @@ func init() {
 	config.LuetCfg.Viper.BindPFlag("general.debug", pflags.Lookup("debug"))
 	config.LuetCfg.Viper.BindPFlag("general.fatal_warnings", pflags.Lookup("fatal"))
 	config.LuetCfg.Viper.BindPFlag("general.same_owner", pflags.Lookup("same-owner"))
+	config.LuetCfg.Viper.BindPFlag("plugin", pflags.Lookup("plugin"))
+
 	// Currently I maintain this only from cli.
 	config.LuetCfg.Viper.BindPFlag("no_spinner", pflags.Lookup("no-spinner"))
 	config.LuetCfg.Viper.BindPFlag("config_protect_skip", pflags.Lookup("skip-config-protect"))

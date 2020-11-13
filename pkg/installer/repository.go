@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mudler/luet/pkg/bus"
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
@@ -426,6 +427,14 @@ func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
 		r.Name, r.Revision, r.LastUpdate,
 	))
 
+	bus.Manager.Publish(bus.EventRepositoryPreBuild, struct {
+		Repo LuetSystemRepository
+		Path string
+	}{
+		Repo: *r,
+		Path: dst,
+	})
+
 	// Create tree and repository file
 	archive, err := config.LuetCfg.GetSystem().TempDir("archive")
 	if err != nil {
@@ -505,6 +514,14 @@ func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
 	if err != nil {
 		return err
 	}
+
+	bus.Manager.Publish(bus.EventRepositoryPostBuild, struct {
+		Repo LuetSystemRepository
+		Path string
+	}{
+		Repo: *r,
+		Path: dst,
+	})
 
 	return nil
 }

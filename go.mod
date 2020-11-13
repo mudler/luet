@@ -8,8 +8,6 @@ require (
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 	github.com/briandowns/spinner v1.7.0
 	github.com/cavaliercoder/grab v2.0.0+incompatible
-	github.com/chuckpreslar/emission v0.0.0-20170206194824-a7ddd980baf9
-	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0
 	github.com/crillab/gophersat v1.3.2-0.20201023142334-3fc2ac466765
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200417035958-130b0bc6032c+incompatible
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
@@ -27,9 +25,10 @@ require (
 	github.com/moby/sys/mount v0.1.1-0.20200320164225-6154f11e6840 // indirect
 	github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
 	github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87
+	github.com/mudler/go-pluggable v0.0.0-20201113172133-2b1db55e5ff0
 	github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290
-	github.com/onsi/ginkgo v1.12.1
-	github.com/onsi/gomega v1.10.0
+	github.com/onsi/ginkgo v1.14.2
+	github.com/onsi/gomega v1.10.3
 	github.com/otiai10/copy v1.2.1-0.20200916181228-26f84a0b1578
 	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/philopon/go-toposort v0.0.0-20170620085441-9be86dbd762f
@@ -41,8 +40,7 @@ require (
 	go.uber.org/multierr v1.4.0 // indirect
 	go.uber.org/zap v1.13.0
 	golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f // indirect
-	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553 // indirect
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.3.0
 	gotest.tools/v3 v3.0.2 // indirect
 	helm.sh/helm/v3 v3.3.4
 	mvdan.cc/sh/v3 v3.0.0-beta1

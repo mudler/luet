@@ -26,6 +26,8 @@ import (
 	"sync"
 	"time"
 
+	bus "github.com/mudler/luet/pkg/bus"
+
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -596,6 +598,14 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	targetAssertion := p.GetSourceAssertion().Search(p.GetPackage().GetFingerPrint())
 	targetPackageHash := cs.ImageRepository + ":" + targetAssertion.Hash.PackageHash
 
+	bus.Manager.Publish(bus.EventPackagePreBuild, struct {
+		CompileSpec CompilationSpec
+		Assert      solver.PackageAssert
+	}{
+		CompileSpec: p,
+		Assert:      *targetAssertion,
+	})
+
 	// - If image is set we just generate a plain dockerfile
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
 	if p.GetImage() != "" {
@@ -636,6 +646,14 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 			Debug(pkgTag, "    :arrow_right_hook: :whale: Builder image from", buildImageHash)
 			Debug(pkgTag, "    :arrow_right_hook: :whale: Package image name", currentPackageImageHash)
 
+			bus.Manager.Publish(bus.EventPackagePreBuild, struct {
+				CompileSpec CompilationSpec
+				Assert      solver.PackageAssert
+			}{
+				CompileSpec: compileSpec,
+				Assert:      assertion,
+			})
+
 			lastHash = currentPackageImageHash
 			if compileSpec.GetImage() != "" {
 				Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().HumanReadableString()+" from image")
@@ -655,6 +673,15 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 				//	deperrs = append(deperrs, err)
 				//		break // stop at first error
 			}
+
+			bus.Manager.Publish(bus.EventPackagePostBuild, struct {
+				CompileSpec CompilationSpec
+				Artifact    Artifact
+			}{
+				CompileSpec: compileSpec,
+				Artifact:    artifact,
+			})
+
 			departifacts = append(departifacts, artifact)
 			Info(pkgTag, ":white_check_mark: Done")
 		}
@@ -672,6 +699,14 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 		}
 		artifact.SetDependencies(departifacts)
 		artifact.SetSourceAssertion(p.GetSourceAssertion())
+
+		bus.Manager.Publish(bus.EventPackagePostBuild, struct {
+			CompileSpec CompilationSpec
+			Artifact    Artifact
+		}{
+			CompileSpec: p,
+			Artifact:    artifact,
+		})
 
 		return artifact, err
 	} else {
