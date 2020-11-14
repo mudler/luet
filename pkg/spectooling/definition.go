@@ -44,6 +44,14 @@ type DefaultPackageSanitized struct {
 	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
 }
 
+func NewDefaultPackageSanitizedFromYaml(data []byte) (*DefaultPackageSanitized, error) {
+	ans := &DefaultPackageSanitized{}
+	if err := yaml.Unmarshal(data, ans); err != nil {
+		return nil, err
+	}
+	return ans, nil
+}
+
 func NewDefaultPackageSanitized(p pkg.Package) *DefaultPackageSanitized {
 	ans := &DefaultPackageSanitized{
 		Name:        p.GetName(),
@@ -109,4 +117,13 @@ func NewDefaultPackageSanitized(p pkg.Package) *DefaultPackageSanitized {
 
 func (p *DefaultPackageSanitized) Yaml() ([]byte, error) {
 	return yaml.Marshal(p)
+}
+
+func (p *DefaultPackageSanitized) Clone() (*DefaultPackageSanitized, error) {
+	data, err := p.Yaml()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewDefaultPackageSanitizedFromYaml(data)
 }
