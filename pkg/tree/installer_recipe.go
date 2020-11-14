@@ -85,7 +85,7 @@ func (r *InstallerRecipe) Load(path string) error {
 	// the function that handles each file or dir
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
 
-		if info.Name() != DefinitionFile {
+		if info.Name() != DefinitionFile && info.Name() != CollectionFile {
 			return nil // Skip with no errors
 		}
 
@@ -93,16 +93,35 @@ func (r *InstallerRecipe) Load(path string) error {
 		if err != nil {
 			return errors.Wrap(err, "Error reading file "+currentpath)
 		}
-		pack, err := pkg.DefaultPackageFromYaml(dat)
-		if err != nil {
-			return errors.Wrap(err, "Error reading yaml "+currentpath)
-		}
 
-		// Path is set only internally when tree is loaded from disk
-		pack.SetPath(filepath.Dir(currentpath))
-		_, err = r.Database.CreatePackage(&pack)
-		if err != nil {
-			return errors.Wrap(err, "Error creating package "+pack.GetName())
+		switch info.Name() {
+		case DefinitionFile:
+			pack, err := pkg.DefaultPackageFromYaml(dat)
+			if err != nil {
+				return errors.Wrap(err, "Error reading yaml "+currentpath)
+			}
+
+			// Path is set only internally when tree is loaded from disk
+			pack.SetPath(filepath.Dir(currentpath))
+			_, err = r.Database.CreatePackage(&pack)
+			if err != nil {
+				return errors.Wrap(err, "Error creating package "+pack.GetName())
+			}
+
+		case CollectionFile:
+			packs, err := pkg.DefaultPackagesFromYaml(dat)
+			if err != nil {
+				return errors.Wrap(err, "Error reading yaml "+currentpath)
+			}
+			for _, p := range packs {
+				// Path is set only internally when tree is loaded from disk
+				p.SetPath(filepath.Dir(currentpath))
+				_, err = r.Database.CreatePackage(&p)
+				if err != nil {
+					return errors.Wrap(err, "Error creating package "+p.GetName())
+				}
+			}
+
 		}
 
 		return nil

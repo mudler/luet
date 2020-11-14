@@ -38,6 +38,7 @@ import (
 
 const BuildFile = "build.yaml"
 const DefinitionFile = "definition.yaml"
+const CollectionFile = "collection.yaml"
 
 type LuetCompiler struct {
 	*tree.CompilerRecipe
@@ -723,12 +724,39 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 		return nil, err
 	}
 
-	out, err := helpers.RenderFiles(pack.Rel(BuildFile), pack.Rel(DefinitionFile))
-	if err != nil {
-		return nil, errors.Wrap(err, "rendering file "+pack.Rel(BuildFile))
+	var dataresult []byte
+
+	val := pack.Rel(DefinitionFile)
+	if _, err := os.Stat(pack.Rel(CollectionFile)); err == nil {
+		val = pack.Rel(CollectionFile)
+
+		data, err := ioutil.ReadFile(val)
+		if err != nil {
+			return nil, errors.Wrap(err, "rendering file "+val)
+		}
+
+		dataBuild, err := ioutil.ReadFile(pack.Rel(BuildFile))
+		if err != nil {
+			return nil, errors.Wrap(err, "rendering file "+val)
+		}
+		packsRaw, err := pkg.GetRawPackages(data)
+
+		raw := packsRaw.Find(p.GetName(), p.GetCategory(), p.GetVersion())
+
+		dat, err := helpers.RenderHelm(string(dataBuild), raw)
+		if err != nil {
+			return nil, errors.Wrap(err, "rendering file "+pack.Rel(BuildFile))
+		}
+		dataresult = []byte(dat)
+	} else {
+		out, err := helpers.RenderFiles(pack.Rel(BuildFile), val)
+		if err != nil {
+			return nil, errors.Wrap(err, "rendering file "+pack.Rel(BuildFile))
+		}
+		dataresult = []byte(out)
 	}
 
-	return NewLuetCompilationSpec([]byte(out), pack)
+	return NewLuetCompilationSpec(dataresult, pack)
 }
 
 func (cs *LuetCompiler) GetBackend() CompilerBackend {

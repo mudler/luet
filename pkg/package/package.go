@@ -147,6 +147,60 @@ func DefaultPackageFromYaml(yml []byte) (DefaultPackage, error) {
 	return unescaped, nil
 }
 
+type rawPackages []map[string]interface{}
+
+func (r rawPackages) Find(name, category, version string) map[string]interface{} {
+	for _, v := range r {
+		if v["name"] == name && v["category"] == category && v["version"] == version {
+			return v
+		}
+	}
+	return map[string]interface{}{}
+}
+
+func GetRawPackages(yml []byte) (rawPackages, error) {
+	var rawPackages struct {
+		Packages []map[string]interface{} `yaml:"packages"`
+	}
+	source, err := yaml.YAMLToJSON(yml)
+	if err != nil {
+		return []map[string]interface{}{}, err
+	}
+
+	rawIn := json.RawMessage(source)
+	bytes, err := rawIn.MarshalJSON()
+	if err != nil {
+		return []map[string]interface{}{}, err
+	}
+	err = json.Unmarshal(bytes, &rawPackages)
+	if err != nil {
+		return []map[string]interface{}{}, err
+	}
+	return rawPackages.Packages, nil
+
+}
+func DefaultPackagesFromYaml(yml []byte) ([]DefaultPackage, error) {
+
+	var unescaped struct {
+		Packages []DefaultPackage `json:"packages"`
+	}
+	source, err := yaml.YAMLToJSON(yml)
+	if err != nil {
+		return []DefaultPackage{}, err
+	}
+
+	rawIn := json.RawMessage(source)
+	bytes, err := rawIn.MarshalJSON()
+	if err != nil {
+		return []DefaultPackage{}, err
+	}
+	err = json.Unmarshal(bytes, &unescaped)
+	if err != nil {
+		return []DefaultPackage{}, err
+	}
+	return unescaped.Packages, nil
+}
+
 // Major and minor gets escaped when marshalling in JSON, making compiler fails recognizing selectors for expansion
 func (t *DefaultPackage) JSON() ([]byte, error) {
 	buffer := &bytes.Buffer{}
