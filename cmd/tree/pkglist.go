@@ -37,6 +37,7 @@ type TreePackageResult struct {
 	Category string `json:"category"`
 	Version  string `json:"version"`
 	Path     string `json:"path"`
+	Image    string `json:"image"`
 }
 
 type TreeResults struct {

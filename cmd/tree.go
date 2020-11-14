@@ -34,5 +34,6 @@ func init() {
 		NewTreePkglistCommand(),
 		NewTreeValidateCommand(),
 		NewTreeBumpCommand(),
+		NewTreeImageCommand(),
 	)
 }
