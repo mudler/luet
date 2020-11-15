@@ -741,7 +741,7 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 		}
 		packsRaw, err := pkg.GetRawPackages(data)
 
-		raw := packsRaw.Find(p.GetName(), p.GetCategory(), p.GetVersion())
+		raw := packsRaw.Find(pack.GetName(), pack.GetCategory(), pack.GetVersion())
 
 		dat, err := helpers.RenderHelm(string(dataBuild), raw)
 		if err != nil {
