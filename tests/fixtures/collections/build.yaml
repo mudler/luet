@@ -1,0 +1,6 @@
+image: quay.io/mocaccino/extra
+steps:
+- touch /{{.Values.name}}
+- touch /build-extra-{{.Values.foo}}
+
+unpack: true
