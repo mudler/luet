@@ -22,6 +22,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	. "github.com/mudler/luet/pkg/logger"
 
@@ -101,6 +102,29 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 			}
 
 			resp := client.Do(req)
+
+			// start download loop
+			t := time.NewTicker(500 * time.Millisecond)
+			defer t.Stop()
+
+		download_loop:
+
+			for {
+				select {
+				case <-t.C:
+					Info(fmt.Sprintf("[%50s] [%2.2f%%] %.02f / %.02f MB",
+						filepath.Base(resp.Request.HTTPRequest.URL.RequestURI()),
+						100*resp.Progress(),
+						float64(resp.BytesComplete())/(1000*1000),
+						float64(resp.Size())/(1000*1000),
+					))
+
+				case <-resp.Done:
+					// download is complete
+					break download_loop
+				}
+			}
+
 			if err = resp.Err(); err != nil {
 				continue
 			}
