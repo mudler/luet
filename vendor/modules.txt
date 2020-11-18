@@ -44,8 +44,9 @@ github.com/asdine/storm/internal
 github.com/asdine/storm/q
 # github.com/briandowns/spinner v1.7.0
 github.com/briandowns/spinner
-# github.com/cavaliercoder/grab v2.0.0+incompatible
+# github.com/cavaliercoder/grab v1.0.1-0.20201108051000-98a5bfe305ec
 github.com/cavaliercoder/grab
+github.com/cavaliercoder/grab/bps
 # github.com/chuckpreslar/emission v0.0.0-20170206194824-a7ddd980baf9
 github.com/chuckpreslar/emission
 # github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0
