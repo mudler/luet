@@ -593,7 +593,7 @@ var _ = Describe("Parallel", func() {
 				}
 				s = &Parallel{InstalledDatabase: dbInstalled, Concurrency: 4, DefinitionDatabase: dbDefinitions, ParallelDatabase: db}
 
-				solution, err := s.Uninstall(A, true, true)
+				solution, err := s.Uninstall(true, true, A)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(solution).To(ContainElement(A))
@@ -619,7 +619,7 @@ var _ = Describe("Parallel", func() {
 				}
 				s = &Parallel{InstalledDatabase: dbInstalled, Concurrency: 4, DefinitionDatabase: dbDefinitions, ParallelDatabase: db}
 
-				solution, err := s.Uninstall(&pkg.DefaultPackage{Name: "A", Version: ">1.0"}, true, true)
+				solution, err := s.Uninstall(true, true, &pkg.DefaultPackage{Name: "A", Version: ">1.0"})
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(solution).To(ContainElement(A))
@@ -643,7 +643,7 @@ var _ = Describe("Parallel", func() {
 					_, err := dbInstalled.CreatePackage(p)
 					Expect(err).ToNot(HaveOccurred())
 				}
-				solution, err := s.Uninstall(A, true, true)
+				solution, err := s.Uninstall(true, true, A)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(solution).To(ContainElement(A))
@@ -667,7 +667,7 @@ var _ = Describe("Parallel", func() {
 					_, err := dbInstalled.CreatePackage(p)
 					Expect(err).ToNot(HaveOccurred())
 				}
-				solution, err := s.Uninstall(A, true, true)
+				solution, err := s.Uninstall(true, true, A)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(solution).To(ContainElement(A))
@@ -690,13 +690,38 @@ var _ = Describe("Parallel", func() {
 					_, err := dbInstalled.CreatePackage(p)
 					Expect(err).ToNot(HaveOccurred())
 				}
-				solution, err := s.Uninstall(A, true, true)
+				solution, err := s.Uninstall(true, true, A)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(solution).To(ContainElement(A))
 				Expect(solution).ToNot(ContainElement(B))
 
 				Expect(len(solution)).To(Equal(1))
+			})
+
+			It("Uninstalls multiple complex packages correctly, even if shared deps are required by system packages", func() {
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, B, C, D} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+				solution, err := s.Uninstall(true, true, A, C)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(solution).To(ContainElement(C))
+
+				Expect(solution).To(ContainElement(A))
+				Expect(solution).ToNot(ContainElement(B))
+
+				Expect(len(solution)).To(Equal(2))
 			})
 
 			It("Uninstalls complex packages in world correctly", func() {
@@ -715,7 +740,7 @@ var _ = Describe("Parallel", func() {
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				solution, err := s.Uninstall(A, true, true)
+				solution, err := s.Uninstall(true, true, A)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(solution).To(ContainElement(A))
@@ -741,7 +766,7 @@ var _ = Describe("Parallel", func() {
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				solution, err := s.Uninstall(A, true, true)
+				solution, err := s.Uninstall(true, true, A)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(solution).To(ContainElement(A))
@@ -1070,7 +1095,7 @@ var _ = Describe("Parallel", func() {
 			}
 
 			val, err := s.Conflicts(D, dbInstalled.World())
-			Expect(err.Error()).To(Equal("\n/A-\n/B-"))
+			Expect(err.Error()).To(Or(Equal("\n/A-\n/B-"), Equal("\n/B-\n/A-")))
 			Expect(val).To(BeTrue())
 		})
 

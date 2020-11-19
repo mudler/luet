@@ -700,7 +700,7 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 				return errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
 			}
 		} else {
-			solution, err = solv.Uninstall(p, checkConflicts, full)
+			solution, err = solv.Uninstall(checkConflicts, full, p)
 			if err != nil && !l.Options.Force {
 				return errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
 			}

@@ -37,7 +37,7 @@ const (
 type PackageSolver interface {
 	SetDefinitionDatabase(pkg.PackageDatabase)
 	Install(p pkg.Packages) (PackagesAssertions, error)
-	Uninstall(candidate pkg.Package, checkconflicts, full bool) (pkg.Packages, error)
+	Uninstall(checkconflicts, full bool, candidate ...pkg.Package) (pkg.Packages, error)
 	ConflictsWithInstalled(p pkg.Package) (bool, error)
 	ConflictsWith(p pkg.Package, ls pkg.Packages) (bool, error)
 	Conflicts(pack pkg.Package, lsp pkg.Packages) (bool, error)
@@ -518,23 +518,22 @@ func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAsser
 		}
 	}
 	// Then try to uninstall the versions in the system, and store that tree
-	for _, p := range toUninstall {
-		r, err := s.Uninstall(p, checkconflicts, false)
+	r, err := s.Uninstall(checkconflicts, false, toUninstall...)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't uninstall candidates ")
+	}
+	for _, z := range r {
+		err = installedcopy.RemovePackage(z)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't uninstall selected candidate "+p.GetFingerPrint())
-		}
-		for _, z := range r {
-			err = installedcopy.RemovePackage(z)
-			if err != nil {
-				return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't remove copy of package targetted for removal")
-			}
+			return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't remove copy of package targetted for removal")
 		}
 	}
+
 	if len(toInstall) == 0 {
 		return toUninstall, PackagesAssertions{}, nil
 	}
-	r, e := s2.Install(toInstall)
-	return toUninstall, r, e
+	assertions, err := s2.Install(toInstall)
+	return toUninstall, assertions, err
 	// To that tree, ask to install the versions that should be upgraded, and try to solve
 	// Return the solution
 
@@ -542,52 +541,71 @@ func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAsser
 
 // Uninstall takes a candidate package and return a list of packages that would be removed
 // in order to purge the candidate. Returns error if unsat.
-func (s *Solver) Uninstall(c pkg.Package, checkconflicts, full bool) (pkg.Packages, error) {
-	var res pkg.Packages
-	candidate, err := s.InstalledDatabase.FindPackage(c)
-	if err != nil {
-
-		//	return nil, errors.Wrap(err, "Couldn't find required package in db definition")
-		packages, err := c.Expand(s.InstalledDatabase)
-		//	Info("Expanded", packages, err)
-		if err != nil || len(packages) == 0 {
-			candidate = c
-		} else {
-			candidate = packages.Best(nil)
-		}
-		//Relax search, otherwise we cannot compute solutions for packages not in definitions
-		//	return nil, errors.Wrap(err, "Package not found between installed")
+func (s *Solver) Uninstall(checkconflicts, full bool, packs ...pkg.Package) (pkg.Packages, error) {
+	if len(packs) == 0 {
+		return pkg.Packages{}, nil
 	}
+	var res pkg.Packages
+
+	toRemove := pkg.Packages{}
+
+	for _, c := range packs {
+		candidate, err := s.InstalledDatabase.FindPackage(c)
+		if err != nil {
+
+			//	return nil, errors.Wrap(err, "Couldn't find required package in db definition")
+			packages, err := c.Expand(s.InstalledDatabase)
+			//	Info("Expanded", packages, err)
+			if err != nil || len(packages) == 0 {
+				candidate = c
+			} else {
+				candidate = packages.Best(nil)
+			}
+			//Relax search, otherwise we cannot compute solutions for packages not in definitions
+			//	return nil, errors.Wrap(err, "Package not found between installed")
+		}
+
+		toRemove = append(toRemove, candidate)
+	}
+
 	// Build a fake "Installed" - Candidate and its requires tree
 	var InstalledMinusCandidate pkg.Packages
 
 	// We are asked to not perform a full uninstall (checking all the possible requires that could
 	// be removed). Let's only check if we can remove the selected package
 	if !full && checkconflicts {
-		if conflicts, err := s.Conflicts(candidate, s.Installed()); conflicts {
-			return nil, err
-		} else {
-			return pkg.Packages{candidate}, nil
+		for _, candidate := range toRemove {
+			if conflicts, err := s.Conflicts(candidate, s.Installed()); conflicts {
+				return nil, err
+			}
 		}
+		return toRemove, nil
 	}
 
 	// TODO: Can be optimized
 	for _, i := range s.Installed() {
-		if !i.Matches(candidate) {
-			contains, err := candidate.RequiresContains(s.SolverDatabase, i)
-			if err != nil {
-				return nil, errors.Wrap(err, "Failed getting installed list")
+		matched := false
+		for _, candidate := range toRemove {
+			if !i.Matches(candidate) {
+				contains, err := candidate.RequiresContains(s.SolverDatabase, i)
+				if err != nil {
+					return nil, errors.Wrap(err, "Failed getting installed list")
+				}
+				if !contains {
+					matched = true
+				}
+
 			}
-			if !contains {
-				InstalledMinusCandidate = append(InstalledMinusCandidate, i)
-			}
+		}
+		if matched {
+			InstalledMinusCandidate = append(InstalledMinusCandidate, i)
 		}
 	}
 
 	s2 := NewSolver(Options{Type: SingleCoreSimple}, pkg.NewInMemoryDatabase(false), s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
 	s2.SetResolver(s.Resolver)
 	// Get the requirements to install the candidate
-	asserts, err := s2.Install(pkg.Packages{candidate})
+	asserts, err := s2.Install(toRemove)
 	if err != nil {
 		return nil, err
 	}
