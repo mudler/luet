@@ -31,6 +31,7 @@ var DBInMemoryInstance = &InMemoryDatabase{
 	Database:         map[string]string{},
 	CacheNoVersion:   map[string]map[string]interface{}{},
 	ProvidesDatabase: map[string]map[string]Package{},
+	RevDepsDatabase:  map[string]map[string]Package{},
 }
 
 type InMemoryDatabase struct {
@@ -39,6 +40,7 @@ type InMemoryDatabase struct {
 	FileDatabase     map[string][]string
 	CacheNoVersion   map[string]map[string]interface{}
 	ProvidesDatabase map[string]map[string]Package
+	RevDepsDatabase  map[string]map[string]Package
 }
 
 func NewInMemoryDatabase(singleton bool) PackageDatabase {
@@ -50,6 +52,7 @@ func NewInMemoryDatabase(singleton bool) PackageDatabase {
 			Database:         map[string]string{},
 			CacheNoVersion:   map[string]map[string]interface{}{},
 			ProvidesDatabase: map[string]map[string]Package{},
+			RevDepsDatabase:  map[string]map[string]Package{},
 		}
 	}
 	return DBInMemoryInstance
@@ -125,6 +128,47 @@ func (db *InMemoryDatabase) GetAllPackages(packages chan Package) error {
 	return nil
 }
 
+func (db *InMemoryDatabase) getRevdeps(p Package, visited map[string]interface{}) (Packages, error) {
+	var versionsInWorld Packages
+	if _, ok := visited[p.HumanReadableString()]; ok {
+		return versionsInWorld, nil
+	}
+	visited[p.HumanReadableString()] = true
+
+	var res Packages
+	packs, err := db.FindPackages(p)
+	if err != nil {
+		return res, err
+	}
+	for _, pp := range packs {
+		//	db.Lock()
+		list := db.RevDepsDatabase[pp.GetFingerPrint()]
+		//	db.Unlock()
+		for _, revdep := range list {
+			dep, err := db.FindPackage(revdep)
+			if err != nil {
+				return res, err
+			}
+			res = append(res, dep)
+
+			packs, err := db.getRevdeps(dep, visited)
+			if err != nil {
+				return res, err
+			}
+			res = append(res, packs...)
+
+		}
+	}
+	return res.Unique(), nil
+}
+
+// GetRevdeps returns the package reverse dependencies,
+// matching also selectors in versions (>, <, >=, <=)
+// TODO: Code should use db explictly
+func (db *InMemoryDatabase) GetRevdeps(p Package) (Packages, error) {
+	return db.getRevdeps(p, make(map[string]interface{}))
+}
+
 // Encode encodes the package to string.
 // It returns an ID which can be used to retrieve the package later on.
 func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {
@@ -143,9 +187,16 @@ func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {
 		return "", err
 	}
 
+	db.populateCaches(pd)
+
+	return ID, nil
+}
+
+func (db *InMemoryDatabase) populateCaches(p Package) {
+	pd, _ := p.(*DefaultPackage)
+
 	// Create extra cache between package -> []versions
 	db.Lock()
-	defer db.Unlock()
 
 	// Provides: Store package provides, we will reuse this when walking deps
 	for _, provide := range pd.Provides {
@@ -157,21 +208,41 @@ func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {
 		db.ProvidesDatabase[provide.GetPackageName()][provide.GetVersion()] = p
 	}
 
-	_, ok = db.CacheNoVersion[p.GetPackageName()]
+	_, ok := db.CacheNoVersion[p.GetPackageName()]
 	if !ok {
 		db.CacheNoVersion[p.GetPackageName()] = make(map[string]interface{})
 	}
 	db.CacheNoVersion[p.GetPackageName()][p.GetVersion()] = nil
+	db.Unlock()
 
-	return ID, nil
+	for _, re := range pd.GetRequires() {
+		packages, _ := db.FindPackages(re)
+		db.Lock()
+
+		for _, pa := range packages {
+			_, ok := db.RevDepsDatabase[pa.GetFingerPrint()]
+			if !ok {
+				db.RevDepsDatabase[pa.GetFingerPrint()] = make(map[string]Package)
+			}
+			db.RevDepsDatabase[pa.GetFingerPrint()][pd.GetFingerPrint()] = pd
+		}
+		_, ok := db.RevDepsDatabase[re.GetFingerPrint()]
+		if !ok {
+			db.RevDepsDatabase[re.GetFingerPrint()] = make(map[string]Package)
+		}
+		db.RevDepsDatabase[re.GetFingerPrint()][pd.GetFingerPrint()] = pd
+		db.Unlock()
+	}
 }
 
 func (db *InMemoryDatabase) getProvide(p Package) (Package, error) {
+
 	db.Lock()
+
 	pa, ok := db.ProvidesDatabase[p.GetPackageName()][p.GetVersion()]
 	if !ok {
 		versions, ok := db.ProvidesDatabase[p.GetPackageName()]
-		db.Unlock()
+		defer db.Unlock()
 
 		if !ok {
 			return nil, errors.New("No versions found for package")
@@ -195,6 +266,7 @@ func (db *InMemoryDatabase) getProvide(p Package) (Package, error) {
 		return nil, errors.New("No package provides this")
 	}
 	db.Unlock()
+
 	return db.FindPackage(pa)
 }
 
@@ -229,8 +301,9 @@ func (db *InMemoryDatabase) FindPackageVersions(p Package) (Packages, error) {
 	if provided, err := db.getProvide(p); err == nil {
 		p = provided
 	}
-
+	db.Lock()
 	versions, ok := db.CacheNoVersion[p.GetPackageName()]
+	db.Unlock()
 	if !ok {
 		return nil, errors.New("No versions found for package")
 	}
@@ -247,29 +320,38 @@ func (db *InMemoryDatabase) FindPackageVersions(p Package) (Packages, error) {
 
 // FindPackages return the list of the packages beloging to cat/name (any versions in requested range)
 func (db *InMemoryDatabase) FindPackages(p Package) (Packages, error) {
-
+	if !p.IsSelector() {
+		pack, err := db.FindPackage(p)
+		if err != nil {
+			return []Package{}, err
+		}
+		return []Package{pack}, nil
+	}
 	// Provides: Treat as the replaced package here
 	if provided, err := db.getProvide(p); err == nil {
 		p = provided
 	}
+
+	db.Lock()
+	var matches []*DefaultPackage
 	versions, ok := db.CacheNoVersion[p.GetPackageName()]
+	for ve := range versions {
+		match, _ := p.SelectorMatchVersion(ve, nil)
+		if match {
+			matches = append(matches, &DefaultPackage{Name: p.GetName(), Category: p.GetCategory(), Version: ve})
+		}
+	}
+	db.Unlock()
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("No versions found for: %s", p.HumanReadableString()))
 	}
 	var versionsInWorld []Package
-	for ve, _ := range versions {
-		match, err := p.SelectorMatchVersion(ve, nil)
+	for _, p := range matches {
+		w, err := db.FindPackage(p)
 		if err != nil {
-			return nil, errors.Wrap(err, "Error on match selector")
+			return nil, errors.Wrap(err, "Cache mismatch - this shouldn't happen")
 		}
-
-		if match {
-			w, err := db.FindPackage(&DefaultPackage{Name: p.GetName(), Category: p.GetCategory(), Version: ve})
-			if err != nil {
-				return nil, errors.Wrap(err, "Cache mismatch - this shouldn't happen")
-			}
-			versionsInWorld = append(versionsInWorld, w)
-		}
+		versionsInWorld = append(versionsInWorld, w)
 	}
 	return Packages(versionsInWorld), nil
 }

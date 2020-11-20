@@ -135,8 +135,8 @@ var searchCmd = &cobra.Command{
 							})
 					}
 				} else {
-					visited := make(map[string]interface{})
-					for _, revdep := range m.Package.ExpandedRevdeps(m.Repo.GetTree().GetDatabase(), visited) {
+					packs, _:= m.Repo.GetTree().GetDatabase().GetRevdeps(m.Package)
+					for _, revdep := range packs{
 						if !revdep.IsHidden() || revdep.IsHidden() && hidden {
 							Info(fmt.Sprintf(":file_folder:%s", m.Repo.GetName()), fmt.Sprintf(":package:%s", revdep.HumanReadableString()))
 							results.Packages = append(results.Packages,
@@ -189,9 +189,8 @@ var searchCmd = &cobra.Command{
 							})
 					}
 				} else {
-					visited := make(map[string]interface{})
-
-					for _, revdep := range pack.ExpandedRevdeps(system.Database, visited) {
+					packs,_:=system.Database.GetRevdeps(pack)
+					for _, revdep := range packs {
 						if !revdep.IsHidden() || revdep.IsHidden() && hidden {
 							Info(fmt.Sprintf(":package:%s", pack.HumanReadableString()))
 							results.Packages = append(results.Packages,

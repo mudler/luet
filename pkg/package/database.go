@@ -28,6 +28,7 @@ type PackageDatabase interface {
 }
 
 type PackageSet interface {
+	GetRevdeps(p Package) (Packages, error)
 	GetPackages() []string //Ids
 	CreatePackage(pkg Package) (string, error)
 	GetPackage(ID string) (Package, error)

@@ -168,9 +168,8 @@ func NewTreePkglistCommand() *cobra.Command {
 
 				if addPkg {
 					if revdeps {
-
-						visited := make(map[string]interface{})
-						for _, revdep := range p.ExpandedRevdeps(reciper.GetDatabase(), visited) {
+						packs, _ := reciper.GetDatabase().GetRevdeps(p)
+						for _, revdep := range packs {
 							if full {
 								pkgstr = pkgDetail(revdep)
 							} else if verbose {

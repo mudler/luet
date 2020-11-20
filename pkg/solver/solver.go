@@ -211,8 +211,8 @@ func (s *Solver) BuildPartialWorld(includeInstalled bool) (bf.Formula, error) {
 	if len(formulas) != 0 {
 		return bf.And(formulas...), nil
 	}
-	return bf.True, nil
 
+	return bf.True, nil
 }
 
 func (s *Solver) getList(db pkg.PackageDatabase, lsp pkg.Packages) (pkg.Packages, error) {
@@ -255,8 +255,11 @@ func (s *Solver) Conflicts(pack pkg.Package, lsp pkg.Packages) (bool, error) {
 	for _, p := range ls {
 		temporarySet.CreatePackage(p)
 	}
-	visited := make(map[string]interface{})
-	revdeps := p.ExpandedRevdeps(temporarySet, visited)
+
+	revdeps, err := temporarySet.GetRevdeps(p)
+	if err != nil {
+		return false, errors.Wrap(err, "error scanning revdeps")
+	}
 
 	var revdepsErr error
 	for _, r := range revdeps {
@@ -518,7 +521,7 @@ func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAsser
 		}
 	}
 	// Then try to uninstall the versions in the system, and store that tree
-	r, err := s.Uninstall(checkconflicts, false, toUninstall...)
+	r, err := s.Uninstall(checkconflicts, false, toUninstall.Unique()...)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Could not compute upgrade - couldn't uninstall candidates ")
 	}
@@ -532,7 +535,9 @@ func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAsser
 	if len(toInstall) == 0 {
 		return toUninstall, PackagesAssertions{}, nil
 	}
-	assertions, err := s2.Install(toInstall)
+
+	assertions, err := s2.Install(toInstall.Unique())
+
 	return toUninstall, assertions, err
 	// To that tree, ask to install the versions that should be upgraded, and try to solve
 	// Return the solution
@@ -604,6 +609,7 @@ func (s *Solver) Uninstall(checkconflicts, full bool, packs ...pkg.Package) (pkg
 
 	s2 := NewSolver(Options{Type: SingleCoreSimple}, pkg.NewInMemoryDatabase(false), s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
 	s2.SetResolver(s.Resolver)
+
 	// Get the requirements to install the candidate
 	asserts, err := s2.Install(toRemove)
 	if err != nil {
@@ -652,6 +658,7 @@ func (s *Solver) BuildFormula() (bf.Formula, error) {
 	}
 
 	for _, wanted := range s.Wanted {
+
 		encodedW, err := wanted.Encode(s.SolverDatabase)
 		if err != nil {
 			return nil, err

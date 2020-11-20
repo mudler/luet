@@ -86,6 +86,17 @@ func (db *BoltDatabase) Retrieve(ID string) ([]byte, error) {
 	return enc, nil
 }
 
+// GetRevdeps uses a new inmemory db to calcuate revdeps
+// TODO: Have a memory instance for boltdb, so we don't compute each time we get called
+// as this is REALLY expensive. But we don't perform usually those operations in a file db.
+func (db *BoltDatabase) GetRevdeps(p Package) (Packages, error) {
+	memory := NewInMemoryDatabase(false)
+	for _, p := range db.World() {
+		memory.CreatePackage(p)
+	}
+	return memory.GetRevdeps(p)
+}
+
 func (db *BoltDatabase) FindPackage(tofind Package) (Package, error) {
 	// Provides: Return the replaced package here
 	if provided, err := db.getProvide(tofind); err == nil {

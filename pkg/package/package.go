@@ -49,7 +49,6 @@ type Package interface {
 	Requires([]*DefaultPackage) Package
 	Conflicts([]*DefaultPackage) Package
 	Revdeps(PackageDatabase) Packages
-	ExpandedRevdeps(definitiondb PackageDatabase, visited map[string]interface{}) Packages
 	LabelDeps(PackageDatabase, string) Packages
 
 	GetProvides() []*DefaultPackage
@@ -513,8 +512,7 @@ func walkPackage(p Package, definitiondb PackageDatabase, visited map[string]int
 	}
 	visited[p.HumanReadableString()] = true
 
-	revdepvisited := make(map[string]interface{})
-	revdeps := p.ExpandedRevdeps(definitiondb, revdepvisited)
+	revdeps, _ := definitiondb.GetRevdeps(p)
 	for _, r := range revdeps {
 		versionsInWorld = append(versionsInWorld, r)
 	}
@@ -546,52 +544,6 @@ func walkPackage(p Package, definitiondb PackageDatabase, visited map[string]int
 
 func (p *DefaultPackage) Related(definitiondb PackageDatabase) Packages {
 	return walkPackage(p, definitiondb, map[string]interface{}{})
-}
-
-// ExpandedRevdeps returns the package reverse dependencies,
-// matching also selectors in versions (>, <, >=, <=)
-func (p *DefaultPackage) ExpandedRevdeps(definitiondb PackageDatabase, visited map[string]interface{}) Packages {
-	var versionsInWorld Packages
-	if _, ok := visited[p.HumanReadableString()]; ok {
-		return versionsInWorld
-	}
-	visited[p.HumanReadableString()] = true
-
-	for _, w := range definitiondb.World() {
-		if w.Matches(p) {
-			continue
-		}
-		match := false
-
-		for _, re := range w.GetRequires() {
-			if re.Matches(p) {
-				match = true
-			}
-			if !match {
-
-				packages, _ := re.Expand(definitiondb)
-				for _, pa := range packages {
-					if pa.Matches(p) {
-						match = true
-					}
-				}
-			}
-
-			//	if ok, _ := w.RequiresContains(definitiondb, p); ok {
-
-		}
-
-		if match {
-			versionsInWorld = append(versionsInWorld, w)
-
-			versionsInWorld = append(versionsInWorld, w.ExpandedRevdeps(definitiondb, visited).Unique()...)
-
-		}
-		//	}
-
-	}
-	//visited[p.HumanReadableString()] = true
-	return versionsInWorld.Unique()
 }
 
 func (p *DefaultPackage) LabelDeps(definitiondb PackageDatabase, labelKey string) Packages {

@@ -273,9 +273,11 @@ func (s *Parallel) Conflicts(pack pkg.Package, lsp pkg.Packages) (bool, error) {
 	for _, p := range ls {
 		temporarySet.CreatePackage(p)
 	}
-	visited := make(map[string]interface{})
-	revdeps := p.ExpandedRevdeps(temporarySet, visited)
 
+	revdeps, err := temporarySet.GetRevdeps(p)
+	if err != nil {
+		return false, errors.Wrap(err, "error scanning revdeps")
+	}
 	var revdepsErr error
 	for _, r := range revdeps {
 		if revdepsErr == nil {

@@ -220,8 +220,8 @@ var _ = Describe("Package", func() {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			visited := make(map[string]interface{})
-			lst := a.ExpandedRevdeps(definitions, visited)
+			lst, err := definitions.GetRevdeps(a)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(lst).To(ContainElement(c))
 			Expect(lst).To(ContainElement(d))
 			Expect(lst).To(ContainElement(e))
@@ -242,9 +242,9 @@ var _ = Describe("Package", func() {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			visited := make(map[string]interface{})
 
-			lst := a.ExpandedRevdeps(definitions, visited)
+			lst, err := definitions.GetRevdeps(a)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(lst).To(ContainElement(b))
 			Expect(lst).To(ContainElement(c))
 			Expect(lst).To(ContainElement(d))
@@ -266,9 +266,8 @@ var _ = Describe("Package", func() {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			visited := make(map[string]interface{})
-
-			lst := a.ExpandedRevdeps(definitions, visited)
+			lst, err := definitions.GetRevdeps(a)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(lst).To(ContainElement(b))
 			Expect(lst).To(ContainElement(c))
 			Expect(lst).To(ContainElement(d))
