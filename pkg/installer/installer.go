@@ -542,9 +542,9 @@ func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, c <-chan Artif
 			return errors.Wrap(err, "Failed installing package "+p.Package.GetName())
 		}
 		if err == nil {
-			Info(":package: ", p.Package.HumanReadableString(), "downloaded")
+			Info("\n:package: ", p.Package.HumanReadableString(), "downloaded")
 		} else if err != nil && l.Options.Force {
-			Info(":package: ", p.Package.HumanReadableString(), "downloaded with failures (force download)")
+			Info("\n:package: ", p.Package.HumanReadableString(), "downloaded with failures (force download)")
 		}
 	}
 

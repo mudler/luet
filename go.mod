@@ -21,7 +21,6 @@ require (
 	github.com/kyokomi/emoji v2.1.0+incompatible
 	github.com/logrusorgru/aurora v0.0.0-20190417123914-21d75270181e
 	github.com/marcsauter/single v0.0.0-20181104081128-f8bf46f26ec0
-	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/moby/sys/mount v0.1.1-0.20200320164225-6154f11e6840 // indirect
 	github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
 	github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87
@@ -33,6 +32,7 @@ require (
 	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/philopon/go-toposort v0.0.0-20170620085441-9be86dbd762f
 	github.com/pkg/errors v0.9.1
+	github.com/schollz/progressbar/v3 v3.7.1
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.6.3
 	go.etcd.io/bbolt v1.3.4
