@@ -31,6 +31,8 @@ import (
 	"github.com/mudler/luet/pkg/helpers"
 
 	"github.com/cavaliercoder/grab"
+
+	"github.com/schollz/progressbar/v3"
 )
 
 type HttpClient struct {
@@ -103,6 +105,27 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 
 			resp := client.Do(req)
 
+			bar := progressbar.NewOptions64(
+				resp.Size(),
+				progressbar.OptionSetDescription(
+					fmt.Sprintf("[cyan] %s - [reset]",
+						filepath.Base(resp.Request.HTTPRequest.URL.RequestURI()))),
+				progressbar.OptionSetRenderBlankState(true),
+				progressbar.OptionEnableColorCodes(config.LuetCfg.GetLogging().Color),
+				progressbar.OptionClearOnFinish(),
+				progressbar.OptionShowBytes(true),
+				progressbar.OptionShowCount(),
+				progressbar.OptionSetPredictTime(true),
+				progressbar.OptionFullWidth(),
+				progressbar.OptionSetTheme(progressbar.Theme{
+					Saucer:        "[white]=[reset]",
+					SaucerHead:    "[white]>[reset]",
+					SaucerPadding: " ",
+					BarStart:      "[",
+					BarEnd:        "]",
+				}))
+
+			bar.Reset()
 			// start download loop
 			t := time.NewTicker(500 * time.Millisecond)
 			defer t.Stop()
@@ -112,12 +135,7 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 			for {
 				select {
 				case <-t.C:
-					Info(fmt.Sprintf("[%50s] [%2.2f%%] %.02f / %.02f MB",
-						filepath.Base(resp.Request.HTTPRequest.URL.RequestURI()),
-						100*resp.Progress(),
-						float64(resp.BytesComplete())/(1000*1000),
-						float64(resp.Size())/(1000*1000),
-					))
+					bar.Set64(resp.BytesComplete())
 
 				case <-resp.Done:
 					// download is complete
@@ -129,16 +147,18 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 				continue
 			}
 
-			Info("Downloaded", artifactName, "of",
-				fmt.Sprintf("%.2f", (float64(resp.BytesComplete())/1000)/1000), "MB (",
-				fmt.Sprintf("%.2f", (float64(resp.BytesPerSecond())/1024)/1024), "MiB/s )")
-
-			Debug("Copying file ", filepath.Join(temp, artifactName), "to", cacheFile)
-			err = helpers.CopyFile(filepath.Join(temp, artifactName), cacheFile)
 			if err != nil {
 				continue
 			}
 
+			Info("\nDownloaded", artifactName, "of",
+				fmt.Sprintf("%.2f", (float64(resp.BytesComplete())/1000)/1000), "MB (",
+				fmt.Sprintf("%.2f", (float64(resp.BytesPerSecond())/1024)/1024), "MiB/s )")
+
+			Debug("\nCopying file ", filepath.Join(temp, artifactName), "to", cacheFile)
+			err = helpers.CopyFile(filepath.Join(temp, artifactName), cacheFile)
+
+			bar.Finish()
 			ok = true
 			break
 		}
