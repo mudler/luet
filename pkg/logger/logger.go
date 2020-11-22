@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 
 	. "github.com/mudler/luet/pkg/config"
 
@@ -34,6 +35,22 @@ func InitAurora() {
 
 func GetAurora() Aurora {
 	return aurora
+}
+
+func Ask() bool {
+	var input string
+
+	Info("Do you want to continue with this operation? [y/N]: ")
+	_, err := fmt.Scanln(&input)
+	if err != nil {
+		panic(err)
+	}
+	input = strings.ToLower(input)
+
+	if input == "y" || input == "yes" {
+		return true
+	}
+	return false
 }
 
 func ZapLogger() error {
@@ -183,7 +200,7 @@ func msg(level string, withoutColor bool, msg ...interface{}) {
 		case "debug":
 			levelMsg = White(message).BgBlack().String()
 		case "info":
-			levelMsg = Bold(White(message)).BgBlack().String()
+			levelMsg = message
 		case "error":
 			levelMsg = Bold(Red(":bomb: " + message + ":fire:")).BgBlack().String()
 		}

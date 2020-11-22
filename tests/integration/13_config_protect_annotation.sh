@@ -74,7 +74,7 @@ testInstall() {
     mkdir $tmpdir/testrootfs/opt/etc -p
     echo "fakeconf" > $tmpdir/testrootfs/opt/etc/conf
 
-    luet install --config $tmpdir/luet.yaml test/a
+    luet install -y --config $tmpdir/luet.yaml test/a
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
 
@@ -86,7 +86,7 @@ testInstall() {
 
 
 testUnInstall() {
-    luet uninstall --full --config $tmpdir/luet.yaml test/a
+    luet uninstall -y --full --config $tmpdir/luet.yaml test/a
     installst=$?
     assertEquals 'uninstall test successfully' "$installst" "0"
     assertTrue 'package uninstalled' "[ ! -e '$tmpdir/testrootfs/c' ]"

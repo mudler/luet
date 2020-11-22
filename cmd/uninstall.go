@@ -42,6 +42,7 @@ var uninstallCmd = &cobra.Command{
 		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
 		LuetCfg.Viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
 		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
+		LuetCfg.Viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var systemDB pkg.PackageDatabase
@@ -63,6 +64,7 @@ var uninstallCmd = &cobra.Command{
 			checkconflicts, _ := cmd.Flags().GetBool("conflictscheck")
 			fullClean, _ := cmd.Flags().GetBool("full-clean")
 			concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
+			yes := LuetCfg.Viper.GetBool("yes")
 
 			LuetCfg.GetSolverOptions().Type = stype
 			LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -86,6 +88,7 @@ var uninstallCmd = &cobra.Command{
 				FullUninstall:      full,
 				FullCleanUninstall: fullClean,
 				CheckConflicts:     checkconflicts,
+				Ask:                !yes,
 			})
 
 			if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
@@ -120,6 +123,7 @@ func init() {
 	uninstallCmd.Flags().Bool("conflictscheck", true, "Check if the package marked for deletion is required by other packages")
 	uninstallCmd.Flags().Bool("full-clean", false, "(experimental) Uninstall packages and all the other deps/revdeps of it.")
 	uninstallCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
+	uninstallCmd.Flags().BoolP("yes", "y", false, "Don't ask questions")
 
 	RootCmd.AddCommand(uninstallCmd)
 }

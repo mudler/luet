@@ -59,7 +59,7 @@ EOF
 }
 
 testInstall() {
-    luet install --config $tmpdir/luet.yaml distro/a
+    luet install -y --config $tmpdir/luet.yaml distro/a
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
 
@@ -75,12 +75,12 @@ testInstall() {
 
     assertContains 'contains distro/a-0.1' "$installed" 'distro/a-0.1'
 
-    luet uninstall --config $tmpdir/luet.yaml distro/a
+    luet uninstall -y --config $tmpdir/luet.yaml distro/a
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
 
     # We do the same check for the others
-    luet install --config $tmpdir/luet.yaml distro/b
+    luet install -y --config $tmpdir/luet.yaml distro/b
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
 
@@ -94,11 +94,11 @@ testInstall() {
 
     assertContains 'contains distro/b-0.3' "$installed" 'distro/b-0.3'
 
-    luet uninstall --config $tmpdir/luet.yaml distro/b
+    luet uninstall -y --config $tmpdir/luet.yaml distro/b
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
 
-    luet install --config $tmpdir/luet.yaml distro/c
+    luet install -y --config $tmpdir/luet.yaml distro/c
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
 
@@ -112,7 +112,7 @@ testInstall() {
 
     assertContains 'contains distro/c-0.3' "$installed" 'distro/c-0.3'
 
-    luet uninstall --config $tmpdir/luet.yaml distro/c
+    luet uninstall -y --config $tmpdir/luet.yaml distro/c
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
 }

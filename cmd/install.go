@@ -43,6 +43,7 @@ var installCmd = &cobra.Command{
 		LuetCfg.Viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
 		LuetCfg.Viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
 		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
+		LuetCfg.Viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
 	},
 	Long: `Install packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -75,6 +76,7 @@ var installCmd = &cobra.Command{
 		nodeps := LuetCfg.Viper.GetBool("nodeps")
 		onlydeps := LuetCfg.Viper.GetBool("onlydeps")
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
+		yes := LuetCfg.Viper.GetBool("yes")
 
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -99,6 +101,7 @@ var installCmd = &cobra.Command{
 			Force:                       force,
 			OnlyDeps:                    onlydeps,
 			PreserveSystemEssentialData: true,
+			Ask:                         !yes,
 		})
 		inst.Repositories(repos)
 
@@ -131,6 +134,7 @@ func init() {
 	installCmd.Flags().Bool("onlydeps", false, "Consider **only** package dependencies")
 	installCmd.Flags().Bool("force", false, "Skip errors and keep going (potentially harmful)")
 	installCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
+	installCmd.Flags().BoolP("yes", "y", false, "Don't ask questions")
 
 	RootCmd.AddCommand(installCmd)
 }

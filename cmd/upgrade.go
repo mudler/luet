@@ -39,6 +39,7 @@ var upgradeCmd = &cobra.Command{
 		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
 		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
 		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
+		LuetCfg.Viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
 	},
 	Long: `Upgrades packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -65,6 +66,7 @@ var upgradeCmd = &cobra.Command{
 		clean, _ := cmd.Flags().GetBool("clean")
 		sync, _ := cmd.Flags().GetBool("sync")
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
+		yes := LuetCfg.Viper.GetBool("yes")
 
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -90,6 +92,7 @@ var upgradeCmd = &cobra.Command{
 			SolverUpgrade:              universe,
 			RemoveUnavailableOnUpgrade: clean,
 			UpgradeNewRevisions:        sync,
+			Ask:                        !yes,
 		})
 		inst.Repositories(repos)
 		_, err := inst.SyncRepositories(false)
@@ -129,6 +132,7 @@ func init() {
 	upgradeCmd.Flags().Bool("clean", false, "Try to drop removed packages (experimental, only when --universe is enabled)")
 	upgradeCmd.Flags().Bool("sync", false, "Upgrade packages with new revisions (experimental)")
 	upgradeCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
+	upgradeCmd.Flags().BoolP("yes", "y", false, "Don't ask questions")
 
 	RootCmd.AddCommand(upgradeCmd)
 }

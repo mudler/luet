@@ -57,15 +57,15 @@ EOF
 }
 
 testInstall() {
-    luet install --config $tmpdir/luet.yaml test/c
-    #luet install --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
+    luet install -y --config $tmpdir/luet.yaml test/c
+    #luet install -y --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package C installed' "[ -e '$tmpdir/testrootfs/c' ]"
 }
 
 testFullInstall() {
-    output=$(luet install --config $tmpdir/luet.yaml test/d test/f test/e test/a)
+    output=$(luet install -y --config $tmpdir/luet.yaml test/d test/f test/e test/a)
     installst=$?
     assertEquals 'cannot install' "$installst" "1"
     assertTrue 'package D installed' "[ ! -e '$tmpdir/testrootfs/d' ]"
@@ -73,11 +73,11 @@ testFullInstall() {
 }
 
 testInstallAgain() {
-    output=$(luet install --solver-type qlearning --config $tmpdir/luet.yaml test/d test/f test/e test/a)
+    output=$(luet install -y --solver-type qlearning --config $tmpdir/luet.yaml test/d test/f test/e test/a)
     installst=$?
     echo "$output"
     assertEquals 'install test successfully' "0" "$installst"
-    assertNotContains 'contains warning' "$output" 'Filtering out'
+    assertNotContains 'contains warning' "$output" 'No packages to install'
     assertTrue 'package D installed' "[ -e '$tmpdir/testrootfs/d' ]"
     assertTrue 'package F installed' "[ -e '$tmpdir/testrootfs/f' ]"
     assertTrue 'package E not installed' "[ ! -e '$tmpdir/testrootfs/e' ]"

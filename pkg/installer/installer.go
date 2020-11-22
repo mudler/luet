@@ -16,7 +16,6 @@
 package installer
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -24,6 +23,7 @@ import (
 	"strings"
 	"sync"
 
+	. "github.com/logrusorgru/aurora"
 	"github.com/mudler/luet/pkg/bus"
 	compiler "github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
@@ -45,6 +45,7 @@ type LuetInstallerOptions struct {
 	FullUninstall, FullCleanUninstall                              bool
 	CheckConflicts                                                 bool
 	SolverUpgrade, RemoveUnavailableOnUpgrade, UpgradeNewRevisions bool
+	Ask                                                            bool
 }
 
 type LuetInstaller struct {
@@ -63,93 +64,105 @@ func NewLuetInstaller(opts LuetInstallerOptions) Installer {
 	return &LuetInstaller{Options: opts}
 }
 
-func (l *LuetInstaller) Upgrade(s *System) error {
+// ComputeUpgrade returns the packages to be uninstalled and installed in a system to perform an upgrade
+// based on the system repositories
+func (l *LuetInstaller) ComputeUpgrade(s *System) (Repositories, pkg.Packages, pkg.Packages, error) {
+	toInstall := pkg.Packages{}
+	var uninstall pkg.Packages
+
 	syncedRepos, err := l.SyncRepositories(true)
 	if err != nil {
-		return err
+		return nil, uninstall, toInstall, err
 	}
 
+	// First match packages against repositories by priority
+	allRepos := pkg.NewInMemoryDatabase(false)
+	syncedRepos.SyncDatabase(allRepos)
+	// compute a "big" world
+	solv := solver.NewResolver(solver.Options{Type: l.Options.SolverOptions.Implementation, Concurrency: l.Options.Concurrency}, s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
+	var solution solver.PackagesAssertions
+
+	if l.Options.SolverUpgrade {
+		uninstall, solution, err = solv.UpgradeUniverse(l.Options.RemoveUnavailableOnUpgrade)
+		if err != nil {
+			return syncedRepos, uninstall, toInstall, errors.Wrap(err, "Failed solving solution for upgrade")
+		}
+	} else {
+		uninstall, solution, err = solv.Upgrade(!l.Options.FullUninstall, l.Options.NoDeps)
+		if err != nil {
+			return syncedRepos, uninstall, toInstall, errors.Wrap(err, "Failed solving solution for upgrade")
+		}
+	}
+
+	for _, assertion := range solution {
+		// Be sure to filter from solutions packages already installed in the system
+		if _, err := s.Database.FindPackage(assertion.Package); err != nil && assertion.Value {
+			toInstall = append(toInstall, assertion.Package)
+		}
+	}
+
+	if l.Options.UpgradeNewRevisions {
+		for _, p := range s.Database.World() {
+			matches := syncedRepos.PackageMatches(pkg.Packages{p})
+			if len(matches) == 0 {
+				// Package missing. the user should run luet upgrade --universe
+				continue
+			}
+			for _, artefact := range matches[0].Repo.GetIndex() {
+				if artefact.GetCompileSpec().GetPackage() == nil {
+					return syncedRepos, uninstall, toInstall, errors.New("Package in compilespec empty")
+
+				}
+				if artefact.GetCompileSpec().GetPackage().Matches(p) && artefact.GetCompileSpec().GetPackage().GetBuildTimestamp() != p.GetBuildTimestamp() {
+					toInstall = append(toInstall, matches[0].Package).Unique()
+					uninstall = append(uninstall, p).Unique()
+				}
+			}
+		}
+	}
+
+	return syncedRepos, uninstall, toInstall, nil
+}
+
+func packsToList(p pkg.Packages) string {
+	var packs []string
+
+	for _, pp := range p {
+		packs = append(packs, pp.HumanReadableString())
+	}
+	return strings.Join(packs, " ")
+}
+
+// Upgrade upgrades a System based on the Installer options. Returns error in case of failure
+func (l *LuetInstaller) Upgrade(s *System) error {
 	Info(":thinking: Computing upgrade, please hang tight... :zzz:")
 	if l.Options.UpgradeNewRevisions {
 		Info(":memo: note: will consider new build revisions while upgrading")
 	}
 	Spinner(32)
 	defer SpinnerStop()
-	// First match packages against repositories by priority
-	allRepos := pkg.NewInMemoryDatabase(false)
-	syncedRepos.SyncDatabase(allRepos)
-	// compute a "big" world
-	solv := solver.NewResolver(solver.Options{Type: l.Options.SolverOptions.Implementation, Concurrency: l.Options.Concurrency}, s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
-	var uninstall pkg.Packages
-	var solution solver.PackagesAssertions
 
-	if l.Options.SolverUpgrade {
-
-		uninstall, solution, err = solv.UpgradeUniverse(l.Options.RemoveUnavailableOnUpgrade)
-		if err != nil {
-			return errors.Wrap(err, "Failed solving solution for upgrade")
-		}
-	} else {
-		uninstall, solution, err = solv.Upgrade(!l.Options.FullUninstall, l.Options.NoDeps)
-		if err != nil {
-			return errors.Wrap(err, "Failed solving solution for upgrade")
-		}
-
+	syncedRepos, uninstall, toInstall, err := l.ComputeUpgrade(s)
+	if err != nil {
+		return errors.Wrap(err, "failed computing upgrade")
 	}
-	SpinnerStop()
 
 	if len(uninstall) > 0 {
-		Info(":recycle: Packages marked for uninstall:")
+		Info(":recycle: Packages that are going to be removed from the system:\n ", Yellow(packsToList(uninstall)).BgBlack().String())
 	}
 
-	for _, p := range uninstall {
-		Info(fmt.Sprintf("- %s", p.HumanReadableString()))
+	if len(toInstall) > 0 {
+		Info(":zap: Packages that are going to be installed in the system:\n ", Green(packsToList(toInstall)).BgBlack().String())
 	}
 
-	if len(solution) > 0 {
-		Info(":zap: Packages marked for upgrade:")
-	}
-
-	toInstall := pkg.Packages{}
-	for _, assertion := range solution {
-		// Be sure to filter from solutions packages already installed in the system
-		if _, err := s.Database.FindPackage(assertion.Package); err != nil && assertion.Value {
-			Info(fmt.Sprintf("- %s", assertion.Package.HumanReadableString()))
-			toInstall = append(toInstall, assertion.Package)
+	if l.Options.Ask {
+		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
+		if Ask() {
+			return l.swap(syncedRepos, uninstall, toInstall, s)
+		} else {
+			return errors.New("Aborted by user")
 		}
 	}
-
-	if l.Options.UpgradeNewRevisions {
-		Info(":mag: Checking packages with new revisions available")
-		for _, p := range s.Database.World() {
-			matches := syncedRepos.PackageMatches(pkg.Packages{p})
-			if len(matches) == 0 {
-				// Package missing. the user should run luet upgrade --universe
-				Info(":warning: Installed packages seems to be missing from remote repositories.")
-				Info(":warning: It is suggested to run 'luet upgrade --universe'")
-				continue
-			}
-			for _, artefact := range matches[0].Repo.GetIndex() {
-				if artefact.GetCompileSpec().GetPackage() == nil {
-					return errors.New("Package in compilespec empty")
-
-				}
-				if artefact.GetCompileSpec().GetPackage().Matches(p) && artefact.GetCompileSpec().GetPackage().GetBuildTimestamp() != p.GetBuildTimestamp() {
-					toInstall = append(toInstall, matches[0].Package).Unique()
-					uninstall = append(uninstall, p).Unique()
-					Info(
-						fmt.Sprintf("- %s ( %s vs %s ) repo: %s (date: %s)",
-							p.HumanReadableString(),
-							artefact.GetCompileSpec().GetPackage().GetBuildTimestamp(),
-							p.GetBuildTimestamp(),
-							matches[0].Repo.GetName(),
-							matches[0].Repo.GetLastUpdate(),
-						))
-				}
-			}
-		}
-	}
-
 	return l.swap(syncedRepos, uninstall, toInstall, s)
 }
 
@@ -216,7 +229,12 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 	}
 	l.Options.Force = forced
 
-	return l.install(syncedRepos, toInstall, s)
+	match, packages, assertions, allRepos, err := l.ComputeInstall(syncedRepos, toInstall, s)
+	if err != nil {
+		return errors.Wrap(err, "computing installation")
+	}
+
+	return l.install(syncedRepos, match, packages, assertions, allRepos, s)
 }
 
 func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
@@ -224,7 +242,28 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 	if err != nil {
 		return err
 	}
-	return l.install(syncedRepos, cp, s)
+
+	match, packages, assertions, allRepos, err := l.ComputeInstall(syncedRepos, cp, s)
+	if err != nil {
+		return err
+	}
+
+	if len(packages) > 0 {
+		Info("Packages that are going to be installed in the system: \n ", Green(packsToList(packages)).BgBlack().String())
+	} else {
+		Info("No packages to install")
+		return nil
+	}
+
+	if l.Options.Ask {
+		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
+		if Ask() {
+			return l.install(syncedRepos, match, packages, assertions, allRepos, s)
+		} else {
+			return errors.New("Aborted by user")
+		}
+	}
+	return l.install(syncedRepos, match, packages, assertions, allRepos, s)
 }
 
 func (l *LuetInstaller) download(syncedRepos Repositories, cp pkg.Packages) error {
@@ -323,16 +362,18 @@ func (l *LuetInstaller) Reclaim(s *System) error {
 	return nil
 }
 
-func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *System) error {
+func (l *LuetInstaller) ComputeInstall(syncedRepos Repositories, cp pkg.Packages, s *System) (map[string]ArtifactMatch, pkg.Packages, solver.PackagesAssertions, pkg.PackageDatabase, error) {
 	var p pkg.Packages
+	toInstall := map[string]ArtifactMatch{}
+	allRepos := pkg.NewInMemoryDatabase(false)
+	var solution solver.PackagesAssertions
 
 	// Check if the package is installed first
 	for _, pi := range cp {
-
 		vers, _ := s.Database.FindPackageVersions(pi)
 
 		if len(vers) >= 1 {
-			Warning("Filtering out package " + pi.HumanReadableString() + ", it has other versions already installed. Uninstall one of them first ")
+			//	Warning("Filtering out package " + pi.HumanReadableString() + ", it has other versions already installed. Uninstall one of them first ")
 			continue
 			//return errors.New("Package " + pi.GetFingerPrint() + " has other versions already installed. Uninstall one of them first: " + strings.Join(vers, " "))
 
@@ -342,7 +383,7 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *Sy
 
 	if len(p) == 0 {
 		Warning("No package to install, bailing out with no errors")
-		return nil
+		return toInstall, p, solution, allRepos, nil
 	}
 	// First get metas from all repos (and decodes trees)
 
@@ -350,25 +391,19 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *Sy
 	//	matches := syncedRepos.PackageMatches(p)
 
 	// compute a "big" world
-	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
 	p = syncedRepos.ResolveSelectors(p)
-	toInstall := map[string]ArtifactMatch{}
 	var packagesToInstall pkg.Packages
 	var err error
-	var solution solver.PackagesAssertions
 
 	if !l.Options.NoDeps {
-		Info(":deciduous_tree: Computing installation, hang tight")
 		solv := solver.NewResolver(solver.Options{Type: l.Options.SolverOptions.Implementation, Concurrency: l.Options.Concurrency}, s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
 		solution, err = solv.Install(p)
 		/// TODO: PackageAssertions needs to be a map[fingerprint]pack so lookup is in O(1)
 		if err != nil && !l.Options.Force {
-			return errors.Wrap(err, "Failed solving solution for package")
+			return toInstall, p, solution, allRepos, errors.Wrap(err, "Failed solving solution for package")
 		}
-		Info(":deciduous_tree: Finished calculating dependencies")
 		// Gathers things to install
-		Info(":deciduous_tree: Checking for packages already installed, and prepare for installation")
 		for _, assertion := range solution {
 			if assertion.Value {
 				if _, err := s.Database.FindPackage(assertion.Package); err == nil {
@@ -387,32 +422,33 @@ func (l *LuetInstaller) install(syncedRepos Repositories, cp pkg.Packages, s *Sy
 			packagesToInstall = append(packagesToInstall, currentPack)
 		}
 	}
-	Info(":deciduous_tree: Finding packages to install from :cloud:")
 	// Gathers things to install
 	for _, currentPack := range packagesToInstall {
 		// Check if package is already installed.
 
 		matches := syncedRepos.PackageMatches(pkg.Packages{currentPack})
 		if len(matches) == 0 {
-			return errors.New("Failed matching solutions against repository for " + currentPack.HumanReadableString() + " where are definitions coming from?!")
+			return toInstall, p, solution, allRepos, errors.New("Failed matching solutions against repository for " + currentPack.HumanReadableString() + " where are definitions coming from?!")
 		}
 	A:
 		for _, artefact := range matches[0].Repo.GetIndex() {
 			if artefact.GetCompileSpec().GetPackage() == nil {
-				return errors.New("Package in compilespec empty")
-
+				return toInstall, p, solution, allRepos, errors.New("Package in compilespec empty")
 			}
 			if matches[0].Package.Matches(artefact.GetCompileSpec().GetPackage()) {
 				currentPack.SetBuildTimestamp(artefact.GetCompileSpec().GetPackage().GetBuildTimestamp())
 				// Filter out already installed
 				if _, err := s.Database.FindPackage(currentPack); err != nil {
 					toInstall[currentPack.GetFingerPrint()] = ArtifactMatch{Package: currentPack, Artifact: artefact, Repository: matches[0].Repo}
-					Info("\t:package:", currentPack.HumanReadableString(), ":cloud:", matches[0].Repo.GetName())
 				}
 				break A
 			}
 		}
 	}
+	return toInstall, p, solution, allRepos, nil
+}
+
+func (l *LuetInstaller) install(syncedRepos Repositories, toInstall map[string]ArtifactMatch, p pkg.Packages, solution solver.PackagesAssertions, allRepos pkg.PackageDatabase, s *System) error {
 	// Install packages into rootfs in parallel.
 	all := make(chan ArtifactMatch)
 
@@ -542,7 +578,7 @@ func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, c <-chan Artif
 			return errors.Wrap(err, "Failed installing package "+p.Package.GetName())
 		}
 		if err == nil {
-			Info("\n:package: ", p.Package.HumanReadableString(), "downloaded")
+			Info("\n:package: Package ", p.Package.HumanReadableString(), "downloaded")
 		} else if err != nil && l.Options.Force {
 			Info("\n:package: ", p.Package.HumanReadableString(), "downloaded with failures (force download)")
 		}
@@ -563,9 +599,9 @@ func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan Arti
 			return errors.Wrap(err, "Failed installing package "+p.Package.GetName())
 		}
 		if err == nil {
-			Info(":package: ", p.Package.HumanReadableString(), "installed")
+			Info(":package: Package ", p.Package.HumanReadableString(), "installed")
 		} else if err != nil && l.Options.Force {
-			Info(":package: ", p.Package.HumanReadableString(), "installed with failures (force install)")
+			Info(":package: Package ", p.Package.HumanReadableString(), "installed with failures (forced install)")
 		}
 	}
 
@@ -663,12 +699,9 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 	return nil
 }
 
-func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
-	Spinner(32)
-	defer SpinnerStop()
+func (l *LuetInstaller) ComputeUninstall(p pkg.Package, s *System) (pkg.Packages, error) {
 
-	Info(":recycle: Uninstalling :package:", p.HumanReadableString(), "hang tight")
-
+	var toUninstall pkg.Packages
 	// compute uninstall from all world - remove packages in parallel - run uninstall finalizer (in order) TODO - mark the uninstallation in db
 	// Get installed definition
 	checkConflicts := l.Options.CheckConflicts
@@ -685,44 +718,66 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 	for _, i := range s.Database.World() {
 		_, err := installedtmp.CreatePackage(i)
 		if err != nil {
-			return errors.Wrap(err, "Failed create temporary in-memory db")
+			return toUninstall, errors.Wrap(err, "Failed create temporary in-memory db")
 		}
 	}
 
 	if !l.Options.NoDeps {
-		Info(":mag: Finding :package:", p.HumanReadableString(), "dependency graph :deciduous_tree:")
 		solv := solver.NewResolver(solver.Options{Type: l.Options.SolverOptions.Implementation, Concurrency: l.Options.Concurrency}, installedtmp, installedtmp, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
 		var solution pkg.Packages
 		var err error
 		if l.Options.FullCleanUninstall {
 			solution, err = solv.UninstallUniverse(pkg.Packages{p})
 			if err != nil {
-				return errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
+				return toUninstall, errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
 			}
 		} else {
 			solution, err = solv.Uninstall(checkConflicts, full, p)
 			if err != nil && !l.Options.Force {
-				return errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
+				return toUninstall, errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
 			}
 		}
 
 		for _, p := range solution {
-			Info(":recycle: Uninstalling", p.HumanReadableString())
+			toUninstall = append(toUninstall, p)
+		}
+	} else {
+		toUninstall = append(toUninstall, p)
+
+	}
+
+	return toUninstall, nil
+}
+func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
+	Spinner(32)
+	defer SpinnerStop()
+
+	toUninstall, err := l.ComputeUninstall(p, s)
+	if err != nil {
+		return errors.Wrap(err, "while computing uninstall")
+	}
+
+	uninstall := func() error {
+		for _, p := range toUninstall {
 			err := l.uninstall(p, s)
 			if err != nil && !l.Options.Force {
 				return errors.Wrap(err, "Uninstall failed")
 			}
 		}
-	} else {
-		Info(":recycle: Uninstalling", p.HumanReadableString(), "without deps")
-		err := l.uninstall(p, s)
-		if err != nil && !l.Options.Force {
-			return errors.Wrap(err, "Uninstall failed")
-		}
-		Info(":recycle: :package:", p.HumanReadableString(), "uninstalled :heavy_check_mark:")
+		return nil
 	}
-	return nil
 
+	Info(":recycle: Packages that are going to be removed from the system:\n   ", Yellow(packsToList(toUninstall)).BgBlack().String())
+
+	if l.Options.Ask {
+		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
+		if Ask() {
+			return uninstall()
+		} else {
+			return errors.New("Aborted by user")
+		}
+	}
+	return uninstall()
 }
 
 func (l *LuetInstaller) Repositories(r []Repository) { l.PackageRepositories = r }

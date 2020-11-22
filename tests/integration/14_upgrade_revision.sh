@@ -75,7 +75,7 @@ EOF
 }
 
 testUpgrade() {
-    luet install --config $tmpdir/luet.yaml test/b-1.0
+    luet install -y --config $tmpdir/luet.yaml test/b-1.0
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package installed B' "[ -e '$tmpdir/testrootfs/test5' ]"
@@ -100,13 +100,13 @@ EOF
     res=$?
     assertEquals 'config test successfully' "$res" "0"
 
-    luet upgrade --sync --config $tmpdir/luet.yaml
+    luet upgrade -y --sync --config $tmpdir/luet.yaml
     installst=$?
     assertEquals 'upgrade test successfully' "$installst" "0"
     assertTrue 'package uninstalled B' "[ ! -e '$tmpdir/testrootfs/test5' ]"
     assertTrue 'package installed B' "[ -e '$tmpdir/testrootfs/newc' ]"
 
-    content=$(luet upgrade --sync --config $tmpdir/luet.yaml)
+    content=$(luet upgrade -y --sync --config $tmpdir/luet.yaml)
     installst=$?
     assertNotContains 'didn not upgrade' "$content" "Uninstalling"
 }

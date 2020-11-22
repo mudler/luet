@@ -65,22 +65,22 @@ EOF
 }
 
 testInstall() {
-    luet install --config $tmpdir/luet.yaml test/c-1.0
-    #luet install --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
+    luet install -y --config $tmpdir/luet.yaml test/c-1.0
+    #luet install -y --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/c' ]"
 }
 
 testReInstall() {
-    output=$(luet install --config $tmpdir/luet.yaml  test/c-1.0)
+    output=$(luet install -y --config $tmpdir/luet.yaml  test/c-1.0)
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
-    assertContains 'contains warning' "$output" 'Filtering out'
+    assertContains 'contains warning' "$output" 'No packages to install'
 }
 
 testUnInstall() {
-    luet uninstall --config $tmpdir/luet.yaml test/c-1.0
+    luet uninstall -y --config $tmpdir/luet.yaml test/c-1.0
     installst=$?
     assertEquals 'uninstall test successfully' "$installst" "0"
     assertTrue 'package uninstalled' "[ ! -e '$tmpdir/testrootfs/c' ]"
@@ -88,10 +88,10 @@ testUnInstall() {
 
 testInstallAgain() {
     assertTrue 'package uninstalled' "[ ! -e '$tmpdir/testrootfs/c' ]"
-    output=$(luet install --config $tmpdir/luet.yaml test/c-1.0)
+    output=$(luet install -y --config $tmpdir/luet.yaml test/c-1.0)
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
-    assertNotContains 'contains warning' "$output" 'Filtering out'
+    assertNotContains 'contains warning' "$output" 'No packages to install'
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/c' ]"
     assertTrue 'package in cache' "[ -e '$tmpdir/testrootfs/packages/c-test-1.0.package.tar.gz' ]"
 }

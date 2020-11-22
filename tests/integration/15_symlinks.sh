@@ -56,7 +56,7 @@ EOF
 }
 
 testInstall() {
-    luet install --config $tmpdir/luet.yaml test/pkgAsym test/pkgBsym
+    luet install -y --config $tmpdir/luet.yaml test/pkgAsym test/pkgBsym
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     ls -liah $tmpdir/testrootfs/

@@ -58,7 +58,7 @@ EOF
 
 testDatabase() {
     luet database create --config $tmpdir/luet.yaml $tmpdir/testbuild/c-test-1.0.metadata.yaml
-    #luet install --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
+    #luet install -y --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
     createst=$?
     assertEquals 'created package successfully' "$createst" "0"
     assertTrue 'package not installed' "[ ! -e '$tmpdir/testrootfs/c' ]"
@@ -75,12 +75,12 @@ testDatabase() {
     assertTrue 'file not touched' "[ -e '$tmpdir/testrootfs/c' ]"
 
     luet database create --config $tmpdir/luet.yaml $tmpdir/testbuild/c-test-1.0.metadata.yaml
-    #luet install --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
+    #luet install -y --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
     createst=$?
     assertEquals 'created package successfully' "$createst" "0"
     assertTrue 'file still present' "[ -e '$tmpdir/testrootfs/c' ]"
     
-    luet uninstall --config $tmpdir/luet.yaml test/c
+    luet uninstall -y --config $tmpdir/luet.yaml test/c
     installst=$?
     assertEquals 'uninstall test successfully' "$installst" "0"
     assertTrue 'package uninstalled' "[ ! -e '$tmpdir/testrootfs/c' ]"
