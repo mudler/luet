@@ -35,6 +35,8 @@ github.com/Microsoft/hcsshim/osversion
 github.com/Sabayon/pkgs-checker/pkg/gentoo
 # github.com/apex/log v1.1.1
 github.com/apex/log
+# github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535
+github.com/asaskevich/govalidator
 # github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 github.com/asdine/storm
 github.com/asdine/storm/codec
@@ -119,6 +121,12 @@ github.com/fsnotify/fsnotify
 github.com/fsouza/go-dockerclient
 # github.com/ghodss/yaml v1.0.0
 github.com/ghodss/yaml
+# github.com/go-openapi/errors v0.19.2
+github.com/go-openapi/errors
+# github.com/go-openapi/strfmt v0.19.3
+github.com/go-openapi/strfmt
+# github.com/go-stack/stack v1.8.0
+github.com/go-stack/stack
 # github.com/gobwas/glob v0.2.3
 github.com/gobwas/glob
 github.com/gobwas/glob/compiler
@@ -170,6 +178,12 @@ github.com/huandu/xstrings
 github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
+# github.com/jedib0t/go-pretty v4.3.0+incompatible
+github.com/jedib0t/go-pretty/table
+github.com/jedib0t/go-pretty/text
+# github.com/jedib0t/go-pretty/v6 v6.0.5
+github.com/jedib0t/go-pretty/v6/list
+github.com/jedib0t/go-pretty/v6/text
 # github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
 github.com/jinzhu/copier
 # github.com/json-iterator/go v1.1.9
@@ -335,6 +349,13 @@ github.com/xeipuuv/gojsonreference
 github.com/xeipuuv/gojsonschema
 # go.etcd.io/bbolt v1.3.4
 go.etcd.io/bbolt
+# go.mongodb.org/mongo-driver v1.1.2
+go.mongodb.org/mongo-driver/bson
+go.mongodb.org/mongo-driver/bson/bsoncodec
+go.mongodb.org/mongo-driver/bson/bsonrw
+go.mongodb.org/mongo-driver/bson/bsontype
+go.mongodb.org/mongo-driver/bson/primitive
+go.mongodb.org/mongo-driver/x/bsonx/bsoncore
 # go.opencensus.io v0.22.2
 go.opencensus.io
 go.opencensus.io/internal
