@@ -64,17 +64,12 @@ func NewLuetInstaller(opts LuetInstallerOptions) Installer {
 	return &LuetInstaller{Options: opts}
 }
 
-// ComputeUpgrade returns the packages to be uninstalled and installed in a system to perform an upgrade
+// computeUpgrade returns the packages to be uninstalled and installed in a system to perform an upgrade
 // based on the system repositories
-func (l *LuetInstaller) ComputeUpgrade(s *System) (Repositories, pkg.Packages, pkg.Packages, error) {
+func (l *LuetInstaller) computeUpgrade(syncedRepos Repositories, s *System) (pkg.Packages, pkg.Packages, error) {
 	toInstall := pkg.Packages{}
 	var uninstall pkg.Packages
-
-	syncedRepos, err := l.SyncRepositories(true)
-	if err != nil {
-		return nil, uninstall, toInstall, err
-	}
-
+	var err error
 	// First match packages against repositories by priority
 	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
@@ -85,12 +80,12 @@ func (l *LuetInstaller) ComputeUpgrade(s *System) (Repositories, pkg.Packages, p
 	if l.Options.SolverUpgrade {
 		uninstall, solution, err = solv.UpgradeUniverse(l.Options.RemoveUnavailableOnUpgrade)
 		if err != nil {
-			return syncedRepos, uninstall, toInstall, errors.Wrap(err, "Failed solving solution for upgrade")
+			return uninstall, toInstall, errors.Wrap(err, "Failed solving solution for upgrade")
 		}
 	} else {
 		uninstall, solution, err = solv.Upgrade(!l.Options.FullUninstall, l.Options.NoDeps)
 		if err != nil {
-			return syncedRepos, uninstall, toInstall, errors.Wrap(err, "Failed solving solution for upgrade")
+			return uninstall, toInstall, errors.Wrap(err, "Failed solving solution for upgrade")
 		}
 	}
 
@@ -110,7 +105,7 @@ func (l *LuetInstaller) ComputeUpgrade(s *System) (Repositories, pkg.Packages, p
 			}
 			for _, artefact := range matches[0].Repo.GetIndex() {
 				if artefact.GetCompileSpec().GetPackage() == nil {
-					return syncedRepos, uninstall, toInstall, errors.New("Package in compilespec empty")
+					return uninstall, toInstall, errors.New("Package in compilespec empty")
 
 				}
 				if artefact.GetCompileSpec().GetPackage().Matches(p) && artefact.GetCompileSpec().GetPackage().GetBuildTimestamp() != p.GetBuildTimestamp() {
@@ -121,7 +116,7 @@ func (l *LuetInstaller) ComputeUpgrade(s *System) (Repositories, pkg.Packages, p
 		}
 	}
 
-	return syncedRepos, uninstall, toInstall, nil
+	return uninstall, toInstall, nil
 }
 
 func packsToList(p pkg.Packages) string {
@@ -135,17 +130,23 @@ func packsToList(p pkg.Packages) string {
 
 // Upgrade upgrades a System based on the Installer options. Returns error in case of failure
 func (l *LuetInstaller) Upgrade(s *System) error {
+
+	syncedRepos, err := l.SyncRepositories(true)
+	if err != nil {
+		return err
+	}
+
 	Info(":thinking: Computing upgrade, please hang tight... :zzz:")
 	if l.Options.UpgradeNewRevisions {
 		Info(":memo: note: will consider new build revisions while upgrading")
 	}
-	Spinner(32)
-	defer SpinnerStop()
 
-	syncedRepos, uninstall, toInstall, err := l.ComputeUpgrade(s)
+	Spinner(32)
+	uninstall, toInstall, err := l.computeUpgrade(syncedRepos, s)
 	if err != nil {
 		return errors.Wrap(err, "failed computing upgrade")
 	}
+	SpinnerStop()
 
 	if len(uninstall) > 0 {
 		Info(":recycle: Packages that are going to be removed from the system:\n ", Yellow(packsToList(uninstall)).BgBlack().String())
@@ -155,14 +156,23 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 		Info(":zap: Packages that are going to be installed in the system:\n ", Green(packsToList(toInstall)).BgBlack().String())
 	}
 
+	if len(toInstall) == 0 && len(uninstall) == 0 {
+		Info("Nothing to do")
+		return nil
+	}
+
 	if l.Options.Ask {
 		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
 		if Ask() {
+			l.Options.Ask = false // Don't prompt anymore
 			return l.swap(syncedRepos, uninstall, toInstall, s)
 		} else {
 			return errors.New("Aborted by user")
 		}
 	}
+
+	Spinner(32)
+	defer SpinnerStop()
 	return l.swap(syncedRepos, uninstall, toInstall, s)
 }
 
@@ -218,18 +228,15 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 	l.Options.Force = true
 
 	for _, u := range toRemove {
-		Info(":package:", u.HumanReadableString(), "Marked for deletion")
-
 		err := l.Uninstall(u, s)
 		if err != nil && !l.Options.Force {
 			Error("Failed uninstall for ", u.HumanReadableString())
 			return errors.Wrap(err, "uninstalling "+u.HumanReadableString())
 		}
-
 	}
 	l.Options.Force = forced
 
-	match, packages, assertions, allRepos, err := l.ComputeInstall(syncedRepos, toInstall, s)
+	match, packages, assertions, allRepos, err := l.computeInstall(syncedRepos, toInstall, s)
 	if err != nil {
 		return errors.Wrap(err, "computing installation")
 	}
@@ -243,7 +250,7 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 		return err
 	}
 
-	match, packages, assertions, allRepos, err := l.ComputeInstall(syncedRepos, cp, s)
+	match, packages, assertions, allRepos, err := l.computeInstall(syncedRepos, cp, s)
 	if err != nil {
 		return err
 	}
@@ -258,6 +265,7 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 	if l.Options.Ask {
 		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
 		if Ask() {
+			l.Options.Ask = false // Don't prompt anymore
 			return l.install(syncedRepos, match, packages, assertions, allRepos, s)
 		} else {
 			return errors.New("Aborted by user")
@@ -362,7 +370,7 @@ func (l *LuetInstaller) Reclaim(s *System) error {
 	return nil
 }
 
-func (l *LuetInstaller) ComputeInstall(syncedRepos Repositories, cp pkg.Packages, s *System) (map[string]ArtifactMatch, pkg.Packages, solver.PackagesAssertions, pkg.PackageDatabase, error) {
+func (l *LuetInstaller) computeInstall(syncedRepos Repositories, cp pkg.Packages, s *System) (map[string]ArtifactMatch, pkg.Packages, solver.PackagesAssertions, pkg.PackageDatabase, error) {
 	var p pkg.Packages
 	toInstall := map[string]ArtifactMatch{}
 	allRepos := pkg.NewInMemoryDatabase(false)
@@ -382,7 +390,6 @@ func (l *LuetInstaller) ComputeInstall(syncedRepos Repositories, cp pkg.Packages
 	}
 
 	if len(p) == 0 {
-		Warning("No package to install, bailing out with no errors")
 		return toInstall, p, solution, allRepos, nil
 	}
 	// First get metas from all repos (and decodes trees)
@@ -699,7 +706,7 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 	return nil
 }
 
-func (l *LuetInstaller) ComputeUninstall(p pkg.Package, s *System) (pkg.Packages, error) {
+func (l *LuetInstaller) computeUninstall(p pkg.Package, s *System) (pkg.Packages, error) {
 
 	var toUninstall pkg.Packages
 	// compute uninstall from all world - remove packages in parallel - run uninstall finalizer (in order) TODO - mark the uninstallation in db
@@ -752,7 +759,7 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 	Spinner(32)
 	defer SpinnerStop()
 
-	toUninstall, err := l.ComputeUninstall(p, s)
+	toUninstall, err := l.computeUninstall(p, s)
 	if err != nil {
 		return errors.Wrap(err, "while computing uninstall")
 	}
@@ -767,11 +774,17 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 		return nil
 	}
 
+	if len(toUninstall) == 0 {
+		Info("Nothing to do")
+		return nil
+	}
+
 	Info(":recycle: Packages that are going to be removed from the system:\n   ", Yellow(packsToList(toUninstall)).BgBlack().String())
 
 	if l.Options.Ask {
 		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
 		if Ask() {
+			l.Options.Ask = false // Don't prompt anymore
 			return uninstall()
 		} else {
 			return errors.New("Aborted by user")

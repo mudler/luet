@@ -95,10 +95,6 @@ var upgradeCmd = &cobra.Command{
 			Ask:                        !yes,
 		})
 		inst.Repositories(repos)
-		_, err := inst.SyncRepositories(false)
-		if err != nil {
-			Fatal("Error: " + err.Error())
-		}
 
 		if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
 			systemDB = pkg.NewBoltDatabase(
@@ -107,8 +103,8 @@ var upgradeCmd = &cobra.Command{
 			systemDB = pkg.NewInMemoryDatabase(true)
 		}
 		system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
-		err = inst.Upgrade(system)
-		if err != nil {
+
+		if err := inst.Upgrade(system); err != nil {
 			Fatal("Error: " + err.Error())
 		}
 	},

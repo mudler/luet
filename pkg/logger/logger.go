@@ -43,7 +43,7 @@ func Ask() bool {
 	Info("Do you want to continue with this operation? [y/N]: ")
 	_, err := fmt.Scanln(&input)
 	if err != nil {
-		panic(err)
+		return false
 	}
 	input = strings.ToLower(input)
 
