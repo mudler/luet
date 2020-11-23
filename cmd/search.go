@@ -59,6 +59,7 @@ func packageToList(l list.Writer, repo string, p pkg.Package) {
 	l.AppendItem(fmt.Sprintf("Category: %s", p.GetCategory()))
 	l.AppendItem(fmt.Sprintf("Name: %s", p.GetCategory()))
 	l.AppendItem(fmt.Sprintf("Version: %s", p.GetVersion()))
+	l.AppendItem(fmt.Sprintf("Description: %s", p.GetDescription()))
 	l.AppendItem(fmt.Sprintf("Repository: %s ", repo))
 	l.AppendItem(fmt.Sprintf("Uri: %s ", strings.Join(p.GetURI(), "\n")))
 	l.UnIndent()
