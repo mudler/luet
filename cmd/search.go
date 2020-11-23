@@ -18,8 +18,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ghodss/yaml"
+	"github.com/jedib0t/go-pretty/table"
+	"github.com/jedib0t/go-pretty/v6/list"
 	. "github.com/mudler/luet/pkg/config"
 	installer "github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/logger"
@@ -44,6 +47,23 @@ func (r PackageResult) String() string {
 	return fmt.Sprintf("%s/%s-%s required for %s", r.Category, r.Name, r.Version, r.Target)
 }
 
+var rows table.Row = table.Row{"Package", "Category", "Name", "Version", "Repository", "Description", "License", "URI"}
+
+func packageToRow(repo string, p pkg.Package) table.Row {
+	return table.Row{p.HumanReadableString(), p.GetCategory(), p.GetName(), p.GetVersion(), repo, p.GetDescription(), p.GetLicense(), strings.Join(p.GetURI(), "\n")}
+}
+
+func packageToList(l list.Writer, repo string, p pkg.Package) {
+	l.AppendItem(p.HumanReadableString())
+	l.Indent()
+	l.AppendItem(fmt.Sprintf("Category: %s", p.GetCategory()))
+	l.AppendItem(fmt.Sprintf("Name: %s", p.GetCategory()))
+	l.AppendItem(fmt.Sprintf("Version: %s", p.GetVersion()))
+	l.AppendItem(fmt.Sprintf("Repository: %s ", repo))
+	l.AppendItem(fmt.Sprintf("Uri: %s ", strings.Join(p.GetURI(), "\n")))
+	l.UnIndent()
+}
+
 var searchCmd = &cobra.Command{
 	Use:     "search <term>",
 	Short:   "Search packages",
@@ -61,10 +81,11 @@ var searchCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var systemDB pkg.PackageDatabase
 		var results Results
-		if len(args) != 1 {
+		if len(args) > 1 {
 			Fatal("Wrong number of arguments (expected 1)")
+		} else if len(args) == 0 {
+			args = []string{"."}
 		}
-
 		hidden, _ := cmd.Flags().GetBool("hidden")
 
 		installed := LuetCfg.Viper.GetBool("installed")
@@ -75,6 +96,7 @@ var searchCmd = &cobra.Command{
 		searchWithLabel, _ := cmd.Flags().GetBool("by-label")
 		searchWithLabelMatch, _ := cmd.Flags().GetBool("by-label-regex")
 		revdeps, _ := cmd.Flags().GetBool("revdeps")
+		tableMode, _ := cmd.Flags().GetBool("table")
 
 		out, _ := cmd.Flags().GetString("output")
 		if out != "terminal" {
@@ -86,6 +108,9 @@ var searchCmd = &cobra.Command{
 		LuetCfg.GetSolverOptions().Discount = float32(discount)
 		LuetCfg.GetSolverOptions().MaxAttempts = attempts
 
+		l := list.NewWriter()
+		t := table.NewWriter()
+		t.AppendHeader(rows)
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 
 		if !installed {
@@ -124,7 +149,8 @@ var searchCmd = &cobra.Command{
 			for _, m := range matches {
 				if !revdeps {
 					if !m.Package.IsHidden() || m.Package.IsHidden() && hidden {
-						Info(fmt.Sprintf(":file_folder:%s", m.Repo.GetName()), fmt.Sprintf(":package:%s", m.Package.HumanReadableString()))
+						t.AppendRow(packageToRow(m.Repo.GetName(), m.Package))
+						packageToList(l, m.Repo.GetName(), m.Package)
 						results.Packages = append(results.Packages,
 							PackageResult{
 								Name:       m.Package.GetName(),
@@ -135,10 +161,11 @@ var searchCmd = &cobra.Command{
 							})
 					}
 				} else {
-					packs, _:= m.Repo.GetTree().GetDatabase().GetRevdeps(m.Package)
-					for _, revdep := range packs{
+					packs, _ := m.Repo.GetTree().GetDatabase().GetRevdeps(m.Package)
+					for _, revdep := range packs {
 						if !revdep.IsHidden() || revdep.IsHidden() && hidden {
-							Info(fmt.Sprintf(":file_folder:%s", m.Repo.GetName()), fmt.Sprintf(":package:%s", revdep.HumanReadableString()))
+							t.AppendRow(packageToRow(m.Repo.GetName(), revdep))
+							packageToList(l, m.Repo.GetName(), revdep)
 							results.Packages = append(results.Packages,
 								PackageResult{
 									Name:       revdep.GetName(),
@@ -178,7 +205,8 @@ var searchCmd = &cobra.Command{
 			for _, pack := range iMatches {
 				if !revdeps {
 					if !pack.IsHidden() || pack.IsHidden() && hidden {
-						Info(fmt.Sprintf(":package:%s", pack.HumanReadableString()))
+						t.AppendRow(packageToRow("system", pack))
+						packageToList(l, "system", pack)
 						results.Packages = append(results.Packages,
 							PackageResult{
 								Name:       pack.GetName(),
@@ -189,10 +217,11 @@ var searchCmd = &cobra.Command{
 							})
 					}
 				} else {
-					packs,_:=system.Database.GetRevdeps(pack)
+					packs, _ := system.Database.GetRevdeps(pack)
 					for _, revdep := range packs {
 						if !revdep.IsHidden() || revdep.IsHidden() && hidden {
-							Info(fmt.Sprintf(":package:%s", pack.HumanReadableString()))
+							t.AppendRow(packageToRow("system", pack))
+							packageToList(l, "system", pack)
 							results.Packages = append(results.Packages,
 								PackageResult{
 									Name:       revdep.GetName(),
@@ -205,6 +234,16 @@ var searchCmd = &cobra.Command{
 					}
 				}
 			}
+		}
+
+		t.AppendFooter(rows)
+		t.SetStyle(table.StyleColoredBright)
+
+		l.SetStyle(list.StyleConnectedRounded)
+		if tableMode {
+			Info(t.Render())
+		} else {
+			Info(l.Render())
 		}
 
 		y, err := yaml.Marshal(results)
@@ -244,6 +283,7 @@ func init() {
 	searchCmd.Flags().Bool("by-label-regex", false, "Search packages through label regex")
 	searchCmd.Flags().Bool("revdeps", false, "Search package reverse dependencies")
 	searchCmd.Flags().Bool("hidden", false, "Include hidden packages")
+	searchCmd.Flags().Bool("table", false, "show output in a table (wider screens)")
 
 	RootCmd.AddCommand(searchCmd)
 }
