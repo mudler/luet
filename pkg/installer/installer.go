@@ -757,12 +757,11 @@ func (l *LuetInstaller) computeUninstall(p pkg.Package, s *System) (pkg.Packages
 }
 func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 	Spinner(32)
-	defer SpinnerStop()
-
 	toUninstall, err := l.computeUninstall(p, s)
 	if err != nil {
 		return errors.Wrap(err, "while computing uninstall")
 	}
+	SpinnerStop()
 
 	uninstall := func() error {
 		for _, p := range toUninstall {
