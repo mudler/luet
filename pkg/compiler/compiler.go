@@ -27,6 +27,7 @@ import (
 	"time"
 
 	bus "github.com/mudler/luet/pkg/bus"
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
@@ -743,13 +744,25 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 
 		raw := packsRaw.Find(pack.GetName(), pack.GetCategory(), pack.GetVersion())
 
-		dat, err := helpers.RenderHelm(string(dataBuild), raw)
+		d := map[string]interface{}{}
+		if len(cs.Options.BuildValuesFile) > 0 {
+			defBuild, err := ioutil.ReadFile(cs.Options.BuildValuesFile)
+			if err != nil {
+				return nil, errors.Wrap(err, "rendering file "+val)
+			}
+			err = yaml.Unmarshal(defBuild, &d)
+			if err != nil {
+				return nil, errors.Wrap(err, "rendering file "+val)
+			}
+		}
+
+		dat, err := helpers.RenderHelm(string(dataBuild), raw, d)
 		if err != nil {
 			return nil, errors.Wrap(err, "rendering file "+pack.Rel(BuildFile))
 		}
 		dataresult = []byte(dat)
 	} else {
-		out, err := helpers.RenderFiles(pack.Rel(BuildFile), val)
+		out, err := helpers.RenderFiles(pack.Rel(BuildFile), val, cs.Options.BuildValuesFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "rendering file "+pack.Rel(BuildFile))
 		}

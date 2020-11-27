@@ -16,17 +16,132 @@
 package helpers_test
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+
 	. "github.com/mudler/luet/pkg/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
+func writeFile(path string, content string) {
+	err := ioutil.WriteFile(path, []byte(content), 0644)
+	Expect(err).ToNot(HaveOccurred())
+}
+
 var _ = Describe("Helpers", func() {
 	Context("RenderHelm", func() {
 		It("Renders templates", func() {
-			out, err := RenderHelm("{{.Values.Test}}", map[string]interface{}{"Test": "foo"})
+			out, err := RenderHelm("{{.Values.Test}}{{.Values.Bar}}", map[string]interface{}{"Test": "foo"}, map[string]interface{}{"Bar": "bar"})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(out).To(Equal("foo"))
+			Expect(out).To(Equal("foobar"))
+		})
+		It("Renders templates with overrides", func() {
+			out, err := RenderHelm("{{.Values.Test}}{{.Values.Bar}}", map[string]interface{}{"Test": "foo", "Bar": "baz"}, map[string]interface{}{"Bar": "bar"})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(out).To(Equal("foobar"))
+		})
+
+		It("Renders templates", func() {
+			out, err := RenderHelm("{{.Values.Test}}{{.Values.Bar}}", map[string]interface{}{"Test": "foo", "Bar": "bar"}, map[string]interface{}{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(out).To(Equal("foobar"))
+		})
+
+		It("Render files default overrides", func() {
+			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(testDir)
+
+			toTemplate := filepath.Join(testDir, "totemplate.yaml")
+			values := filepath.Join(testDir, "values.yaml")
+			d := filepath.Join(testDir, "default.yaml")
+
+			writeFile(toTemplate, `{{.Values.foo}}`)
+			writeFile(values, `
+foo: "bar"
+`)
+			writeFile(d, `
+foo: "baz"
+`)
+
+			Expect(err).ToNot(HaveOccurred())
+
+			res, err := RenderFiles(toTemplate, values, d)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).To(Equal("baz"))
+
+		})
+
+		It("Render files from values", func() {
+			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(testDir)
+
+			toTemplate := filepath.Join(testDir, "totemplate.yaml")
+			values := filepath.Join(testDir, "values.yaml")
+			d := filepath.Join(testDir, "default.yaml")
+
+			writeFile(toTemplate, `{{.Values.foo}}`)
+			writeFile(values, `
+foo: "bar"
+`)
+			writeFile(d, `
+faa: "baz"
+`)
+
+			Expect(err).ToNot(HaveOccurred())
+
+			res, err := RenderFiles(toTemplate, values, d)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).To(Equal("bar"))
+
+		})
+
+		It("Render files from values if no default", func() {
+			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(testDir)
+
+			toTemplate := filepath.Join(testDir, "totemplate.yaml")
+			values := filepath.Join(testDir, "values.yaml")
+
+			writeFile(toTemplate, `{{.Values.foo}}`)
+			writeFile(values, `
+foo: "bar"
+`)
+
+			Expect(err).ToNot(HaveOccurred())
+
+			res, err := RenderFiles(toTemplate, values, "")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).To(Equal("bar"))
+		})
+
+		It("doesn't interpolate if no one provides the values", func() {
+			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(testDir)
+
+			toTemplate := filepath.Join(testDir, "totemplate.yaml")
+			values := filepath.Join(testDir, "values.yaml")
+			d := filepath.Join(testDir, "default.yaml")
+
+			writeFile(toTemplate, `{{.Values.foo}}`)
+			writeFile(values, `
+foao: "bar"
+`)
+			writeFile(d, `
+faa: "baz"
+`)
+
+			Expect(err).ToNot(HaveOccurred())
+
+			res, err := RenderFiles(toTemplate, values, d)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).To(Equal(""))
+
 		})
 	})
 })

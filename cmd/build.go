@@ -49,6 +49,7 @@ var buildCmd = &cobra.Command{
 		viper.BindPFlag("compression", cmd.Flags().Lookup("compression"))
 		viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
 		viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
+		viper.BindPFlag("values", cmd.Flags().Lookup("values"))
 
 		viper.BindPFlag("image-repository", cmd.Flags().Lookup("image-repository"))
 		viper.BindPFlag("push", cmd.Flags().Lookup("push"))
@@ -75,6 +76,8 @@ var buildCmd = &cobra.Command{
 		databaseType := viper.GetString("database")
 		compressionType := viper.GetString("compression")
 		imageRepository := viper.GetString("image-repository")
+		values := viper.GetString("values")
+
 		push := viper.GetBool("push")
 		pull := viper.GetBool("pull")
 		keepImages := viper.GetBool("keep-images")
@@ -157,7 +160,7 @@ var buildCmd = &cobra.Command{
 		opts.KeepImageExport = keepExportedImages
 		opts.SkipIfMetadataExists = skip
 		opts.PackageTargetOnly = onlyTarget
-
+		opts.BuildValuesFile = values
 		var solverOpts solver.Options
 		if concurrent {
 			solverOpts = solver.Options{Type: solver.ParallelSimple, Concurrency: concurrency}
@@ -291,6 +294,7 @@ func init() {
 	buildCmd.Flags().Bool("revdeps", false, "Build with revdeps")
 	buildCmd.Flags().Bool("all", false, "Build all specfiles in the tree")
 	buildCmd.Flags().Bool("full", false, "Build all packages (optimized)")
+	buildCmd.Flags().String("values", "", "Build values file to interpolate with each package")
 
 	buildCmd.Flags().String("destination", path, "Destination folder")
 	buildCmd.Flags().String("compression", "none", "Compression alg: none, gzip")

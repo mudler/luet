@@ -92,7 +92,7 @@ func (r *CompilerRecipe) Load(path string) error {
 			compileDefPath := pack.Rel(CompilerDefinitionFile)
 			if helpers.Exists(compileDefPath) {
 
-				dat, err := helpers.RenderFiles(compileDefPath, currentpath)
+				dat, err := helpers.RenderFiles(compileDefPath, currentpath, "")
 				if err != nil {
 					return errors.Wrap(err,
 						"Error templating file "+CompilerDefinitionFile+" from "+
@@ -137,7 +137,7 @@ func (r *CompilerRecipe) Load(path string) error {
 					if err != nil {
 						return errors.Wrap(err, "Error reading file "+currentpath)
 					}
-					dat, err := helpers.RenderHelm(string(buildyaml), raw)
+					dat, err := helpers.RenderHelm(string(buildyaml), raw, map[string]interface{}{})
 					if err != nil {
 						return errors.Wrap(err,
 							"Error templating file "+CompilerDefinitionFile+" from "+

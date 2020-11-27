@@ -1,0 +1,13 @@
+packages:
+- name: "a"
+  category: "distro"
+  version: "0.1"
+  foo: "baz"
+- name: "b"
+  category: "distro"
+  version: "0.3"
+  foo: "f"
+- name: "c"
+  category: "distro"
+  version: "0.3"
+  foo: "bar"

@@ -56,6 +56,7 @@ type CompilerOptions struct {
 	NoDeps               bool
 	SolverOptions        config.LuetSolverOptions
 	SkipIfMetadataExists bool
+	BuildValuesFile      string
 
 	PackageTargetOnly bool
 }

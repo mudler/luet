@@ -11,7 +11,7 @@ import (
 )
 
 // RenderHelm renders the template string with helm
-func RenderHelm(template string, values map[string]interface{}) (string, error) {
+func RenderHelm(template string, values, d map[string]interface{}) (string, error) {
 	c := &chart.Chart{
 		Metadata: &chart.Metadata{
 			Name:    "",
@@ -23,7 +23,7 @@ func RenderHelm(template string, values map[string]interface{}) (string, error) 
 		Values: map[string]interface{}{"Values": values},
 	}
 
-	v, err := chartutil.CoalesceValues(c, map[string]interface{}{})
+	v, err := chartutil.CoalesceValues(c, map[string]interface{}{"Values": d})
 	if err != nil {
 		return "", errors.Wrap(err, "while rendering template")
 	}
@@ -37,7 +37,7 @@ func RenderHelm(template string, values map[string]interface{}) (string, error) 
 
 type templatedata map[string]interface{}
 
-func RenderFiles(toTemplate, valuesFile string) (string, error) {
+func RenderFiles(toTemplate, valuesFile string, defaultFile string) (string, error) {
 	raw, err := ioutil.ReadFile(toTemplate)
 	if err != nil {
 		return "", errors.Wrap(err, "reading file "+toTemplate)
@@ -46,14 +46,26 @@ func RenderFiles(toTemplate, valuesFile string) (string, error) {
 	if !Exists(valuesFile) {
 		return "", errors.Wrap(err, "file not existing "+valuesFile)
 	}
-	def, err := ioutil.ReadFile(valuesFile)
+	val, err := ioutil.ReadFile(valuesFile)
 	if err != nil {
 		return "", errors.Wrap(err, "reading file "+valuesFile)
 	}
 
 	var values templatedata
-	if err = yaml.Unmarshal(def, &values); err != nil {
+	d := templatedata{}
+	if len(defaultFile) > 0 {
+		def, err := ioutil.ReadFile(defaultFile)
+		if err != nil {
+			return "", errors.Wrap(err, "reading file "+valuesFile)
+		}
+		if err = yaml.Unmarshal(def, &d); err != nil {
+			return "", errors.Wrap(err, "unmarshalling file "+toTemplate)
+		}
+	}
+
+	if err = yaml.Unmarshal(val, &values); err != nil {
 		return "", errors.Wrap(err, "unmarshalling file "+toTemplate)
 	}
-	return RenderHelm(string(raw), values)
+
+	return RenderHelm(string(raw), values, d)
 }

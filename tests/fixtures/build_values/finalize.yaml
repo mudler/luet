@@ -1,0 +1,2 @@
+install:
+- touch /finalize-{{.Values.name}}

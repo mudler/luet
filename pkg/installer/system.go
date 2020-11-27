@@ -24,7 +24,7 @@ func (s *System) ExecuteFinalizers(packs []pkg.Package, force bool) error {
 	executedFinalizer := map[string]bool{}
 	for _, p := range packs {
 		if helpers.Exists(p.Rel(tree.FinalizerFile)) {
-			out, err := helpers.RenderFiles(p.Rel(tree.FinalizerFile), p.Rel(tree.DefinitionFile))
+			out, err := helpers.RenderFiles(p.Rel(tree.FinalizerFile), p.Rel(tree.DefinitionFile), "")
 			if err != nil && !force {
 				return errors.Wrap(err, "reading file "+p.Rel(tree.FinalizerFile))
 			}

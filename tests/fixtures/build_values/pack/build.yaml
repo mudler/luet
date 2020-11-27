@@ -1,0 +1,4 @@
+image: quay.io/mocaccino/extra
+steps:
+- touch /{{.Values.name}}
+- touch /{{.Values.name}}-{{.Values.bb}}
