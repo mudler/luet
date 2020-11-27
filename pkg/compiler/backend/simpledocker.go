@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	docker "github.com/fsouza/go-dockerclient"
 	capi "github.com/mudler/docker-companion/api"
 
 	"github.com/mudler/luet/pkg/compiler"
@@ -45,6 +46,7 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	path := opts.SourcePath
 	dockerfileName := opts.DockerFileName
+
 	buildarg := []string{"build", "-f", dockerfileName, "-t", name, "."}
 
 	Debug(":whale2: Building image " + name)
@@ -55,6 +57,21 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 		return errors.Wrap(err, "Failed building image: "+string(out))
 	}
 	Info(":whale: Building image " + name + " done")
+
+	if os.Getenv("DOCKER_SQUASH") == "true" {
+		Info(":whale: Squashing image " + name)
+		var client *docker.Client
+
+		client, err = docker.NewClientFromEnv()
+		if err != nil {
+			return errors.Wrap(err, "could not connect to the Docker daemon")
+		}
+		err = capi.Squash(client, name, name)
+		if err != nil {
+			return errors.Wrap(err, "Failed squashing image")
+		}
+		Info(":whale: Squashing image " + name + " done")
+	}
 
 	if config.LuetCfg.GetGeneral().ShowBuildOutput {
 		Info(string(out))
