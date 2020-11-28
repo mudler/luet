@@ -100,7 +100,7 @@ func (*SimpleDocker) DownloadImage(opts compiler.CompilerBackendOptions) error {
 	cmd := exec.Command("docker", buildarg...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return errors.Wrap(err, "Failed building image: "+string(out))
+		return errors.Wrap(err, "Failed pulling image: "+string(out))
 	}
 	Info(":whale: Downloaded image:", name)
 	return nil

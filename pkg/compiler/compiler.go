@@ -368,8 +368,12 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	buildAndPush := func(opts CompilerBackendOptions) error {
 		buildImage := true
 		if cs.Options.PullFirst {
-			if err := cs.Backend.DownloadImage(opts); err == nil {
+			err := cs.Backend.DownloadImage(opts)
+			if err == nil {
 				buildImage = false
+			} else {
+				Warning("Failed to download image. Will keep going and build the image unless you use --fatal")
+				Warning(err.Error())
 			}
 		}
 		if buildImage {
