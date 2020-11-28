@@ -242,6 +242,7 @@ RUN ` + s
 func (cs *LuetCompilationSpec) RenderStepImage(image string) (string, error) {
 	spec := `
 FROM ` + image + `
+WORKDIR /luetbuild
 ENV PACKAGE_NAME=` + cs.Package.GetName() + `
 ENV PACKAGE_VERSION=` + cs.Package.GetVersion() + `
 ENV PACKAGE_CATEGORY=` + cs.Package.GetCategory()
