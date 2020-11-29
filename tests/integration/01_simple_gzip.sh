@@ -62,7 +62,7 @@ EOF
 }
 
 testInstall() {
-    luet install -y --config $tmpdir/luet.yaml test/c-1.0
+    luet install -y --config $tmpdir/luet.yaml test/c@1.0
     #luet install -y --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
@@ -77,7 +77,7 @@ testReInstall() {
 }
 
 testUnInstall() {
-    luet uninstall -y --config $tmpdir/luet.yaml test/c-1.0
+    luet uninstall -y --config $tmpdir/luet.yaml =test/c-1.0
     installst=$?
     assertEquals 'uninstall test successfully' "$installst" "0"
     assertTrue 'package uninstalled' "[ ! -e '$tmpdir/testrootfs/c' ]"

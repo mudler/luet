@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -41,7 +42,41 @@ func CreateRegexArray(rgx []string) ([]*regexp.Regexp, error) {
 	return ans, nil
 }
 
+func packageData(p string) (string, string) {
+	cat := ""
+	name := ""
+	if strings.Contains(p, "/") {
+		packagedata := strings.Split(p, "/")
+		cat = packagedata[0]
+		name = packagedata[1]
+	} else {
+		name = p
+	}
+	return cat, name
+}
 func ParsePackageStr(p string) (*pkg.DefaultPackage, error) {
+
+	if !strings.HasPrefix(p, "=") {
+		ver := ">=0"
+		cat := ""
+		name := ""
+
+		if strings.Contains(p, "@") {
+			packageinfo := strings.Split(p, "@")
+			ver = packageinfo[1]
+			cat, name = packageData(packageinfo[0])
+		} else {
+			cat, name = packageData(p)
+		}
+
+		return &pkg.DefaultPackage{
+			Name:     name,
+			Category: cat,
+			Version:  ver,
+			Uri:      make([]string, 0),
+		}, nil
+	}
+
 	gp, err := _gentoo.ParsePackageStr(p)
 	if err != nil {
 		return nil, err
