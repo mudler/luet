@@ -75,7 +75,7 @@ EOF
 }
 
 testUpgrade() {
-    luet install -y --config $tmpdir/luet.yaml test/b-1.0
+    luet install -y --config $tmpdir/luet.yaml test/b@1.0
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package installed B' "[ -e '$tmpdir/testrootfs/test5' ]"

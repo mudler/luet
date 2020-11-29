@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+export LUET_YES=true
 export ROOT_DIR="$(git rev-parse --show-toplevel)"
 
 pushd $ROOT_DIR

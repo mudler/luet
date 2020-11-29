@@ -21,7 +21,7 @@ testBuild() {
     assertEquals 'builds successfully' "0" "$buildst"
 
 
-    luet build --tree "$ROOT_DIR/tests/fixtures/versioning" --destination $tmpdir/testbuild --compression gzip '>=dev-libs/libsigc++-2-0'
+    luet build --tree "$ROOT_DIR/tests/fixtures/versioning" --destination $tmpdir/testbuild --compression gzip '=dev-libs/libsigc++-2-2.10.1+1'
     buildst=$?
     assertEquals 'builds successfully' "0" "$buildst"
 }
@@ -70,7 +70,7 @@ testInstall() {
 }
 
 testInstall2() {
-    luet install -y --config $tmpdir/luet.yaml '>=dev-libs/libsigc++-2-0'
+    luet install -y --config $tmpdir/luet.yaml '=dev-libs/libsigc++-2-2.10.1+1'
     installst=$?
     assertEquals 'install test successfully' "0" "$installst"
 }

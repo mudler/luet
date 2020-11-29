@@ -69,7 +69,7 @@ testDatabase() {
     assertContains 'contains test/c-1.0' "$installed" 'test/c-1.0'
     touch $tmpdir/testrootfs/c
     
-    luet database remove --config $tmpdir/luet.yaml test/c-1.0
+    luet database remove --config $tmpdir/luet.yaml test/c@1.0
     removetest=$?
     assertEquals 'package removed successfully' "$removetest" "0"
     assertTrue 'file not touched' "[ -e '$tmpdir/testrootfs/c' ]"
