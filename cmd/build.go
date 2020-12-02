@@ -36,8 +36,30 @@ import (
 var buildCmd = &cobra.Command{
 	Use:   "build <package name> <package name> <package name> ...",
 	Short: "build a package or a tree",
-	Long:  `build packages or trees from luet tree definitions. Packages are in [category]/[name]-[version] form`,
-	PreRun: func(cmd *cobra.Command, args []string) {
+	Long: `Builds one or more packages from a tree (current directory is implied):
+
+	$ luet build utils/busybox utils/yq ...
+	
+Builds all packages
+	
+	$ luet build --all
+	
+Builds only the leaf packages:
+	
+	$ luet build --full
+
+Build package revdeps:
+	
+	$ luet build --revdeps utils/yq
+
+Build package without dependencies (needs the images already in the host, or either need to be available online):
+
+	$ luet build --nodeps utils/yq ...
+
+Build packages specifying multiple definition trees:
+
+	$ luet build --tree overlay/path --tree overlay/path2 utils/yq ...
+`, PreRun: func(cmd *cobra.Command, args []string) {
 		viper.BindPFlag("clean", cmd.Flags().Lookup("clean"))
 		viper.BindPFlag("tree", cmd.Flags().Lookup("tree"))
 		viper.BindPFlag("destination", cmd.Flags().Lookup("destination"))

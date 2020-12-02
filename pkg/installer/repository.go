@@ -711,9 +711,12 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	repo.SetPriority(r.GetPriority())
 	repo.SetName(r.GetName())
 	InfoC(
-		aurora.Bold(
-			aurora.Yellow(":information_source: Repository "+repo.GetName()+" priority: ")).String() +
-			aurora.Bold(aurora.Green(repo.GetPriority())).String() + " - type " +
+		aurora.Yellow(":information_source:").String() +
+			aurora.Magenta("Repository: ").String() +
+			aurora.Green(aurora.Bold(repo.GetName()).String()).String() +
+			aurora.Magenta(" Priority: ").String() +
+			aurora.Bold(aurora.Green(repo.GetPriority())).String() +
+			aurora.Magenta(" Type: ").String() +
 			aurora.Bold(aurora.Green(repo.GetType())).String(),
 	)
 	return repo, nil

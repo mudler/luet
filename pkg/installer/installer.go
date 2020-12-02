@@ -153,7 +153,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	}
 
 	if len(toInstall) > 0 {
-		Info(":zap: Packages that are going to be installed in the system:\n ", Green(packsToList(toInstall)).BgBlack().String())
+		Info(":zap:Packages that are going to be installed in the system:\n ", Green(packsToList(toInstall)).BgBlack().String())
 	}
 
 	if len(toInstall) == 0 && len(uninstall) == 0 {
@@ -203,6 +203,25 @@ func (l *LuetInstaller) Swap(toRemove pkg.Packages, toInstall pkg.Packages, s *S
 	if err != nil {
 		return err
 	}
+
+	if len(toRemove) > 0 {
+		Info(":recycle: Packages that are going to be removed from the system:\n ", Yellow(packsToList(toRemove)).BgBlack().String())
+	}
+
+	if len(toInstall) > 0 {
+		Info(":zap:Packages that are going to be installed in the system:\n ", Green(packsToList(toInstall)).BgBlack().String())
+	}
+
+	if l.Options.Ask {
+		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
+		if Ask() {
+			l.Options.Ask = false // Don't prompt anymore
+			return l.swap(syncedRepos, toRemove, toInstall, s)
+		} else {
+			return errors.New("Aborted by user")
+		}
+	}
+
 	return l.swap(syncedRepos, toRemove, toInstall, s)
 }
 
@@ -363,7 +382,7 @@ func (l *LuetInstaller) Reclaim(s *System) error {
 			return errors.Wrap(err, "Failed creating package")
 		}
 		s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: pack.GetFingerPrint(), Files: match.Artifact.GetFiles()})
-		Info(":zap: Reclaimed package:", pack.HumanReadableString())
+		Info(":zap:Reclaimed package:", pack.HumanReadableString())
 	}
 	Info("Done!")
 
@@ -702,7 +721,7 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 
 	bus.Manager.Publish(bus.EventPackageUnInstall, p)
 
-	Info(":recycle:", p.GetFingerPrint(), "Removed :heavy_check_mark:")
+	Info(":recycle: ", p.GetFingerPrint(), "Removed :heavy_check_mark:")
 	return nil
 }
 

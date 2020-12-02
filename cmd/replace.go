@@ -1,4 +1,4 @@
-// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2020 Ettore Di Giacinto <mudler@mocaccino.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -29,26 +29,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var installCmd = &cobra.Command{
-	Use:   "install <pkg1> <pkg2> ...",
-	Short: "Install a package",
-	Long: `Installs one or more packages without asking questions:
+var replaceCmd = &cobra.Command{
+	Use:     "replace <pkg1> <pkg2> --for <pkg3> --for <pkg4> ...",
+	Short:   "replace a set of packages",
+	Aliases: []string{"r"},
+	Long: `Replaces one or a group of packages without asking questions:
 
-	$ luet install -y utils/busybox utils/yq ...
-	
-To install only deps of a package:
-	
-	$ luet install --onlydeps utils/busybox ...
-	
-To not install deps of a package:
-	
-	$ luet install --nodeps utils/busybox ...
-
-To force install a package:
-	
-	$ luet install --force utils/busybox ...
+	$ luet replace -y system/busybox ... --for shells/bash --for system/coreutils ...
 `,
-	Aliases: []string{"i"},
 	PreRun: func(cmd *cobra.Command, args []string) {
 		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
 		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
@@ -59,18 +47,40 @@ To force install a package:
 		LuetCfg.Viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
 		LuetCfg.Viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
 		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
+		LuetCfg.Viper.BindPFlag("for", cmd.Flags().Lookup("for"))
+
 		LuetCfg.Viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		var toInstall pkg.Packages
+		var toUninstall pkg.Packages
+		var toAdd pkg.Packages
 		var systemDB pkg.PackageDatabase
+
+		f := LuetCfg.Viper.GetStringSlice("for")
+		stype := LuetCfg.Viper.GetString("solver.type")
+		discount := LuetCfg.Viper.GetFloat64("solver.discount")
+		rate := LuetCfg.Viper.GetFloat64("solver.rate")
+		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
+		force := LuetCfg.Viper.GetBool("force")
+		nodeps := LuetCfg.Viper.GetBool("nodeps")
+		onlydeps := LuetCfg.Viper.GetBool("onlydeps")
+		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
+		yes := LuetCfg.Viper.GetBool("yes")
 
 		for _, a := range args {
 			pack, err := helpers.ParsePackageStr(a)
 			if err != nil {
 				Fatal("Invalid package string ", a, ": ", err.Error())
 			}
-			toInstall = append(toInstall, pack)
+			toUninstall = append(toUninstall, pack)
+		}
+
+		for _, a := range f {
+			pack, err := helpers.ParsePackageStr(a)
+			if err != nil {
+				Fatal("Invalid package string ", a, ": ", err.Error())
+			}
+			toAdd = append(toAdd, pack)
 		}
 
 		// This shouldn't be necessary, but we need to unmarshal the repositories to a concrete struct, thus we need to port them back to the Repositories type
@@ -82,16 +92,6 @@ To force install a package:
 			r := installer.NewSystemRepository(repo)
 			repos = append(repos, r)
 		}
-
-		stype := LuetCfg.Viper.GetString("solver.type")
-		discount := LuetCfg.Viper.GetFloat64("solver.discount")
-		rate := LuetCfg.Viper.GetFloat64("solver.rate")
-		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
-		force := LuetCfg.Viper.GetBool("force")
-		nodeps := LuetCfg.Viper.GetBool("nodeps")
-		onlydeps := LuetCfg.Viper.GetBool("onlydeps")
-		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
-		yes := LuetCfg.Viper.GetBool("yes")
 
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -127,7 +127,7 @@ To force install a package:
 			systemDB = pkg.NewInMemoryDatabase(true)
 		}
 		system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
-		err := inst.Install(toInstall, system)
+		err := inst.Swap(toUninstall, toAdd, system)
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
@@ -139,17 +139,18 @@ func init() {
 	if err != nil {
 		Fatal(err)
 	}
-	installCmd.Flags().String("system-dbpath", path, "System db path")
-	installCmd.Flags().String("system-target", path, "System rootpath")
-	installCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+AvailableResolvers+" )")
-	installCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
-	installCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
-	installCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
-	installCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful!)")
-	installCmd.Flags().Bool("onlydeps", false, "Consider **only** package dependencies")
-	installCmd.Flags().Bool("force", false, "Skip errors and keep going (potentially harmful)")
-	installCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
-	installCmd.Flags().BoolP("yes", "y", false, "Don't ask questions")
+	replaceCmd.Flags().String("system-dbpath", path, "System db path")
+	replaceCmd.Flags().String("system-target", path, "System rootpath")
+	replaceCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+AvailableResolvers+" )")
+	replaceCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
+	replaceCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
+	replaceCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
+	replaceCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful!)")
+	replaceCmd.Flags().Bool("onlydeps", false, "Consider **only** package dependencies")
+	replaceCmd.Flags().Bool("force", false, "Skip errors and keep going (potentially harmful)")
+	replaceCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
+	replaceCmd.Flags().BoolP("yes", "y", false, "Don't ask questions")
+	replaceCmd.Flags().StringSlice("for", []string{}, "Packages that has to be installed in place of others")
 
-	RootCmd.AddCommand(installCmd)
+	RootCmd.AddCommand(replaceCmd)
 }

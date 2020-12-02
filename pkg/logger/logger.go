@@ -202,7 +202,7 @@ func msg(level string, withoutColor bool, msg ...interface{}) {
 		case "info":
 			levelMsg = message
 		case "error":
-			levelMsg = Bold(Red(":bomb: " + message + ":fire:")).BgBlack().String()
+			levelMsg = Red(message).String()
 		}
 	}
 
@@ -248,6 +248,6 @@ func Error(mess ...interface{}) {
 }
 
 func Fatal(mess ...interface{}) {
-	Error(mess)
+	Error(mess...)
 	os.Exit(1)
 }

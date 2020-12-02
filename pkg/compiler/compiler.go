@@ -340,8 +340,6 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 		}
 	}
 
-	Info(pkgTag, ":whale: Generating 'builder' image definition from", image)
-
 	// First we create the builder image
 	if err := p.WriteBuildImageDefinition(filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+"-builder.dockerfile")); err != nil {
 		return builderOpts, runnerOpts, errors.Wrap(err, "Could not generate image definition")
@@ -368,31 +366,38 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	buildAndPush := func(opts CompilerBackendOptions) error {
 		buildImage := true
 		if cs.Options.PullFirst {
+			bus.Manager.Publish(bus.EventImagePrePull, opts)
 			err := cs.Backend.DownloadImage(opts)
 			if err == nil {
 				buildImage = false
 			} else {
-				Warning("Failed to download image. Will keep going and build the image unless you use --fatal")
+				Warning("Failed to download '" + opts.ImageName + "'. Will keep going and build the image unless you use --fatal")
 				Warning(err.Error())
 			}
+			bus.Manager.Publish(bus.EventImagePostPull, opts)
 		}
 		if buildImage {
+			bus.Manager.Publish(bus.EventImagePreBuild, opts)
 			if err := cs.Backend.BuildImage(opts); err != nil {
 				return errors.Wrap(err, "Could not build image: "+image+" "+opts.DockerFileName)
 			}
+			bus.Manager.Publish(bus.EventImagePostBuild, opts)
 			if cs.Options.Push {
+				bus.Manager.Publish(bus.EventImagePrePush, opts)
 				if err = cs.Backend.Push(opts); err != nil {
 					return errors.Wrap(err, "Could not push image: "+image+" "+opts.DockerFileName)
 				}
+				bus.Manager.Publish(bus.EventImagePostPush, opts)
 			}
 		}
 		return nil
 	}
 
+	Info(pkgTag, ":whale: Generating 'builder' image from", image, "as", buildertaggedImage, "with prelude steps")
 	if err := buildAndPush(builderOpts); err != nil {
 		return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
 	}
-
+	Info(pkgTag, ":whale: Generating 'package' image from", buildertaggedImage, "as", packageImage, "with build steps")
 	if err := buildAndPush(runnerOpts); err != nil {
 		return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
 	}

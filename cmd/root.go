@@ -55,12 +55,12 @@ var (
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "luet",
-	Short: "Package manager for the XXth century!",
+	Short: "Container based package manager",
 	Long: `Luet is a single-binary package manager based on containers to build packages.
 	
 To install a package:
 
-$ luet install package
+	$ luet install package
 
 To search for a package in the repositories:
 
@@ -68,15 +68,15 @@ $ luet search package
 
 To list all packages installed in the system:
 
-$ luet search --installed .
+	$ luet search --installed .
 
 To show hidden packages:
 
-$ luet search --hidden package
+	$ luet search --hidden package
 
 To build a package, from a tree definition:
 
-$ luet build --tree tree/path package
+	$ luet build --tree tree/path package
 	
 `,
 	Version: fmt.Sprintf("%s-g%s %s", LuetCLIVersion, BuildCommit, BuildTime),
