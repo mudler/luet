@@ -304,13 +304,13 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	fp := p.GetPackage().HashFingerprint(packageImage)
 
 	if buildertaggedImage == "" {
-		buildertaggedImage = cs.ImageRepository + "-" + fp + "-builder"
+		buildertaggedImage = cs.ImageRepository + ":builder-" + fp
 		Debug(pkgTag, "Creating intermediary image", buildertaggedImage, "from", image)
 	}
 
 	// TODO:  Cleanup, not actually hit
 	if packageImage == "" {
-		packageImage = cs.ImageRepository + "-" + fp
+		packageImage = cs.ImageRepository + ":builder-invalid" + fp
 	}
 
 	p.SetSeedImage(image) // In this case, we ignore the build deps as we suppose that the image has them - otherwise we recompose the tree with a solver,
