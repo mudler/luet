@@ -35,8 +35,12 @@ var reclaimCmd = &cobra.Command{
 		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
 		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
 	},
-	Long: `Add packages to the systemdb if files belonging to packages 
-in available repositories exists in the target root.`,
+	Long: `Reclaim tries to find association between packages in the online repositories and the system one.
+
+	$ luet reclaim
+
+It scans the target file system, and if finds a match with a package available in the repositories, it marks as installed in the system database.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var systemDB pkg.PackageDatabase
 

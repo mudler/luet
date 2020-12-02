@@ -31,7 +31,13 @@ func NewDatabaseRemoveCommand() *cobra.Command {
 	var ans = &cobra.Command{
 		Use:   "remove [package1] [package2] ...",
 		Short: "Remove a package from the system DB (forcefully - you normally don't want to do that)",
-		Args:  cobra.OnlyValidArgs,
+		Long: `Removes a package in the system database without actually uninstalling it:
+
+		$ luet database remove foo/bar
+
+This commands takes multiple packages as arguments and prunes their entries from the system database.
+`,
+		Args: cobra.OnlyValidArgs,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
 			LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))

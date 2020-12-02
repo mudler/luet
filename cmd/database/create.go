@@ -32,7 +32,18 @@ func NewDatabaseCreateCommand() *cobra.Command {
 	var ans = &cobra.Command{
 		Use:   "create <artifact_metadata1.yaml> <artifact_metadata1.yaml>",
 		Short: "Insert a package in the system DB",
-		Args:  cobra.OnlyValidArgs,
+		Long: `Inserts a package in the system database:
+
+		$ luet database create foo.yaml
+
+"luet database create" injects a package in the system database without actually installing it, use it with caution.
+
+This commands takes multiple yaml input file representing package artifacts, that are usually generated while building packages.
+
+The yaml must contain the package definition, and the file list at least.
+
+For reference, inspect a "metadata.yaml" file generated while running "luet build"`,
+		Args: cobra.OnlyValidArgs,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
 			LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))

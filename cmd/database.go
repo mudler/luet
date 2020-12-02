@@ -25,6 +25,10 @@ import (
 var databaseGroupCmd = &cobra.Command{
 	Use:   "database [command] [OPTIONS]",
 	Short: "Manage system database (dangerous commands ahead!)",
+	Long: `Allows to manipulate Luet internal database of installed packages. Use with caution!
+
+Removing packages by hand from the database can result in a broken system, and thus it's not reccomended.
+`,
 }
 
 func init() {

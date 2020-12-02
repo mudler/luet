@@ -30,7 +30,26 @@ import (
 var createrepoCmd = &cobra.Command{
 	Use:   "create-repo",
 	Short: "Create a luet repository from a build",
-	Long:  `Generate and renew repository metadata`,
+	Long: `Builds tree metadata from a set of packages and a tree definition:
+
+	$ luet create-repo
+
+Provide specific paths for packages, tree, and metadata output which is generated:
+
+	$ luet create-repo --packages my/packages/path --tree my/tree/path --output my/packages/path ...
+
+Provide name and description of the repository:
+
+	$ luet create-repo --name "foo" --description "bar" ...
+
+Change compression method:
+	
+	$ luet create-repo --tree-compression gzip --meta-compression gzip
+
+Create a repository from the metadata description defined in the luet.yaml config file:
+
+	$ luet create-repo --repo repository1
+`,
 	PreRun: func(cmd *cobra.Command, args []string) {
 		viper.BindPFlag("packages", cmd.Flags().Lookup("packages"))
 		viper.BindPFlag("tree", cmd.Flags().Lookup("tree"))

@@ -66,9 +66,41 @@ func packageToList(l list.Writer, repo string, p pkg.Package) {
 }
 
 var searchCmd = &cobra.Command{
-	Use:     "search <term>",
-	Short:   "Search packages",
-	Long:    `Search for installed and available packages`,
+	Use:   "search <term>",
+	Short: "Search packages",
+	Long: `Search for installed and available packages
+	
+To search a package in the repositories:
+
+	$ luet search <regex>
+
+To search a package and display results in a table (wide screens):
+
+	$ luet search --table <regex>
+
+To look into the installed packages:
+
+	$ luet search --installed <regex>
+
+Note: the regex argument is optional, if omitted implies "all"
+
+To search a package by label:
+
+	$ luet search --by-label <label>
+
+or by regex against the label:
+
+	$ luet search --by-label-regex <label>
+
+It can also show a package revdeps by:
+
+	$ luet search --revdeps <regex>
+
+Search can also return results in the terminal in different ways: as terminal output, as json or as yaml.
+
+	$ luet search --json <regex> # JSON output
+	$ luet search --yaml <regex> # YAML output
+`,
 	Aliases: []string{"s"},
 	PreRun: func(cmd *cobra.Command, args []string) {
 		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
