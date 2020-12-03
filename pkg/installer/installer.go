@@ -288,16 +288,18 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 		Info("No packages to install")
 		return nil
 	}
-
-	for _, p := range cp {
-		found := false
-		for _, m := range match {
-			if m.Package.GetName() == p.GetName() {
-				found = true
+	// Resolvers might decide to remove some packages from being installed
+	if !l.Options.SolverOptions.ResolverIsSet() {
+		for _, p := range cp {
+			found := false
+			for _, m := range match {
+				if m.Package.GetName() == p.GetName() {
+					found = true
+				}
 			}
-		}
-		if !found {
-			return fmt.Errorf("Package '%s' not found", p.HumanReadableString())
+			if !found {
+				return fmt.Errorf("Package '%s' not found", p.HumanReadableString())
+			}
 		}
 	}
 

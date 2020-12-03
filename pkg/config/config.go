@@ -71,6 +71,15 @@ type LuetSolverOptions struct {
 	Implementation solver.SolverType `mapstructure:"implementation"`
 }
 
+func (opts LuetSolverOptions) ResolverIsSet() bool {
+	switch opts.Type {
+	case solver.QLearningResolverType:
+		return true
+	default:
+		return false
+	}
+}
+
 func (opts LuetSolverOptions) Resolver() solver.PackageResolver {
 	switch opts.Type {
 	case solver.QLearningResolverType:
