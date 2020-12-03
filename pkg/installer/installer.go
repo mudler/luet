@@ -16,6 +16,7 @@
 package installer
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -124,6 +125,15 @@ func packsToList(p pkg.Packages) string {
 
 	for _, pp := range p {
 		packs = append(packs, pp.HumanReadableString())
+	}
+	return strings.Join(packs, " ")
+}
+
+func matchesToList(artefacts map[string]ArtifactMatch) string {
+	var packs []string
+
+	for fingerprint, match := range artefacts {
+		packs = append(packs, fmt.Sprintf("%s (%s)", fingerprint, match.Repository.GetName()))
 	}
 	return strings.Join(packs, " ")
 }
@@ -274,8 +284,20 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 		return err
 	}
 
-	if len(packages) > 0 {
-		Info("Packages that are going to be installed in the system: \n ", Green(packsToList(packages)).BgBlack().String())
+	for _, p := range cp {
+		found := false
+		for _, m := range match {
+			if m.Package.GetName() == p.GetName() {
+				found = true
+			}
+		}
+		if !found {
+			return fmt.Errorf("Package '%s' not available in repositories", p.HumanReadableString())
+		}
+	}
+
+	if len(match) > 0 {
+		Info("Packages that are going to be installed in the system: \n ", Green(matchesToList(match)).BgBlack().String())
 	} else {
 		Info("No packages to install")
 		return nil
@@ -775,6 +797,10 @@ func (l *LuetInstaller) computeUninstall(p pkg.Package, s *System) (pkg.Packages
 	return toUninstall, nil
 }
 func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
+	if packs, _ := s.Database.FindPackages(p); len(packs) == 0 {
+		return errors.New("Package not found in the system")
+	}
+
 	Spinner(32)
 	toUninstall, err := l.computeUninstall(p, s)
 	if err != nil {
