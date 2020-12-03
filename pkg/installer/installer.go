@@ -284,6 +284,11 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 		return err
 	}
 
+	if len(match) == 0 {
+		Info("No packages to install")
+		return nil
+	}
+
 	for _, p := range cp {
 		found := false
 		for _, m := range match {
@@ -292,16 +297,11 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 			}
 		}
 		if !found {
-			return fmt.Errorf("Package '%s' not available in repositories", p.HumanReadableString())
+			return fmt.Errorf("Package '%s' not found", p.HumanReadableString())
 		}
 	}
 
-	if len(match) > 0 {
-		Info("Packages that are going to be installed in the system: \n ", Green(matchesToList(match)).BgBlack().String())
-	} else {
-		Info("No packages to install")
-		return nil
-	}
+	Info("Packages that are going to be installed in the system: \n ", Green(matchesToList(match)).BgBlack().String())
 
 	if l.Options.Ask {
 		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
@@ -797,8 +797,14 @@ func (l *LuetInstaller) computeUninstall(p pkg.Package, s *System) (pkg.Packages
 	return toUninstall, nil
 }
 func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
-	if packs, _ := s.Database.FindPackages(p); len(packs) == 0 {
-		return errors.New("Package not found in the system")
+	if p.IsSelector() {
+		if packs, _ := s.Database.FindPackages(p); len(packs) == 0 {
+			return errors.New("Package not found in the system")
+		}
+	} else {
+		if _, err := s.Database.FindPackage(p); err != nil {
+			return errors.Wrap(err, "package not found in the system")
+		}
 	}
 
 	Spinner(32)
