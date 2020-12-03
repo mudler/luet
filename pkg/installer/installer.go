@@ -284,6 +284,7 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 		return err
 	}
 
+	// Check if we have to process something, or return to the user an error
 	if len(match) == 0 {
 		Info("No packages to install")
 		return nil
@@ -292,11 +293,18 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 	if !l.Options.SolverOptions.ResolverIsSet() {
 		for _, p := range cp {
 			found := false
+			vers, _ := s.Database.FindPackageVersions(p) // If was installed, it is found, as it was filtered
+			if len(vers) >= 1 {
+				found = true
+				continue
+			}
+
 			for _, m := range match {
 				if m.Package.GetName() == p.GetName() {
 					found = true
 				}
 			}
+
 			if !found {
 				return fmt.Errorf("Package '%s' not found", p.HumanReadableString())
 			}
