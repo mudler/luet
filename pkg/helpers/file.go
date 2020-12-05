@@ -19,6 +19,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	copy "github.com/otiai10/copy"
@@ -41,6 +43,8 @@ func OrderFiles(target string, files []string) ([]string, []string) {
 		}
 	}
 
+	dirs := []string{}
+
 	for _, f := range files {
 		target := filepath.Join(target, f)
 		fi, err := os.Lstat(target)
@@ -48,11 +52,16 @@ func OrderFiles(target string, files []string) ([]string, []string) {
 			continue
 		}
 		if m := fi.Mode(); m.IsDir() {
-			newFiles = append(newFiles, f)
+			dirs = append(dirs, f)
 		}
 	}
 
-	return newFiles, notPresent
+	// Compare how many sub paths there are, and push at the end the ones that have less subpaths
+	sort.Slice(dirs, func(i, j int) bool {
+		return len(strings.Split(dirs[i], string(os.PathSeparator))) > len(strings.Split(dirs[j], string(os.PathSeparator)))
+	})
+
+	return append(newFiles, dirs...), notPresent
 }
 
 func ListDir(dir string) ([]string, error) {

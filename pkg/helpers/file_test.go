@@ -60,5 +60,27 @@ var _ = Describe("Helpers", func() {
 			Expect(ordered).To(Equal([]string{"baz", "bar/foo", "foo", "baz2/foo", "bar", "baz2"}))
 			Expect(notExisting).To(Equal([]string{"notexisting"}))
 		})
+
+		It("orders correctly when there are folders with folders", func() {
+			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(testDir)
+
+			err = os.MkdirAll(filepath.Join(testDir, "bar"), os.ModePerm)
+			Expect(err).ToNot(HaveOccurred())
+			err = os.MkdirAll(filepath.Join(testDir, "foo"), os.ModePerm)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = os.MkdirAll(filepath.Join(testDir, "foo", "bar"), os.ModePerm)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = os.MkdirAll(filepath.Join(testDir, "foo", "baz"), os.ModePerm)
+			Expect(err).ToNot(HaveOccurred())
+			err = os.MkdirAll(filepath.Join(testDir, "foo", "baz", "fa"), os.ModePerm)
+			Expect(err).ToNot(HaveOccurred())
+
+			ordered, _ := OrderFiles(testDir, []string{"foo", "foo/bar", "bar", "foo/baz/fa", "foo/baz"})
+			Expect(ordered).To(Equal([]string{"foo/baz/fa", "foo/bar", "foo/baz", "foo", "bar"}))
+		})
 	})
 })
