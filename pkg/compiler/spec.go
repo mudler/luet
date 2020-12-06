@@ -247,6 +247,19 @@ ENV PACKAGE_NAME=` + cs.Package.GetName() + `
 ENV PACKAGE_VERSION=` + cs.Package.GetVersion() + `
 ENV PACKAGE_CATEGORY=` + cs.Package.GetCategory()
 
+	if len(cs.Retrieve) > 0 {
+		for _, s := range cs.Retrieve {
+			//var file string
+			// if helpers.IsValidUrl(s) {
+			// 	file = s
+			// } else {
+			// 	file = cs.Rel(s)
+			// }
+			spec = spec + `
+ADD ` + s + ` /luetbuild/`
+		}
+	}
+
 	for _, s := range cs.Env {
 		spec = spec + `
 ENV ` + s
