@@ -345,6 +345,18 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 		return builderOpts, runnerOpts, errors.Wrap(err, "Could not generate image definition")
 	}
 
+	if len(p.GetPreBuildSteps()) == 0 {
+		buildertaggedImage = image
+	}
+
+	if len(p.BuildSteps()) == 0 {
+		packageImage = buildertaggedImage
+	}
+
+	if len(p.BuildSteps()) == 0 && len(p.GetPreBuildSteps()) == 0 {
+		packageImage = image
+	}
+
 	// Then we write the step image, which uses the builder one
 	if err := p.WriteStepImageDefinition(buildertaggedImage, filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+".dockerfile")); err != nil {
 		return builderOpts, runnerOpts, errors.Wrap(err, "Could not generate image definition")
@@ -392,14 +404,18 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 		}
 		return nil
 	}
-
-	Info(pkgTag, ":whale: Generating 'builder' image from", image, "as", buildertaggedImage, "with prelude steps")
-	if err := buildAndPush(builderOpts); err != nil {
-		return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
+	if len(p.GetPreBuildSteps()) != 0 {
+		Info(pkgTag, ":whale: Generating 'builder' image from", image, "as", buildertaggedImage, "with prelude steps")
+		if err := buildAndPush(builderOpts); err != nil {
+			return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
+		}
 	}
-	Info(pkgTag, ":whale: Generating 'package' image from", buildertaggedImage, "as", packageImage, "with build steps")
-	if err := buildAndPush(runnerOpts); err != nil {
-		return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
+
+	if len(p.BuildSteps()) != 0 {
+		Info(pkgTag, ":whale: Generating 'package' image from", buildertaggedImage, "as", packageImage, "with build steps")
+		if err := buildAndPush(runnerOpts); err != nil {
+			return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
+		}
 	}
 
 	return builderOpts, runnerOpts, nil
@@ -418,6 +434,20 @@ func (cs *LuetCompiler) genArtifact(p CompilationSpec, builderOpts, runnerOpts C
 	// as the root of our archive.  ImageUnpack is implied to be true. override it
 	if p.GetPackageDir() != "" {
 		unpack = true
+	}
+
+	if len(p.BuildSteps()) == 0 && len(p.GetPreBuildSteps()) == 0 && !unpack {
+		fakePackage := p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar")
+		// We can't generate delta in this case. It implies the package is a virtual, and nothing as to be done really
+		file, err := os.Create(fakePackage)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed creating virtual package")
+		}
+		file.Close()
+
+		artifact := NewPackageArtifact(fakePackage)
+		artifact.SetCompressionType(cs.CompressionType)
+		return artifact, nil
 	}
 
 	// prepare folder content of the image with the package compiled inside
