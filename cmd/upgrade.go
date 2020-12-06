@@ -123,7 +123,7 @@ func init() {
 	upgradeCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	upgradeCmd.Flags().Bool("force", false, "Force upgrade by ignoring errors")
 	upgradeCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful! overrides checkconflicts and full!)")
-	upgradeCmd.Flags().Bool("full", true, "Attempts to remove as much packages as possible which aren't required (slow)")
+	upgradeCmd.Flags().Bool("full", false, "Attempts to remove as much packages as possible which aren't required (slow)")
 	upgradeCmd.Flags().Bool("universe", false, "Use ONLY the SAT solver to compute upgrades (experimental)")
 	upgradeCmd.Flags().Bool("clean", false, "Try to drop removed packages (experimental, only when --universe is enabled)")
 	upgradeCmd.Flags().Bool("sync", false, "Upgrade packages with new revisions (experimental)")
