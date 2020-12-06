@@ -173,6 +173,8 @@ WORKDIR /luetbuild
 ENV PACKAGE_NAME=a
 ENV PACKAGE_VERSION=1.0
 ENV PACKAGE_CATEGORY=test
+ADD test /luetbuild/
+ADD http://www.google.com /luetbuild/
 ENV test=1
 RUN echo foo > /test
 RUN echo bar > /test2`))
