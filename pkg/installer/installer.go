@@ -249,8 +249,9 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 	// now the solver enforces the constraints and explictly denies two packages
 	// of the same version installed.
 	forced := l.Options.Force
-
+	nodeps := l.Options.NoDeps
 	l.Options.Force = true
+	l.Options.NoDeps = true
 
 	// First check what would have been done
 	installedtmp := pkg.NewInMemoryDatabase(false)
@@ -293,8 +294,9 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 			return errors.Wrap(err, "uninstalling "+u.HumanReadableString())
 		}
 	}
-	l.Options.Force = forced
 
+	l.Options.Force = forced
+	l.Options.NoDeps = nodeps
 	return l.install(syncedRepos, match, packages, assertions, allRepos, s)
 }
 
