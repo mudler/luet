@@ -241,10 +241,6 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 	syncedRepos.SyncDatabase(allRepos)
 	toInstall = syncedRepos.ResolveSelectors(toInstall)
 
-	if err := l.download(syncedRepos, toInstall); err != nil {
-		return errors.Wrap(err, "Pre-downloading packages")
-	}
-
 	// We don't want any conflict with the installed to raise during the upgrade.
 	// In this way we both force uninstalls and we avoid to check with conflicts
 	// against the current system state which is pending to deletion
@@ -256,6 +252,40 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 
 	l.Options.Force = true
 
+	// First check what would have been done
+	installedtmp := pkg.NewInMemoryDatabase(false)
+
+	for _, i := range s.Database.World() {
+		_, err := installedtmp.CreatePackage(i)
+		if err != nil {
+			return errors.Wrap(err, "Failed create temporary in-memory db")
+		}
+	}
+	systemAfterChanges := &System{Database: installedtmp}
+
+	for _, u := range toRemove {
+		packs, err := l.computeUninstall(u, systemAfterChanges)
+		if err != nil && !l.Options.Force {
+			Error("Failed computing uninstall for ", u.HumanReadableString())
+			return errors.Wrap(err, "computing uninstall "+u.HumanReadableString())
+		}
+		for _, p := range packs {
+			err = systemAfterChanges.Database.RemovePackage(p)
+			if err != nil {
+				return errors.Wrap(err, "Failed removing package from database")
+			}
+		}
+	}
+
+	match, packages, assertions, allRepos, err := l.computeInstall(syncedRepos, toInstall, systemAfterChanges)
+	if err != nil {
+		return errors.Wrap(err, "computing installation")
+	}
+
+	if err := l.download(syncedRepos, match); err != nil {
+		return errors.Wrap(err, "Pre-downloading packages")
+	}
+
 	for _, u := range toRemove {
 		err := l.Uninstall(u, s)
 		if err != nil && !l.Options.Force {
@@ -264,11 +294,6 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 		}
 	}
 	l.Options.Force = forced
-
-	match, packages, assertions, allRepos, err := l.computeInstall(syncedRepos, toInstall, s)
-	if err != nil {
-		return errors.Wrap(err, "computing installation")
-	}
 
 	return l.install(syncedRepos, match, packages, assertions, allRepos, s)
 }
@@ -325,32 +350,8 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 	return l.install(syncedRepos, match, packages, assertions, allRepos, s)
 }
 
-func (l *LuetInstaller) download(syncedRepos Repositories, cp pkg.Packages) error {
-	toDownload := map[string]ArtifactMatch{}
+func (l *LuetInstaller) download(syncedRepos Repositories, toDownload map[string]ArtifactMatch) error {
 
-	// FIXME: This can be optimized. We don't need to re-match this to the repository
-	// But we could just do it once
-
-	// Gathers things to download
-	for _, currentPack := range cp {
-		matches := syncedRepos.PackageMatches(pkg.Packages{currentPack})
-		if len(matches) == 0 {
-			return errors.New("Failed matching solutions against repository for " + currentPack.HumanReadableString() + " where are definitions coming from?!")
-		}
-	A:
-		for _, artefact := range matches[0].Repo.GetIndex() {
-			if artefact.GetCompileSpec().GetPackage() == nil {
-				return errors.New("Package in compilespec empty")
-
-			}
-			if matches[0].Package.Matches(artefact.GetCompileSpec().GetPackage()) {
-
-				toDownload[currentPack.GetFingerPrint()] = ArtifactMatch{Package: currentPack, Artifact: artefact, Repository: matches[0].Repo}
-
-				break A
-			}
-		}
-	}
 	// Download packages into cache in parallel.
 	all := make(chan ArtifactMatch)
 
@@ -508,25 +509,13 @@ func (l *LuetInstaller) computeInstall(syncedRepos Repositories, cp pkg.Packages
 
 func (l *LuetInstaller) install(syncedRepos Repositories, toInstall map[string]ArtifactMatch, p pkg.Packages, solution solver.PackagesAssertions, allRepos pkg.PackageDatabase, s *System) error {
 	// Install packages into rootfs in parallel.
+	if err := l.download(syncedRepos, toInstall); err != nil {
+		return errors.Wrap(err, "Downloading packages")
+	}
+
 	all := make(chan ArtifactMatch)
 
-	var wg = new(sync.WaitGroup)
-
-	// Download first
-	for i := 0; i < l.Options.Concurrency; i++ {
-		wg.Add(1)
-		go l.downloadWorker(i, wg, all)
-	}
-
-	for _, c := range toInstall {
-		all <- c
-	}
-	close(all)
-	wg.Wait()
-
-	all = make(chan ArtifactMatch)
-
-	wg = new(sync.WaitGroup)
+	wg := new(sync.WaitGroup)
 
 	// Do the real install
 	for i := 0; i < l.Options.Concurrency; i++ {
