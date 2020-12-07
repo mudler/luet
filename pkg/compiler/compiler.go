@@ -350,12 +350,8 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 		buildertaggedImage = image
 	}
 
-	if len(p.BuildSteps()) == 0 {
+	if len(p.BuildSteps()) == 0 || len(p.BuildSteps()) == 0 && len(p.GetPreBuildSteps()) == 0 {
 		packageImage = buildertaggedImage
-	}
-
-	if len(p.BuildSteps()) == 0 && len(p.GetPreBuildSteps()) == 0 {
-		packageImage = image
 	}
 
 	// Then we write the step image, which uses the builder one
@@ -412,7 +408,7 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 		}
 	}
 
-	if len(p.BuildSteps()) != 0 {
+	if len(p.BuildSteps()) != 0 || len(p.BuildSteps()) == 0 && len(p.GetPreBuildSteps()) == 0 {
 		Info(pkgTag, ":whale: Generating 'package' image from", buildertaggedImage, "as", packageImage, "with build steps")
 		if err := buildAndPush(runnerOpts); err != nil {
 			return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
