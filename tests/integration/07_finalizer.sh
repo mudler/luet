@@ -12,7 +12,7 @@ oneTimeTearDown() {
 
 testBuild() {
     mkdir $tmpdir/testbuild
-    luet build --tree "$ROOT_DIR/tests/fixtures/finalizers" --destination $tmpdir/testbuild --compression gzip --all > /dev/null
+    luet build --tree "$ROOT_DIR/tests/fixtures/finalizers" --destination $tmpdir/testbuild --compression gzip --all
     buildst=$?
     assertEquals 'builds successfully' "$buildst" "0"
     assertTrue 'create package' "[ -e '$tmpdir/testbuild/alpine-seed-1.0.package.tar.gz' ]"
