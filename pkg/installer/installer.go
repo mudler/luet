@@ -84,7 +84,7 @@ func (l *LuetInstaller) computeUpgrade(syncedRepos Repositories, s *System) (pkg
 			return uninstall, toInstall, errors.Wrap(err, "Failed solving solution for upgrade")
 		}
 	} else {
-		uninstall, solution, err = solv.Upgrade(!l.Options.FullUninstall, l.Options.NoDeps)
+		uninstall, solution, err = solv.Upgrade(l.Options.FullUninstall, true)
 		if err != nil {
 			return uninstall, toInstall, errors.Wrap(err, "Failed solving solution for upgrade")
 		}
