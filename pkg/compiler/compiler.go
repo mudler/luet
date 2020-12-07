@@ -346,11 +346,13 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 		return builderOpts, runnerOpts, errors.Wrap(err, "Could not generate image definition")
 	}
 
-	if len(p.GetPreBuildSteps()) == 0 {
+	noBuildInstructions := len(p.BuildSteps()) == 0 && len(p.GetPreBuildSteps()) == 0
+
+	if len(p.GetPreBuildSteps()) == 0 && !noBuildInstructions {
 		buildertaggedImage = image
 	}
 
-	if len(p.BuildSteps()) == 0 || len(p.BuildSteps()) == 0 && len(p.GetPreBuildSteps()) == 0 {
+	if len(p.BuildSteps()) == 0 || noBuildInstructions {
 		packageImage = buildertaggedImage
 	}
 
