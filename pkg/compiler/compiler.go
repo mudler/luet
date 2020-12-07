@@ -346,12 +346,6 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 		return builderOpts, runnerOpts, errors.Wrap(err, "Could not generate image definition")
 	}
 
-	noBuildInstructions := len(p.BuildSteps()) == 0 && len(p.GetPreBuildSteps()) == 0
-
-	if len(p.BuildSteps()) == 0 || noBuildInstructions {
-		packageImage = buildertaggedImage
-	}
-
 	if len(p.GetPreBuildSteps()) == 0 {
 		buildertaggedImage = image
 	}
@@ -410,11 +404,11 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 		}
 	}
 
-	if len(p.BuildSteps()) != 0 || len(p.BuildSteps()) == 0 && len(p.GetPreBuildSteps()) == 0 {
-		Info(pkgTag, ":whale: Generating 'package' image from", buildertaggedImage, "as", packageImage, "with build steps")
-		if err := buildAndPush(runnerOpts); err != nil {
-			return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
-		}
+	// Even if we might not have any steps to build, we do that so we can tag the image used in this moment and use that to cache it in a registry, or in the system.
+	// acting as a docker tag.
+	Info(pkgTag, ":whale: Generating 'package' image from", buildertaggedImage, "as", packageImage, "with build steps")
+	if err := buildAndPush(runnerOpts); err != nil {
+		return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
 	}
 
 	return builderOpts, runnerOpts, nil
