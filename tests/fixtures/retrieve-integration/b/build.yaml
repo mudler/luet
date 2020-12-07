@@ -1,6 +1,6 @@
 
 steps:
-- tar xvf a-test-1.0.package.* -C ./
+- ls -liah /a
 - mv a /b
 requires:
 - name: "a"
