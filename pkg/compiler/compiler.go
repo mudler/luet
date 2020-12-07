@@ -348,12 +348,12 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 
 	noBuildInstructions := len(p.BuildSteps()) == 0 && len(p.GetPreBuildSteps()) == 0
 
-	if len(p.GetPreBuildSteps()) == 0 && !noBuildInstructions {
-		buildertaggedImage = image
-	}
-
 	if len(p.BuildSteps()) == 0 || noBuildInstructions {
 		packageImage = buildertaggedImage
+	}
+
+	if len(p.GetPreBuildSteps()) == 0 {
+		buildertaggedImage = image
 	}
 
 	// Then we write the step image, which uses the builder one
