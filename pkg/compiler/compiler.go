@@ -16,6 +16,7 @@
 package compiler
 
 import (
+	"archive/tar"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -438,12 +439,15 @@ func (cs *LuetCompiler) genArtifact(p CompilationSpec, builderOpts, runnerOpts C
 
 	if len(p.BuildSteps()) == 0 && len(p.GetPreBuildSteps()) == 0 && !unpack {
 		fakePackage := p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar")
-		// We can't generate delta in this case. It implies the package is a virtual, and nothing as to be done really
+		// We can't generate delta in this case. It implies the package is a virtual, and nothing has to be done really
+
 		file, err := os.Create(fakePackage)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed creating virtual package")
 		}
-		file.Close()
+		defer file.Close()
+		tw := tar.NewWriter(file)
+		defer tw.Close()
 
 		artifact := NewPackageArtifact(fakePackage)
 		artifact.SetCompressionType(cs.CompressionType)
