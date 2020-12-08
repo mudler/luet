@@ -607,7 +607,7 @@ func (s *Solver) Uninstall(checkconflicts, full bool, packs ...pkg.Package) (pkg
 		}
 	}
 
-	s2 := NewSolver(Options{Type: SingleCoreSimple}, pkg.NewInMemoryDatabase(false), s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
+	s2 := NewSolver(Options{Type: SingleCoreSimple}, pkg.NewInMemoryDatabase(false), s.InstalledDatabase, pkg.NewInMemoryDatabase(false))
 	s2.SetResolver(s.Resolver)
 
 	// Get the requirements to install the candidate
