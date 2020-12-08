@@ -20,7 +20,7 @@ It is written entirely in Golang and where used as package manager, it can run i
 - You can install it aside also with your current distro package manager, and start building and distributing your packages
 - Support for packages as "layers"
 - [It uses SAT solving techniques to solve the deptree](https://luet-lab.github.io/docs/docs/concepts/constraints/) ( Inspired by [OPIUM](https://ranjitjhala.github.io/static/opium.pdf) )
-- Support for [collections](https://luet-lab.github.io/docs/docs/concepts/packages/collections/) and [templated package definitions](https://luet-lab.github.io/docs/docs/concepts/packages/templates/))
+- Support for [collections](https://luet-lab.github.io/docs/docs/concepts/packages/collections/) and [templated package definitions](https://luet-lab.github.io/docs/docs/concepts/packages/templates/)
 - [Can be extended with Plugins and Extensions](https://luet-lab.github.io/docs/docs/concepts/plugins-and-extensions/)
 
 ## Install
