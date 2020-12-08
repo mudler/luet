@@ -699,7 +699,7 @@ func (s *Parallel) Uninstall(checkconflicts, full bool, packs ...pkg.Package) (p
 		}
 	}
 
-	s2 := &Parallel{Concurrency: s.Concurrency, InstalledDatabase: pkg.NewInMemoryDatabase(false), DefinitionDatabase: s.DefinitionDatabase, ParallelDatabase: pkg.NewInMemoryDatabase(false)}
+	s2 := &Parallel{Concurrency: s.Concurrency, InstalledDatabase: pkg.NewInMemoryDatabase(false), DefinitionDatabase: s.InstalledDatabase, ParallelDatabase: pkg.NewInMemoryDatabase(false)}
 	s2.SetResolver(s.Resolver)
 	// Get the requirements to install the candidate
 	asserts, err := s2.Install(toRemove)
