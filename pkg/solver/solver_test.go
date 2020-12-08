@@ -671,8 +671,9 @@ var _ = Describe("Solver", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(solution).To(ContainElement(A))
+				Expect(solution).To(ContainElement(B))
 
-				Expect(len(solution)).To(Equal(1))
+				Expect(len(solution)).To(Equal(2))
 			})
 
 			It("Uninstalls complex packages correctly, even if shared deps are required by system packages", func() {
