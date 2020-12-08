@@ -471,7 +471,7 @@ func (s *Parallel) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAsse
 		go func(wg *sync.WaitGroup, c <-chan pkg.Package) {
 			defer wg.Done()
 			for p := range c {
-				available, err := universe.FindPackageVersions(p)
+				available, err := s.DefinitionDatabase.FindPackageVersions(p)
 				if err != nil {
 					removed = append(removed, p) /// FIXME: Racy
 				}

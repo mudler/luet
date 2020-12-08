@@ -412,7 +412,7 @@ func (s *Solver) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssert
 
 	// Grab all the installed ones, see if they are eligible for update
 	for _, p := range s.Installed() {
-		available, err := universe.FindPackageVersions(p)
+		available, err := s.DefinitionDatabase.FindPackageVersions(p)
 		if err != nil {
 			removed = append(removed, p)
 		}
