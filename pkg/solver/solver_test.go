@@ -1210,6 +1210,8 @@ var _ = Describe("Solver", func() {
 		})
 	})
 	Context("Upgrades", func() {
+		E := pkg.NewPackage("e", "1.5", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+		E.SetCategory("test")
 		C := pkg.NewPackage("c", "1.5", []*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "a", Version: ">=1.0", Category: "test"}}, []*pkg.DefaultPackage{})
 		C.SetCategory("test")
 		B := pkg.NewPackage("b", "1.0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
@@ -1301,6 +1303,31 @@ var _ = Describe("Solver", func() {
 
 			Expect(solution).ToNot(ContainElement(PackageAssert{Package: C, Value: true}))
 			Expect(solution).ToNot(ContainElement(PackageAssert{Package: A, Value: true}))
+
+			Expect(len(solution)).To(Equal(3))
+		})
+
+		It("Suggests to remove untracked packages", func() {
+			for _, p := range []pkg.Package{E} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, B, C, E} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			uninstall, solution, err := s.UpgradeUniverse(true)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(uninstall)).To(Equal(3))
+
+			Expect(uninstall).To(ContainElement(B))
+			Expect(uninstall).To(ContainElement(A))
+			Expect(uninstall).To(ContainElement(C))
+
+			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: false}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: false}))
+			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: false}))
 
 			Expect(len(solution)).To(Equal(3))
 		})

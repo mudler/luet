@@ -472,10 +472,8 @@ func (s *Parallel) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAsse
 			defer wg.Done()
 			for p := range c {
 				available, err := s.DefinitionDatabase.FindPackageVersions(p)
-				if err != nil {
-					removed = append(removed, p) /// FIXME: Racy
-				}
-				if len(available) == 0 {
+				if len(available) == 0 || err != nil {
+					removed = append(removed, p)
 					continue
 				}
 
