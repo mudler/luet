@@ -79,7 +79,7 @@ type CompilerBackend interface {
 	BuildImage(CompilerBackendOptions) error
 	ExportImage(CompilerBackendOptions) error
 	RemoveImage(CompilerBackendOptions) error
-	Changes(fromImage, toImage string) ([]ArtifactLayer, error)
+	Changes(fromImage, toImage CompilerBackendOptions) ([]ArtifactLayer, error)
 	ImageDefinitionToTar(CompilerBackendOptions) error
 	ExtractRootfs(opts CompilerBackendOptions, keepPerms bool) error
 

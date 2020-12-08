@@ -93,13 +93,13 @@ ENV PACKAGE_VERSION=1.4.0
 ENV PACKAGE_CATEGORY=app-admin
 RUN echo foo > /test
 RUN echo bar > /test2`))
-			opts = CompilerBackendOptions{
+			opts2 := CompilerBackendOptions{
 				ImageName:      "test",
 				SourcePath:     tmpdir,
 				DockerFileName: "LuetDockerfile",
 				Destination:    filepath.Join(tmpdir, "output2.tar"),
 			}
-			Expect(b.ImageDefinitionToTar(opts)).ToNot(HaveOccurred())
+			Expect(b.ImageDefinitionToTar(opts2)).ToNot(HaveOccurred())
 			Expect(helpers.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
 
 			artifacts := []ArtifactNode{}
@@ -109,7 +109,7 @@ RUN echo bar > /test2`))
 			artifacts = append(artifacts, ArtifactNode{Name: "/test", Size: 4})
 			artifacts = append(artifacts, ArtifactNode{Name: "/test2", Size: 4})
 
-			Expect(b.Changes(filepath.Join(tmpdir2, "output1.tar"), filepath.Join(tmpdir, "output2.tar"))).To(Equal(
+			Expect(b.Changes(opts, opts2)).To(Equal(
 				[]ArtifactLayer{{
 					FromImage: filepath.Join(tmpdir2, "output1.tar"),
 					ToImage:   filepath.Join(tmpdir, "output2.tar"),

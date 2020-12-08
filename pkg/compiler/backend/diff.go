@@ -52,7 +52,10 @@ import (
 //     }
 //   }
 // ]
-func GenerateChanges(b compiler.CompilerBackend, srcImage, dstImage string) ([]compiler.ArtifactLayer, error) {
+func GenerateChanges(b compiler.CompilerBackend, fromImage, toImage compiler.CompilerBackendOptions) ([]compiler.ArtifactLayer, error) {
+
+	srcImage := fromImage.Destination
+	dstImage := toImage.Destination
 
 	res := compiler.ArtifactLayer{FromImage: srcImage, ToImage: dstImage}
 
@@ -95,6 +98,7 @@ func GenerateChanges(b compiler.CompilerBackend, srcImage, dstImage string) ([]c
 
 	srcImageExtract := compiler.CompilerBackendOptions{
 		SourcePath:  srcImage,
+		ImageName:   fromImage.ImageName,
 		Destination: srcRootFS,
 	}
 	err = b.ExtractRootfs(srcImageExtract, false) // No need to keep permissions as we just collect file diffs
@@ -123,6 +127,7 @@ func GenerateChanges(b compiler.CompilerBackend, srcImage, dstImage string) ([]c
 
 	dstImageExtract := compiler.CompilerBackendOptions{
 		SourcePath:  dstImage,
+		ImageName:   toImage.ImageName,
 		Destination: dstRootFS,
 	}
 	err = b.ExtractRootfs(dstImageExtract, false)

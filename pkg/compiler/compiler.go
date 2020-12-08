@@ -272,7 +272,7 @@ func (cs *LuetCompiler) unpackDelta(rootfs string, concurrency int, keepPermissi
 		defer os.Remove(builderOpts.Destination)
 	}
 	Info(pkgTag, ":hammer: Generating delta")
-	diffs, err := cs.Backend.Changes(builderOpts.Destination, runnerOpts.Destination)
+	diffs, err := cs.Backend.Changes(builderOpts, runnerOpts)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not generate changes from layers")
 	}

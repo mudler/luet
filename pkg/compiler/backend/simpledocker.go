@@ -239,7 +239,7 @@ func (*SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPer
 }
 
 // Changes retrieves changes between image layers
-func (d *SimpleDocker) Changes(fromImage, toImage string) ([]compiler.ArtifactLayer, error) {
+func (d *SimpleDocker) Changes(fromImage, toImage compiler.CompilerBackendOptions) ([]compiler.ArtifactLayer, error) {
 	diffs, err := GenerateChanges(d, fromImage, toImage)
 
 	if config.LuetCfg.GetGeneral().Debug {

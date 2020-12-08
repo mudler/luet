@@ -149,7 +149,7 @@ func (*SimpleImg) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerms 
 
 // TODO: Use container-diff (https://github.com/GoogleContainerTools/container-diff) for checking out layer diffs
 // Changes uses container-diff (https://github.com/GoogleContainerTools/container-diff) for retrieving out layer diffs
-func (i *SimpleImg) Changes(fromImage, toImage string) ([]compiler.ArtifactLayer, error) {
+func (i *SimpleImg) Changes(fromImage, toImage compiler.CompilerBackendOptions) ([]compiler.ArtifactLayer, error) {
 	return GenerateChanges(i, fromImage, toImage)
 }
 
