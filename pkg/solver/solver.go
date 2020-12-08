@@ -134,13 +134,13 @@ func (s *Solver) BuildInstalled() (bf.Formula, error) {
 	var packages pkg.Packages
 	for _, p := range s.Installed() {
 		packages = append(packages, p)
-		for _, dep := range p.Related(s.DefinitionDatabase) {
+		for _, dep := range p.Related(s.InstalledDatabase) {
 			packages = append(packages, dep)
 		}
 	}
 
 	for _, p := range packages {
-		solvable, err := p.BuildFormula(s.DefinitionDatabase, s.SolverDatabase)
+		solvable, err := p.BuildFormula(s.InstalledDatabase, s.SolverDatabase)
 		if err != nil {
 			return nil, err
 		}
@@ -399,6 +399,7 @@ func (s *Solver) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssert
 	notUptodate := pkg.Packages{}
 	removed := pkg.Packages{}
 	toUpgrade := pkg.Packages{}
+	replacements := map[pkg.Package]pkg.Package{}
 
 	// TODO: this is memory expensive, we need to optimize this
 	universe := pkg.NewInMemoryDatabase(false)
@@ -424,6 +425,7 @@ func (s *Solver) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssert
 		if !bestmatch.Matches(p) {
 			notUptodate = append(notUptodate, p)
 			toUpgrade = append(toUpgrade, bestmatch)
+			replacements[p] = bestmatch
 		}
 	}
 
@@ -437,27 +439,36 @@ func (s *Solver) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssert
 
 	// Treat removed packages from universe as marked for deletion
 	if dropremoved {
-		notUptodate = append(notUptodate, removed...)
+		// SAT encode the clauses against the world
+		for _, p := range removed.Unique() {
+			encodedP, err := p.Encode(universe)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "couldn't encode package")
+			}
+			P := bf.Var(encodedP)
+			formulas = append(formulas, bf.And(bf.Not(P), r))
+		}
 	}
 
-	// SAT encode the clauses against the world
-	for _, p := range notUptodate.Unique() {
-		encodedP, err := p.Encode(universe)
+	for old, new := range replacements {
+		oldP, err := old.Encode(universe)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "couldn't encode package")
 		}
-		P := bf.Var(encodedP)
-		formulas = append(formulas, bf.And(bf.Not(P), r))
-	}
-
-	for _, p := range toUpgrade {
-		encodedP, err := p.Encode(universe)
+		oldencodedP := bf.Var(oldP)
+		newP, err := new.Encode(universe)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "couldn't encode package")
 		}
-		P := bf.Var(encodedP)
-		formulas = append(formulas, bf.And(P, r))
+		newEncodedP := bf.Var(newP)
+
+		//solvable, err := old.BuildFormula(s.DefinitionDatabase, s.SolverDatabase)
+		solvablenew, err := new.BuildFormula(s.DefinitionDatabase, s.SolverDatabase)
+
+		formulas = append(formulas, bf.And(bf.Not(oldencodedP), bf.And(append(solvablenew, newEncodedP)...)))
 	}
+
+	//formulas = append(formulas, r)
 
 	markedForRemoval := pkg.Packages{}
 

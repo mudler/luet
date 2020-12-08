@@ -76,7 +76,7 @@ func (s *Parallel) noRulesInstalled() bool {
 	return true
 }
 
-func (s *Parallel) buildParallelFormula(formulas []bf.Formula, packages pkg.Packages) (bf.Formula, error) {
+func (s *Parallel) buildParallelFormula(db pkg.PackageDatabase, formulas []bf.Formula, packages pkg.Packages) (bf.Formula, error) {
 	var wg = new(sync.WaitGroup)
 	var wg2 = new(sync.WaitGroup)
 
@@ -87,7 +87,7 @@ func (s *Parallel) buildParallelFormula(formulas []bf.Formula, packages pkg.Pack
 		go func(wg *sync.WaitGroup, c <-chan pkg.Package) {
 			defer wg.Done()
 			for p := range c {
-				solvable, err := p.BuildFormula(s.DefinitionDatabase, s.ParallelDatabase)
+				solvable, err := p.BuildFormula(db, s.ParallelDatabase)
 				if err != nil {
 					panic(err)
 				}
@@ -126,13 +126,13 @@ func (s *Parallel) BuildInstalled() (bf.Formula, error) {
 	var packages pkg.Packages
 	for _, p := range s.Installed() {
 		packages = append(packages, p)
-		for _, dep := range p.Related(s.DefinitionDatabase) {
+		for _, dep := range p.Related(s.InstalledDatabase) {
 			packages = append(packages, dep)
 		}
 
 	}
 
-	return s.buildParallelFormula(formulas, packages)
+	return s.buildParallelFormula(s.InstalledDatabase, formulas, packages)
 }
 
 // BuildWorld builds the formula which olds the requirements from the package definitions
@@ -148,7 +148,7 @@ func (s *Parallel) BuildWorld(includeInstalled bool) (bf.Formula, error) {
 		//f = bf.And(f, solvable)
 		formulas = append(formulas, solvable)
 	}
-	return s.buildParallelFormula(formulas, s.World())
+	return s.buildParallelFormula(s.DefinitionDatabase, formulas, s.World())
 }
 
 // BuildWorld builds the formula which olds the requirements from the package definitions
@@ -200,7 +200,7 @@ func (s *Parallel) BuildPartialWorld(includeInstalled bool) (bf.Formula, error) 
 	close(results)
 	wg2.Wait()
 
-	return s.buildParallelFormula(formulas, packages)
+	return s.buildParallelFormula(s.DefinitionDatabase, formulas, packages)
 
 	//return s.buildParallelFormula(formulas, s.World())
 }
