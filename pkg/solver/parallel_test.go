@@ -1326,10 +1326,9 @@ var _ = Describe("Parallel", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(len(uninstall)).To(Equal(2))
-			Expect(uninstall[0].GetName()).To(Or(Equal("b"), Equal("a")))
-			Expect(uninstall[0].GetVersion()).To(Equal("1.1"))
-			Expect(uninstall[1].GetName()).To(Or(Equal("b"), Equal("a")))
-			Expect(uninstall[1].GetVersion()).To(Equal("1.0"))
+			Expect(uninstall).To(ContainElement(A))
+			Expect(uninstall).To(ContainElement(B))
+
 			Expect(solution).To(ContainElement(PackageAssert{Package: A1, Value: true}))
 			Expect(solution).To(ContainElement(PackageAssert{Package: B1, Value: true}))
 			Expect(solution).To(ContainElement(PackageAssert{Package: C1, Value: true}))
