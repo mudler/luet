@@ -1297,10 +1297,12 @@ var _ = Describe("Solver", func() {
 
 			Expect(solution).To(ContainElement(PackageAssert{Package: A1, Value: true}))
 			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: false}))
 			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: false}))
 
-			Expect(len(solution)).To(Equal(4))
+			Expect(solution).ToNot(ContainElement(PackageAssert{Package: C, Value: true}))
+			Expect(solution).ToNot(ContainElement(PackageAssert{Package: A, Value: true}))
+
+			Expect(len(solution)).To(Equal(3))
 		})
 	})
 })

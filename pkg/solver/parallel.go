@@ -482,12 +482,13 @@ func (s *Parallel) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAsse
 				bestmatch := available.Best(nil)
 				// Found a better version available
 				if !bestmatch.Matches(p) {
-					encodedP, _ := p.Encode(universe)
-					P := bf.Var(encodedP)
-					results <- bf.And(bf.Not(P), r)
-					encodedP, _ = bestmatch.Encode(universe)
-					P = bf.Var(encodedP)
-					results <- bf.And(P, r)
+					oldP, _ := p.Encode(universe)
+					toreplaceP := bf.Var(oldP)
+					best, _ := bestmatch.Encode(universe)
+					toUpgrade := bf.Var(best)
+
+					solvablenew, _ := bestmatch.BuildFormula(s.DefinitionDatabase, s.ParallelDatabase)
+					results <- bf.And(bf.Not(toreplaceP), bf.And(append(solvablenew, toUpgrade)...))
 				}
 			}
 		}(wg, all)
@@ -514,8 +515,7 @@ func (s *Parallel) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAsse
 	// Treat removed packages from universe as marked for deletion
 	if dropremoved {
 
-		// SAT encode the clauses against the world
-		for _, p := range removed {
+		for _, p := range removed.Unique() {
 			encodedP, err := p.Encode(universe)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "couldn't encode package")
