@@ -119,8 +119,8 @@ testUpgrade() {
     assertTrue 'package installed new A' "[ -e '$tmpdir/testrootfs/testlatest' ]"
 
     # It does remove C as well, no other package depends on it.
-    assertContains 'does contain test/c-1.0' "$upgrade" 'test/c-1.0'
-    assertNotContains 'does not attempt to download test/c-1.0' "$upgrade" 'test/c-1.0 downloaded'
+    #assertContains 'does contain test/c-1.0' "$upgrade" 'test/c-1.0'
+    #assertNotContains 'does not attempt to download test/c-1.0' "$upgrade" 'test/c-1.0 downloaded'
 }
 
 # Load shUnit2.
