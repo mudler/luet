@@ -621,15 +621,15 @@ func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, c <-chan Artif
 	for p := range c {
 		// TODO: Keep trace of what was added from the tar, and save it into system
 		_, err := l.downloadPackage(p)
-		if err != nil && !l.Options.Force {
-			//TODO: Uninstall, rollback.
-			Fatal("Failed installing package "+p.Package.GetName(), err.Error())
-			return errors.Wrap(err, "Failed installing package "+p.Package.GetName())
+		if err != nil {
+			Fatal("Failed downloading package "+p.Package.GetName(), err.Error())
+			return errors.Wrap(err, "Failed downloading package "+p.Package.GetName())
 		}
 		if err == nil {
-			Info("\n:package: Package ", p.Package.HumanReadableString(), "downloaded")
-		} else if err != nil && l.Options.Force {
-			Info("\n:package: ", p.Package.HumanReadableString(), "downloaded with failures (force download)")
+			Info(":package: Package ", p.Package.HumanReadableString(), "downloaded")
+		} else if err != nil {
+			Fatal(":package: ", p.Package.HumanReadableString(), " failed downloading:", err.Error())
+			return errors.Wrap(err, "Failed downloading package "+p.Package.GetName())
 		}
 	}
 
