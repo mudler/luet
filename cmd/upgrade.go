@@ -84,15 +84,16 @@ var upgradeCmd = &cobra.Command{
 		installer.LoadConfigProtectConfs(LuetCfg)
 
 		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-			Concurrency:                LuetCfg.GetGeneral().Concurrency,
-			SolverOptions:              *LuetCfg.GetSolverOptions(),
-			Force:                      force,
-			FullUninstall:              full,
-			NoDeps:                     nodeps,
-			SolverUpgrade:              universe,
-			RemoveUnavailableOnUpgrade: clean,
-			UpgradeNewRevisions:        sync,
-			Ask:                        !yes,
+			Concurrency:                 LuetCfg.GetGeneral().Concurrency,
+			SolverOptions:               *LuetCfg.GetSolverOptions(),
+			Force:                       force,
+			FullUninstall:               full,
+			NoDeps:                      nodeps,
+			SolverUpgrade:               universe,
+			RemoveUnavailableOnUpgrade:  clean,
+			UpgradeNewRevisions:         sync,
+			PreserveSystemEssentialData: true,
+			Ask:                         !yes,
 		})
 		inst.Repositories(repos)
 

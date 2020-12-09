@@ -81,14 +81,15 @@ var uninstallCmd = &cobra.Command{
 			installer.LoadConfigProtectConfs(LuetCfg)
 
 			inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-				Concurrency:        LuetCfg.GetGeneral().Concurrency,
-				SolverOptions:      *LuetCfg.GetSolverOptions(),
-				NoDeps:             nodeps,
-				Force:              force,
-				FullUninstall:      full,
-				FullCleanUninstall: fullClean,
-				CheckConflicts:     checkconflicts,
-				Ask:                !yes,
+				Concurrency:                 LuetCfg.GetGeneral().Concurrency,
+				SolverOptions:               *LuetCfg.GetSolverOptions(),
+				NoDeps:                      nodeps,
+				Force:                       force,
+				FullUninstall:               full,
+				FullCleanUninstall:          fullClean,
+				CheckConflicts:              checkconflicts,
+				Ask:                         !yes,
+				PreserveSystemEssentialData: true,
 			})
 
 			if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
