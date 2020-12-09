@@ -587,7 +587,7 @@ func (l *LuetInstaller) downloadPackage(a ArtifactMatch) (compiler.Artifact, err
 	}
 
 	err = artifact.Verify()
-	if err != nil && !l.Options.Force {
+	if err != nil {
 		return nil, errors.Wrap(err, "Artifact integrity check failure")
 	}
 	return artifact, nil
