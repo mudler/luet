@@ -59,7 +59,7 @@ func (*SimpleImg) RemoveImage(opts compiler.CompilerBackendOptions) error {
 	defer SpinnerStop()
 	out, err := exec.Command("img", buildarg...).CombinedOutput()
 	if err != nil {
-		return errors.Wrap(err, "Failed building image: "+string(out))
+		return errors.Wrap(err, "Failed removing image: "+string(out))
 	}
 
 	Info(":tea: Image " + name + " removed")
@@ -75,7 +75,7 @@ func (*SimpleImg) DownloadImage(opts compiler.CompilerBackendOptions) error {
 	cmd := exec.Command("img", buildarg...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return errors.Wrap(err, "Failed building image: "+string(out))
+		return errors.Wrap(err, "Failed downloading image: "+string(out))
 	}
 
 	Info(":tea: Image " + name + " downloaded")
@@ -124,7 +124,7 @@ func (*SimpleImg) ExportImage(opts compiler.CompilerBackendOptions) error {
 	Debug(":tea: Saving image " + name)
 	out, err := exec.Command("img", buildarg...).CombinedOutput()
 	if err != nil {
-		return errors.Wrap(err, "Failed building image: "+string(out))
+		return errors.Wrap(err, "Failed exporting image: "+string(out))
 	}
 	Info(":tea: Image " + name + " saved")
 	return nil
