@@ -22,6 +22,7 @@ It is written entirely in Golang and where used as package manager, it can run i
 - [It uses SAT solving techniques to solve the deptree](https://luet-lab.github.io/docs/docs/concepts/constraints/) ( Inspired by [OPIUM](https://ranjitjhala.github.io/static/opium.pdf) )
 - Support for [collections](https://luet-lab.github.io/docs/docs/concepts/packages/collections/) and [templated package definitions](https://luet-lab.github.io/docs/docs/concepts/packages/templates/)
 - [Can be extended with Plugins and Extensions](https://luet-lab.github.io/docs/docs/concepts/plugins-and-extensions/)
+- [Can build packages in Kubernetes (experimental)](https://github.com/mudler/luet-k8s)
 
 ## Install
 
