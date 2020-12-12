@@ -114,7 +114,10 @@ RUN echo bar > /test2`))
 			diffs, err := b.Changes(opts, opts2)
 			Expect(err).ToNot(HaveOccurred())
 
-			artifacts := []ArtifactNode{}
+			artifacts := []ArtifactNode{{
+				Name: "/luetbuild/LuetDockerfile",
+				Size: 175,
+			}}
 			if os.Getenv("DOCKER_BUILDKIT") == "1" {
 				artifacts = append(artifacts, ArtifactNode{Name: "/etc/resolv.conf", Size: 0})
 			}

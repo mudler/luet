@@ -103,7 +103,10 @@ RUN echo bar > /test2`))
 			Expect(b.ImageDefinitionToTar(opts2)).ToNot(HaveOccurred())
 			Expect(helpers.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
 
-			artifacts := []ArtifactNode{}
+			artifacts := []ArtifactNode{{
+				Name: "/luetbuild/LuetDockerfile",
+				Size: 175,
+			}}
 			if os.Getenv("DOCKER_BUILDKIT") == "1" {
 				artifacts = append(artifacts, ArtifactNode{Name: "/etc/resolv.conf", Size: 0})
 			}
