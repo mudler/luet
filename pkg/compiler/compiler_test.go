@@ -50,8 +50,8 @@ var _ = Describe("Compiler", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
-			Expect(spec.BuildSteps()).To(Equal([]string{"echo artifact5 > /test5", "echo artifact6 > /test6", "./generate.sh"}))
-			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2", "chmod +x generate.sh"}))
+			Expect(spec.BuildSteps()).To(Equal([]string{"echo artifact5 > /test5", "echo artifact6 > /test6", "chmod +x generate.sh", "./generate.sh"}))
+			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 
 			spec.SetOutputPath(tmpdir)
 			compiler.SetConcurrency(2)
