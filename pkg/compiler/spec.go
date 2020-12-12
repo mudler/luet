@@ -237,14 +237,13 @@ RUN ` + s
 	return spec
 }
 
-// TODO: docker build image first. Then a backend can be used to actually spin up a container with it and run the steps within
+// RenderBuildImage renders the dockerfile of the image used as a pre-build step
 func (cs *LuetCompilationSpec) RenderBuildImage() (string, error) {
-
 	return cs.genDockerfile(cs.GetSeedImage(), cs.GetPreBuildSteps()), nil
 
 }
 
-// TODO: docker build image first. Then a backend can be used to actually spin up a container with it and run the steps within
+// RenderStepImage renders the dockerfile used for the image used for building the package
 func (cs *LuetCompilationSpec) RenderStepImage(image string) (string, error) {
 	return cs.genDockerfile(image, cs.BuildSteps()), nil
 }
