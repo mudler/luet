@@ -96,6 +96,7 @@ ENV test=1`))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dockerfile).To(Equal(`
 FROM luet/base
+COPY . /luetbuild
 WORKDIR /luetbuild
 ENV PACKAGE_NAME=enman
 ENV PACKAGE_VERSION=1.4.0
@@ -169,6 +170,7 @@ ENV test=1`))
 
 		Expect(dockerfile).To(Equal(`
 FROM luet/base
+COPY . /luetbuild
 WORKDIR /luetbuild
 ENV PACKAGE_NAME=a
 ENV PACKAGE_VERSION=1.0

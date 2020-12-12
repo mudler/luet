@@ -203,10 +203,9 @@ func (cs *LuetCompilationSpec) CopyRetrieves(dest string) error {
 	return err
 }
 
-// TODO: docker build image first. Then a backend can be used to actually spin up a container with it and run the steps within
-func (cs *LuetCompilationSpec) RenderBuildImage() (string, error) {
+func (cs *LuetCompilationSpec) genDockerfile(image string, steps []string) string {
 	spec := `
-FROM ` + cs.GetSeedImage() + `
+FROM ` + image + `
 COPY . /luetbuild
 WORKDIR /luetbuild
 ENV PACKAGE_NAME=` + cs.Package.GetName() + `
@@ -231,45 +230,23 @@ ADD ` + s + ` /luetbuild/`
 ENV ` + s
 	}
 
-	for _, s := range cs.GetPreBuildSteps() {
+	for _, s := range steps {
 		spec = spec + `
 RUN ` + s
 	}
-	return spec, nil
+	return spec
+}
+
+// TODO: docker build image first. Then a backend can be used to actually spin up a container with it and run the steps within
+func (cs *LuetCompilationSpec) RenderBuildImage() (string, error) {
+
+	return cs.genDockerfile(cs.GetSeedImage(), cs.GetPreBuildSteps()), nil
+
 }
 
 // TODO: docker build image first. Then a backend can be used to actually spin up a container with it and run the steps within
 func (cs *LuetCompilationSpec) RenderStepImage(image string) (string, error) {
-	spec := `
-FROM ` + image + `
-WORKDIR /luetbuild
-ENV PACKAGE_NAME=` + cs.Package.GetName() + `
-ENV PACKAGE_VERSION=` + cs.Package.GetVersion() + `
-ENV PACKAGE_CATEGORY=` + cs.Package.GetCategory()
-
-	if len(cs.Retrieve) > 0 {
-		for _, s := range cs.Retrieve {
-			//var file string
-			// if helpers.IsValidUrl(s) {
-			// 	file = s
-			// } else {
-			// 	file = cs.Rel(s)
-			// }
-			spec = spec + `
-ADD ` + s + ` /luetbuild/`
-		}
-	}
-
-	for _, s := range cs.Env {
-		spec = spec + `
-ENV ` + s
-	}
-	for _, s := range cs.BuildSteps() {
-		spec = spec + `
-RUN ` + s
-	}
-
-	return spec, nil
+	return cs.genDockerfile(image, cs.BuildSteps()), nil
 }
 
 func (cs *LuetCompilationSpec) WriteBuildImageDefinition(path string) error {

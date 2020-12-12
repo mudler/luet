@@ -87,6 +87,7 @@ ENV PACKAGE_CATEGORY=app-admin`))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dockerfile).To(Equal(`
 FROM luet/base
+COPY . /luetbuild
 WORKDIR /luetbuild
 ENV PACKAGE_NAME=enman
 ENV PACKAGE_VERSION=1.4.0
