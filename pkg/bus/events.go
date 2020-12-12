@@ -16,9 +16,9 @@ var (
 
 	// EventPackagePreBuild is the event fired before a package is being built
 	EventPackagePreBuild pluggable.EventType = "package.pre.build"
-	// EventPackagePreBuildArtifact is the event fired before a package artifact is being built
+	// EventPackagePreBuildArtifact is the event fired before a package tarball is being generated
 	EventPackagePreBuildArtifact pluggable.EventType = "package.pre.build_artifact"
-	// EventPackagePostBuildArtifact is the event fired after a package artifact was built
+	// EventPackagePostBuildArtifact is the event fired after a package tarball is generated
 	EventPackagePostBuildArtifact pluggable.EventType = "package.post.build_artifact"
 	// EventPackagePostBuild is the event fired after a package was built
 	EventPackagePostBuild pluggable.EventType = "package.post.build"
