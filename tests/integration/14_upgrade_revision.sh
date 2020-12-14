@@ -12,13 +12,13 @@ oneTimeTearDown() {
 
 testBuild() {
     mkdir $tmpdir/testbuild
-    luet build --tree "$ROOT_DIR/tests/fixtures/upgrade_old_repo" --destination $tmpdir/testbuild --compression gzip --full --clean=true
+    luet build --tree "$ROOT_DIR/tests/fixtures/upgrade_old_repo" --destination $tmpdir/testbuild --compression gzip --full
     buildst=$?
     assertTrue 'create package B 1.0' "[ -e '$tmpdir/testbuild/b-test-1.0.package.tar.gz' ]"
     assertEquals 'builds successfully' "$buildst" "0"
 
     mkdir $tmpdir/testbuild_revision
-    luet build --tree "$ROOT_DIR/tests/fixtures/upgrade_old_repo_revision" --destination $tmpdir/testbuild_revision --compression gzip --full --clean=true
+    luet build --tree "$ROOT_DIR/tests/fixtures/upgrade_old_repo_revision" --destination $tmpdir/testbuild_revision --compression gzip --full
     buildst=$?
     assertTrue 'create package B 1.0' "[ -e '$tmpdir/testbuild_revision/b-test-1.0.package.tar.gz' ]"
     assertEquals 'builds successfully' "$buildst" "0"
