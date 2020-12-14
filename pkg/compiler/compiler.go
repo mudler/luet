@@ -67,7 +67,6 @@ func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase, opt *Compi
 		CompressionType: opt.CompressionType,
 		KeepImg:         opt.KeepImg,
 		Concurrency:     opt.Concurrency,
-		Clean:           opt.Clean,
 		Options:         *opt,
 		SolverOptions:   solvopts,
 	}
@@ -505,14 +504,14 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	keepPermissions, keepImg bool,
 	p CompilationSpec, generateArtifact bool) (Artifact, error) {
 
-	if !cs.Clean {
-		exists := cs.Backend.ImageExists(buildertaggedImage) && cs.Backend.ImageExists(packageImage)
+	if !generateArtifact {
+		exists := cs.Backend.ImageExists(packageImage)
 		if art, err := LoadArtifactFromYaml(p); err == nil && exists { // If YAML is correctly loaded, and both images exists, no reason to rebuild.
 			Debug("Artifact reloaded from YAML. Skipping build")
 			return art, err
 		}
-		available := cs.Backend.ImageAvailable(buildertaggedImage) && cs.Backend.ImageAvailable(packageImage)
-		if (exists || available) && !generateArtifact {
+		available := cs.Backend.ImageAvailable(packageImage)
+		if exists || available {
 			return &PackageArtifact{}, nil
 		}
 	}

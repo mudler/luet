@@ -60,7 +60,6 @@ Build packages specifying multiple definition trees:
 
 	$ luet build --tree overlay/path --tree overlay/path2 utils/yq ...
 `, PreRun: func(cmd *cobra.Command, args []string) {
-		viper.BindPFlag("clean", cmd.Flags().Lookup("clean"))
 		viper.BindPFlag("tree", cmd.Flags().Lookup("tree"))
 		viper.BindPFlag("destination", cmd.Flags().Lookup("destination"))
 		viper.BindPFlag("backend", cmd.Flags().Lookup("backend"))
@@ -87,7 +86,6 @@ Build packages specifying multiple definition trees:
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
-		clean := viper.GetBool("clean")
 		treePaths := viper.GetStringSlice("tree")
 		dst := viper.GetString("destination")
 		concurrency := LuetCfg.GetGeneral().Concurrency
@@ -172,7 +170,6 @@ Build packages specifying multiple definition trees:
 		opts := compiler.NewDefaultCompilerOptions()
 		opts.SolverOptions = *LuetCfg.GetSolverOptions()
 		opts.ImageRepository = imageRepository
-		opts.Clean = clean
 		opts.PullFirst = pull
 		opts.KeepImg = keepImages
 		opts.Push = push
@@ -306,7 +303,6 @@ func init() {
 	if err != nil {
 		Fatal(err)
 	}
-	buildCmd.Flags().Bool("clean", true, "Build all packages locally without considering the packages present or images available")
 	buildCmd.Flags().StringSliceP("tree", "t", []string{}, "Path of the tree to use.")
 	buildCmd.Flags().String("backend", "docker", "backend used (docker,img)")
 	buildCmd.Flags().Bool("privileged", false, "Privileged (Keep permissions)")

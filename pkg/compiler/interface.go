@@ -49,7 +49,6 @@ type CompilerOptions struct {
 	PullFirst, KeepImg, Push bool
 	Concurrency              int
 	CompressionType          CompressionImplementation
-	Clean                    bool
 	KeepImageExport          bool
 
 	OnlyDeps        bool
@@ -68,7 +67,6 @@ func NewDefaultCompilerOptions() *CompilerOptions {
 		CompressionType: None,
 		KeepImg:         true,
 		Concurrency:     runtime.NumCPU(),
-		Clean:           true,
 		OnlyDeps:        false,
 		NoDeps:          false,
 	}
