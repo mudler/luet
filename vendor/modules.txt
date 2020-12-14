@@ -73,6 +73,11 @@ github.com/crillab/gophersat/solver
 github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
+# github.com/docker/cli v0.0.0-20200130152716-5d0cf8839492
+github.com/docker/cli/cli/config
+github.com/docker/cli/cli/config/configfile
+github.com/docker/cli/cli/config/credentials
+github.com/docker/cli/cli/config/types
 # github.com/docker/distribution v2.7.1+incompatible
 github.com/docker/distribution
 github.com/docker/distribution/digestset
@@ -81,6 +86,7 @@ github.com/docker/distribution/manifest/schema1
 github.com/docker/distribution/manifest/schema2
 github.com/docker/distribution/reference
 github.com/docker/distribution/registry/api/errcode
+github.com/docker/distribution/registry/client/auth/challenge
 # github.com/docker/docker v17.12.0-ce-rc1.0.20200417035958-130b0bc6032c+incompatible => github.com/Luet-lab/moby v17.12.0-ce-rc1.0.20200605210607-749178b8f80d+incompatible
 github.com/docker/docker/api/types/blkiodev
 github.com/docker/docker/api/types/container
@@ -105,6 +111,9 @@ github.com/docker/docker/pkg/stdcopy
 github.com/docker/docker/pkg/system
 github.com/docker/docker/pkg/term
 github.com/docker/docker/pkg/term/windows
+# github.com/docker/docker-credential-helpers v0.6.3
+github.com/docker/docker-credential-helpers/client
+github.com/docker/docker-credential-helpers/credentials
 # github.com/docker/go-connections v0.4.0
 github.com/docker/go-connections/nat
 # github.com/docker/go-units v0.4.0
@@ -141,7 +150,7 @@ github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 github.com/gogo/protobuf/sortkeys
-# github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6
+# github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
 github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.4.2
 github.com/golang/protobuf/proto
@@ -149,11 +158,34 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
+# github.com/google/go-containerregistry v0.2.1
+github.com/google/go-containerregistry/pkg/authn
+github.com/google/go-containerregistry/pkg/crane
+github.com/google/go-containerregistry/pkg/internal/legacy
+github.com/google/go-containerregistry/pkg/internal/redact
+github.com/google/go-containerregistry/pkg/internal/retry
+github.com/google/go-containerregistry/pkg/internal/retry/wait
+github.com/google/go-containerregistry/pkg/legacy
+github.com/google/go-containerregistry/pkg/legacy/tarball
+github.com/google/go-containerregistry/pkg/logs
+github.com/google/go-containerregistry/pkg/name
+github.com/google/go-containerregistry/pkg/v1
+github.com/google/go-containerregistry/pkg/v1/empty
+github.com/google/go-containerregistry/pkg/v1/layout
+github.com/google/go-containerregistry/pkg/v1/match
+github.com/google/go-containerregistry/pkg/v1/mutate
+github.com/google/go-containerregistry/pkg/v1/partial
+github.com/google/go-containerregistry/pkg/v1/remote
+github.com/google/go-containerregistry/pkg/v1/remote/transport
+github.com/google/go-containerregistry/pkg/v1/stream
+github.com/google/go-containerregistry/pkg/v1/tarball
+github.com/google/go-containerregistry/pkg/v1/types
+github.com/google/go-containerregistry/pkg/v1/v1util
 # github.com/google/gofuzz v1.1.0
 github.com/google/gofuzz
 # github.com/google/uuid v1.1.1
 github.com/google/uuid
-# github.com/googleapis/gnostic v0.1.0
+# github.com/googleapis/gnostic v0.2.2
 github.com/googleapis/gnostic/OpenAPIv2
 github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
@@ -356,7 +388,7 @@ go.mongodb.org/mongo-driver/bson/bsonrw
 go.mongodb.org/mongo-driver/bson/bsontype
 go.mongodb.org/mongo-driver/bson/primitive
 go.mongodb.org/mongo-driver/x/bsonx/bsoncore
-# go.opencensus.io v0.22.2
+# go.opencensus.io v0.22.3
 go.opencensus.io
 go.opencensus.io/internal
 go.opencensus.io/trace
@@ -382,9 +414,11 @@ golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/ripemd160
 golang.org/x/crypto/scrypt
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f
+# golang.org/x/lint v0.0.0-20200302205851-738671d3881b
 golang.org/x/lint
 golang.org/x/lint/golint
+# golang.org/x/mod v0.3.0
+golang.org/x/mod/semver
 # golang.org/x/net v0.0.0-20201006153459-a7d1128ccaa0
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -395,10 +429,10 @@ golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
-# golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+# golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
+# golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 golang.org/x/sync/errgroup
 # golang.org/x/sys v0.0.0-20201113135734-0a15ea8d9b02
 golang.org/x/sys/internal/unsafeheader
@@ -425,27 +459,35 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# golang.org/x/time v0.0.0-20191024005414-555d28b269f0
+# golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20200103221440-774c71fcf114
+# golang.org/x/tools v0.0.0-20200916195026-c9a70fc28ce3
 golang.org/x/tools/go/analysis
 golang.org/x/tools/go/analysis/passes/inspect
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/ast/inspector
 golang.org/x/tools/go/buildutil
 golang.org/x/tools/go/gcexportdata
+golang.org/x/tools/go/internal/cgo
 golang.org/x/tools/go/internal/gcimporter
 golang.org/x/tools/go/internal/packagesdriver
+golang.org/x/tools/go/loader
 golang.org/x/tools/go/packages
 golang.org/x/tools/go/types/objectpath
 golang.org/x/tools/go/types/typeutil
-golang.org/x/tools/internal/fastwalk
-golang.org/x/tools/internal/gopathwalk
-golang.org/x/tools/internal/semver
-# golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
+golang.org/x/tools/internal/analysisinternal
+golang.org/x/tools/internal/event
+golang.org/x/tools/internal/event/core
+golang.org/x/tools/internal/event/keys
+golang.org/x/tools/internal/event/label
+golang.org/x/tools/internal/gocommand
+golang.org/x/tools/internal/lsp/fuzzy
+golang.org/x/tools/internal/packagesinternal
+golang.org/x/tools/internal/typesinternal
+# golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/appengine v1.6.5
+# google.golang.org/appengine v1.6.6
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/datastore
@@ -453,15 +495,13 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
+# google.golang.org/genproto v0.0.0-20200527145253-8367513e4ece
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.27.1
+# google.golang.org/grpc v1.29.1
 google.golang.org/grpc/codes
-google.golang.org/grpc/connectivity
-google.golang.org/grpc/grpclog
-google.golang.org/grpc/internal
+google.golang.org/grpc/internal/status
 google.golang.org/grpc/status
-# google.golang.org/protobuf v1.23.0
+# google.golang.org/protobuf v1.24.0
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
 google.golang.org/protobuf/internal/descfmt
@@ -508,29 +548,33 @@ helm.sh/helm/v3/pkg/chart
 helm.sh/helm/v3/pkg/chart/loader
 helm.sh/helm/v3/pkg/chartutil
 helm.sh/helm/v3/pkg/engine
-# honnef.co/go/tools v0.0.1-2019.2.3
+# honnef.co/go/tools v0.0.1-2020.1.3
 honnef.co/go/tools/arg
 honnef.co/go/tools/cmd/staticcheck
+honnef.co/go/tools/code
 honnef.co/go/tools/config
 honnef.co/go/tools/deprecated
+honnef.co/go/tools/edit
 honnef.co/go/tools/facts
 honnef.co/go/tools/functions
 honnef.co/go/tools/go/types/typeutil
 honnef.co/go/tools/internal/cache
-honnef.co/go/tools/internal/passes/buildssa
+honnef.co/go/tools/internal/passes/buildir
 honnef.co/go/tools/internal/renameio
+honnef.co/go/tools/internal/robustio
 honnef.co/go/tools/internal/sharedcheck
+honnef.co/go/tools/ir
+honnef.co/go/tools/ir/irutil
 honnef.co/go/tools/lint
 honnef.co/go/tools/lint/lintdsl
 honnef.co/go/tools/lint/lintutil
 honnef.co/go/tools/lint/lintutil/format
 honnef.co/go/tools/loader
+honnef.co/go/tools/pattern
 honnef.co/go/tools/printf
+honnef.co/go/tools/report
 honnef.co/go/tools/simple
-honnef.co/go/tools/ssa
-honnef.co/go/tools/ssautil
 honnef.co/go/tools/staticcheck
-honnef.co/go/tools/staticcheck/vrp
 honnef.co/go/tools/stylecheck
 honnef.co/go/tools/unused
 honnef.co/go/tools/version
