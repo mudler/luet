@@ -124,5 +124,11 @@ RUN echo bar > /test2`))
 
 		})
 
+		It("Detects available images", func() {
+			b := NewSimpleDockerBackend()
+			Expect(b.ImageAvailable("quay.io/mocaccino/extra")).To(BeTrue())
+			Expect(b.ImageAvailable("ubuntu:20.10")).To(BeTrue())
+			Expect(b.ImageAvailable("igjo5ijgo25nho52")).To(BeFalse())
+		})
 	})
 })

@@ -14,13 +14,13 @@ require (
 	github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
 	github.com/fsouza/go-dockerclient v1.6.4
 	github.com/ghodss/yaml v1.0.0
+	github.com/google/go-containerregistry v0.2.1
 	github.com/hashicorp/go-version v1.2.0
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/jedib0t/go-pretty/v6 v6.0.5
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
 	github.com/klauspost/pgzip v1.2.1
 	github.com/knqyf263/go-deb-version v0.0.0-20190517075300-09fca494f03d
-	github.com/kr/pretty v0.2.0 // indirect
 	github.com/kyokomi/emoji v2.1.0+incompatible
 	github.com/logrusorgru/aurora v0.0.0-20190417123914-21d75270181e
 	github.com/marcsauter/single v0.0.0-20181104081128-f8bf46f26ec0
@@ -42,7 +42,6 @@ require (
 	go.uber.org/atomic v1.5.1 // indirect
 	go.uber.org/multierr v1.4.0 // indirect
 	go.uber.org/zap v1.13.0
-	golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	gotest.tools/v3 v3.0.2 // indirect
 	helm.sh/helm/v3 v3.3.4

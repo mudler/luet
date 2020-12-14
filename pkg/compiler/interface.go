@@ -52,11 +52,10 @@ type CompilerOptions struct {
 	Clean                    bool
 	KeepImageExport          bool
 
-	OnlyDeps             bool
-	NoDeps               bool
-	SolverOptions        config.LuetSolverOptions
-	SkipIfMetadataExists bool
-	BuildValuesFile      string
+	OnlyDeps        bool
+	NoDeps          bool
+	SolverOptions   config.LuetSolverOptions
+	BuildValuesFile string
 
 	PackageTargetOnly bool
 }
@@ -87,6 +86,7 @@ type CompilerBackend interface {
 	DownloadImage(opts CompilerBackendOptions) error
 
 	Push(opts CompilerBackendOptions) error
+	ImageAvailable(string) bool
 
 	ImageExists(string) bool
 }

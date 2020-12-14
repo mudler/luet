@@ -119,6 +119,10 @@ func (*SimpleDocker) ImageExists(imagename string) bool {
 	return true
 }
 
+func (*SimpleDocker) ImageAvailable(imagename string) bool {
+	return imageAvailable(imagename)
+}
+
 func (*SimpleDocker) RemoveImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	buildarg := []string{"rmi", name}

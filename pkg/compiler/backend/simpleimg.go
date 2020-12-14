@@ -97,6 +97,10 @@ func (*SimpleImg) CopyImage(src, dst string) error {
 	return nil
 }
 
+func (*SimpleImg) ImageAvailable(imagename string) bool {
+	return imageAvailable(imagename)
+}
+
 func (*SimpleImg) ImageExists(imagename string) bool {
 	// NOOP: not implemented
 	// TODO: Since img doesn't have an inspect command,

@@ -108,7 +108,6 @@ Build packages specifying multiple definition trees:
 		keepExportedImages := viper.GetBool("keep-exported-images")
 		onlyTarget, _ := cmd.Flags().GetBool("only-target-package")
 		full, _ := cmd.Flags().GetBool("full")
-		skip, _ := cmd.Flags().GetBool("skip-if-metadata-exists")
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		var results Results
 
@@ -180,7 +179,6 @@ Build packages specifying multiple definition trees:
 		opts.OnlyDeps = onlydeps
 		opts.NoDeps = nodeps
 		opts.KeepImageExport = keepExportedImages
-		opts.SkipIfMetadataExists = skip
 		opts.PackageTargetOnly = onlyTarget
 		opts.BuildValuesFile = values
 		var solverOpts solver.Options
@@ -308,7 +306,7 @@ func init() {
 	if err != nil {
 		Fatal(err)
 	}
-	buildCmd.Flags().Bool("clean", true, "Build all packages without considering the packages present in the build directory")
+	buildCmd.Flags().Bool("clean", true, "Build all packages locally without considering the packages present or images available")
 	buildCmd.Flags().StringSliceP("tree", "t", []string{}, "Path of the tree to use.")
 	buildCmd.Flags().String("backend", "docker", "backend used (docker,img)")
 	buildCmd.Flags().Bool("privileged", false, "Privileged (Keep permissions)")
@@ -327,7 +325,6 @@ func init() {
 	buildCmd.Flags().Bool("nodeps", false, "Build only the target packages, skipping deps (it works only if you already built the deps locally, or by using --pull) ")
 	buildCmd.Flags().Bool("onlydeps", false, "Build only package dependencies")
 	buildCmd.Flags().Bool("keep-exported-images", false, "Keep exported images used during building")
-	buildCmd.Flags().Bool("skip-if-metadata-exists", false, "Skip package if metadata exists")
 	buildCmd.Flags().Bool("only-target-package", false, "Build packages of only the required target. Otherwise builds all the necessary ones not present in the destination")
 	buildCmd.Flags().String("solver-type", "", "Solver strategy")
 	buildCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
