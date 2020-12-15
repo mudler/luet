@@ -264,8 +264,16 @@ func (cs *LuetCompiler) unpackFs(rootfs string, concurrency int, p CompilationSp
 
 func (cs *LuetCompiler) unpackDelta(rootfs string, concurrency int, keepPermissions bool, p CompilationSpec, builderOpts, runnerOpts CompilerBackendOptions) (Artifact, error) {
 	pkgTag := ":package: " + p.GetPackage().HumanReadableString()
+	if cs.Options.PullFirst && !cs.Backend.ImageExists(builderOpts.ImageName) && cs.Backend.ImageAvailable(builderOpts.ImageName) {
+		err := cs.Backend.DownloadImage(builderOpts)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not pull image")
+		}
+	} else if !cs.Backend.ImageExists(builderOpts.ImageName) {
+		return nil, errors.New("No image found for " + builderOpts.ImageName)
+	}
 	if err := cs.Backend.ExportImage(builderOpts); err != nil {
-		return nil, errors.Wrap(err, "Could not export image")
+		return nil, errors.Wrap(err, "Could not export image"+builderOpts.ImageName)
 	}
 	if !cs.Options.KeepImageExport {
 		defer os.Remove(builderOpts.Destination)
@@ -472,13 +480,13 @@ func (cs *LuetCompiler) genArtifact(p CompilationSpec, builderOpts, runnerOpts C
 		// Take content of container as a base for our package files
 		artifact, err = cs.unpackFs(rootfs, concurrency, p)
 		if err != nil {
-			return nil, errors.Wrap(err, "Error met while creating package archive")
+			return nil, errors.Wrap(err, "Error met while extracting image")
 		}
 	} else {
 		// Generate delta between the two images
 		artifact, err = cs.unpackDelta(rootfs, concurrency, keepPermissions, p, builderOpts, runnerOpts)
 		if err != nil {
-			return nil, errors.Wrap(err, "Error met while creating package archive")
+			return nil, errors.Wrap(err, "Error met while generating delta")
 		}
 	}
 
@@ -510,8 +518,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 			Debug("Artifact reloaded from YAML. Skipping build")
 			return art, err
 		}
-		available := cs.Backend.ImageAvailable(packageImage)
-		if exists || available {
+		if cs.Options.PullFirst && cs.Backend.ImageAvailable(packageImage) {
 			return &PackageArtifact{}, nil
 		}
 	}
