@@ -330,6 +330,9 @@ func (db *InMemoryDatabase) FindPackages(p Package) (Packages, error) {
 	// Provides: Treat as the replaced package here
 	if provided, err := db.getProvide(p); err == nil {
 		p = provided
+		if !provided.IsSelector() {
+			return Packages{provided}, nil
+		}
 	}
 
 	db.Lock()
