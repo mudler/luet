@@ -19,7 +19,7 @@ if [ "${LUET_CONFIG_PROTECT}" = "1" ] ; then
   mkdir -p /etc/luet/config.protect.d || true
   wget -q  https://raw.githubusercontent.com/mudler/luet/master/contrib/config/config.protect.d/01_etc.yml.example -O /etc/luet/config.protect.d/01_etc.yml
 fi
-wget -q https://raw.githubusercontent.com/mocaccinoOS/repository-index/master/packages/mocaccino-repository-index/mocaccino-repository-index.yml -O /etc/luet/repos.conf.d/mocaccino-repository-index.yml
+wget -q https://raw.githubusercontent.com/mocaccinoOS/repository-index/master/packages/mocaccino-repository-index.yml -O /etc/luet/repos.conf.d/mocaccino-repository-index.yml
 
 cat > /etc/luet/luet.yaml <<EOF
 general:
