@@ -214,6 +214,27 @@ func (l *LuetInstaller) Swap(toRemove pkg.Packages, toInstall pkg.Packages, s *S
 		return err
 	}
 
+	toRemoveFinal := pkg.Packages{}
+	toInstallFinal := pkg.Packages{}
+
+	for _, p := range toRemove {
+		packs, _ := s.Database.FindPackages(p)
+		if len(packs) == 0 {
+			return errors.New("Package " + p.HumanReadableString() + " not found in the system")
+		}
+		for _, pp := range packs {
+			toRemoveFinal = append(toRemoveFinal, pp)
+		}
+	}
+
+	match, _, _, _, err := l.computeInstall(syncedRepos, toInstall, s)
+	if err != nil {
+		return err
+	}
+	for _, m := range match {
+		toInstallFinal = append(toInstallFinal, m.Package)
+	}
+
 	if len(toRemove) > 0 {
 		Info(":recycle: Packages that are going to be removed from the system:\n ", Yellow(packsToList(toRemove)).BgBlack().String())
 	}
@@ -226,13 +247,13 @@ func (l *LuetInstaller) Swap(toRemove pkg.Packages, toInstall pkg.Packages, s *S
 		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
 		if Ask() {
 			l.Options.Ask = false // Don't prompt anymore
-			return l.swap(syncedRepos, toRemove, toInstall, s)
+			return l.swap(syncedRepos, toRemoveFinal, toInstallFinal, s)
 		} else {
 			return errors.New("Aborted by user")
 		}
 	}
 
-	return l.swap(syncedRepos, toRemove, toInstall, s)
+	return l.swap(syncedRepos, toRemoveFinal, toInstallFinal, s)
 }
 
 func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, toInstall pkg.Packages, s *System) error {
