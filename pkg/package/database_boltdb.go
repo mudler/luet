@@ -362,10 +362,22 @@ func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
 // FindPackages return the list of the packages beloging to cat/name  (any versions in requested range)
 // FIXME: Optimize, see inmemorydb
 func (db *BoltDatabase) FindPackages(p Package) (Packages, error) {
+	if !p.IsSelector() {
+		pack, err := db.FindPackage(p)
+		if err != nil {
+			return []Package{}, err
+		}
+		return []Package{pack}, nil
+	}
+
 	// Provides: Treat as the replaced package here
 	if provided, err := db.getProvide(p); err == nil {
 		p = provided
+		if !provided.IsSelector() {
+			return Packages{provided}, nil
+		}
 	}
+
 	var versionsInWorld []Package
 	for _, w := range db.World() {
 		if w.GetName() != p.GetName() || w.GetCategory() != p.GetCategory() {

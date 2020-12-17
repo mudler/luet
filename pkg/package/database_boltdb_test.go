@@ -81,7 +81,6 @@ var _ = Describe("BoltDB Database", func() {
 		})
 
 		It("Find best package candidate", func() {
-			db := NewInMemoryDatabase(false)
 			a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
 			a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
 			a3 := NewPackage("A", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
@@ -102,7 +101,6 @@ var _ = Describe("BoltDB Database", func() {
 		})
 
 		It("Find specific package candidate", func() {
-			db := NewInMemoryDatabase(false)
 			a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
 			a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
 			a3 := NewPackage("A", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
@@ -123,7 +121,6 @@ var _ = Describe("BoltDB Database", func() {
 		})
 
 		It("Provides replaces definitions", func() {
-			db := NewInMemoryDatabase(false)
 			a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
 			a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
 			a3 := NewPackage("A", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
@@ -145,6 +142,144 @@ var _ = Describe("BoltDB Database", func() {
 			pack, err := db.FindPackage(s)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(pack).To(Equal(a3))
+		})
+
+		Context("Provides", func() {
+
+			It("replaces definitions", func() {
+				a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+				a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
+				a3 := NewPackage("A", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+
+				a3.SetProvides([]*DefaultPackage{{Name: "A", Category: "", Version: "1.0"}})
+				Expect(a3.GetProvides()).To(Equal([]*DefaultPackage{{Name: "A", Category: "", Version: "1.0"}}))
+
+				_, err := db.CreatePackage(a)
+				Expect(err).ToNot(HaveOccurred())
+
+				_, err = db.CreatePackage(a1)
+				Expect(err).ToNot(HaveOccurred())
+
+				_, err = db.CreatePackage(a3)
+				Expect(err).ToNot(HaveOccurred())
+
+				s := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+
+				pack, err := db.FindPackage(s)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(pack).To(Equal(a3))
+			})
+
+			It("replaces definitions", func() {
+				a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+				a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
+				a3 := NewPackage("A", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+
+				a3.SetProvides([]*DefaultPackage{{Name: "A", Category: "", Version: "1.0"}})
+				Expect(a3.GetProvides()).To(Equal([]*DefaultPackage{{Name: "A", Category: "", Version: "1.0"}}))
+
+				_, err := db.CreatePackage(a)
+				Expect(err).ToNot(HaveOccurred())
+
+				_, err = db.CreatePackage(a1)
+				Expect(err).ToNot(HaveOccurred())
+
+				_, err = db.CreatePackage(a3)
+				Expect(err).ToNot(HaveOccurred())
+
+				s := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+
+				packs, err := db.FindPackages(s)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(packs).To(ContainElement(a3))
+			})
+
+			It("replaces definitions", func() {
+				a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+				a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
+				z := NewPackage("Z", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+
+				z.SetProvides([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}})
+				Expect(z.GetProvides()).To(Equal([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}}))
+
+				_, err := db.CreatePackage(a)
+				Expect(err).ToNot(HaveOccurred())
+
+				_, err = db.CreatePackage(a1)
+				Expect(err).ToNot(HaveOccurred())
+
+				_, err = db.CreatePackage(z)
+				Expect(err).ToNot(HaveOccurred())
+
+				s := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+
+				packs, err := db.FindPackages(s)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(packs).To(ContainElement(z))
+			})
+
+			It("replaces definitions of unexisting packages", func() {
+				a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
+				z := NewPackage("Z", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+
+				z.SetProvides([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}})
+				Expect(z.GetProvides()).To(Equal([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}}))
+
+				_, err := db.CreatePackage(a1)
+				Expect(err).ToNot(HaveOccurred())
+
+				_, err = db.CreatePackage(z)
+				Expect(err).ToNot(HaveOccurred())
+
+				s := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+
+				packs, err := db.FindPackages(s)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(packs).To(ContainElement(z))
+			})
+
+			It("replaces definitions of a required package", func() {
+
+				c := NewPackage("C", "1.1", []*DefaultPackage{{Name: "A", Category: "", Version: ">=0"}}, []*DefaultPackage{})
+				z := NewPackage("Z", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+
+				z.SetProvides([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}})
+				Expect(z.GetProvides()).To(Equal([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}}))
+
+				_, err := db.CreatePackage(z)
+				Expect(err).ToNot(HaveOccurred())
+				_, err = db.CreatePackage(c)
+				Expect(err).ToNot(HaveOccurred())
+
+				s := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+
+				packs, err := db.FindPackages(s)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(packs).To(ContainElement(z))
+			})
+
+			When("Searching with selectors", func() {
+				It("replaces definitions of a required package", func() {
+
+					c := NewPackage("C", "1.1", []*DefaultPackage{{Name: "A", Category: "", Version: ">=0"}}, []*DefaultPackage{})
+					z := NewPackage("Z", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+
+					z.SetProvides([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}})
+					Expect(z.GetProvides()).To(Equal([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}}))
+
+					_, err := db.CreatePackage(z)
+					Expect(err).ToNot(HaveOccurred())
+					_, err = db.CreatePackage(c)
+					Expect(err).ToNot(HaveOccurred())
+
+					s := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+
+					packs, err := db.FindPackages(s)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(packs).To(ContainElement(z))
+				})
+			})
+
 		})
 
 	})
