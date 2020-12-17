@@ -815,14 +815,8 @@ func (l *LuetInstaller) computeUninstall(p pkg.Package, s *System) (pkg.Packages
 	return toUninstall, nil
 }
 func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
-	if p.IsSelector() {
-		if packs, _ := s.Database.FindPackages(p); len(packs) == 0 {
-			return errors.New("Package not found in the system")
-		}
-	} else {
-		if _, err := s.Database.FindPackage(p); err != nil {
-			return errors.Wrap(err, "package not found in the system")
-		}
+	if packs, _ := s.Database.FindPackages(p); len(packs) == 0 {
+		return errors.New("Package not found in the system")
 	}
 
 	Spinner(32)
