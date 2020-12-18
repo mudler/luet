@@ -159,9 +159,9 @@ func init() {
 	createrepoCmd.Flags().Bool("reset-revision", false, "Reset repository revision.")
 	createrepoCmd.Flags().String("repo", "", "Use repository defined in configuration.")
 
-	createrepoCmd.Flags().String("tree-compression", "gzip", "Compression alg: none, gzip")
+	createrepoCmd.Flags().String("tree-compression", "gzip", "Compression alg: none, gzip, zstd")
 	createrepoCmd.Flags().String("tree-filename", installer.TREE_TARBALL, "Repository tree filename")
-	createrepoCmd.Flags().String("meta-compression", "none", "Compression alg: none, gzip")
+	createrepoCmd.Flags().String("meta-compression", "none", "Compression alg: none, gzip, zstd")
 	createrepoCmd.Flags().String("meta-filename", installer.REPOSITORY_METAFILE+".tar", "Repository metadata filename")
 
 	RootCmd.AddCommand(createrepoCmd)

@@ -313,7 +313,7 @@ func init() {
 	buildCmd.Flags().String("values", "", "Build values file to interpolate with each package")
 
 	buildCmd.Flags().String("destination", path, "Destination folder")
-	buildCmd.Flags().String("compression", "none", "Compression alg: none, gzip")
+	buildCmd.Flags().String("compression", "none", "Compression alg: none, gzip, zstd")
 	buildCmd.Flags().String("image-repository", "luet/cache", "Default base image string for generated image")
 	buildCmd.Flags().Bool("push", false, "Push images to a hub")
 	buildCmd.Flags().Bool("pull", false, "Pull images from a hub")

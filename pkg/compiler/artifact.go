@@ -28,6 +28,7 @@ import (
 	"regexp"
 
 	system "github.com/docker/docker/pkg/system"
+	"github.com/klauspost/compress/zstd"
 	gzip "github.com/klauspost/pgzip"
 
 	//"strconv"
@@ -47,8 +48,9 @@ import (
 type CompressionImplementation string
 
 const (
-	None CompressionImplementation = "none" // e.g. tar for standard packages
-	GZip CompressionImplementation = "gzip"
+	None      CompressionImplementation = "none" // e.g. tar for standard packages
+	GZip      CompressionImplementation = "gzip"
+	Zstandard CompressionImplementation = "zstd"
 )
 
 type ArtifactIndex []Artifact
@@ -242,6 +244,43 @@ func (a *PackageArtifact) SetPath(p string) {
 // Compress Archives and compress (TODO) to the artifact path
 func (a *PackageArtifact) Compress(src string, concurrency int) error {
 	switch a.CompressionType {
+
+	case Zstandard:
+		err := helpers.Tar(src, a.Path)
+		if err != nil {
+			return err
+		}
+		original, err := os.Open(a.Path)
+		if err != nil {
+			return err
+		}
+		defer original.Close()
+
+		zstdFile := a.Path + ".zstd"
+		bufferedReader := bufio.NewReader(original)
+
+		// Open a file for writing.
+		dst, err := os.Create(zstdFile)
+		if err != nil {
+			return err
+		}
+
+		enc, err := zstd.NewWriter(dst)
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(enc, bufferedReader)
+		if err != nil {
+			enc.Close()
+			return err
+		}
+		if err := enc.Close(); err != nil {
+			return err
+		}
+
+		os.RemoveAll(a.Path) // Remove original
+		a.Path = zstdFile
+		return nil
 	case GZip:
 		err := helpers.Tar(src, a.Path)
 		if err != nil {
@@ -367,6 +406,40 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 	tarModifier := helpers.NewTarModifierWrapper(dst, tarModifierWrapperFunc)
 
 	switch a.CompressionType {
+	case Zstandard:
+		// Create the uncompressed archive
+		archive, err := os.Create(a.GetPath() + ".uncompressed")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(a.GetPath() + ".uncompressed")
+		defer archive.Close()
+
+		original, err := os.Open(a.Path)
+		if err != nil {
+			return errors.Wrap(err, "Cannot open "+a.Path)
+		}
+		defer original.Close()
+
+		bufferedReader := bufio.NewReader(original)
+
+		d, err := zstd.NewReader(bufferedReader)
+		if err != nil {
+			return err
+		}
+		defer d.Close()
+
+		_, err = io.Copy(archive, d)
+		if err != nil {
+			return errors.Wrap(err, "Cannot copy to "+a.GetPath()+".uncompressed")
+		}
+
+		err = helpers.UntarProtect(a.GetPath()+".uncompressed", dst,
+			LuetCfg.GetGeneral().SameOwner, protectedFiles, tarModifier)
+		if err != nil {
+			return err
+		}
+		return nil
 	case GZip:
 		// Create the uncompressed archive
 		archive, err := os.Create(a.GetPath() + ".uncompressed")
@@ -412,6 +485,27 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 func (a *PackageArtifact) FileList() ([]string, error) {
 	var tr *tar.Reader
 	switch a.CompressionType {
+	case Zstandard:
+		archive, err := os.Create(a.GetPath() + ".uncompressed")
+		if err != nil {
+			return []string{}, err
+		}
+		defer os.RemoveAll(a.GetPath() + ".uncompressed")
+		defer archive.Close()
+
+		original, err := os.Open(a.Path)
+		if err != nil {
+			return []string{}, errors.Wrap(err, "Cannot open "+a.Path)
+		}
+		defer original.Close()
+
+		bufferedReader := bufio.NewReader(original)
+		r, err := zstd.NewReader(bufferedReader)
+		if err != nil {
+			return []string{}, err
+		}
+		defer r.Close()
+		tr = tar.NewReader(r)
 	case GZip:
 		// Create the uncompressed archive
 		archive, err := os.Create(a.GetPath() + ".uncompressed")

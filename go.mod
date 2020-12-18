@@ -19,6 +19,7 @@ require (
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/jedib0t/go-pretty/v6 v6.0.5
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
+	github.com/klauspost/compress v1.8.3
 	github.com/klauspost/pgzip v1.2.1
 	github.com/knqyf263/go-deb-version v0.0.0-20190517075300-09fca494f03d
 	github.com/kyokomi/emoji v2.1.0+incompatible
