@@ -51,6 +51,7 @@ type CompilerOptions struct {
 	CompressionType          CompressionImplementation
 	KeepImageExport          bool
 
+	Wait            bool
 	OnlyDeps        bool
 	NoDeps          bool
 	SolverOptions   config.LuetSolverOptions

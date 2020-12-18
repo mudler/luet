@@ -75,6 +75,7 @@ Build packages specifying multiple definition trees:
 		viper.BindPFlag("image-repository", cmd.Flags().Lookup("image-repository"))
 		viper.BindPFlag("push", cmd.Flags().Lookup("push"))
 		viper.BindPFlag("pull", cmd.Flags().Lookup("pull"))
+		viper.BindPFlag("wait", cmd.Flags().Lookup("wait"))
 		viper.BindPFlag("keep-images", cmd.Flags().Lookup("keep-images"))
 
 		LuetCfg.Viper.BindPFlag("keep-exported-images", cmd.Flags().Lookup("keep-exported-images"))
@@ -97,7 +98,7 @@ Build packages specifying multiple definition trees:
 		compressionType := viper.GetString("compression")
 		imageRepository := viper.GetString("image-repository")
 		values := viper.GetString("values")
-
+		wait := viper.GetBool("wait")
 		push := viper.GetBool("push")
 		pull := viper.GetBool("pull")
 		keepImages := viper.GetBool("keep-images")
@@ -175,6 +176,7 @@ Build packages specifying multiple definition trees:
 		opts.Push = push
 		opts.OnlyDeps = onlydeps
 		opts.NoDeps = nodeps
+		opts.Wait = wait
 		opts.KeepImageExport = keepExportedImages
 		opts.PackageTargetOnly = onlyTarget
 		opts.BuildValuesFile = values
@@ -317,6 +319,7 @@ func init() {
 	buildCmd.Flags().String("image-repository", "luet/cache", "Default base image string for generated image")
 	buildCmd.Flags().Bool("push", false, "Push images to a hub")
 	buildCmd.Flags().Bool("pull", false, "Pull images from a hub")
+	buildCmd.Flags().Bool("wait", false, "Don't build all intermediate images, but wait for them until they are available")
 	buildCmd.Flags().Bool("keep-images", true, "Keep built docker images in the host")
 	buildCmd.Flags().Bool("nodeps", false, "Build only the target packages, skipping deps (it works only if you already built the deps locally, or by using --pull) ")
 	buildCmd.Flags().Bool("onlydeps", false, "Build only package dependencies")

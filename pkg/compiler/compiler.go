@@ -507,6 +507,18 @@ func (cs *LuetCompiler) genArtifact(p CompilationSpec, builderOpts, runnerOpts C
 	return artifact, nil
 }
 
+func (cs *LuetCompiler) waitForImage(image string) {
+	if cs.Options.PullFirst && cs.Options.Wait && !cs.Backend.ImageAvailable(image) {
+		Info(fmt.Sprintf("Waiting for image %s to be available... :zzz:", image))
+		Spinner(22)
+		defer SpinnerStop()
+		for !cs.Backend.ImageAvailable(image) {
+			Info(fmt.Sprintf("Image %s not available yet, sleeping", image))
+			time.Sleep(5 * time.Second)
+		}
+	}
+}
+
 func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage string,
 	concurrency int,
 	keepPermissions, keepImg bool,
@@ -518,6 +530,7 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 			Debug("Artifact reloaded from YAML. Skipping build")
 			return art, err
 		}
+		cs.waitForImage(packageImage)
 		if cs.Options.PullFirst && cs.Backend.ImageAvailable(packageImage) {
 			return &PackageArtifact{}, nil
 		}
