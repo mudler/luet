@@ -1,0 +1,9 @@
+requires:
+- category: "test"
+  name: "a"
+  version: ">=0"
+
+prelude:
+  - echo b > /b-prelude
+steps:
+  - echo b > /b

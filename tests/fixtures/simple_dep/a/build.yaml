@@ -1,0 +1,5 @@
+image: "alpine"
+prelude:
+  - echo a > /a-prelude
+steps:
+  - echo a > /a

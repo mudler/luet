@@ -1,0 +1,7 @@
+requires:
+- category: "test"
+  name: "a"
+  version: ">=0"
+steps:
+  - echo c > /c
+
