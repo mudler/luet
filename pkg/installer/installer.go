@@ -175,7 +175,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
 		if Ask() {
 			l.Options.Ask = false // Don't prompt anymore
-			return l.swap(syncedRepos, uninstall, toInstall, s)
+			return l.swap(syncedRepos, uninstall, toInstall, s, true)
 		} else {
 			return errors.New("Aborted by user")
 		}
@@ -183,7 +183,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 
 	Spinner(32)
 	defer SpinnerStop()
-	return l.swap(syncedRepos, uninstall, toInstall, s)
+	return l.swap(syncedRepos, uninstall, toInstall, s, true)
 }
 
 func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
@@ -225,7 +225,7 @@ func (l *LuetInstaller) Swap(toRemove pkg.Packages, toInstall pkg.Packages, s *S
 		}
 	}
 
-	return l.swap(syncedRepos, toRemoveFinal, toInstall, s)
+	return l.swap(syncedRepos, toRemoveFinal, toInstall, s, false)
 }
 
 func (l *LuetInstaller) computeSwap(syncedRepos Repositories, toRemove pkg.Packages, toInstall pkg.Packages, s *System) (map[string]ArtifactMatch, pkg.Packages, solver.PackagesAssertions, pkg.PackageDatabase, error) {
@@ -234,16 +234,6 @@ func (l *LuetInstaller) computeSwap(syncedRepos Repositories, toRemove pkg.Packa
 	syncedRepos.SyncDatabase(allRepos)
 
 	toInstall = syncedRepos.ResolveSelectors(toInstall)
-
-	// We don't want any conflict with the installed to raise during the upgrade.
-	// In this way we both force uninstalls and we avoid to check with conflicts
-	// against the current system state which is pending to deletion
-	// E.g. you can't check for conflicts for an upgrade of a new version of A
-	// if the old A results installed in the system. This is due to the fact that
-	// now the solver enforces the constraints and explictly denies two packages
-	// of the same version installed.
-	l.Options.Force = true
-	l.Options.NoDeps = true
 
 	// First check what would have been done
 	installedtmp := pkg.NewInMemoryDatabase(false)
@@ -273,9 +263,21 @@ func (l *LuetInstaller) computeSwap(syncedRepos Repositories, toRemove pkg.Packa
 	return l.computeInstall(syncedRepos, toInstall, systemAfterChanges)
 }
 
-func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, toInstall pkg.Packages, s *System) error {
+func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, toInstall pkg.Packages, s *System, forceNodeps bool) error {
 	forced := l.Options.Force
 	nodeps := l.Options.NoDeps
+
+	// We don't want any conflict with the installed to raise during the upgrade.
+	// In this way we both force uninstalls and we avoid to check with conflicts
+	// against the current system state which is pending to deletion
+	// E.g. you can't check for conflicts for an upgrade of a new version of A
+	// if the old A results installed in the system. This is due to the fact that
+	// now the solver enforces the constraints and explictly denies two packages
+	// of the same version installed.
+	l.Options.Force = true
+	if forceNodeps {
+		l.Options.NoDeps = true
+	}
 
 	match, packages, assertions, allRepos, err := l.computeSwap(syncedRepos, toRemove, toInstall, s)
 	if err != nil {
