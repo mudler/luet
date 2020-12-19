@@ -236,14 +236,11 @@ func (l *LuetInstaller) computeSwap(syncedRepos Repositories, toRemove pkg.Packa
 	toInstall = syncedRepos.ResolveSelectors(toInstall)
 
 	// First check what would have been done
-	installedtmp := pkg.NewInMemoryDatabase(false)
-
-	for _, i := range s.Database.World() {
-		_, err := installedtmp.CreatePackage(i)
-		if err != nil {
-			return nil, nil, nil, nil, errors.Wrap(err, "Failed create temporary in-memory db")
-		}
+	installedtmp, err := s.Database.Copy()
+	if err != nil {
+		return nil, nil, nil, nil, errors.Wrap(err, "Failed create temporary in-memory db")
 	}
+
 	systemAfterChanges := &System{Database: installedtmp}
 
 	packs, err := l.computeUninstall(systemAfterChanges, toRemove...)
@@ -772,13 +769,10 @@ func (l *LuetInstaller) computeUninstall(s *System, packs ...pkg.Package) (pkg.P
 
 	// Create a temporary DB with the installed packages
 	// so the solver is much faster finding the deptree
-	installedtmp := pkg.NewInMemoryDatabase(false)
-
-	for _, i := range s.Database.World() {
-		_, err := installedtmp.CreatePackage(i)
-		if err != nil {
-			return toUninstall, errors.Wrap(err, "Failed create temporary in-memory db")
-		}
+	// First check what would have been done
+	installedtmp, err := s.Database.Copy()
+	if err != nil {
+		return toUninstall, errors.Wrap(err, "Failed create temporary in-memory db")
 	}
 
 	if !l.Options.NoDeps {

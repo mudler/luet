@@ -402,10 +402,11 @@ func (s *Solver) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssert
 	replacements := map[pkg.Package]pkg.Package{}
 
 	// TODO: this is memory expensive, we need to optimize this
-	universe := pkg.NewInMemoryDatabase(false)
-	for _, p := range s.DefinitionDatabase.World() {
-		universe.CreatePackage(p)
+	universe, err := s.DefinitionDatabase.Copy()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "Failed copying db")
 	}
+
 	for _, p := range s.Installed() {
 		universe.CreatePackage(p)
 	}
@@ -501,10 +502,10 @@ func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAsser
 	toUninstall := pkg.Packages{}
 	toInstall := pkg.Packages{}
 
-	// we do this in memory so we take into account of provides
-	universe := pkg.NewInMemoryDatabase(false)
-	for _, p := range s.DefinitionDatabase.World() {
-		universe.CreatePackage(p)
+	// we do this in memory so we take into account of provides, and its faster
+	universe, err := s.DefinitionDatabase.Copy()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed creating db copy")
 	}
 
 	installedcopy := pkg.NewInMemoryDatabase(false)

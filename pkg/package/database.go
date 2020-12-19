@@ -28,6 +28,9 @@ type PackageDatabase interface {
 }
 
 type PackageSet interface {
+	Clone(PackageDatabase) error
+	Copy() (PackageDatabase, error)
+
 	GetRevdeps(p Package) (Packages, error)
 	GetPackages() []string //Ids
 	CreatePackage(pkg Package) (string, error)

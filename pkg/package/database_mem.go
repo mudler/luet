@@ -270,6 +270,14 @@ func (db *InMemoryDatabase) getProvide(p Package) (Package, error) {
 	return db.FindPackage(pa)
 }
 
+func (db *InMemoryDatabase) Clone(to PackageDatabase) error {
+	return clone(db, to)
+}
+
+func (db *InMemoryDatabase) Copy() (PackageDatabase, error) {
+	return copy(db)
+}
+
 func (db *InMemoryDatabase) encodePackage(p Package) (string, string, error) {
 	pd, ok := p.(*DefaultPackage)
 	if !ok {

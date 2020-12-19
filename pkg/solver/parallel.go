@@ -446,10 +446,9 @@ func (s *Parallel) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAsse
 	removed := pkg.Packages{}
 
 	// TODO: this is memory expensive, we need to optimize this
-	universe := pkg.NewInMemoryDatabase(false)
-
-	for _, p := range s.DefinitionDatabase.World() {
-		universe.CreatePackage(p)
+	universe, err := s.DefinitionDatabase.Copy()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "couldn't build world copy")
 	}
 	for _, p := range s.Installed() {
 		universe.CreatePackage(p)
@@ -558,9 +557,9 @@ func (s *Parallel) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAss
 	toInstall := pkg.Packages{}
 
 	// we do this in memory so we take into account of provides
-	universe := pkg.NewInMemoryDatabase(false)
-	for _, p := range s.DefinitionDatabase.World() {
-		universe.CreatePackage(p)
+	universe, err := s.DefinitionDatabase.Copy()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "Could not copy def db")
 	}
 
 	installedcopy := pkg.NewInMemoryDatabase(false)

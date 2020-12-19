@@ -47,6 +47,14 @@ func NewBoltDatabase(path string) PackageDatabase {
 	return &BoltDatabase{Path: path, ProvidesDatabase: map[string]map[string]Package{}}
 }
 
+func (db *BoltDatabase) Clone(to PackageDatabase) error {
+	return clone(db, to)
+}
+
+func (db *BoltDatabase) Copy() (PackageDatabase, error) {
+	return copy(db)
+}
+
 func (db *BoltDatabase) Get(s string) (string, error) {
 	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
