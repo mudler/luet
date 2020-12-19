@@ -215,8 +215,6 @@ func (l *LuetInstaller) Swap(toRemove pkg.Packages, toInstall pkg.Packages, s *S
 	}
 
 	toRemoveFinal := pkg.Packages{}
-	toInstallFinal := pkg.Packages{}
-
 	for _, p := range toRemove {
 		packs, _ := s.Database.FindPackages(p)
 		if len(packs) == 0 {
@@ -227,39 +225,14 @@ func (l *LuetInstaller) Swap(toRemove pkg.Packages, toInstall pkg.Packages, s *S
 		}
 	}
 
-	match, _, _, _, err := l.computeInstall(syncedRepos, toInstall, s)
-	if err != nil {
-		return err
-	}
-	for _, m := range match {
-		toInstallFinal = append(toInstallFinal, m.Package)
-	}
-
-	if len(toRemove) > 0 {
-		Info(":recycle: Packages that are going to be removed from the system:\n ", Yellow(packsToList(toRemove)).BgBlack().String())
-	}
-
-	if len(toInstall) > 0 {
-		Info(":zap:Packages that are going to be installed in the system:\n ", Green(packsToList(toInstall)).BgBlack().String())
-	}
-
-	if l.Options.Ask {
-		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
-		if Ask() {
-			l.Options.Ask = false // Don't prompt anymore
-			return l.swap(syncedRepos, toRemoveFinal, toInstallFinal, s)
-		} else {
-			return errors.New("Aborted by user")
-		}
-	}
-
-	return l.swap(syncedRepos, toRemoveFinal, toInstallFinal, s)
+	return l.swap(syncedRepos, toRemoveFinal, toInstall, s)
 }
 
-func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, toInstall pkg.Packages, s *System) error {
-	// First match packages against repositories by priority
+func (l *LuetInstaller) computeSwap(syncedRepos Repositories, toRemove pkg.Packages, toInstall pkg.Packages, s *System) (map[string]ArtifactMatch, pkg.Packages, solver.PackagesAssertions, pkg.PackageDatabase, error) {
+
 	allRepos := pkg.NewInMemoryDatabase(false)
 	syncedRepos.SyncDatabase(allRepos)
+
 	toInstall = syncedRepos.ResolveSelectors(toInstall)
 
 	// We don't want any conflict with the installed to raise during the upgrade.
@@ -269,8 +242,6 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 	// if the old A results installed in the system. This is due to the fact that
 	// now the solver enforces the constraints and explictly denies two packages
 	// of the same version installed.
-	forced := l.Options.Force
-	nodeps := l.Options.NoDeps
 	l.Options.Force = true
 	l.Options.NoDeps = true
 
@@ -280,7 +251,7 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 	for _, i := range s.Database.World() {
 		_, err := installedtmp.CreatePackage(i)
 		if err != nil {
-			return errors.Wrap(err, "Failed create temporary in-memory db")
+			return nil, nil, nil, nil, errors.Wrap(err, "Failed create temporary in-memory db")
 		}
 	}
 	systemAfterChanges := &System{Database: installedtmp}
@@ -289,21 +260,46 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 		packs, err := l.computeUninstall(u, systemAfterChanges)
 		if err != nil && !l.Options.Force {
 			Error("Failed computing uninstall for ", u.HumanReadableString())
-			return errors.Wrap(err, "computing uninstall "+u.HumanReadableString())
+			return nil, nil, nil, nil, errors.Wrap(err, "computing uninstall "+u.HumanReadableString())
 		}
 		for _, p := range packs {
 			err = systemAfterChanges.Database.RemovePackage(p)
 			if err != nil {
-				return errors.Wrap(err, "Failed removing package from database")
+				return nil, nil, nil, nil, errors.Wrap(err, "Failed removing package from database")
 			}
 		}
 	}
 
-	match, packages, assertions, allRepos, err := l.computeInstall(syncedRepos, toInstall, systemAfterChanges)
+	return l.computeInstall(syncedRepos, toInstall, systemAfterChanges)
+}
+
+func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, toInstall pkg.Packages, s *System) error {
+	forced := l.Options.Force
+	nodeps := l.Options.NoDeps
+
+	match, packages, assertions, allRepos, err := l.computeSwap(syncedRepos, toRemove, toInstall, s)
 	if err != nil {
-		return errors.Wrap(err, "computing installation")
+		return errors.Wrap(err, "failed computing package replacement")
 	}
 
+	if l.Options.Ask {
+		if len(toRemove) > 0 {
+			Info(":recycle: Packages that are going to be removed from the system:\n ", Yellow(packsToList(toRemove)).BgBlack().String())
+		}
+
+		if len(match) > 0 {
+			Info("Packages that are going to be installed in the system: \n ", Green(matchesToList(match)).BgBlack().String())
+		}
+
+		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
+		if Ask() {
+			l.Options.Ask = false // Don't prompt anymore
+		} else {
+			return errors.New("Aborted by user")
+		}
+	}
+
+	// First match packages against repositories by priority
 	if err := l.download(syncedRepos, match); err != nil {
 		return errors.Wrap(err, "Pre-downloading packages")
 	}
@@ -358,7 +354,6 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 			}
 		}
 	}
-
 	Info("Packages that are going to be installed in the system: \n ", Green(matchesToList(match)).BgBlack().String())
 
 	if l.Options.Ask {
@@ -841,9 +836,8 @@ func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
 		return nil
 	}
 
-	Info(":recycle: Packages that are going to be removed from the system:\n   ", Yellow(packsToList(toUninstall)).BgBlack().String())
-
 	if l.Options.Ask {
+		Info(":recycle: Packages that are going to be removed from the system:\n   ", Yellow(packsToList(toUninstall)).BgBlack().String())
 		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
 		if Ask() {
 			l.Options.Ask = false // Don't prompt anymore
