@@ -65,13 +65,13 @@ testInstall() {
 }
 
 testReplace() {
-    luet --config $tmpdir/luet.yaml replace -y test/b --for test/c
+    luet --config $tmpdir/luet.yaml replace --nodeps -y test/b --for test/c
     installst=$?
     assertEquals 'replace test successfully' "$installst" "0"
     echo "$upgrade"
     assertTrue 'package uninstalled B' "[ ! -e '$tmpdir/testrootfs/b' ]"
     assertTrue 'package installed C' "[ -e '$tmpdir/testrootfs/c' ]"
-    assertTrue 'package installed A' "[ -e '$tmpdir/testrootfs/a' ]"
+    assertTrue 'package not installed A' "[ ! -e '$tmpdir/testrootfs/a' ]"
 }
 
 # Load shUnit2.
