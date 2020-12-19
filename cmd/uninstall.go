@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"os"
-	"path/filepath"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
 	. "github.com/mudler/luet/pkg/config"
@@ -45,7 +44,6 @@ var uninstallCmd = &cobra.Command{
 		LuetCfg.Viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		var systemDB pkg.PackageDatabase
 		toRemove := []pkg.Package{}
 		for _, a := range args {
 
@@ -94,13 +92,7 @@ var uninstallCmd = &cobra.Command{
 			PreserveSystemEssentialData: true,
 		})
 
-		if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-			systemDB = pkg.NewBoltDatabase(
-				filepath.Join(LuetCfg.GetSystem().GetSystemRepoDatabaseDirPath(), "luet.db"))
-		} else {
-			systemDB = pkg.NewInMemoryDatabase(true)
-		}
-		system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
+		system := &installer.System{Database: LuetCfg.GetSystemDB(), Target: LuetCfg.GetSystem().Rootfs}
 
 		if err := inst.Uninstall(system, toRemove...); err != nil {
 			Fatal("Error: " + err.Error())

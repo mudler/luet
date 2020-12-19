@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/mudler/luet/pkg/helpers"
+	pkg "github.com/mudler/luet/pkg/package"
 	solver "github.com/mudler/luet/pkg/solver"
 
 	v "github.com/spf13/viper"
@@ -274,6 +275,16 @@ func GenDefault(viper *v.Viper) {
 	viper.SetDefault("solver.rate", 0.7)
 	viper.SetDefault("solver.discount", 1.0)
 	viper.SetDefault("solver.max_attempts", 9000)
+}
+
+func (c *LuetConfig) GetSystemDB() pkg.PackageDatabase {
+	switch LuetCfg.GetSystem().DatabaseEngine {
+	case "boltdb":
+		return pkg.NewBoltDatabase(
+			filepath.Join(LuetCfg.GetSystem().GetSystemRepoDatabaseDirPath(), "luet.db"))
+	default:
+		return pkg.NewInMemoryDatabase(true)
+	}
 }
 
 func (c *LuetConfig) AddSystemRepository(r LuetRepository) {

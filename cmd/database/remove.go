@@ -16,13 +16,10 @@
 package cmd_database
 
 import (
-	"path/filepath"
-
 	. "github.com/mudler/luet/pkg/logger"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
 	. "github.com/mudler/luet/pkg/config"
-	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/spf13/cobra"
 )
@@ -44,19 +41,12 @@ This commands takes multiple packages as arguments and prunes their entries from
 
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			var systemDB pkg.PackageDatabase
+			systemDB := LuetCfg.GetSystemDB()
 
 			for _, a := range args {
 				pack, err := helpers.ParsePackageStr(a)
 				if err != nil {
 					Fatal("Invalid package string ", a, ": ", err.Error())
-				}
-
-				if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-					systemDB = pkg.NewBoltDatabase(
-						filepath.Join(LuetCfg.GetSystem().GetSystemRepoDatabaseDirPath(), "luet.db"))
-				} else {
-					systemDB = pkg.NewInMemoryDatabase(true)
 				}
 
 				if err := systemDB.RemovePackage(pack); err != nil {

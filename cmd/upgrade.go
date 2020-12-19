@@ -16,12 +16,10 @@ package cmd
 
 import (
 	"os"
-	"path/filepath"
 
 	. "github.com/mudler/luet/pkg/config"
 	installer "github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/logger"
-	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 
 	"github.com/spf13/cobra"
@@ -43,7 +41,6 @@ var upgradeCmd = &cobra.Command{
 	},
 	Long: `Upgrades packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var systemDB pkg.PackageDatabase
 
 		repos := installer.Repositories{}
 		for _, repo := range LuetCfg.SystemRepositories {
@@ -97,14 +94,7 @@ var upgradeCmd = &cobra.Command{
 		})
 		inst.Repositories(repos)
 
-		if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-			systemDB = pkg.NewBoltDatabase(
-				filepath.Join(LuetCfg.GetSystem().GetSystemRepoDatabaseDirPath(), "luet.db"))
-		} else {
-			systemDB = pkg.NewInMemoryDatabase(true)
-		}
-		system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
-
+		system := &installer.System{Database: LuetCfg.GetSystemDB(), Target: LuetCfg.GetSystem().Rootfs}
 		if err := inst.Upgrade(system); err != nil {
 			Fatal("Error: " + err.Error())
 		}

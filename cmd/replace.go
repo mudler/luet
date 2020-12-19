@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"os"
-	"path/filepath"
 
 	installer "github.com/mudler/luet/pkg/installer"
 	"github.com/mudler/luet/pkg/solver"
@@ -54,7 +53,6 @@ var replaceCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var toUninstall pkg.Packages
 		var toAdd pkg.Packages
-		var systemDB pkg.PackageDatabase
 
 		f := LuetCfg.Viper.GetStringSlice("for")
 		stype := LuetCfg.Viper.GetString("solver.type")
@@ -120,13 +118,7 @@ var replaceCmd = &cobra.Command{
 		})
 		inst.Repositories(repos)
 
-		if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-			systemDB = pkg.NewBoltDatabase(
-				filepath.Join(LuetCfg.GetSystem().GetSystemRepoDatabaseDirPath(), "luet.db"))
-		} else {
-			systemDB = pkg.NewInMemoryDatabase(true)
-		}
-		system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
+		system := &installer.System{Database: LuetCfg.GetSystemDB(), Target: LuetCfg.GetSystem().Rootfs}
 		err := inst.Swap(toUninstall, toAdd, system)
 		if err != nil {
 			Fatal("Error: " + err.Error())

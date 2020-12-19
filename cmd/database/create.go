@@ -17,7 +17,6 @@ package cmd_database
 
 import (
 	"io/ioutil"
-	"path/filepath"
 
 	"github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/logger"
@@ -51,7 +50,7 @@ For reference, inspect a "metadata.yaml" file generated while running "luet buil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 
-			var systemDB pkg.PackageDatabase
+			systemDB := LuetCfg.GetSystemDB()
 
 			for _, a := range args {
 				dat, err := ioutil.ReadFile(a)
@@ -61,13 +60,6 @@ For reference, inspect a "metadata.yaml" file generated while running "luet buil
 				art, err := compiler.NewPackageArtifactFromYaml(dat)
 				if err != nil {
 					Fatal("Failed reading yaml ", a, ": ", err.Error())
-				}
-
-				if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-					systemDB = pkg.NewBoltDatabase(
-						filepath.Join(LuetCfg.GetSystem().GetSystemRepoDatabaseDirPath(), "luet.db"))
-				} else {
-					systemDB = pkg.NewInMemoryDatabase(true)
 				}
 
 				files := art.GetFiles()

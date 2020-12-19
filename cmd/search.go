@@ -17,7 +17,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/ghodss/yaml"
@@ -112,7 +111,6 @@ Search can also return results in the terminal in different ways: as terminal ou
 		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		var systemDB pkg.PackageDatabase
 		var results Results
 		if len(args) > 1 {
 			Fatal("Wrong number of arguments (expected 1)")
@@ -213,13 +211,7 @@ Search can also return results in the terminal in different ways: as terminal ou
 			}
 		} else {
 
-			if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-				systemDB = pkg.NewBoltDatabase(
-					filepath.Join(LuetCfg.GetSystem().GetSystemRepoDatabaseDirPath(), "luet.db"))
-			} else {
-				systemDB = pkg.NewInMemoryDatabase(true)
-			}
-			system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
+			system := &installer.System{Database: LuetCfg.GetSystemDB(), Target: LuetCfg.GetSystem().Rootfs}
 
 			var err error
 			iMatches := pkg.Packages{}
