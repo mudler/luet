@@ -46,63 +46,64 @@ var uninstallCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var systemDB pkg.PackageDatabase
-
+		toRemove := []pkg.Package{}
 		for _, a := range args {
 
 			pack, err := helpers.ParsePackageStr(a)
 			if err != nil {
 				Fatal("Invalid package string ", a, ": ", err.Error())
 			}
+			toRemove = append(toRemove, pack)
+		}
 
-			stype := LuetCfg.Viper.GetString("solver.type")
-			discount := LuetCfg.Viper.GetFloat64("solver.discount")
-			rate := LuetCfg.Viper.GetFloat64("solver.rate")
-			attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
-			force := LuetCfg.Viper.GetBool("force")
-			nodeps, _ := cmd.Flags().GetBool("nodeps")
-			full, _ := cmd.Flags().GetBool("full")
-			checkconflicts, _ := cmd.Flags().GetBool("conflictscheck")
-			fullClean, _ := cmd.Flags().GetBool("full-clean")
-			concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
-			yes := LuetCfg.Viper.GetBool("yes")
+		stype := LuetCfg.Viper.GetString("solver.type")
+		discount := LuetCfg.Viper.GetFloat64("solver.discount")
+		rate := LuetCfg.Viper.GetFloat64("solver.rate")
+		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
+		force := LuetCfg.Viper.GetBool("force")
+		nodeps, _ := cmd.Flags().GetBool("nodeps")
+		full, _ := cmd.Flags().GetBool("full")
+		checkconflicts, _ := cmd.Flags().GetBool("conflictscheck")
+		fullClean, _ := cmd.Flags().GetBool("full-clean")
+		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
+		yes := LuetCfg.Viper.GetBool("yes")
 
-			LuetCfg.GetSolverOptions().Type = stype
-			LuetCfg.GetSolverOptions().LearnRate = float32(rate)
-			LuetCfg.GetSolverOptions().Discount = float32(discount)
-			LuetCfg.GetSolverOptions().MaxAttempts = attempts
-			if concurrent {
-				LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple
-			} else {
-				LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
-			}
-			Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
+		LuetCfg.GetSolverOptions().Type = stype
+		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
+		LuetCfg.GetSolverOptions().Discount = float32(discount)
+		LuetCfg.GetSolverOptions().MaxAttempts = attempts
+		if concurrent {
+			LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple
+		} else {
+			LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
+		}
+		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 
-			// Load config protect configs
-			installer.LoadConfigProtectConfs(LuetCfg)
+		// Load config protect configs
+		installer.LoadConfigProtectConfs(LuetCfg)
 
-			inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-				Concurrency:                 LuetCfg.GetGeneral().Concurrency,
-				SolverOptions:               *LuetCfg.GetSolverOptions(),
-				NoDeps:                      nodeps,
-				Force:                       force,
-				FullUninstall:               full,
-				FullCleanUninstall:          fullClean,
-				CheckConflicts:              checkconflicts,
-				Ask:                         !yes,
-				PreserveSystemEssentialData: true,
-			})
+		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
+			Concurrency:                 LuetCfg.GetGeneral().Concurrency,
+			SolverOptions:               *LuetCfg.GetSolverOptions(),
+			NoDeps:                      nodeps,
+			Force:                       force,
+			FullUninstall:               full,
+			FullCleanUninstall:          fullClean,
+			CheckConflicts:              checkconflicts,
+			Ask:                         !yes,
+			PreserveSystemEssentialData: true,
+		})
 
-			if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
-				systemDB = pkg.NewBoltDatabase(
-					filepath.Join(LuetCfg.GetSystem().GetSystemRepoDatabaseDirPath(), "luet.db"))
-			} else {
-				systemDB = pkg.NewInMemoryDatabase(true)
-			}
-			system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
-			err = inst.Uninstall(pack, system)
-			if err != nil {
-				Fatal("Error: " + err.Error())
-			}
+		if LuetCfg.GetSystem().DatabaseEngine == "boltdb" {
+			systemDB = pkg.NewBoltDatabase(
+				filepath.Join(LuetCfg.GetSystem().GetSystemRepoDatabaseDirPath(), "luet.db"))
+		} else {
+			systemDB = pkg.NewInMemoryDatabase(true)
+		}
+		system := &installer.System{Database: systemDB, Target: LuetCfg.GetSystem().Rootfs}
+
+		if err := inst.Uninstall(system, toRemove...); err != nil {
+			Fatal("Error: " + err.Error())
 		}
 	},
 }

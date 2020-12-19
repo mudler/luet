@@ -134,7 +134,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			Expect(p.GetName()).To(Equal("b"))
 
-			err = inst.Uninstall(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}, system)
+			err = inst.Uninstall(system, &pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			// Nothing should be there anymore (files, packagedb entry)
@@ -253,7 +253,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			Expect(p.GetName()).To(Equal("b"))
 
-			err = inst.Uninstall(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}, system)
+			err = inst.Uninstall(system, &pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			// Nothing should be there anymore (files, packagedb entry)
@@ -373,7 +373,7 @@ urls:
 			Expect(files).To(Equal([]string{"artifact42", "test5", "test6"}))
 			Expect(err).ToNot(HaveOccurred())
 
-			err = inst.Uninstall(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}, system)
+			err = inst.Uninstall(system, &pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			// Nothing should be there anymore (files, packagedb entry)

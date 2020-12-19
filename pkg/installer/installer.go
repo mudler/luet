@@ -246,17 +246,15 @@ func (l *LuetInstaller) computeSwap(syncedRepos Repositories, toRemove pkg.Packa
 	}
 	systemAfterChanges := &System{Database: installedtmp}
 
-	for _, u := range toRemove {
-		packs, err := l.computeUninstall(u, systemAfterChanges)
-		if err != nil && !l.Options.Force {
-			Error("Failed computing uninstall for ", u.HumanReadableString())
-			return nil, nil, nil, nil, errors.Wrap(err, "computing uninstall "+u.HumanReadableString())
-		}
-		for _, p := range packs {
-			err = systemAfterChanges.Database.RemovePackage(p)
-			if err != nil {
-				return nil, nil, nil, nil, errors.Wrap(err, "Failed removing package from database")
-			}
+	packs, err := l.computeUninstall(systemAfterChanges, toRemove...)
+	if err != nil && !l.Options.Force {
+		Error("Failed computing uninstall for ", packsToList(toRemove))
+		return nil, nil, nil, nil, errors.Wrap(err, "computing uninstall "+packsToList(toRemove))
+	}
+	for _, p := range packs {
+		err = systemAfterChanges.Database.RemovePackage(p)
+		if err != nil {
+			return nil, nil, nil, nil, errors.Wrap(err, "Failed removing package from database")
 		}
 	}
 
@@ -306,12 +304,10 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 		return errors.Wrap(err, "Pre-downloading packages")
 	}
 
-	for _, u := range toRemove {
-		err := l.Uninstall(u, s)
-		if err != nil && !l.Options.Force {
-			Error("Failed uninstall for ", u.HumanReadableString())
-			return errors.Wrap(err, "uninstalling "+u.HumanReadableString())
-		}
+	err = l.Uninstall(s, toRemove...)
+	if err != nil && !l.Options.Force {
+		Error("Failed uninstall for ", packsToList(toRemove))
+		return errors.Wrap(err, "uninstalling "+packsToList(toRemove))
 	}
 
 	l.Options.Force = forced
@@ -762,7 +758,7 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 	return nil
 }
 
-func (l *LuetInstaller) computeUninstall(p pkg.Package, s *System) (pkg.Packages, error) {
+func (l *LuetInstaller) computeUninstall(s *System, packs ...pkg.Package) (pkg.Packages, error) {
 
 	var toUninstall pkg.Packages
 	// compute uninstall from all world - remove packages in parallel - run uninstall finalizer (in order) TODO - mark the uninstallation in db
@@ -790,12 +786,12 @@ func (l *LuetInstaller) computeUninstall(p pkg.Package, s *System) (pkg.Packages
 		var solution pkg.Packages
 		var err error
 		if l.Options.FullCleanUninstall {
-			solution, err = solv.UninstallUniverse(pkg.Packages{p})
+			solution, err = solv.UninstallUniverse(packs)
 			if err != nil {
 				return toUninstall, errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
 			}
 		} else {
-			solution, err = solv.Uninstall(checkConflicts, full, p)
+			solution, err = solv.Uninstall(checkConflicts, full, packs...)
 			if err != nil && !l.Options.Force {
 				return toUninstall, errors.Wrap(err, "Could not solve the uninstall constraints. Tip: try with --solver-type qlearning or with --force, or by removing packages excluding their dependencies with --nodeps")
 			}
@@ -805,19 +801,22 @@ func (l *LuetInstaller) computeUninstall(p pkg.Package, s *System) (pkg.Packages
 			toUninstall = append(toUninstall, p)
 		}
 	} else {
-		toUninstall = append(toUninstall, p)
-
+		toUninstall = append(toUninstall, packs...)
 	}
 
 	return toUninstall, nil
 }
-func (l *LuetInstaller) Uninstall(p pkg.Package, s *System) error {
-	if packs, _ := s.Database.FindPackages(p); len(packs) == 0 {
-		return errors.New("Package not found in the system")
+func (l *LuetInstaller) Uninstall(s *System, packs ...pkg.Package) error {
+
+	for _, p := range packs {
+		if packs, _ := s.Database.FindPackages(p); len(packs) == 0 {
+			return errors.New("Package not found in the system")
+		}
+
 	}
 
 	Spinner(32)
-	toUninstall, err := l.computeUninstall(p, s)
+	toUninstall, err := l.computeUninstall(s, packs...)
 	if err != nil {
 		return errors.Wrap(err, "while computing uninstall")
 	}

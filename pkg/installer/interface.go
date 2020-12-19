@@ -24,7 +24,7 @@ import (
 
 type Installer interface {
 	Install(pkg.Packages, *System) error
-	Uninstall(pkg.Package, *System) error
+	Uninstall(*System, ...pkg.Package) error
 	Upgrade(s *System) error
 	Reclaim(s *System) error
 
