@@ -341,17 +341,18 @@ func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
 
 	required, err := db.FindPackage(p)
 	if err != nil {
-
+		err = nil
 		//	return nil, errors.Wrap(err, "Couldn't find required package in db definition")
 		packages, err := p.Expand(db)
 		//	Info("Expanded", packages, err)
 		if err != nil || len(packages) == 0 {
 			required = p
+			err = errors.Wrap(err, "Candidate not found")
 		} else {
 			required = packages.Best(nil)
 
 		}
-		return required, nil
+		return required, err
 		//required = &DefaultPackage{Name: "test"}
 	}
 
