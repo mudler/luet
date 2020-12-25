@@ -587,7 +587,7 @@ func (l *LuetInstaller) install(syncedRepos Repositories, toInstall map[string]A
 		}
 	}
 
-	return s.ExecuteFinalizers(toFinalize, l.Options.Force)
+	return s.ExecuteFinalizers(toFinalize)
 }
 
 func (l *LuetInstaller) downloadPackage(a ArtifactMatch) (compiler.Artifact, error) {

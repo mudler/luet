@@ -15,6 +15,7 @@ require (
 	github.com/fsouza/go-dockerclient v1.6.4
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-containerregistry v0.2.1
+	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-version v1.2.0
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/jedib0t/go-pretty/v6 v6.0.5
