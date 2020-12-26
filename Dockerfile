@@ -7,6 +7,5 @@ FROM scratch
 ENV LUET_NOLOCK=true
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /luet/luet /usr/bin/luet
-RUN mkdir /tmp && chmod a+rwx /tmp
 
 ENTRYPOINT ["/usr/bin/luet"]
