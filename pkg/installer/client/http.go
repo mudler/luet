@@ -90,7 +90,7 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 		client := grab.NewClient()
 
 		for _, uri := range c.RepoData.Urls {
-			Info("Downloading artifact", artifactName, "from", uri)
+			Debug("Downloading artifact", artifactName, "from", uri)
 
 			u, err = url.Parse(uri)
 			if err != nil {
@@ -202,7 +202,7 @@ func (c *HttpClient) DownloadFile(name string) (string, error) {
 		}
 		u.Path = path.Join(u.Path, name)
 
-		Info("Downloading", u.String())
+		Debug("Downloading", u.String())
 
 		req, err = c.PrepareReq(temp, u.String())
 		if err != nil {
