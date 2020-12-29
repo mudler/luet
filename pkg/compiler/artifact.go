@@ -28,7 +28,7 @@ import (
 	"regexp"
 
 	system "github.com/docker/docker/pkg/system"
-	"github.com/klauspost/compress/zstd"
+	zstd "github.com/klauspost/compress/zstd"
 	gzip "github.com/klauspost/pgzip"
 
 	//"strconv"
