@@ -759,7 +759,11 @@ var _ = Describe("Solver", func() {
 				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
 				Z := pkg.NewPackage("Z", "", []*pkg.DefaultPackage{A}, []*pkg.DefaultPackage{})
-				F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{Z}, []*pkg.DefaultPackage{})
+				F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{Z, B}, []*pkg.DefaultPackage{})
+
+				Z.SetVersion("1.4101.dvw.dqc.")
+				B.SetVersion("1.4101qe.eq.ff..dvw.dqc.")
+				C.SetVersion("1.aaaa.eq.ff..dvw.dqc.")
 
 				for _, p := range []pkg.Package{A, B, C, D, Z, F} {
 					_, err := dbDefinitions.CreatePackage(p)

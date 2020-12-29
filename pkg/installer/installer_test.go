@@ -899,6 +899,47 @@ urls:
 
 	})
 
+	Context("Uninstallation", func() {
+		It("fails if package is required by others which are installed", func() {
+
+			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(fakeroot) // clean up
+			bolt, err := ioutil.TempDir("", "db")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(bolt) // clean up
+
+			systemDB := pkg.NewBoltDatabase(filepath.Join(bolt, "db.db"))
+			system := &System{Database: systemDB, Target: fakeroot}
+
+			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1, CheckConflicts: true})
+
+			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			B := pkg.NewPackage("calamares", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+			C := pkg.NewPackage("kpmcore", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+			Z := pkg.NewPackage("chromium", "", []*pkg.DefaultPackage{A}, []*pkg.DefaultPackage{})
+			F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{Z, B}, []*pkg.DefaultPackage{})
+
+			Z.SetVersion("86.0.4240.193+2")
+			Z.SetCategory("www-client")
+			B.SetVersion("3.2.32.1+5")
+			B.SetCategory("app-admin")
+			C.SetVersion("4.2.0+2")
+			C.SetCategory("sys-libs-5")
+			D.SetVersion("5.19.5+9")
+			D.SetCategory("layers")
+
+			for _, p := range []pkg.Package{A, B, C, D, Z, F} {
+				_, err := systemDB.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			err = inst.Uninstall(system, D)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
 	Context("Existing files", func() {
 		It("Reclaims them", func() {
 			//repo:=NewLuetSystemRepository()
