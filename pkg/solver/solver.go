@@ -266,7 +266,7 @@ func (s *Solver) Conflicts(pack pkg.Package, lsp pkg.Packages) (bool, error) {
 		if revdepsErr == nil {
 			revdepsErr = errors.New("")
 		}
-		revdepsErr = errors.New(fmt.Sprintf("%s\n%s", revdepsErr.Error(), r.HumanReadableString()))
+		revdepsErr = fmt.Errorf("%s\n%s", revdepsErr.Error(), r.HumanReadableString())
 	}
 
 	return len(revdeps) != 0, revdepsErr
@@ -278,7 +278,6 @@ func (s *Solver) ConflictsWith(pack pkg.Package, lsp pkg.Packages) (bool, error)
 	p, err := s.DefinitionDatabase.FindPackage(pack)
 	if err != nil {
 		p = pack //Relax search, otherwise we cannot compute solutions for packages not in definitions
-
 		//	return false, errors.Wrap(err, "Package not found in definition db")
 	}
 

@@ -753,6 +753,29 @@ var _ = Describe("Solver", func() {
 
 			})
 
+			It("Fails to uninstall if a package is required", func() {
+				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
+				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+				Z := pkg.NewPackage("Z", "", []*pkg.DefaultPackage{A}, []*pkg.DefaultPackage{})
+				F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{Z}, []*pkg.DefaultPackage{})
+
+				for _, p := range []pkg.Package{A, B, C, D, Z, F} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{A, B, C, D, Z, F} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				solution, err := s.Uninstall(true, false, B)
+				Expect(err).To(HaveOccurred())
+				Expect(len(solution)).To(Equal(0))
+			})
+
 			It("UninstallUniverse simple package correctly", func() {
 
 				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
