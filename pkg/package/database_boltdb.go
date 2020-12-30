@@ -98,9 +98,9 @@ func (db *BoltDatabase) Retrieve(ID string) ([]byte, error) {
 // TODO: Have a memory instance for boltdb, so we don't compute each time we get called
 // as this is REALLY expensive. But we don't perform usually those operations in a file db.
 func (db *BoltDatabase) GetRevdeps(p Package) (Packages, error) {
-	memory := NewInMemoryDatabase(false)
-	for _, p := range db.World() {
-		memory.CreatePackage(p)
+	memory, err := db.Copy()
+	if err != nil {
+		return nil, errors.New("Failed copying bolt db to memory")
 	}
 	return memory.GetRevdeps(p)
 }
