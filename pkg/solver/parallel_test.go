@@ -401,7 +401,7 @@ var _ = Describe("Parallel", func() {
 			Expect(solution).ToNot(ContainElement(PackageAssert{Package: D, Value: false}))
 			Expect(solution).ToNot(ContainElement(PackageAssert{Package: E, Value: true}))
 
-			Expect(len(solution)).To(Equal(3))
+			Expect(len(solution)).To(Equal(4))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -529,7 +529,7 @@ var _ = Describe("Parallel", func() {
 			Expect(solution).To(ContainElement(PackageAssert{Package: D1, Value: false}))
 			Expect(solution).ToNot(ContainElement(PackageAssert{Package: E, Value: true}))
 
-			Expect(len(solution)).To(Equal(5))
+			Expect(len(solution)).To(Equal(6))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -570,7 +570,7 @@ var _ = Describe("Parallel", func() {
 			Expect(solution).To(ContainElement(PackageAssert{Package: D1, Value: false}))
 			Expect(solution).ToNot(ContainElement(PackageAssert{Package: E, Value: true}))
 
-			Expect(len(solution)).To(Equal(5))
+			Expect(len(solution)).To(Equal(6))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
