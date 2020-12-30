@@ -589,13 +589,8 @@ func (s *Solver) Uninstall(checkconflicts, full bool, packs ...pkg.Package) (pkg
 	// be removed). Let's only check if we can remove the selected package
 	if !full && checkconflicts {
 		for _, candidate := range toRemove {
-			if conflicts, _ := s.ConflictsWith(candidate, s.Installed()); conflicts {
-				revdeps, _ := s.InstalledDatabase.GetRevdeps(candidate)
-				packs := ""
-				for _, p := range revdeps {
-					packs += " " + p.HumanReadableString()
-				}
-				return nil, errors.New("Package " + candidate.HumanReadableString() + "has conflicts: required by " + packs)
+			if conflicts, err := s.Conflicts(candidate, s.Installed()); conflicts {
+				return nil, errors.Wrap(err, "while searching for "+candidate.HumanReadableString()+" conflicts")
 			}
 		}
 		return toRemove, nil
