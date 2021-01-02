@@ -1,0 +1,6 @@
+image: "alpine"
+unpack: true
+excludes:
+  - /sys/.*
+  - /proc/.*
+  - /etc/.*

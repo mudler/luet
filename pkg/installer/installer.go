@@ -255,7 +255,11 @@ func (l *LuetInstaller) computeSwap(syncedRepos Repositories, toRemove pkg.Packa
 		}
 	}
 
-	return l.computeInstall(syncedRepos, toInstall, systemAfterChanges)
+	match, packages, assertions, allRepos, err := l.computeInstall(syncedRepos, toInstall, systemAfterChanges)
+	for _, p := range toInstall {
+		assertions = append(assertions, solver.PackageAssert{Package: p.(*pkg.DefaultPackage), Value: true})
+	}
+	return match, packages, assertions, allRepos, err
 }
 
 func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, toInstall pkg.Packages, s *System, forceNodeps bool) error {
