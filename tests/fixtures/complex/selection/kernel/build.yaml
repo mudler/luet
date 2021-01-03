@@ -5,3 +5,6 @@ requires:
 
 includes:
 - /usr/portage/packages/.*
+
+steps:
+- echo "foo"

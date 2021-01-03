@@ -5,3 +5,5 @@ requires:
 - category: "layer"
   name: "sabayon-build-portage"
   version: ">=0.1"
+steps:
+- echo "foo"

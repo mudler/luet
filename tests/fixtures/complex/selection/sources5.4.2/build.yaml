@@ -2,6 +2,7 @@ requires:
 - category: "layer"
   version:  "0.1"
   name:     "build-sabayon-overlays"
-
+steps:
+- echo "foo"
 includes:
 - /usr/portage/packages/.*

@@ -2,3 +2,5 @@ requires:
 - category: "layer"
   version:  "0.1"
   name:     "build"
+steps:
+- echo "foo"

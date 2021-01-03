@@ -16,3 +16,6 @@ requires:
 - category: "layer"
   name: "build-sabayon-overlay"
   version: ">=0.1"
+
+steps:
+- echo "foo"
