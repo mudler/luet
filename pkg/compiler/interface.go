@@ -178,6 +178,10 @@ type CompilationSpec interface {
 
 	SetPackageDir(string)
 	GetPackageDir() string
+
+	EmptyPackage() bool
+	UnpackedPackage() bool
+	HasImageSource() bool
 }
 
 type CompilationSpecs interface {

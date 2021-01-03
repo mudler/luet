@@ -16,7 +16,6 @@
 package compiler
 
 import (
-	"archive/tar"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -427,29 +426,33 @@ func (cs *LuetCompiler) genArtifact(p CompilationSpec, builderOpts, runnerOpts C
 	var artifact Artifact
 	var rootfs string
 	var err error
-	unpack := p.ImageUnpack()
 	pkgTag := ":package: " + p.GetPackage().HumanReadableString()
 
-	// If package_dir was specified in the spec, we want to treat the content of the directory
-	// as the root of our archive.  ImageUnpack is implied to be true. override it
-	if p.GetPackageDir() != "" {
-		unpack = true
-	}
-
-	if len(p.BuildSteps()) == 0 && len(p.GetPreBuildSteps()) == 0 && !unpack {
+	// We can't generate delta in this case. It implies the package is a virtual, and nothing has to be done really
+	if p.EmptyPackage() {
 		fakePackage := p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar")
-		// We can't generate delta in this case. It implies the package is a virtual, and nothing has to be done really
 
-		file, err := os.Create(fakePackage)
+		rootfs, err = ioutil.TempDir(p.GetOutputPath(), "rootfs")
 		if err != nil {
-			return nil, errors.Wrap(err, "Failed creating virtual package")
+			return nil, errors.Wrap(err, "Could not create tempdir")
 		}
-		defer file.Close()
-		tw := tar.NewWriter(file)
-		defer tw.Close()
+		defer os.RemoveAll(rootfs) // clean up
 
 		artifact := NewPackageArtifact(fakePackage)
 		artifact.SetCompressionType(cs.CompressionType)
+
+		if err := artifact.Compress(rootfs, concurrency); err != nil {
+			return nil, errors.Wrap(err, "Error met while creating package archive")
+		}
+
+		artifact.SetCompileSpec(p)
+		artifact.GetCompileSpec().GetPackage().SetBuildTimestamp(time.Now().String())
+
+		err = artifact.WriteYaml(p.GetOutputPath())
+		if err != nil {
+			return artifact, errors.Wrap(err, "Failed while writing metadata file")
+		}
+		Info(pkgTag, "   :white_check_mark: done (empty virtual package)")
 		return artifact, nil
 	}
 
@@ -476,7 +479,7 @@ func (cs *LuetCompiler) genArtifact(p CompilationSpec, builderOpts, runnerOpts C
 		return nil, errors.Wrap(err, "Could not extract rootfs")
 	}
 
-	if unpack {
+	if p.UnpackedPackage() {
 		// Take content of container as a base for our package files
 		artifact, err = cs.unpackFs(rootfs, concurrency, p)
 		if err != nil {
@@ -523,6 +526,13 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	concurrency int,
 	keepPermissions, keepImg bool,
 	p CompilationSpec, generateArtifact bool) (Artifact, error) {
+
+	// If it is a virtual, check if we have to generate an empty artifact or not.
+	if generateArtifact && p.EmptyPackage() {
+		return cs.genArtifact(p, CompilerBackendOptions{}, CompilerBackendOptions{}, concurrency, keepPermissions)
+	} else if p.EmptyPackage() {
+		return &PackageArtifact{}, nil
+	}
 
 	if !generateArtifact {
 		exists := cs.Backend.ImageExists(packageImage)
@@ -649,10 +659,13 @@ func (cs *LuetCompiler) Compile(keepPermissions bool, p CompilationSpec) (Artifa
 func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
 	Info(":package: Compiling", p.GetPackage().HumanReadableString(), ".... :coffee:")
 
-	if len(p.GetPackage().GetRequires()) == 0 && p.GetImage() == "" {
-		Error("Package with no deps and no seed image supplied, bailing out")
-		return nil, errors.New("Package " + p.GetPackage().GetFingerPrint() +
-			" with no deps and no seed image supplied, bailing out")
+	Debug(fmt.Sprintf("%s: has images %t, empty package: %t", p.GetPackage().HumanReadableString(), p.HasImageSource(), p.EmptyPackage()))
+	if !p.HasImageSource() && !p.EmptyPackage() {
+		return nil,
+			fmt.Errorf(
+				"%s is invalid: package has no dependencies and no seed image supplied while it has steps defined",
+				p.GetPackage().GetFingerPrint(),
+			)
 	}
 
 	targetAssertion := p.GetSourceAssertion().Search(p.GetPackage().GetFingerPrint())

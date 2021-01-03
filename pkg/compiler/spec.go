@@ -185,6 +185,24 @@ func (cs *LuetCompilationSpec) SetSeedImage(s string) {
 	cs.Seed = s
 }
 
+func (cs *LuetCompilationSpec) EmptyPackage() bool {
+	return len(cs.BuildSteps()) == 0 && len(cs.GetPreBuildSteps()) == 0 && !cs.UnpackedPackage()
+}
+
+func (cs *LuetCompilationSpec) UnpackedPackage() bool {
+	// If package_dir was specified in the spec, we want to treat the content of the directory
+	// as the root of our archive.  ImageUnpack is implied to be true. override it
+	unpack := cs.ImageUnpack()
+	if cs.GetPackageDir() != "" {
+		unpack = true
+	}
+	return unpack
+}
+
+func (cs *LuetCompilationSpec) HasImageSource() bool {
+	return len(cs.GetPackage().GetRequires()) != 0 || cs.GetImage() != ""
+}
+
 func (cs *LuetCompilationSpec) CopyRetrieves(dest string) error {
 	var err error
 	if len(cs.Retrieve) > 0 {

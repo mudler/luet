@@ -1,0 +1,4 @@
+# Invalid, no source image or requires defined, but we define steps
+
+steps:
+- echo "fail!"
