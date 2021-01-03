@@ -528,9 +528,9 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	p CompilationSpec, generateArtifact bool) (Artifact, error) {
 
 	// If it is a virtual, check if we have to generate an empty artifact or not.
-	if generateArtifact && p.EmptyPackage() {
+	if generateArtifact && p.EmptyPackage() && !p.HasImageSource() {
 		return cs.genArtifact(p, CompilerBackendOptions{}, CompilerBackendOptions{}, concurrency, keepPermissions)
-	} else if p.EmptyPackage() {
+	} else if p.EmptyPackage() && !p.HasImageSource() {
 		return &PackageArtifact{}, nil
 	}
 
