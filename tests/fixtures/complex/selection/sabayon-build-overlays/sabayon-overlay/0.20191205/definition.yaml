@@ -1,3 +1,5 @@
 category: "layer"
 name: "build-sabayon-overlay"
 version: "0.20191205"
+steps:
+- echo "foo"
