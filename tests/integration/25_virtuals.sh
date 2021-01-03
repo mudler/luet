@@ -15,8 +15,8 @@ testBuildA() {
     luet build --tree "$ROOT_DIR/tests/fixtures/virtuals"  --debug --compression "gzip" --destination $tmpdir/testbuild1 test/a
     buildst=$?
     assertEquals 'builds successfully' "$buildst" "0"
-    assertTrue 'create package A 1.0' "[ -e '$tmpdir/testbuild1/a-test-1.0.package.tar.gz' ]"
-    assertTrue 'create package A 1.0' "[ -e '$tmpdir/testbuild1/a-test-1.0.metadata.yaml' ]"
+    assertTrue 'create package A 1.99' "[ -e '$tmpdir/testbuild1/a-test-1.99.package.tar.gz' ]"
+    assertTrue 'create package A 1.99' "[ -e '$tmpdir/testbuild1/a-test-1.99.metadata.yaml' ]"
 }
 
 testBuildB() {
