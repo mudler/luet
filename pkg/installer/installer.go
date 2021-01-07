@@ -837,7 +837,6 @@ func (l *LuetInstaller) Uninstall(s *System, packs ...pkg.Package) error {
 
 	if l.Options.Ask {
 		Info(":recycle: Packages that are going to be removed from the system:\n   ", Yellow(packsToList(toUninstall)).BgBlack().String())
-		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
 		if Ask() {
 			l.Options.Ask = false // Don't prompt anymore
 			return uninstall()
