@@ -741,7 +741,7 @@ func (s *Parallel) Uninstall(checkconflicts, full bool, packs ...pkg.Package) (p
 func (s *Parallel) BuildFormula() (bf.Formula, error) {
 	var formulas []bf.Formula
 
-	r, err := s.BuildPartialWorld(false)
+	r, err := s.BuildWorld(false)
 	if err != nil {
 		return nil, err
 	}

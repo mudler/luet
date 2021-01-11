@@ -661,7 +661,7 @@ func (s *Solver) Uninstall(checkconflicts, full bool, packs ...pkg.Package) (pkg
 // BuildFormula builds the main solving formula that is evaluated by the sat solver.
 func (s *Solver) BuildFormula() (bf.Formula, error) {
 	var formulas []bf.Formula
-	r, err := s.BuildPartialWorld(false)
+	r, err := s.BuildWorld(false)
 	if err != nil {
 		return nil, err
 	}
