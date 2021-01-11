@@ -111,7 +111,7 @@ var _ = Describe("Solver", func() {
 			//	Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: false}))
 			//Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: false}))
 
-			Expect(len(solution)).To(Equal(3))
+			Expect(len(solution)).To(Equal(5))
 		})
 
 		It("Solves correctly if the selected package to install has requirements", func() {
@@ -1283,7 +1283,37 @@ var _ = Describe("Solver", func() {
 		})
 
 		It("upgrades correctly with provides", func() {
-			B.SetProvides([]*pkg.DefaultPackage{&pkg.DefaultPackage{Name: "a", Version: ">=0", Category: "test"}, &pkg.DefaultPackage{Name: "c", Version: ">=0", Category: "test"}})
+			B.SetProvides([]*pkg.DefaultPackage{
+				&pkg.DefaultPackage{Name: "a", Version: ">=0", Category: "test"},
+				&pkg.DefaultPackage{Name: "c", Version: ">=0", Category: "test"},
+			})
+
+			for _, p := range []pkg.Package{B} {
+				_, err := dbDefinitions.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			for _, p := range []pkg.Package{A, C} {
+				_, err := dbInstalled.CreatePackage(p)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			uninstall, solution, err := s.Upgrade(true, true)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(uninstall)).To(Equal(2))
+
+			Expect(uninstall).To(ContainElement(C))
+			Expect(uninstall).To(ContainElement(A))
+
+			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+			Expect(len(solution)).To(Equal(1))
+		})
+
+		PIt("upgrades correctly with provides, also if definitiondb contains both a provide, and the package to be provided", func() {
+			B.SetProvides([]*pkg.DefaultPackage{
+				&pkg.DefaultPackage{Name: "a", Version: ">=0", Category: "test"},
+				&pkg.DefaultPackage{Name: "c", Version: ">=0", Category: "test"},
+			})
 
 			for _, p := range []pkg.Package{A1, B} {
 				_, err := dbDefinitions.CreatePackage(p)
@@ -1298,10 +1328,9 @@ var _ = Describe("Solver", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(len(uninstall)).To(Equal(2))
-			Expect(uninstall[1].GetName()).To(Equal("c"))
-			Expect(uninstall[1].GetVersion()).To(Equal("1.5"))
-			Expect(uninstall[0].GetName()).To(Equal("a"))
-			Expect(uninstall[0].GetVersion()).To(Equal("1.1"))
+
+			Expect(uninstall).To(ContainElement(C))
+			Expect(uninstall).To(ContainElement(A))
 
 			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
 			Expect(len(solution)).To(Equal(1))

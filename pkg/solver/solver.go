@@ -167,7 +167,6 @@ func (s *Solver) BuildWorld(includeInstalled bool) (bf.Formula, error) {
 	}
 
 	for _, p := range s.World() {
-
 		solvable, err := p.BuildFormula(s.DefinitionDatabase, s.SolverDatabase)
 		if err != nil {
 			return nil, err

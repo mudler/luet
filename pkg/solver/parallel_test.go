@@ -111,7 +111,7 @@ var _ = Describe("Parallel", func() {
 			Expect(solution).ToNot(ContainElement(PackageAssert{Package: B, Value: true}))
 			Expect(solution).ToNot(ContainElement(PackageAssert{Package: D, Value: true}))
 
-			Expect(len(solution)).To(Equal(3))
+			Expect(len(solution)).To(Equal(5))
 		})
 
 		It("Solves correctly if the selected package to install has requirements", func() {
