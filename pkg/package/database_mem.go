@@ -41,6 +41,7 @@ type InMemoryDatabase struct {
 	CacheNoVersion   map[string]map[string]interface{}
 	ProvidesDatabase map[string]map[string]Package
 	RevDepsDatabase  map[string]map[string]Package
+	cached           map[string]interface{}
 }
 
 func NewInMemoryDatabase(singleton bool) PackageDatabase {
@@ -53,6 +54,7 @@ func NewInMemoryDatabase(singleton bool) PackageDatabase {
 			CacheNoVersion:   map[string]map[string]interface{}{},
 			ProvidesDatabase: map[string]map[string]Package{},
 			RevDepsDatabase:  map[string]map[string]Package{},
+			cached:           map[string]interface{}{},
 		}
 	}
 	return DBInMemoryInstance
@@ -197,6 +199,11 @@ func (db *InMemoryDatabase) populateCaches(p Package) {
 
 	// Create extra cache between package -> []versions
 	db.Lock()
+	if _, ok := db.cached[p.GetFingerPrint()]; ok {
+		db.Unlock()
+		return
+	}
+	db.cached[p.GetFingerPrint()] = nil
 
 	// Provides: Store package provides, we will reuse this when walking deps
 	for _, provide := range pd.Provides {
