@@ -18,7 +18,7 @@ It is written entirely in Golang and where used as package manager, it can run i
 - It builds, installs, uninstalls and perform upgrades on machines
 - Installer doesn't depend on anything ( 0 dep installer !), statically built
 - You can install it aside also with your current distro package manager, and start building and distributing your packages
-- Support for packages as "layers"
+- [Support for packages as "layers"](https://luet-lab.github.io/docs/docs/concepts/packages/specfile/#building-strategies)
 - [It uses SAT solving techniques to solve the deptree](https://luet-lab.github.io/docs/docs/concepts/overview/constraints/) ( Inspired by [OPIUM](https://ranjitjhala.github.io/static/opium.pdf) )
 - Support for [collections](https://luet-lab.github.io/docs/docs/concepts/packages/collections/) and [templated package definitions](https://luet-lab.github.io/docs/docs/concepts/packages/templates/)
 - [Can be extended with Plugins and Extensions](https://luet-lab.github.io/docs/docs/concepts/plugins-and-extensions/)
