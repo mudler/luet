@@ -51,7 +51,7 @@ run `luet --help`,  any subcommand is documented as well, try e.g.: `luet build 
 # Dependency solving
 
 Luet uses SAT and Reinforcement learning engine for dependency solving.
-It encodes the package requirements into a SAT problem, using gophersat to solve the dependency tree and give a concrete model as result.
+It encodes the package requirements into a SAT problem, using [gophersat](https://github.com/crillab/gophersat) to solve the dependency tree and give a concrete model as result.
 
 ## SAT encoding
 
