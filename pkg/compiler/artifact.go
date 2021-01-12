@@ -256,7 +256,7 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 		}
 		defer original.Close()
 
-		zstdFile := a.Path + ".zstd"
+		zstdFile := a.Path + ".zst"
 		bufferedReader := bufio.NewReader(original)
 
 		// Open a file for writing.

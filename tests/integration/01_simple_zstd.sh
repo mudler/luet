@@ -15,8 +15,8 @@ testBuild() {
     luet build --tree "$ROOT_DIR/tests/fixtures/buildableseed" --destination $tmpdir/testbuild --compression zstd test/c@1.0 > /dev/null
     buildst=$?
     assertEquals 'builds successfully' "$buildst" "0"
-    assertTrue 'create package dep B' "[ -e '$tmpdir/testbuild/b-test-1.0.package.tar.zstd' ]"
-    assertTrue 'create package' "[ -e '$tmpdir/testbuild/c-test-1.0.package.tar.zstd' ]"
+    assertTrue 'create package dep B' "[ -e '$tmpdir/testbuild/b-test-1.0.package.tar.zst' ]"
+    assertTrue 'create package' "[ -e '$tmpdir/testbuild/c-test-1.0.package.tar.zst' ]"
 }
 
 testRepo() {
@@ -36,9 +36,9 @@ testRepo() {
     createst=$?
     assertEquals 'create repo successfully' "$createst" "0"
     assertTrue 'create repository' "[ -e '$tmpdir/testbuild/repository.yaml' ]"
-    assertTrue 'create named tree in zstd' "[ -e '$tmpdir/testbuild/foo.tar.zstd' ]"
+    assertTrue 'create named tree in zstd' "[ -e '$tmpdir/testbuild/foo.tar.zst' ]"
     assertTrue 'create tree in zstd-only' "[ ! -e '$tmpdir/testbuild/foo.tar' ]"
-    assertTrue 'create named meta in zstd' "[ -e '$tmpdir/testbuild/repository.meta.tar.zstd' ]"
+    assertTrue 'create named meta in zstd' "[ -e '$tmpdir/testbuild/repository.meta.tar.zst' ]"
     assertTrue 'create meta in zstd-only' "[ ! -e '$tmpdir/testbuild/repository.meta.tar' ]"
 }
 
@@ -93,14 +93,14 @@ testInstallAgain() {
     assertEquals 'install test successfully' "$installst" "0"
     assertNotContains 'contains warning' "$output" 'No packages to install'
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/c' ]"
-    assertTrue 'package in cache' "[ -e '$tmpdir/testrootfs/packages/c-test-1.0.package.tar.zstd' ]"
+    assertTrue 'package in cache' "[ -e '$tmpdir/testrootfs/packages/c-test-1.0.package.tar.zst' ]"
 }
 
 testCleanup() {
     luet cleanup --config $tmpdir/luet.yaml
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
-    assertTrue 'package installed' "[ ! -e '$tmpdir/testrootfs/packages/c-test-1.0.package.tar.zstd' ]"
+    assertTrue 'package installed' "[ ! -e '$tmpdir/testrootfs/packages/c-test-1.0.package.tar.zst' ]"
 }
 
 # Load shUnit2.
