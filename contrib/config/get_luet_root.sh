@@ -2,13 +2,13 @@
 set -ex
 export LUET_NOLOCK=true
 
-LUET_VERSION=0.8.6
+LUET_VERSION=0.9.24
 LUET_ROOTFS=${LUET_ROOTFS:-/}
 LUET_DATABASE_PATH=${LUET_DATABASE_PATH:-/var/luet/db}
 LUET_DATABASE_ENGINE=${LUET_DATABASE_ENGINE:-boltdb}
 LUET_CONFIG_PROTECT=${LUET_CONFIG_PROTECT:-1}
 
-wget -q https://github.com/mudler/luet/releases/download/0.8.6/luet-0.8.6-linux-amd64 -O luet
+wget -q https://github.com/mudler/luet/releases/download/${LUET_VERSION}/luet-${LUET_VERSION}-linux-amd64 -O luet
 chmod +x luet
 
 mkdir -p /etc/luet/repos.conf.d || true
@@ -35,3 +35,4 @@ EOF
 ./luet install system/luet system/luet-extensions
 
 rm -rf luet
+
