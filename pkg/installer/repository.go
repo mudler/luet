@@ -46,6 +46,10 @@ const (
 
 	REPOFILE_TREE_KEY = "tree"
 	REPOFILE_META_KEY = "meta"
+
+	DiskRepositoryType   = "disk"
+	HttpRepositoryType   = "http"
+	DockerRepositoryType = "docker"
 )
 
 type LuetRepositoryFile struct {
@@ -60,6 +64,7 @@ type LuetSystemRepository struct {
 	Index           compiler.ArtifactIndex        `json:"index"`
 	Tree            tree.Builder                  `json:"-"`
 	RepositoryFiles map[string]LuetRepositoryFile `json:"repo_files"`
+	Backend         compiler.CompilerBackend      `json:"-"`
 }
 
 type LuetSystemRepositorySerialized struct {
@@ -177,7 +182,9 @@ func (f *LuetRepositoryFile) GetChecksums() compiler.Checksums {
 	return f.Checksums
 }
 
-func GenerateRepository(name, descr, t string, urls []string, priority int, src string, treesDir []string, db pkg.PackageDatabase) (Repository, error) {
+func GenerateRepository(name, descr, t string, urls []string,
+	priority int, src string, treesDir []string, db pkg.PackageDatabase,
+	b compiler.CompilerBackend, imagePrefix string) (Repository, error) {
 
 	tr := tree.NewInstallerRecipe(db)
 
@@ -188,14 +195,27 @@ func GenerateRepository(name, descr, t string, urls []string, priority int, src 
 		}
 	}
 
-	art, err := buildPackageIndex(src, tr.GetDatabase())
-	if err != nil {
-		return nil, err
+	var art []compiler.Artifact
+	var err error
+	switch t {
+	case DiskRepositoryType, HttpRepositoryType:
+		art, err = buildPackageIndex(src, tr.GetDatabase())
+		if err != nil {
+			return nil, err
+		}
+
+	case DockerRepositoryType:
+		art, err = generatePackageImages(b, imagePrefix, src, tr.GetDatabase())
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return NewLuetSystemRepository(
+	repo := NewLuetSystemRepository(
 		config.NewLuetRepository(name, t, descr, urls, priority, true, false),
-		art, tr), nil
+		art, tr)
+	repo.SetBackend(b)
+	return repo, nil
 }
 
 func NewSystemRepository(repo config.LuetRepository) Repository {
@@ -244,6 +264,53 @@ func NewLuetSystemRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (Repos
 	return r, err
 }
 
+func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string, db pkg.PackageDatabase) ([]compiler.Artifact, error) {
+
+	var art []compiler.Artifact
+	var ff = func(currentpath string, info os.FileInfo, err error) error {
+
+		if !strings.HasSuffix(info.Name(), ".metadata.yaml") {
+			return nil // Skip with no errors
+		}
+
+		dat, err := ioutil.ReadFile(currentpath)
+		if err != nil {
+			return errors.Wrap(err, "Error reading file "+currentpath)
+		}
+
+		artifact, err := compiler.NewPackageArtifactFromYaml(dat)
+		if err != nil {
+			return errors.Wrap(err, "Error reading yaml "+currentpath)
+		}
+
+		// We want to include packages that are ONLY referenced in the tree.
+		// the ones which aren't should be deleted. (TODO: by another cli command?)
+		if _, notfound := db.FindPackage(artifact.GetCompileSpec().GetPackage()); notfound != nil {
+			Debug(fmt.Sprintf("Package %s not found in tree. Ignoring it.",
+				artifact.GetCompileSpec().GetPackage().HumanReadableString()))
+			return nil
+		}
+
+		Info("Generating final image", imagePrefix+artifact.GetCompileSpec().GetPackage().GetFingerPrint(),
+			"for package ", artifact.GetCompileSpec().GetPackage().HumanReadableString())
+		if opts, err := artifact.GenerateFinalImage(imagePrefix+artifact.GetCompileSpec().GetPackage().GetFingerPrint(), b, true); err != nil {
+			return errors.Wrap(err, "Failed generating metadata tree"+opts.ImageName)
+		}
+		// TODO: Push image
+
+		art = append(art, artifact)
+
+		return nil
+	}
+
+	err := filepath.Walk(path, ff)
+	if err != nil {
+		return nil, err
+
+	}
+	return art, nil
+}
+
 func buildPackageIndex(path string, db pkg.PackageDatabase) ([]compiler.Artifact, error) {
 
 	var art []compiler.Artifact
@@ -266,7 +333,7 @@ func buildPackageIndex(path string, db pkg.PackageDatabase) ([]compiler.Artifact
 		// We want to include packages that are ONLY referenced in the tree.
 		// the ones which aren't should be deleted. (TODO: by another cli command?)
 		if _, notfound := db.FindPackage(artifact.GetCompileSpec().GetPackage()); notfound != nil {
-			Info(fmt.Sprintf("Package %s not found in tree. Ignoring it.",
+			Debug(fmt.Sprintf("Package %s not found in tree. Ignoring it.",
 				artifact.GetCompileSpec().GetPackage().HumanReadableString()))
 			return nil
 		}
@@ -304,6 +371,13 @@ func (r *LuetSystemRepository) GetType() string {
 }
 func (r *LuetSystemRepository) SetType(p string) {
 	r.LuetRepository.Type = p
+}
+
+func (r *LuetSystemRepository) GetBackend() compiler.CompilerBackend {
+	return r.Backend
+}
+func (r *LuetSystemRepository) SetBackend(b compiler.CompilerBackend) {
+	r.Backend = b
 }
 
 func (r *LuetSystemRepository) SetName(p string) {
@@ -400,7 +474,7 @@ func (r *LuetSystemRepository) ReadSpecFile(file string, removeFile bool) (Repos
 	return repo, err
 }
 
-func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
+func (r *LuetSystemRepository) genLocalRepo(dst string, resetRevision bool) error {
 	err := os.MkdirAll(dst, os.ModePerm)
 	if err != nil {
 		return err
@@ -522,15 +596,195 @@ func (r *LuetSystemRepository) Write(dst string, resetRevision bool) error {
 		Repo: *r,
 		Path: dst,
 	})
-
 	return nil
+}
+
+func (r *LuetSystemRepository) genDockerRepo(imagePrefix string, resetRevision, force bool) error {
+	// - Iterate over meta, build final images, push them if necessary
+	//   - while pushing, check if image already exists, and if exist push them only if --force is supplied
+	// - Generate final images for metadata and push
+
+	imageRepository := fmt.Sprintf("%s%s", imagePrefix, "repository")
+
+	r.LastUpdate = strconv.FormatInt(time.Now().Unix(), 10)
+
+	repoTemp, err := config.LuetCfg.GetSystem().TempDir("repo")
+	if err != nil {
+		return errors.Wrap(err, "Error met while creating tempdir for repository")
+	}
+	defer os.RemoveAll(repoTemp) // clean up
+
+	if r.GetBackend().ImageAvailable(imageRepository) {
+		if err := r.GetBackend().DownloadImage(compiler.CompilerBackendOptions{ImageName: imageRepository}); err != nil {
+			return errors.Wrapf(err, "while downloading '%s'", imageRepository)
+		}
+
+		if err := r.GetBackend().ExtractRootfs(compiler.CompilerBackendOptions{ImageName: imageRepository, Destination: repoTemp}, false); err != nil {
+			return errors.Wrapf(err, "while extracting '%s'", imageRepository)
+		}
+	}
+
+	repospec := filepath.Join(repoTemp, REPOSITORY_SPECFILE)
+	if resetRevision {
+		r.Revision = 0
+	} else {
+		if _, err := os.Stat(repospec); !os.IsNotExist(err) {
+			// Read existing file for retrieve revision
+			spec, err := r.ReadSpecFile(repospec, false)
+			if err != nil {
+				return err
+			}
+			r.Revision = spec.GetRevision()
+		}
+	}
+	r.Revision++
+
+	Info(fmt.Sprintf(
+		"For repository %s creating revision %d and last update %s...",
+		r.Name, r.Revision, r.LastUpdate,
+	))
+
+	bus.Manager.Publish(bus.EventRepositoryPreBuild, struct {
+		Repo LuetSystemRepository
+		Path string
+	}{
+		Repo: *r,
+		Path: imageRepository,
+	})
+
+	// Create tree and repository file
+	archive, err := config.LuetCfg.GetSystem().TempDir("archive")
+	if err != nil {
+		return errors.Wrap(err, "Error met while creating tempdir for archive")
+	}
+	defer os.RemoveAll(archive) // clean up
+	err = r.GetTree().Save(archive)
+	if err != nil {
+		return errors.Wrap(err, "Error met while saving the tree")
+	}
+
+	treeFile := NewDefaultTreeRepositoryFile()
+	a := compiler.NewPackageArtifact(filepath.Join(repoTemp, treeFile.GetFileName()))
+	a.SetCompressionType(treeFile.GetCompressionType())
+	err = a.Compress(archive, 1)
+	if err != nil {
+		return errors.Wrap(err, "Error met while creating package archive")
+	}
+
+	// Update the tree name with the name created by compression selected.
+	treeFile.SetFileName(path.Base(a.GetPath()))
+	err = a.Hash()
+	if err != nil {
+		return errors.Wrap(err, "Failed generating checksums for tree")
+	}
+	treeFile.SetChecksums(a.GetChecksums())
+	r.SetRepositoryFile(REPOFILE_TREE_KEY, treeFile)
+
+	imageTree := fmt.Sprintf("%s%s", imagePrefix, REPOFILE_TREE_KEY)
+	Debug("Generating image", imageTree)
+	if opts, err := a.GenerateFinalImage(imageTree, r.GetBackend(), false); err != nil {
+		return errors.Wrap(err, "Failed generating metadata tree "+opts.ImageName)
+	}
+	// TODO: Push imageTree
+
+	// Create Metadata struct and serialized repository
+	meta, serialized := r.Serialize()
+
+	// Create metadata file and repository file
+	metaTmpDir, err := config.LuetCfg.GetSystem().TempDir("metadata")
+	if err != nil {
+		return errors.Wrap(err, "Error met while creating tempdir for metadata")
+	}
+	defer os.RemoveAll(metaTmpDir) // clean up
+
+	metaFile, err := r.GetRepositoryFile(REPOFILE_META_KEY)
+	if err != nil {
+		metaFile = NewDefaultMetaRepositoryFile()
+		r.SetRepositoryFile(REPOFILE_META_KEY, metaFile)
+	}
+
+	repoMetaSpec := filepath.Join(metaTmpDir, REPOSITORY_METAFILE)
+	// Create repository.meta.yaml file
+	err = meta.WriteFile(repoMetaSpec)
+	if err != nil {
+		return err
+	}
+
+	// create temp dir for metafile
+	metaDir, err := config.LuetCfg.GetSystem().TempDir("metadata")
+	if err != nil {
+		return errors.Wrap(err, "Error met while creating tempdir for metadata")
+	}
+	defer os.RemoveAll(metaDir) // clean up
+
+	a = compiler.NewPackageArtifact(filepath.Join(metaDir, metaFile.GetFileName()))
+	a.SetCompressionType(metaFile.GetCompressionType())
+	err = a.Compress(metaTmpDir, 1)
+	if err != nil {
+		return errors.Wrap(err, "Error met while archiving repository metadata")
+	}
+
+	metaFile.SetFileName(path.Base(a.GetPath()))
+	r.SetRepositoryFile(REPOFILE_META_KEY, metaFile)
+	err = a.Hash()
+	if err != nil {
+		return errors.Wrap(err, "Failed generating checksums for metadata")
+	}
+	metaFile.SetChecksums(a.GetChecksums())
+
+	imageMetaTree := fmt.Sprintf("%s%s", imagePrefix, REPOFILE_META_KEY)
+	if opts, err := a.GenerateFinalImage(imageMetaTree, r.GetBackend(), false); err != nil {
+		return errors.Wrap(err, "Failed generating metadata tree"+opts.ImageName)
+	}
+
+	// TODO: Push image meta tree
+	data, err := yaml.Marshal(serialized)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(repospec, data, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	tempRepoFile := filepath.Join(metaDir, REPOSITORY_SPECFILE+".tar")
+	if err := helpers.Tar(repospec, tempRepoFile); err != nil {
+		return errors.Wrap(err, "Error met while archiving repository file")
+	}
+
+	a = compiler.NewPackageArtifact(tempRepoFile)
+	imageRepo := fmt.Sprintf("%s%s", imagePrefix, "repository")
+	if opts, err := a.GenerateFinalImage(imageRepo, r.GetBackend(), false); err != nil {
+		return errors.Wrap(err, "Failed generating repository image"+opts.ImageName)
+	}
+	// TODO: Push image meta tree
+
+	bus.Manager.Publish(bus.EventRepositoryPostBuild, struct {
+		Repo LuetSystemRepository
+		Path string
+	}{
+		Repo: *r,
+		Path: imagePrefix,
+	})
+	return nil
+}
+
+// Write writes the repository metadata to the supplied destination
+func (r *LuetSystemRepository) Write(dst string, resetRevision, force bool) error {
+	switch r.GetType() {
+	case DiskRepositoryType, HttpRepositoryType:
+		return r.genLocalRepo(dst, resetRevision)
+	case DockerRepositoryType:
+		return r.genDockerRepo(dst, resetRevision, force)
+	}
+	return errors.New("invalid repository type")
 }
 
 func (r *LuetSystemRepository) Client() Client {
 	switch r.GetType() {
-	case "disk":
+	case DiskRepositoryType:
 		return client.NewLocalClient(client.RepoData{Urls: r.GetUrls()})
-	case "http":
+	case HttpRepositoryType:
 		return client.NewHttpClient(
 			client.RepoData{
 				Urls:           r.GetUrls(),
@@ -540,6 +794,7 @@ func (r *LuetSystemRepository) Client() Client {
 
 	return nil
 }
+
 func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	var repoUpdated bool = false
 	var treefs, metafs string

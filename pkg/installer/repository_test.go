@@ -90,7 +90,7 @@ var _ = Describe("Repository", func() {
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false)
+			err = repo.Write(tmpdir, false, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).To(BeTrue())
@@ -172,7 +172,7 @@ var _ = Describe("Repository", func() {
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false)
+			err = repo.Write(tmpdir, false, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).To(BeTrue())

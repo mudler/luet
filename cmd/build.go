@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/ghodss/yaml"
 	helpers "github.com/mudler/luet/cmd/helpers"
@@ -116,14 +117,9 @@ Build packages specifying multiple definition trees:
 		}
 		pretend, _ := cmd.Flags().GetBool("pretend")
 		compilerSpecs := compiler.NewLuetCompilationspecs()
-		var compilerBackend compiler.CompilerBackend
 		var db pkg.PackageDatabase
-		switch backendType {
-		case "img":
-			compilerBackend = backend.NewSimpleImgBackend()
-		case "docker":
-			compilerBackend = backend.NewSimpleDockerBackend()
-		}
+
+		compilerBackend := backend.NewBackend(backendType)
 
 		switch databaseType {
 		case "memory":
@@ -310,7 +306,7 @@ func init() {
 	buildCmd.Flags().Bool("full", false, "Build all packages (optimized)")
 	buildCmd.Flags().String("values", "", "Build values file to interpolate with each package")
 
-	buildCmd.Flags().String("destination", path, "Destination folder")
+	buildCmd.Flags().String("destination", filepath.Join(path, "build"), "Destination folder")
 	buildCmd.Flags().String("compression", "none", "Compression alg: none, gzip, zstd")
 	buildCmd.Flags().String("image-repository", "luet/cache", "Default base image string for generated image")
 	buildCmd.Flags().Bool("push", false, "Push images to a hub")

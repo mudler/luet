@@ -17,9 +17,27 @@ package backend
 
 import (
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/mudler/luet/pkg/compiler"
+)
+
+const (
+	ImgBackend    = "img"
+	DockerBackend = "docker"
 )
 
 func imageAvailable(image string) bool {
 	_, err := crane.Digest(image)
 	return err == nil
+}
+
+func NewBackend(s string) compiler.CompilerBackend {
+	var compilerBackend compiler.CompilerBackend
+
+	switch s {
+	case ImgBackend:
+		compilerBackend = NewSimpleImgBackend()
+	case DockerBackend:
+		compilerBackend = NewSimpleDockerBackend()
+	}
+	return compilerBackend
 }

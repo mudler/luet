@@ -51,7 +51,7 @@ type Repository interface {
 	SetIndex(i compiler.ArtifactIndex)
 	GetTree() tree.Builder
 	SetTree(tree.Builder)
-	Write(path string, resetRevision bool) error
+	Write(path string, resetRevision, force bool) error
 	Sync(bool) (Repository, error)
 	GetTreePath() string
 	SetTreePath(string)
@@ -72,4 +72,6 @@ type Repository interface {
 	SetRepositoryFile(string, LuetRepositoryFile)
 	SetName(p string)
 	Serialize() (*LuetSystemRepositoryMetadata, LuetSystemRepositorySerialized)
+	GetBackend() compiler.CompilerBackend
+	SetBackend(b compiler.CompilerBackend)
 }
