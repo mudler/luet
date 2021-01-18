@@ -35,9 +35,14 @@ func NewSimpleImgBackend() compiler.CompilerBackend {
 func (*SimpleImg) BuildImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	path := opts.SourcePath
+	context := opts.Context
+
+	if context == "" {
+		context = "."
+	}
 	dockerfileName := opts.DockerFileName
 
-	buildarg := []string{"build", "-f", dockerfileName, "-t", name, "."}
+	buildarg := []string{"build", "-f", dockerfileName, "-t", name, context}
 	Spinner(22)
 	defer SpinnerStop()
 	Debug(":tea: Building image " + name)

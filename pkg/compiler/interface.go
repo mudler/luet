@@ -42,6 +42,7 @@ type CompilerBackendOptions struct {
 	SourcePath     string
 	DockerFileName string
 	Destination    string
+	Context        string
 }
 
 type CompilerOptions struct {

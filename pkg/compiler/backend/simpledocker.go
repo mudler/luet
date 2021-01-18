@@ -46,8 +46,12 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	path := opts.SourcePath
 	dockerfileName := opts.DockerFileName
+	context := opts.Context
 
-	buildarg := []string{"build", "-f", dockerfileName, "-t", name, "."}
+	if context == "" {
+		context = "."
+	}
+	buildarg := []string{"build", "-f", dockerfileName, "-t", name, context}
 
 	Debug(":whale2: Building image " + name)
 	cmd := exec.Command("docker", buildarg...)
