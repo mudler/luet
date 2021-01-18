@@ -181,7 +181,7 @@ RUN echo bar > /test2`))
 			err = artifact.Compress(tmpdir, 1)
 			Expect(err).ToNot(HaveOccurred())
 			resultingImage := imageprefix + "foo--1.0"
-			opts, err := artifact.GenerateFinalImage(imageprefix, b, false)
+			opts, err := artifact.GenerateFinalImage(resultingImage, b, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(opts.ImageName).To(Equal(resultingImage))
 

@@ -248,7 +248,7 @@ COPY * /`
 }
 
 // GenerateFinalImage takes an artifact and builds a Docker image with its content
-func (a *PackageArtifact) GenerateFinalImage(imageprefix string, b CompilerBackend, keepPerms bool) (CompilerBackendOptions, error) {
+func (a *PackageArtifact) GenerateFinalImage(imageName string, b CompilerBackend, keepPerms bool) (CompilerBackendOptions, error) {
 	builderOpts := CompilerBackendOptions{}
 	archive, err := LuetCfg.GetSystem().TempDir("archive")
 	if err != nil {
@@ -273,7 +273,7 @@ func (a *PackageArtifact) GenerateFinalImage(imageprefix string, b CompilerBacke
 	}
 
 	builderOpts = CompilerBackendOptions{
-		ImageName:      imageprefix + a.CompileSpec.Package.GetFingerPrint(),
+		ImageName:      imageName,
 		SourcePath:     archive,
 		DockerFileName: dockerFile,
 		Context:        uncompressedFiles,
