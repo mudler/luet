@@ -241,6 +241,46 @@ func (a *PackageArtifact) SetPath(p string) {
 	a.Path = p
 }
 
+func (a *PackageArtifact) genDockerfile() string {
+	return `
+FROM scratch
+COPY * /`
+}
+
+// GenerateFinalImage takes an artifact and builds a Docker image with its content
+func (a *PackageArtifact) GenerateFinalImage(imageprefix string, b CompilerBackend, keepPerms bool) (CompilerBackendOptions, error) {
+	builderOpts := CompilerBackendOptions{}
+	archive, err := LuetCfg.GetSystem().TempDir("archive")
+	if err != nil {
+		return builderOpts, errors.Wrap(err, "error met while creating tempdir for "+a.Path)
+	}
+	defer os.RemoveAll(archive) // clean up
+
+	uncompressedFiles := filepath.Join(archive, "files")
+	dockerFile := filepath.Join(archive, "Dockerfile")
+
+	if err := os.MkdirAll(uncompressedFiles, os.ModePerm); err != nil {
+		return builderOpts, errors.Wrap(err, "error met while creating tempdir for "+a.Path)
+	}
+
+	data := a.genDockerfile()
+	if err := ioutil.WriteFile(dockerFile, []byte(data), 0644); err != nil {
+		return builderOpts, errors.Wrap(err, "error met while rendering artifact dockerfile "+a.Path)
+	}
+
+	if err := a.Unpack(uncompressedFiles, keepPerms); err != nil {
+		return builderOpts, errors.Wrap(err, "error met while uncompressing artifact "+a.Path)
+	}
+
+	builderOpts = CompilerBackendOptions{
+		ImageName:      imageprefix + a.CompileSpec.Package.GetFingerPrint(),
+		SourcePath:     archive,
+		DockerFileName: dockerFile,
+		Context:        uncompressedFiles,
+	}
+	return builderOpts, b.BuildImage(builderOpts)
+}
+
 // Compress Archives and compress (TODO) to the artifact path
 func (a *PackageArtifact) Compress(src string, concurrency int) error {
 	switch a.CompressionType {

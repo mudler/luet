@@ -139,7 +139,7 @@ func (*SimpleImg) ExportImage(opts compiler.CompilerBackendOptions) error {
 	return nil
 }
 
-// TODO: Dup in docker, refactor common code in helpers for shared parts
+// ExtractRootfs extracts the docker image content inside the destination
 func (*SimpleImg) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerms bool) error {
 	name := opts.ImageName
 	path := opts.Destination
@@ -153,7 +153,6 @@ func (*SimpleImg) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerms 
 	}
 	Info(":tea: Image " + name + " extracted")
 	return nil
-	//return NewSimpleDockerBackend().ExtractRootfs(opts, keepPerms)
 }
 
 // TODO: Use container-diff (https://github.com/GoogleContainerTools/container-diff) for checking out layer diffs

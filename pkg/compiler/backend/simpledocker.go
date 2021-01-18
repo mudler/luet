@@ -183,9 +183,22 @@ type ManifestEntry struct {
 	Layers []string `json:"Layers"`
 }
 
-func (*SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerms bool) error {
+func (b *SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerms bool) error {
 	src := opts.SourcePath
 	dst := opts.Destination
+
+	if src == "" && opts.ImageName != "" {
+		tempUnpack, err := ioutil.TempDir(dst, "tempUnpack")
+		if err != nil {
+			return errors.Wrap(err, "Error met while creating tempdir for rootfs")
+		}
+		defer os.RemoveAll(tempUnpack) // clean up
+		imageExport := filepath.Join(tempUnpack, "image.tar")
+		if err := b.ExportImage(compiler.CompilerBackendOptions{ImageName: opts.ImageName, Destination: imageExport}); err != nil {
+			return errors.Wrap(err, "while exporting image before extraction")
+		}
+		src = imageExport
+	}
 
 	rootfs, err := ioutil.TempDir(dst, "tmprootfs")
 	if err != nil {

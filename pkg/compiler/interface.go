@@ -114,6 +114,8 @@ type Artifact interface {
 
 	GetChecksums() Checksums
 	SetChecksums(c Checksums)
+
+	GenerateFinalImage(string, CompilerBackend, bool) (CompilerBackendOptions, error)
 }
 
 type ArtifactNode struct {
