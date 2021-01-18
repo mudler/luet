@@ -18,6 +18,7 @@ package cmd_tree
 
 import (
 	"fmt"
+	"os"
 
 	//. "github.com/mudler/luet/pkg/config"
 	"github.com/ghodss/yaml"
@@ -127,9 +128,12 @@ func NewTreeImageCommand() *cobra.Command {
 			}
 		},
 	}
-
+	path, err := os.Getwd()
+	if err != nil {
+		Fatal(err)
+	}
 	ans.Flags().StringP("output", "o", "terminal", "Output format ( Defaults: terminal, available: json,yaml )")
-	ans.Flags().StringArrayP("tree", "t", []string{}, "Path of the tree to use.")
+	ans.Flags().StringArrayP("tree", "t", []string{path}, "Path of the tree to use.")
 	ans.Flags().String("image-repository", "luet/cache", "Default base image string for generated image")
 
 	return ans

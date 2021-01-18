@@ -18,6 +18,7 @@ package cmd_tree
 
 import (
 	"fmt"
+	"os"
 	"sort"
 
 	//. "github.com/mudler/luet/pkg/config"
@@ -266,7 +267,10 @@ func NewTreePkglistCommand() *cobra.Command {
 
 		},
 	}
-
+	path, err := os.Getwd()
+	if err != nil {
+		Fatal(err)
+	}
 	ans.Flags().BoolP("buildtime", "b", false, "Build time match")
 	ans.Flags().StringP("output", "o", "terminal", "Output format ( Defaults: terminal, available: json,yaml )")
 	ans.Flags().Bool("revdeps", false, "Search package reverse dependencies")
@@ -274,7 +278,7 @@ func NewTreePkglistCommand() *cobra.Command {
 
 	ans.Flags().BoolP("verbose", "v", false, "Add package version")
 	ans.Flags().BoolP("full", "f", false, "Show package detail")
-	ans.Flags().StringArrayP("tree", "t", []string{}, "Path of the tree to use.")
+	ans.Flags().StringArrayP("tree", "t", []string{path}, "Path of the tree to use.")
 	ans.Flags().StringSliceVarP(&matches, "matches", "m", []string{},
 		"Include only matched packages from list. (Use string as regex).")
 	ans.Flags().StringSliceVarP(&excludes, "exclude", "e", []string{},

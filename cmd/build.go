@@ -141,10 +141,6 @@ Build packages specifying multiple definition trees:
 
 		generalRecipe := tree.NewCompilerRecipe(db)
 
-		if len(treePaths) <= 0 {
-			Fatal("No tree path supplied!")
-		}
-
 		for _, src := range treePaths {
 			Info("Loading tree", src)
 
@@ -305,7 +301,7 @@ func init() {
 	if err != nil {
 		Fatal(err)
 	}
-	buildCmd.Flags().StringSliceP("tree", "t", []string{}, "Path of the tree to use.")
+	buildCmd.Flags().StringSliceP("tree", "t", []string{path}, "Path of the tree to use.")
 	buildCmd.Flags().String("backend", "docker", "backend used (docker,img)")
 	buildCmd.Flags().Bool("privileged", false, "Privileged (Keep permissions)")
 	buildCmd.Flags().String("database", "memory", "database used for solving (memory,boltdb)")

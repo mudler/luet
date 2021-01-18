@@ -458,12 +458,15 @@ func NewTreeValidateCommand() *cobra.Command {
 			}
 		},
 	}
-
+	path, err := os.Getwd()
+	if err != nil {
+		Fatal(err)
+	}
 	ans.Flags().Bool("only-runtime", false, "Check only runtime dependencies.")
 	ans.Flags().Bool("only-buildtime", false, "Check only buildtime dependencies.")
 	ans.Flags().BoolP("with-solver", "s", false,
 		"Enable check of requires also with solver.")
-	ans.Flags().StringSliceVarP(&treePaths, "tree", "t", []string{},
+	ans.Flags().StringSliceVarP(&treePaths, "tree", "t", []string{path},
 		"Path of the tree to use.")
 	ans.Flags().StringSliceVarP(&excludes, "exclude", "e", []string{},
 		"Exclude matched packages from analysis. (Use string as regex).")

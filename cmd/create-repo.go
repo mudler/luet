@@ -150,7 +150,7 @@ func init() {
 		Fatal(err)
 	}
 	createrepoCmd.Flags().String("packages", path, "Packages folder (output from build)")
-	createrepoCmd.Flags().StringSliceP("tree", "t", []string{}, "Path of the source trees to use.")
+	createrepoCmd.Flags().StringSliceP("tree", "t", []string{path}, "Path of the source trees to use.")
 	createrepoCmd.Flags().String("output", path, "Destination folder")
 	createrepoCmd.Flags().String("name", "luet", "Repository name")
 	createrepoCmd.Flags().String("descr", "luet", "Repository description")
