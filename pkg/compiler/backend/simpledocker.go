@@ -240,7 +240,7 @@ func (b *SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepP
 			}
 		}
 	}
-
+	// TODO: Drop capi in favor of the img approach already used in pkg/installer/repository
 	export, err := capi.CreateExport(rootfs)
 	if err != nil {
 		return err
