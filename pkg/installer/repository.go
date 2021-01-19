@@ -65,6 +65,8 @@ type LuetSystemRepository struct {
 	Tree            tree.Builder                  `json:"-"`
 	RepositoryFiles map[string]LuetRepositoryFile `json:"repo_files"`
 	Backend         compiler.CompilerBackend      `json:"-"`
+	PushImages      bool                          `json:"-"`
+	ForcePush       bool                          `json:"-"`
 }
 
 type LuetSystemRepositorySerialized struct {
@@ -184,7 +186,7 @@ func (f *LuetRepositoryFile) GetChecksums() compiler.Checksums {
 
 func GenerateRepository(name, descr, t string, urls []string,
 	priority int, src string, treesDir []string, db pkg.PackageDatabase,
-	b compiler.CompilerBackend, imagePrefix string) (Repository, error) {
+	b compiler.CompilerBackend, imagePrefix string, pushImages, force bool) (Repository, error) {
 
 	tr := tree.NewInstallerRecipe(db)
 
@@ -205,7 +207,7 @@ func GenerateRepository(name, descr, t string, urls []string,
 		}
 
 	case DockerRepositoryType:
-		art, err = generatePackageImages(b, imagePrefix, src, tr.GetDatabase())
+		art, err = generatePackageImages(b, imagePrefix, src, tr.GetDatabase(), pushImages, force)
 		if err != nil {
 			return nil, err
 		}
@@ -213,7 +215,7 @@ func GenerateRepository(name, descr, t string, urls []string,
 
 	repo := NewLuetSystemRepository(
 		config.NewLuetRepository(name, t, descr, urls, priority, true, false),
-		art, tr)
+		art, tr, pushImages, force)
 	repo.SetBackend(b)
 	return repo, nil
 }
@@ -225,12 +227,14 @@ func NewSystemRepository(repo config.LuetRepository) Repository {
 	}
 }
 
-func NewLuetSystemRepository(repo *config.LuetRepository, art []compiler.Artifact, builder tree.Builder) Repository {
+func NewLuetSystemRepository(repo *config.LuetRepository, art []compiler.Artifact, builder tree.Builder, pushImages, force bool) Repository {
 	return &LuetSystemRepository{
 		LuetRepository:  repo,
 		Index:           art,
 		Tree:            builder,
 		RepositoryFiles: map[string]LuetRepositoryFile{},
+		PushImages:      pushImages,
+		ForcePush:       force,
 	}
 }
 
@@ -264,7 +268,15 @@ func NewLuetSystemRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (Repos
 	return r, err
 }
 
-func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string, db pkg.PackageDatabase) ([]compiler.Artifact, error) {
+func pushImage(b compiler.CompilerBackend, image string, force bool) error {
+	if b.ImageAvailable(image) && !force {
+		Debug("Image", image, "already present, skipping")
+		return nil
+	}
+	return b.Push(compiler.CompilerBackendOptions{ImageName: image})
+}
+
+func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string, db pkg.PackageDatabase, imagePush, force bool) ([]compiler.Artifact, error) {
 
 	var art []compiler.Artifact
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
@@ -291,12 +303,17 @@ func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string,
 			return nil
 		}
 
-		Info("Generating final image", imagePrefix+artifact.GetCompileSpec().GetPackage().GetPackageImageName(),
+		packageImage := imagePrefix + artifact.GetCompileSpec().GetPackage().GetPackageImageName()
+		Info("Generating final image", packageImage,
 			"for package ", artifact.GetCompileSpec().GetPackage().HumanReadableString())
-		if opts, err := artifact.GenerateFinalImage(imagePrefix+artifact.GetCompileSpec().GetPackage().GetPackageImageName(), b, true); err != nil {
+		if opts, err := artifact.GenerateFinalImage(packageImage, b, true); err != nil {
 			return errors.Wrap(err, "Failed generating metadata tree"+opts.ImageName)
 		}
-		// TODO: Push image (check if exists first, and avoid to re-push the same images, unless --force is passed)
+		if imagePush {
+			if err := pushImage(b, packageImage, force); err != nil {
+				return errors.Wrapf(err, "Failed while pushing image: '%s'", packageImage)
+			}
+		}
 
 		art = append(art, artifact)
 
@@ -685,7 +702,11 @@ func (r *LuetSystemRepository) genDockerRepo(imagePrefix string, resetRevision, 
 	if opts, err := a.GenerateFinalImage(imageTree, r.GetBackend(), false); err != nil {
 		return errors.Wrap(err, "Failed generating metadata tree "+opts.ImageName)
 	}
-	// TODO: Push imageTree
+	if r.ForcePush {
+		if err := pushImage(r.GetBackend(), imageTree, true); err != nil {
+			return errors.Wrapf(err, "Failed while pushing image: '%s'", imageTree)
+		}
+	}
 
 	// Create Metadata struct and serialized repository
 	meta, serialized := r.Serialize()
@@ -736,8 +757,11 @@ func (r *LuetSystemRepository) genDockerRepo(imagePrefix string, resetRevision, 
 	if opts, err := a.GenerateFinalImage(imageMetaTree, r.GetBackend(), false); err != nil {
 		return errors.Wrap(err, "Failed generating metadata tree"+opts.ImageName)
 	}
-
-	// TODO: Push image meta tree
+	if r.ForcePush {
+		if err := pushImage(r.GetBackend(), imageMetaTree, true); err != nil {
+			return errors.Wrapf(err, "Failed while pushing image: '%s'", imageMetaTree)
+		}
+	}
 	data, err := yaml.Marshal(serialized)
 	if err != nil {
 		return err
@@ -757,7 +781,11 @@ func (r *LuetSystemRepository) genDockerRepo(imagePrefix string, resetRevision, 
 	if opts, err := a.GenerateFinalImage(imageRepo, r.GetBackend(), false); err != nil {
 		return errors.Wrap(err, "Failed generating repository image"+opts.ImageName)
 	}
-	// TODO: Push image meta tree
+	if r.ForcePush {
+		if err := pushImage(r.GetBackend(), imageRepo, true); err != nil {
+			return errors.Wrapf(err, "Failed while pushing image: '%s'", imageRepo)
+		}
+	}
 
 	bus.Manager.Publish(bus.EventRepositoryPostBuild, struct {
 		Repo LuetSystemRepository
@@ -790,8 +818,14 @@ func (r *LuetSystemRepository) Client() Client {
 				Urls:           r.GetUrls(),
 				Authentication: r.GetAuthentication(),
 			})
-	}
 
+	case DockerRepositoryType:
+		return client.NewDockerClient(
+			client.RepoData{
+				Urls:           r.GetUrls(),
+				Authentication: r.GetAuthentication(),
+			})
+	}
 	return nil
 }
 

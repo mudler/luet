@@ -67,6 +67,10 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		viper.BindPFlag("meta-filename", cmd.Flags().Lookup("meta-filename"))
 		viper.BindPFlag("reset-revision", cmd.Flags().Lookup("reset-revision"))
 		viper.BindPFlag("repo", cmd.Flags().Lookup("repo"))
+
+		viper.BindPFlag("force-push", cmd.Flags().Lookup("force-push"))
+		viper.BindPFlag("push-images", cmd.Flags().Lookup("push-images"))
+
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
@@ -90,6 +94,8 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		treeFile := installer.NewDefaultTreeRepositoryFile()
 		metaFile := installer.NewDefaultMetaRepositoryFile()
 		compilerBackend := backend.NewBackend(backendType)
+		force := viper.GetBool("force-push")
+		imagePush := viper.GetBool("push-images")
 
 		if source_repo != "" {
 			// Search for system repository
@@ -112,11 +118,11 @@ Create a repository from the metadata description defined in the luet.yaml confi
 				lrepo.Priority,
 				packages,
 				treePaths,
-				pkg.NewInMemoryDatabase(false), compilerBackend, dst)
+				pkg.NewInMemoryDatabase(false), compilerBackend, dst, imagePush, force)
 
 		} else {
 			repo, err = installer.GenerateRepository(name, descr, t, urls, 1, packages,
-				treePaths, pkg.NewInMemoryDatabase(false), compilerBackend, dst)
+				treePaths, pkg.NewInMemoryDatabase(false), compilerBackend, dst, imagePush, force)
 		}
 
 		if err != nil {
@@ -164,6 +170,9 @@ func init() {
 	createrepoCmd.Flags().Bool("reset-revision", false, "Reset repository revision.")
 	createrepoCmd.Flags().String("repo", "", "Use repository defined in configuration.")
 	createrepoCmd.Flags().String("backend", "docker", "backend used (docker,img)")
+
+	createrepoCmd.Flags().Bool("force-push", false, "Force overwrite of docker images if already present")
+	createrepoCmd.Flags().Bool("push-images", false, "Enable/Disable docker image push for docker repositories")
 
 	createrepoCmd.Flags().String("tree-compression", "gzip", "Compression alg: none, gzip, zstd")
 	createrepoCmd.Flags().String("tree-filename", installer.TREE_TARBALL, "Repository tree filename")
