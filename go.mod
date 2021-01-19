@@ -1,6 +1,6 @@
 module github.com/mudler/luet
 
-go 1.12
+go 1.14
 
 require (
 	github.com/DataDog/zstd v1.4.4 // indirect
@@ -8,11 +8,13 @@ require (
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 	github.com/briandowns/spinner v1.7.0
 	github.com/cavaliercoder/grab v1.0.1-0.20201108051000-98a5bfe305ec
+	github.com/containerd/containerd v1.4.1-0.20201117152358-0edc412565dc
 	github.com/crillab/gophersat v1.3.2-0.20201023142334-3fc2ac466765
-	github.com/docker/docker v17.12.0-ce-rc1.0.20200417035958-130b0bc6032c+incompatible
-	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
+	github.com/docker/docker v20.10.0-beta1.0.20201110211921-af34b94a78a1+incompatible
+	github.com/docker/go-units v0.4.0
 	github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
 	github.com/fsouza/go-dockerclient v1.6.4
+	github.com/genuinetools/img v0.5.11
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-containerregistry v0.2.1
 	github.com/hashicorp/go-multierror v1.0.0
@@ -26,7 +28,8 @@ require (
 	github.com/kyokomi/emoji v2.1.0+incompatible
 	github.com/logrusorgru/aurora v0.0.0-20190417123914-21d75270181e
 	github.com/marcsauter/single v0.0.0-20181104081128-f8bf46f26ec0
-	github.com/moby/sys/mount v0.1.1-0.20200320164225-6154f11e6840 // indirect
+	github.com/moby/buildkit v0.7.2
+	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
 	github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87
 	github.com/mudler/go-pluggable v0.0.0-20201113184918-d36448fc8f82
@@ -34,19 +37,27 @@ require (
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3
 	github.com/otiai10/copy v1.2.1-0.20200916181228-26f84a0b1578
-	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/philopon/go-toposort v0.0.0-20170620085441-9be86dbd762f
 	github.com/pkg/errors v0.9.1
 	github.com/schollz/progressbar/v3 v3.7.1
+	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
-	github.com/spf13/viper v1.6.3
-	go.etcd.io/bbolt v1.3.4
+	github.com/spf13/viper v1.7.0
+	go.etcd.io/bbolt v1.3.5
 	go.uber.org/atomic v1.5.1 // indirect
 	go.uber.org/multierr v1.4.0 // indirect
 	go.uber.org/zap v1.13.0
+	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208 // indirect
 	gopkg.in/yaml.v2 v2.3.0
-	gotest.tools/v3 v3.0.2 // indirect
 	helm.sh/helm/v3 v3.3.4
 )
 
 replace github.com/docker/docker => github.com/Luet-lab/moby v17.12.0-ce-rc1.0.20200605210607-749178b8f80d+incompatible
+
+replace github.com/containerd/containerd => github.com/containerd/containerd v1.3.1-0.20200227195959-4d242818bf55
+
+replace github.com/hashicorp/go-immutable-radix => github.com/tonistiigi/go-immutable-radix v0.0.0-20170803185627-826af9ccf0fe
+
+replace github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
+
+replace github.com/opencontainers/runc => github.com/opencontainers/runc v1.0.0-rc9.0.20200221051241-688cf6d43cc4
