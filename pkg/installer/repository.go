@@ -197,6 +197,10 @@ func GenerateRepository(name, descr, t string, urls []string,
 		}
 	}
 
+	// if !strings.HasSuffix(imagePrefix, "/") {
+	// 	imagePrefix = imagePrefix + "/"
+	// }
+
 	var art []compiler.Artifact
 	var err error
 	switch t {
@@ -303,7 +307,7 @@ func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string,
 			return nil
 		}
 
-		packageImage := imagePrefix + artifact.GetCompileSpec().GetPackage().GetPackageImageName()
+		packageImage := fmt.Sprintf("%s:%s", imagePrefix, artifact.GetCompileSpec().GetPackage().GetFingerPrint())
 		Info("Generating final image", packageImage,
 			"for package ", artifact.GetCompileSpec().GetPackage().HumanReadableString())
 		if opts, err := artifact.GenerateFinalImage(packageImage, b, true); err != nil {
@@ -697,7 +701,7 @@ func (r *LuetSystemRepository) genDockerRepo(imagePrefix string, resetRevision, 
 	treeFile.SetChecksums(a.GetChecksums())
 	r.SetRepositoryFile(REPOFILE_TREE_KEY, treeFile)
 
-	imageTree := fmt.Sprintf("%s%s:%s", imagePrefix, "repository", TREE_TARBALL)
+	imageTree := fmt.Sprintf("%s:%s", imagePrefix, TREE_TARBALL)
 	Debug("Generating image", imageTree)
 	if opts, err := a.GenerateFinalImage(imageTree, r.GetBackend(), false); err != nil {
 		return errors.Wrap(err, "Failed generating metadata tree "+opts.ImageName)
@@ -753,7 +757,7 @@ func (r *LuetSystemRepository) genDockerRepo(imagePrefix string, resetRevision, 
 	}
 	metaFile.SetChecksums(a.GetChecksums())
 
-	imageMetaTree := fmt.Sprintf("%s%s:%s", imagePrefix, "repository", REPOSITORY_METAFILE)
+	imageMetaTree := fmt.Sprintf("%s:%s", imagePrefix, REPOSITORY_METAFILE)
 	if opts, err := a.GenerateFinalImage(imageMetaTree, r.GetBackend(), false); err != nil {
 		return errors.Wrap(err, "Failed generating metadata tree"+opts.ImageName)
 	}
@@ -777,7 +781,7 @@ func (r *LuetSystemRepository) genDockerRepo(imagePrefix string, resetRevision, 
 	}
 
 	a = compiler.NewPackageArtifact(tempRepoFile)
-	imageRepo := fmt.Sprintf("%s%s:%s", imagePrefix, "repository", REPOSITORY_SPECFILE)
+	imageRepo := fmt.Sprintf("%s:%s", imagePrefix, REPOSITORY_SPECFILE)
 	if opts, err := a.GenerateFinalImage(imageRepo, r.GetBackend(), false); err != nil {
 		return errors.Wrap(err, "Failed generating repository image"+opts.ImageName)
 	}
@@ -837,7 +841,7 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	Debug("Sync of the repository", r.Name, "in progress...")
 	c := r.Client()
 	if c == nil {
-		return nil, errors.New("No client could be generated from repository.")
+		return nil, errors.New("no client could be generated from repository")
 	}
 
 	// Retrieve remote repository.yaml for retrieve revision and date
