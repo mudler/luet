@@ -46,6 +46,7 @@ type Package interface {
 
 	GetFingerPrint() string
 	GetPackageName() string
+	GetPackageImageName() string
 	Requires([]*DefaultPackage) Package
 	Conflicts([]*DefaultPackage) Package
 	Revdeps(PackageDatabase) Packages
@@ -286,6 +287,10 @@ func FromString(s string) Package {
 
 func (p *DefaultPackage) GetPackageName() string {
 	return fmt.Sprintf("%s-%s", p.Name, p.Category)
+}
+
+func (p *DefaultPackage) GetPackageImageName() string {
+	return fmt.Sprintf("%s-%s:%s", p.Name, p.Category, p.Version)
 }
 
 // GetBuildTimestamp returns the package build timestamp

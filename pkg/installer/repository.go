@@ -291,12 +291,12 @@ func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string,
 			return nil
 		}
 
-		Info("Generating final image", imagePrefix+artifact.GetCompileSpec().GetPackage().GetFingerPrint(),
+		Info("Generating final image", imagePrefix+artifact.GetCompileSpec().GetPackage().GetPackageImageName(),
 			"for package ", artifact.GetCompileSpec().GetPackage().HumanReadableString())
-		if opts, err := artifact.GenerateFinalImage(imagePrefix+artifact.GetCompileSpec().GetPackage().GetFingerPrint(), b, true); err != nil {
+		if opts, err := artifact.GenerateFinalImage(imagePrefix+artifact.GetCompileSpec().GetPackage().GetPackageImageName(), b, true); err != nil {
 			return errors.Wrap(err, "Failed generating metadata tree"+opts.ImageName)
 		}
-		// TODO: Push image
+		// TODO: Push image (check if exists first, and avoid to re-push the same images, unless --force is passed)
 
 		art = append(art, artifact)
 
@@ -680,7 +680,7 @@ func (r *LuetSystemRepository) genDockerRepo(imagePrefix string, resetRevision, 
 	treeFile.SetChecksums(a.GetChecksums())
 	r.SetRepositoryFile(REPOFILE_TREE_KEY, treeFile)
 
-	imageTree := fmt.Sprintf("%s%s", imagePrefix, REPOFILE_TREE_KEY)
+	imageTree := fmt.Sprintf("%s%s:%s", imagePrefix, "repository", TREE_TARBALL)
 	Debug("Generating image", imageTree)
 	if opts, err := a.GenerateFinalImage(imageTree, r.GetBackend(), false); err != nil {
 		return errors.Wrap(err, "Failed generating metadata tree "+opts.ImageName)
@@ -732,7 +732,7 @@ func (r *LuetSystemRepository) genDockerRepo(imagePrefix string, resetRevision, 
 	}
 	metaFile.SetChecksums(a.GetChecksums())
 
-	imageMetaTree := fmt.Sprintf("%s%s", imagePrefix, REPOFILE_META_KEY)
+	imageMetaTree := fmt.Sprintf("%s%s:%s", imagePrefix, "repository", REPOSITORY_METAFILE)
 	if opts, err := a.GenerateFinalImage(imageMetaTree, r.GetBackend(), false); err != nil {
 		return errors.Wrap(err, "Failed generating metadata tree"+opts.ImageName)
 	}
@@ -753,7 +753,7 @@ func (r *LuetSystemRepository) genDockerRepo(imagePrefix string, resetRevision, 
 	}
 
 	a = compiler.NewPackageArtifact(tempRepoFile)
-	imageRepo := fmt.Sprintf("%s%s", imagePrefix, "repository")
+	imageRepo := fmt.Sprintf("%s%s:%s", imagePrefix, "repository", REPOSITORY_SPECFILE)
 	if opts, err := a.GenerateFinalImage(imageRepo, r.GetBackend(), false); err != nil {
 		return errors.Wrap(err, "Failed generating repository image"+opts.ImageName)
 	}
@@ -817,7 +817,7 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Remove temporary file that contains repository.html.
+	// Remove temporary file that contains repository.yaml
 	// Example: /tmp/HttpClient236052003
 	defer os.RemoveAll(file)
 
@@ -847,15 +847,10 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
 		}
-		// Note: If we always remove them, later on, no other structure can access
-		// to the tree for e.g. to retrieve finalizers
-
 		metafs, err = config.LuetCfg.GetSystem().TempDir("metafs")
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met whilte creating tempdir for metafs")
 		}
-		//defer os.RemoveAll(metafs)
-
 	}
 
 	// POST: treeFile and metaFile are present. I check this inside
@@ -866,17 +861,18 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	if !repoUpdated {
 
 		// Get Tree
-		a := compiler.NewPackageArtifact(treeFile.GetFileName())
-		artifactTree, err := c.DownloadArtifact(a)
+		downloadedTreeFile, err := c.DownloadFile(treeFile.GetFileName())
 		if err != nil {
 			return nil, errors.Wrap(err, "While downloading "+treeFile.GetFileName())
 		}
-		defer os.Remove(artifactTree.GetPath())
+		defer os.Remove(downloadedTreeFile)
 
-		artifactTree.SetChecksums(treeFile.GetChecksums())
-		artifactTree.SetCompressionType(treeFile.GetCompressionType())
+		// Treat the file as artifact, in order to verify it
+		treeFileArtifact := compiler.NewPackageArtifact(downloadedTreeFile)
+		treeFileArtifact.SetChecksums(treeFile.GetChecksums())
+		treeFileArtifact.SetCompressionType(treeFile.GetCompressionType())
 
-		err = artifactTree.Verify()
+		err = treeFileArtifact.Verify()
 		if err != nil {
 			return nil, errors.Wrap(err, "Tree integrity check failure")
 		}
@@ -884,17 +880,17 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 		Debug("Tree tarball for the repository " + r.GetName() + " downloaded correctly.")
 
 		// Get Repository Metadata
-		a = compiler.NewPackageArtifact(metaFile.GetFileName())
-		artifactMeta, err := c.DownloadArtifact(a)
+		downloadedMeta, err := c.DownloadFile(metaFile.GetFileName())
 		if err != nil {
 			return nil, errors.Wrap(err, "While downloading "+metaFile.GetFileName())
 		}
-		defer os.Remove(artifactMeta.GetPath())
+		defer os.Remove(downloadedMeta)
 
-		artifactMeta.SetChecksums(metaFile.GetChecksums())
-		artifactMeta.SetCompressionType(metaFile.GetCompressionType())
+		metaFileArtifact := compiler.NewPackageArtifact(downloadedMeta)
+		metaFileArtifact.SetChecksums(metaFile.GetChecksums())
+		metaFileArtifact.SetCompressionType(metaFile.GetCompressionType())
 
-		err = artifactMeta.Verify()
+		err = metaFileArtifact.Verify()
 		if err != nil {
 			return nil, errors.Wrap(err, "Metadata integrity check failure")
 		}
@@ -914,7 +910,7 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 		}
 		Debug("Decompress tree of the repository " + r.Name + "...")
 
-		err = artifactTree.Unpack(treefs, true)
+		err = treeFileArtifact.Unpack(treefs, true)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while unpacking tree")
 		}
@@ -922,7 +918,7 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 		// FIXME: It seems that tar with only one file doesn't create destination
 		//       directory. I create directory directly for now.
 		os.MkdirAll(metafs, os.ModePerm)
-		err = artifactMeta.Unpack(metafs, true)
+		err = metaFileArtifact.Unpack(metafs, true)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while unpacking metadata")
 		}
