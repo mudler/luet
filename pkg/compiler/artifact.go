@@ -144,14 +144,14 @@ func (a *PackageArtifact) Hash() error {
 
 func (a *PackageArtifact) Verify() error {
 	sum := Checksums{}
-	err := sum.Generate(a)
-	if err != nil {
+	if err := sum.Generate(a); err != nil {
 		return err
 	}
-	err = sum.Compare(a.Checksums)
-	if err != nil {
+
+	if err := sum.Compare(a.Checksums); err != nil {
 		return err
 	}
+
 	return nil
 }
 
