@@ -78,7 +78,7 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 
 	// Check if file is already in cache
 	if helpers.Exists(cacheFile) {
-		Info("Use artifact", artifactName, "from cache.")
+		Debug("Use artifact", artifactName, "from cache.")
 	} else {
 
 		temp, err = config.LuetCfg.GetSystem().TempDir("tree")

@@ -111,6 +111,7 @@ type Artifact interface {
 
 	SetFiles(f []string)
 	GetFiles() []string
+	GetFileName() string
 
 	GetChecksums() Checksums
 	SetChecksums(c Checksums)

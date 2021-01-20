@@ -51,7 +51,7 @@ func (c *LocalClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Art
 
 	// Check if file is already in cache
 	if helpers.Exists(cacheFile) {
-		Info("Use artifact", artifactName, "from cache.")
+		Debug("Use artifact", artifactName, "from cache.")
 	} else {
 		ok := false
 		for _, uri := range c.RepoData.Urls {

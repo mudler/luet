@@ -117,14 +117,15 @@ func Read(file string) (string, error) {
 	return string(dat), nil
 }
 
-func ensureDir(fileName string) {
+func EnsureDir(fileName string) error {
 	dirName := filepath.Dir(fileName)
 	if _, serr := os.Stat(dirName); serr != nil {
 		merr := os.MkdirAll(dirName, os.ModePerm) // FIXME: It should preserve permissions from src to dst instead
 		if merr != nil {
-			panic(merr)
+			return merr
 		}
 	}
+	return nil
 }
 
 // CopyFile copies the contents of the file named src to the file named

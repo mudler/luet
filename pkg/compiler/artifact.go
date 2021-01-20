@@ -237,6 +237,10 @@ func (a *PackageArtifact) GetPath() string {
 	return a.Path
 }
 
+func (a *PackageArtifact) GetFileName() string {
+	return path.Base(a.GetPath())
+}
+
 func (a *PackageArtifact) SetPath(p string) {
 	a.Path = p
 }
@@ -245,6 +249,29 @@ func (a *PackageArtifact) genDockerfile() string {
 	return `
 FROM scratch
 COPY * /`
+}
+
+// CreateArtifactForFile creates a new artifact from the given file
+func CreateArtifactForFile(s string, opts ...func(*PackageArtifact)) (*PackageArtifact, error) {
+
+	fileName := path.Base(s)
+	archive, err := LuetCfg.GetSystem().TempDir("archive")
+	if err != nil {
+		return nil, errors.Wrap(err, "error met while creating tempdir for "+s)
+	}
+	defer os.RemoveAll(archive) // clean up
+	helpers.CopyFile(s, filepath.Join(archive, fileName))
+	artifact, err := LuetCfg.GetSystem().TempDir("artifact")
+	if err != nil {
+		return nil, errors.Wrap(err, "error met while creating tempdir for "+s)
+	}
+	a := &PackageArtifact{Path: filepath.Join(artifact, fileName)}
+
+	for _, o := range opts {
+		o(a)
+	}
+
+	return a, a.Compress(archive, 1)
 }
 
 // GenerateFinalImage takes an artifact and builds a Docker image with its content
@@ -281,7 +308,9 @@ func (a *PackageArtifact) GenerateFinalImage(imageName string, b CompilerBackend
 	return builderOpts, b.BuildImage(builderOpts)
 }
 
-// Compress Archives and compress (TODO) to the artifact path
+// Compress is responsible to archive and compress to the artifact Path.
+// It accepts a source path, which is the content to be archived/compressed
+// and a concurrency parameter.
 func (a *PackageArtifact) Compress(src string, concurrency int) error {
 	switch a.CompressionType {
 
