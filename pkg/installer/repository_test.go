@@ -84,7 +84,7 @@ var _ = Describe("Repository", func() {
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
 
-			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, []string{"../../tests/fixtures/buildable"}, pkg.NewInMemoryDatabase(false))
+			repo, err := stubRepo(tmpdir, "../../tests/fixtures/buildable")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
@@ -166,7 +166,7 @@ var _ = Describe("Repository", func() {
 			Expect(helpers.Exists(spec2.Rel("alpine-seed-1.0.package.tar"))).To(BeTrue())
 			Expect(helpers.Exists(spec2.Rel("alpine-seed-1.0.metadata.yaml"))).To(BeTrue())
 
-			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, []string{"../../tests/fixtures/buildable"}, pkg.NewInMemoryDatabase(false))
+			repo, err := stubRepo(tmpdir, "../../tests/fixtures/buildable")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())

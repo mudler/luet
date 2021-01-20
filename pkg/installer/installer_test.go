@@ -24,6 +24,7 @@ import (
 	compiler "github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/helpers"
+	"github.com/mudler/luet/pkg/installer"
 	solver "github.com/mudler/luet/pkg/solver"
 
 	. "github.com/mudler/luet/pkg/installer"
@@ -32,6 +33,18 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+func stubRepo(tmpdir, tree string) (installer.Repository, error) {
+	return GenerateRepository(
+		"test",
+		"description",
+		"disk",
+		[]string{tmpdir},
+		1,
+		tmpdir,
+		[]string{tree},
+		pkg.NewInMemoryDatabase(false), nil, "", false, false)
+}
 
 var _ = Describe("Installer", func() {
 	Context("Writes a repository definition", func() {
@@ -84,13 +97,13 @@ var _ = Describe("Installer", func() {
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
 
-			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, []string{"../../tests/fixtures/buildable"}, pkg.NewInMemoryDatabase(false))
+			repo, err := stubRepo(tmpdir, "../../tests/fixtures/buildable")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false)
+			err = repo.Write(tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
@@ -200,7 +213,9 @@ urls:
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
 
-			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, []string{"../../tests/fixtures/buildable"}, pkg.NewInMemoryDatabase(false))
+			repo, err := stubRepo(tmpdir, "../../tests/fixtures/buildable")
+			Expect(err).ToNot(HaveOccurred())
+
 			treeFile := NewDefaultTreeRepositoryFile()
 			treeFile.SetCompressionType(compiler.None)
 			repo.SetRepositoryFile(REPOFILE_TREE_KEY, treeFile)
@@ -209,7 +224,7 @@ urls:
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false)
+			err = repo.Write(tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
@@ -318,13 +333,20 @@ urls:
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
 
-			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, []string{"../../tests/fixtures/buildable"}, pkg.NewInMemoryDatabase(false))
+			repo, err := GenerateRepository(
+				"test",
+				"description",
+				"disk",
+				[]string{tmpdir}, 1,
+				tmpdir,
+				[]string{"../../tests/fixtures/buildable"},
+				pkg.NewInMemoryDatabase(false), nil, "", false, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false)
+			err = repo.Write(tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
@@ -436,13 +458,21 @@ urls:
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
 
-			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, []string{"../../tests/fixtures/buildable"}, pkg.NewInMemoryDatabase(false))
+			repo, err := GenerateRepository(
+				"test",
+				"description",
+				"disk",
+				[]string{tmpdir},
+				1,
+				tmpdir,
+				[]string{"../../tests/fixtures/buildable"},
+				pkg.NewInMemoryDatabase(false), nil, "", false, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false)
+			err = repo.Write(tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
@@ -502,9 +532,9 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
 
-			repo, err = GenerateRepository("test", "description", "disk", []string{tmpdir2}, 1, tmpdir2, []string{"../../tests/fixtures/alpine"}, pkg.NewInMemoryDatabase(false))
+			repo, err = stubRepo(tmpdir2, "../../tests/fixtures/alpine")
 			Expect(err).ToNot(HaveOccurred())
-			err = repo.Write(tmpdir2, false)
+			err = repo.Write(tmpdir2, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			fakeroot, err = ioutil.TempDir("", "fakeroot")
@@ -571,13 +601,13 @@ urls:
 
 			Expect(errs).To(BeEmpty())
 
-			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, []string{"../../tests/fixtures/upgrade"}, pkg.NewInMemoryDatabase(false))
+			repo, err := stubRepo(tmpdir, "../../tests/fixtures/upgrade")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false)
+			err = repo.Write(tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
@@ -697,18 +727,18 @@ urls:
 			_, errs = c2.CompileParallel(false, compiler.NewLuetCompilationspecs(spec2))
 			Expect(errs).To(BeEmpty())
 
-			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, []string{"../../tests/fixtures/upgrade_old_repo"}, pkg.NewInMemoryDatabase(false))
+			repo, err := stubRepo(tmpdir, "../../tests/fixtures/upgrade_old_repo")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false)
+			err = repo.Write(tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
-			repoupgrade, err := GenerateRepository("test", "description", "disk", []string{tmpdirnewrepo}, 1, tmpdirnewrepo, []string{"../../tests/fixtures/upgrade_new_repo"}, pkg.NewInMemoryDatabase(false))
+			repoupgrade, err := stubRepo(tmpdirnewrepo, "../../tests/fixtures/upgrade_new_repo")
 			Expect(err).ToNot(HaveOccurred())
-			err = repoupgrade.Write(tmpdirnewrepo, false)
+			err = repoupgrade.Write(tmpdirnewrepo, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			fakeroot, err := ioutil.TempDir("", "fakeroot")
@@ -820,13 +850,13 @@ urls:
 
 			Expect(errs).To(BeEmpty())
 
-			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, []string{"../../tests/fixtures/upgrade"}, pkg.NewInMemoryDatabase(false))
+			repo, err := stubRepo(tmpdir, "../../tests/fixtures/upgrade")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false)
+			err = repo.Write(tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Exists(spec.Rel("b-test-1.1.package.tar.gz"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("b-test-1.1.package.tar"))).ToNot(BeTrue())
@@ -978,13 +1008,13 @@ urls:
 
 			Expect(errs).To(BeEmpty())
 
-			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, []string{"../../tests/fixtures/upgrade"}, pkg.NewInMemoryDatabase(false))
+			repo, err := stubRepo(tmpdir, "../../tests/fixtures/upgrade")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false)
+			err = repo.Write(tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Exists(spec.Rel("b-test-1.1.package.tar.gz"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("b-test-1.1.package.tar"))).ToNot(BeTrue())
@@ -1080,13 +1110,13 @@ urls:
 
 			Expect(errs).To(BeEmpty())
 
-			repo, err := GenerateRepository("test", "description", "disk", []string{tmpdir}, 1, tmpdir, []string{"../../tests/fixtures/upgrade_old_repo"}, pkg.NewInMemoryDatabase(false))
+			repo, err := stubRepo(tmpdir, "../../tests/fixtures/upgrade_old_repo")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false)
+			err = repo.Write(tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
@@ -1166,10 +1196,10 @@ urls:
 
 			Expect(errs).To(BeEmpty())
 
-			repo, err = GenerateRepository("test", "description", "disk", []string{tmpdir2}, 1, tmpdir2, []string{"../../tests/fixtures/upgrade_new_repo"}, pkg.NewInMemoryDatabase(false))
+			repo, err = stubRepo(tmpdir2, "../../tests/fixtures/upgrade_new_repo")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
-			err = repo.Write(tmpdir2, false)
+			err = repo.Write(tmpdir2, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			inst = NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
