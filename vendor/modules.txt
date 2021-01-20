@@ -61,8 +61,6 @@ github.com/chuckpreslar/emission
 github.com/codegangsta/inject
 # github.com/containerd/cgroups v0.0.0-20200217135630-d732e370d46d
 github.com/containerd/cgroups/stats/v1
-# github.com/containerd/console v0.0.0-20191219165238-8375c3424e4d
-github.com/containerd/console
 # github.com/containerd/containerd v1.4.1-0.20201117152358-0edc412565dc => github.com/containerd/containerd v1.3.1-0.20200227195959-4d242818bf55
 ## explicit
 github.com/containerd/containerd/api/services/content/v1
@@ -103,7 +101,6 @@ github.com/containerd/containerd/rootfs
 github.com/containerd/containerd/services/content/contentserver
 github.com/containerd/containerd/snapshots
 github.com/containerd/containerd/snapshots/native
-github.com/containerd/containerd/snapshots/overlay
 github.com/containerd/containerd/snapshots/storage
 github.com/containerd/containerd/sys
 github.com/containerd/containerd/version
@@ -111,21 +108,10 @@ github.com/containerd/containerd/version
 github.com/containerd/continuity/fs
 github.com/containerd/continuity/syscallx
 github.com/containerd/continuity/sysx
-# github.com/containerd/go-cni v0.0.0-20200107172653-c154a49e2c75
-github.com/containerd/go-cni
-# github.com/containerd/go-runc v0.0.0-20200220073739-7016d3ce2328
-github.com/containerd/go-runc
 # github.com/containerd/ttrpc v0.0.0-20200121165050-0be804eadb15
 github.com/containerd/ttrpc
 # github.com/containerd/typeurl v0.0.0-20200205145503-b45ef1f1f737
 github.com/containerd/typeurl
-# github.com/containernetworking/cni v0.7.1
-github.com/containernetworking/cni/libcni
-github.com/containernetworking/cni/pkg/invoke
-github.com/containernetworking/cni/pkg/types
-github.com/containernetworking/cni/pkg/types/020
-github.com/containernetworking/cni/pkg/types/current
-github.com/containernetworking/cni/pkg/version
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
 github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/crillab/gophersat v1.3.2-0.20201023142334-3fc2ac466765
@@ -142,6 +128,7 @@ github.com/docker/cli/cli/config/configfile
 github.com/docker/cli/cli/config/credentials
 github.com/docker/cli/cli/config/types
 # github.com/docker/distribution v2.7.1+incompatible
+## explicit
 github.com/docker/distribution
 github.com/docker/distribution/digestset
 github.com/docker/distribution/manifest
@@ -162,7 +149,6 @@ github.com/docker/docker/api/types/strslice
 github.com/docker/docker/api/types/swarm
 github.com/docker/docker/api/types/swarm/runtime
 github.com/docker/docker/api/types/versions
-github.com/docker/docker/builder/dockerignore
 github.com/docker/docker/errdefs
 github.com/docker/docker/pkg/archive
 github.com/docker/docker/pkg/chrootarchive
@@ -175,7 +161,6 @@ github.com/docker/docker/pkg/locker
 github.com/docker/docker/pkg/longpath
 github.com/docker/docker/pkg/pools
 github.com/docker/docker/pkg/reexec
-github.com/docker/docker/pkg/signal
 github.com/docker/docker/pkg/stdcopy
 github.com/docker/docker/pkg/system
 github.com/docker/docker/pkg/term
@@ -208,7 +193,6 @@ github.com/fsnotify/fsnotify
 github.com/fsouza/go-dockerclient
 # github.com/genuinetools/img v0.5.11
 ## explicit
-github.com/genuinetools/img/client
 github.com/genuinetools/img/types
 # github.com/ghodss/yaml v1.0.0
 ## explicit
@@ -382,23 +366,18 @@ github.com/moby/buildkit/cache/blobs
 github.com/moby/buildkit/cache/contenthash
 github.com/moby/buildkit/cache/metadata
 github.com/moby/buildkit/cache/remotecache
-github.com/moby/buildkit/cache/remotecache/inline
-github.com/moby/buildkit/cache/remotecache/local
-github.com/moby/buildkit/cache/remotecache/registry
 github.com/moby/buildkit/cache/remotecache/v1
 github.com/moby/buildkit/cache/util
 github.com/moby/buildkit/client
 github.com/moby/buildkit/client/buildid
 github.com/moby/buildkit/client/connhelper
 github.com/moby/buildkit/client/llb
-github.com/moby/buildkit/client/llb/imagemetaresolver
 github.com/moby/buildkit/client/ociindex
 github.com/moby/buildkit/cmd/buildkitd/config
 github.com/moby/buildkit/control
 github.com/moby/buildkit/control/gateway
 github.com/moby/buildkit/executor
 github.com/moby/buildkit/executor/oci
-github.com/moby/buildkit/executor/runcexecutor
 github.com/moby/buildkit/exporter
 github.com/moby/buildkit/exporter/containerimage
 github.com/moby/buildkit/exporter/containerimage/exptypes
@@ -406,15 +385,8 @@ github.com/moby/buildkit/exporter/local
 github.com/moby/buildkit/exporter/oci
 github.com/moby/buildkit/exporter/tar
 github.com/moby/buildkit/frontend
-github.com/moby/buildkit/frontend/dockerfile/builder
-github.com/moby/buildkit/frontend/dockerfile/command
-github.com/moby/buildkit/frontend/dockerfile/dockerfile2llb
-github.com/moby/buildkit/frontend/dockerfile/instructions
-github.com/moby/buildkit/frontend/dockerfile/parser
-github.com/moby/buildkit/frontend/dockerfile/shell
 github.com/moby/buildkit/frontend/gateway
 github.com/moby/buildkit/frontend/gateway/client
-github.com/moby/buildkit/frontend/gateway/forwarder
 github.com/moby/buildkit/frontend/gateway/grpcclient
 github.com/moby/buildkit/frontend/gateway/pb
 github.com/moby/buildkit/identity
@@ -432,7 +404,6 @@ github.com/moby/buildkit/snapshot
 github.com/moby/buildkit/snapshot/containerd
 github.com/moby/buildkit/snapshot/imagerefchecker
 github.com/moby/buildkit/solver
-github.com/moby/buildkit/solver/bboltcachestorage
 github.com/moby/buildkit/solver/internal/pipe
 github.com/moby/buildkit/solver/llbsolver
 github.com/moby/buildkit/solver/llbsolver/file
@@ -457,14 +428,11 @@ github.com/moby/buildkit/util/flightcontrol
 github.com/moby/buildkit/util/imageutil
 github.com/moby/buildkit/util/leaseutil
 github.com/moby/buildkit/util/network
-github.com/moby/buildkit/util/network/cniprovider
-github.com/moby/buildkit/util/network/netproviders
 github.com/moby/buildkit/util/progress
 github.com/moby/buildkit/util/progress/logs
 github.com/moby/buildkit/util/pull
 github.com/moby/buildkit/util/push
 github.com/moby/buildkit/util/resolver
-github.com/moby/buildkit/util/rootless/specconv
 github.com/moby/buildkit/util/system
 github.com/moby/buildkit/util/throttle
 github.com/moby/buildkit/util/tracing
@@ -553,6 +521,7 @@ github.com/openSUSE/umoci/third_party/user
 # github.com/opencontainers/go-digest v1.0.0
 github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.1
+## explicit
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
@@ -685,7 +654,6 @@ golang.org/x/net/trace
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
 # golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
-## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20201113135734-0a15ea8d9b02

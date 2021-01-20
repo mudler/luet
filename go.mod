@@ -10,6 +10,7 @@ require (
 	github.com/cavaliercoder/grab v1.0.1-0.20201108051000-98a5bfe305ec
 	github.com/containerd/containerd v1.4.1-0.20201117152358-0edc412565dc
 	github.com/crillab/gophersat v1.3.2-0.20201023142334-3fc2ac466765
+	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v20.10.0-beta1.0.20201110211921-af34b94a78a1+incompatible
 	github.com/docker/go-units v0.4.0
 	github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
@@ -36,6 +37,7 @@ require (
 	github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3
+	github.com/opencontainers/image-spec v1.0.1
 	github.com/otiai10/copy v1.2.1-0.20200916181228-26f84a0b1578
 	github.com/philopon/go-toposort v0.0.0-20170620085441-9be86dbd762f
 	github.com/pkg/errors v0.9.1
@@ -47,9 +49,9 @@ require (
 	go.uber.org/atomic v1.5.1 // indirect
 	go.uber.org/multierr v1.4.0 // indirect
 	go.uber.org/zap v1.13.0
-	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	helm.sh/helm/v3 v3.3.4
+
 )
 
 replace github.com/docker/docker => github.com/Luet-lab/moby v17.12.0-ce-rc1.0.20200605210607-749178b8f80d+incompatible
