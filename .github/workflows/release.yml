@@ -23,6 +23,7 @@ jobs:
                     env "PATH=$PATH" \
                     env "TEST_DOCKER_IMAGE=${{ secrets.DOCKER_TESTING_IMAGE }}" \
                     env "UNIT_TEST_DOCKER_IMAGE=${{ secrets.DOCKER_TESTING_IMAGE }}" \
+                    env "UNIT_TEST_DOCKER_IMAGE_REPOSITORY=${{ secrets.DOCKER_TESTING_UNIT_TEST_IMAGE }}" \
                     make deps multiarch-build-small test-integration test-coverage
       - name: Build
         run: sudo -E env "PATH=$PATH" make multiarch-build-small && sudo chmod -R 777 release/

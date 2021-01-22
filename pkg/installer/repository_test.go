@@ -19,13 +19,16 @@ import (
 
 	//	. "github.com/mudler/luet/pkg/installer"
 
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	config "github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
+	"github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/installer"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
@@ -33,6 +36,18 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+func dockerStubRepo(tmpdir, tree, image string, push, force bool) (installer.Repository, error) {
+	return GenerateRepository(
+		"test",
+		"description",
+		"docker",
+		[]string{image},
+		1,
+		tmpdir,
+		[]string{tree},
+		pkg.NewInMemoryDatabase(false), backend.NewSimpleDockerBackend(), image, push, force)
+}
 
 var _ = Describe("Repository", func() {
 	Context("Generation", func() {
@@ -216,6 +231,89 @@ urls:
 			Expect(matches).To(Equal([]PackageMatch{{Repo: repo1, Package: package1}}))
 
 		})
+	})
+	Context("Docker repository", func() {
+		repoImage := os.Getenv("UNIT_TEST_DOCKER_IMAGE_REPOSITORY")
 
+		BeforeEach(func() {
+			if repoImage == "" {
+				Skip("UNIT_TEST_DOCKER_IMAGE_REPOSITORY not specified")
+			}
+		})
+
+		It("generates images", func() {
+			b := backend.NewSimpleDockerBackend()
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err = generalRecipe.Load("../../tests/fixtures/buildable")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
+
+			localcompiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+
+			spec, err := localcompiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err = ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			spec.SetOutputPath(tmpdir)
+			localcompiler.SetConcurrency(1)
+
+			artifact, err := localcompiler.Compile(false, spec)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+
+			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
+
+			repo, err := dockerStubRepo(tmpdir, "../../tests/fixtures/buildable", repoImage, true, true)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(repo.GetName()).To(Equal("test"))
+			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
+			err = repo.Write(repoImage, false, true)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", repoImage, "tree.tar.gz"))).To(BeTrue())
+			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", repoImage, "repository.meta.yaml.tar"))).To(BeTrue())
+			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", repoImage, "repository.yaml"))).To(BeTrue())
+			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", repoImage, "b-test-1.0"))).To(BeTrue())
+
+			extracted, err := ioutil.TempDir("", "extracted")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(extracted) // clean up
+
+			c := repo.Client()
+
+			f, err := c.DownloadFile("repository.yaml")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(helpers.Read(f)).To(ContainSubstring("name: test"))
+
+			a, err := c.DownloadArtifact(&compiler.PackageArtifact{
+				Path: "test.tar",
+				CompileSpec: &compiler.LuetCompilationSpec{
+					Package: &pkg.DefaultPackage{
+						Name:     "b",
+						Category: "test",
+						Version:  "1.0",
+					},
+				},
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(a.Unpack(extracted, false)).ToNot(HaveOccurred())
+			Expect(helpers.Read(filepath.Join(extracted, "test6"))).To(Equal("artifact6\n"))
+		})
 	})
 })
