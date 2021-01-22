@@ -689,7 +689,12 @@ func (r *LuetSystemRepository) genDockerRepo(imagePrefix string, resetRevision, 
 		return errors.Wrap(err, "Error met while saving the tree")
 	}
 
-	treeFile := NewDefaultTreeRepositoryFile()
+	treeFile, err := r.GetRepositoryFile(REPOFILE_TREE_KEY)
+	if err != nil {
+		treeFile = NewDefaultTreeRepositoryFile()
+		r.SetRepositoryFile(REPOFILE_TREE_KEY, treeFile)
+	}
+
 	a := compiler.NewPackageArtifact(filepath.Join(repoTemp, treeFile.GetFileName()))
 	a.SetCompressionType(treeFile.GetCompressionType())
 	err = a.Compress(archive, 1)
