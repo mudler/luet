@@ -15,6 +15,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// TODO: this requires root permissions to mount/unmount layers, althrought it shouldn't be required.
+// See how backends are unpacking images without asking for root permissions.
+
 // Unpack exports an image to a rootfs destination directory.
 func (c *Client) Unpack(image, dest string) error {
 
