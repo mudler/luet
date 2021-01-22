@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/solver"
 
@@ -200,5 +201,18 @@ RUN echo bar > /test2`))
 			Expect(content).To(Equal(testString))
 		})
 
+		It("Retrieves uncompressed name", func() {
+			a := NewPackageArtifact("foo.tar.gz")
+			a.SetCompressionType(compiler.GZip)
+			Expect(a.GetUncompressedName()).To(Equal("foo.tar"))
+
+			a = NewPackageArtifact("foo.tar.zst")
+			a.SetCompressionType(compiler.Zstandard)
+			Expect(a.GetUncompressedName()).To(Equal("foo.tar"))
+
+			a = NewPackageArtifact("foo.tar")
+			a.SetCompressionType(compiler.None)
+			Expect(a.GetUncompressedName()).To(Equal("foo.tar"))
+		})
 	})
 })
