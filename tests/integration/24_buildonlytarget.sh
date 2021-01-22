@@ -8,7 +8,6 @@ export tmpdir="$(mktemp -d)"
 
 oneTimeTearDown() {
     rm -rf "$tmpdir"
-    docker system prune --force --volumes --all > /dev/null
 }
 
 testBuild() {
