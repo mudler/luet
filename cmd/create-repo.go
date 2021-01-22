@@ -171,7 +171,7 @@ func init() {
 	createrepoCmd.Flags().String("repo", "", "Use repository defined in configuration.")
 	createrepoCmd.Flags().String("backend", "docker", "backend used (docker,img)")
 
-	createrepoCmd.Flags().Bool("force-push", false, "Force overwrite of docker images if already present")
+	createrepoCmd.Flags().Bool("force-push", false, "Force overwrite of docker images if already present online")
 	createrepoCmd.Flags().Bool("push-images", false, "Enable/Disable docker image push for docker repositories")
 
 	createrepoCmd.Flags().String("tree-compression", "gzip", "Compression alg: none, gzip, zstd")
