@@ -164,26 +164,51 @@ func NewDefaultMetaRepositoryFile() LuetRepositoryFile {
 	}
 }
 
+// SetFileName sets the name of the repository file.
+// Each repository can ship arbitrary file that will be downloaded by the client
+// in case of need, this set the filename that the client will pull
 func (f *LuetRepositoryFile) SetFileName(n string) {
 	f.FileName = n
 }
 
+// GetFileName returns the name of the repository file.
+// Each repository can ship arbitrary file that will be downloaded by the client
+// in case of need, this gets the filename that the client will pull
 func (f *LuetRepositoryFile) GetFileName() string {
 	return f.FileName
 }
+
+// SetCompressionType sets the compression type of the repository file.
+// Each repository can ship arbitrary file that will be downloaded by the client
+// in case of need, this sets the compression type that the client will use to uncompress the artifact
 func (f *LuetRepositoryFile) SetCompressionType(c compiler.CompressionImplementation) {
 	f.CompressionType = c
 }
+
+// GetCompressionType gets the compression type of the repository file.
+// Each repository can ship arbitrary file that will be downloaded by the client
+// in case of need, this gets the compression type that the client will use to uncompress the artifact
 func (f *LuetRepositoryFile) GetCompressionType() compiler.CompressionImplementation {
 	return f.CompressionType
 }
+
+// SetChecksums sets the checksum of the repository file.
+// Each repository can ship arbitrary file that will be downloaded by the client
+// in case of need, this sets the checksums that the client will use to verify the artifact
 func (f *LuetRepositoryFile) SetChecksums(c compiler.Checksums) {
 	f.Checksums = c
 }
+
+// GetChecksums gets the checksum of the repository file.
+// Each repository can ship arbitrary file that will be downloaded by the client
+// in case of need, this gets the checksums that the client will use to verify the artifact
 func (f *LuetRepositoryFile) GetChecksums() compiler.Checksums {
 	return f.Checksums
 }
 
+// GenerateRepository generates a new repository from the given argument.
+// If the repository is of the docker type, it will also push the package images.
+// In case the repository is local, it will build the package Index
 func GenerateRepository(name, descr, t string, urls []string,
 	priority int, src string, treesDir []string, db pkg.PackageDatabase,
 	b compiler.CompilerBackend, imagePrefix string, pushImages, force bool) (Repository, error) {
