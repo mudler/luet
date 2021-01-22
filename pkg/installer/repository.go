@@ -281,7 +281,7 @@ func pushImage(b compiler.CompilerBackend, image string, force bool) error {
 }
 
 func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string, db pkg.PackageDatabase, imagePush, force bool) ([]compiler.Artifact, error) {
-
+	Info("Generating docker images for packages in", imagePrefix)
 	var art []compiler.Artifact
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
 
@@ -308,10 +308,15 @@ func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string,
 		}
 
 		packageImage := fmt.Sprintf("%s:%s", imagePrefix, artifact.GetCompileSpec().GetPackage().GetFingerPrint())
-		Info("Generating final image", packageImage,
-			"for package ", artifact.GetCompileSpec().GetPackage().HumanReadableString())
-		if opts, err := artifact.GenerateFinalImage(packageImage, b, true); err != nil {
-			return errors.Wrap(err, "Failed generating metadata tree"+opts.ImageName)
+
+		if imagePush && b.ImageAvailable(packageImage) && !force {
+			Info("Image", packageImage, "already present, skipping. use --force-push to override")
+		} else {
+			Info("Generating final image", packageImage,
+				"for package ", artifact.GetCompileSpec().GetPackage().HumanReadableString())
+			if opts, err := artifact.GenerateFinalImage(packageImage, b, true); err != nil {
+				return errors.Wrap(err, "Failed generating metadata tree"+opts.ImageName)
+			}
 		}
 		if imagePush {
 			if err := pushImage(b, packageImage, force); err != nil {
