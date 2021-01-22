@@ -1,8 +1,13 @@
 #!/bin/bash
+if [ $(id -u) -ne 0 ]
+  then echo "Please run the installer with sudo/as root"
+  exit
+fi
+
 set -ex
 export LUET_NOLOCK=true
 
-LUET_VERSION=0.9.24
+LUET_VERSION=$(curl -s https://api.github.com/repos/mudler/luet/releases/latest | ( grep -oP '"tag_name": "\K(.*)(?=")') || echo "0.9.24" ))
 LUET_ROOTFS=${LUET_ROOTFS:-/}
 LUET_DATABASE_PATH=${LUET_DATABASE_PATH:-/var/luet/db}
 LUET_DATABASE_ENGINE=${LUET_DATABASE_ENGINE:-boltdb}
@@ -31,7 +36,8 @@ system:
   tmpdir_base: "/var/tmp/luet"
 EOF
 
-./luet install repository/luet repository/mocaccino-repository-index
-./luet install system/luet system/luet-extensions
+./luet install repository/luet repository/mocaccino-repository-index -y
+./luet install system/luet system/luet-extensions -y
 
 rm -rf luet
+
