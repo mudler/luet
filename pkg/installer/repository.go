@@ -625,7 +625,7 @@ func (r *LuetSystemRepository) genDockerRepo(imagePrefix string, resetRevision, 
 	//   - while pushing, check if image already exists, and if exist push them only if --force is supplied
 	// - Generate final images for metadata and push
 
-	imageRepository := fmt.Sprintf("%s%s", imagePrefix, "repository")
+	imageRepository := fmt.Sprintf("%s:%s", imagePrefix, REPOSITORY_SPECFILE)
 
 	r.LastUpdate = strconv.FormatInt(time.Now().Unix(), 10)
 
