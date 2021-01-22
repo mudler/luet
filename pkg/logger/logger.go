@@ -3,7 +3,9 @@ package logger
 import (
 	"fmt"
 	"os"
+	"path"
 	"regexp"
+	"runtime"
 	"strings"
 
 	. "github.com/mudler/luet/pkg/config"
@@ -228,6 +230,11 @@ func Warning(mess ...interface{}) {
 }
 
 func Debug(mess ...interface{}) {
+	pc, file, line, ok := runtime.Caller(1)
+	if ok {
+		mess = append([]interface{}{fmt.Sprintf("DEBUG (%s:#%d:%v)",
+			path.Base(file), line, runtime.FuncForPC(pc).Name())}, mess...)
+	}
 	msg("debug", false, mess...)
 }
 
