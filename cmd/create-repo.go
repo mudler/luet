@@ -166,7 +166,7 @@ func init() {
 	createrepoCmd.Flags().String("name", "luet", "Repository name")
 	createrepoCmd.Flags().String("descr", "luet", "Repository description")
 	createrepoCmd.Flags().StringSlice("urls", []string{}, "Repository URLs")
-	createrepoCmd.Flags().String("type", "disk", "Repository type (disk)")
+	createrepoCmd.Flags().String("type", "disk", "Repository type (disk, http, docker)")
 	createrepoCmd.Flags().Bool("reset-revision", false, "Reset repository revision.")
 	createrepoCmd.Flags().String("repo", "", "Use repository defined in configuration.")
 	createrepoCmd.Flags().String("backend", "docker", "backend used (docker,img)")
