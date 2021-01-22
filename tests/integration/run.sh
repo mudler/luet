@@ -12,7 +12,16 @@ popd
 
 export PATH=$ROOT_DIR/tests/integration/bin/:$PATH
 
-for script in $(ls "$ROOT_DIR/tests/integration/" | grep '^[0-9]*_.*.sh'); do
-  echo "Executing script '$script'."
-  $ROOT_DIR/tests/integration/$script
-done
+if [ -z "$SINGLE_TEST" ]; then
+
+  for script in $(ls "$ROOT_DIR/tests/integration/" | grep '^[0-9]*_.*.sh'); do
+    echo "Executing test '$script'."
+    $ROOT_DIR/tests/integration/$script
+  done
+
+else
+
+  echo "Executing test '$SINGLE_TEST'."
+  $ROOT_DIR/tests/integration/$SINGLE_TEST
+
+fi
