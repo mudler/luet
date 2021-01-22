@@ -74,7 +74,7 @@ func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Ar
 	var resultingArtifact compiler.Artifact
 	artifactName := path.Base(artifact.GetPath())
 	cacheFile := filepath.Join(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), artifactName)
-
+	Debug("Cache file", cacheFile)
 	if err := helpers.EnsureDir(cacheFile); err != nil {
 		return nil, errors.Wrapf(err, "could not create cache folder %s for %s", config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), cacheFile)
 	}
@@ -89,7 +89,7 @@ func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Ar
 
 	// Check if file is already in cache
 	if helpers.Exists(cacheFile) {
-		Debug("Use artifact", artifactName, "from cache.")
+		Debug("Cache hit for artifact", artifactName)
 		resultingArtifact = artifact
 		resultingArtifact.SetPath(cacheFile)
 		resultingArtifact.SetChecksums(compiler.Checksums{})
@@ -117,7 +117,8 @@ func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Ar
 			newart := artifact
 			// We discard checksum, that are checked while during pull and unpack
 			newart.SetChecksums(compiler.Checksums{})
-			newart.SetPath(cacheFile)
+			newart.SetPath(cacheFile)                    // First set to cache file
+			newart.SetPath(newart.GetUncompressedName()) // Calculate the real path from cacheFile
 			err = newart.Compress(temp, 1)
 			if err != nil {
 				Error(fmt.Sprintf("Failed compressing package %s: %s", imageName, err.Error()))

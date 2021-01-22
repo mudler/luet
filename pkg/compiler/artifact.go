@@ -325,7 +325,7 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 		}
 		defer original.Close()
 
-		zstdFile := a.Path + ".zst"
+		zstdFile := a.getCompressedName()
 		bufferedReader := bufio.NewReader(original)
 
 		// Open a file for writing.
@@ -348,6 +348,8 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 		}
 
 		os.RemoveAll(a.Path) // Remove original
+		Debug("Removed artifact", a.Path)
+
 		a.Path = zstdFile
 		return nil
 	case GZip:
@@ -361,7 +363,7 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 		}
 		defer original.Close()
 
-		gzipfile := a.Path + ".gz"
+		gzipfile := a.getCompressedName()
 		bufferedReader := bufio.NewReader(original)
 
 		// Open a file for writing.
@@ -380,6 +382,7 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 		}
 		w.Close()
 		os.RemoveAll(a.Path) // Remove original
+		Debug("Removed artifact", a.Path)
 		//	a.CompressedPath = gzipfile
 		a.Path = gzipfile
 		return nil
@@ -387,10 +390,29 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 
 	// Defaults to tar only (covers when "none" is supplied)
 	default:
-		return helpers.Tar(src, a.Path)
-
+		return helpers.Tar(src, a.getCompressedName())
 	}
 	return errors.New("Compression type must be supplied")
+}
+
+func (a *PackageArtifact) getCompressedName() string {
+	switch a.CompressionType {
+	case Zstandard:
+		return a.Path + ".zst"
+
+	case GZip:
+		return a.Path + ".gz"
+	}
+	return a.Path
+}
+
+// GetUncompressedName returns the artifact path without the extension suffix
+func (a *PackageArtifact) GetUncompressedName() string {
+	switch a.CompressionType {
+	case Zstandard, GZip:
+		return strings.TrimSuffix(a.Path, filepath.Ext(a.Path))
+	}
+	return a.Path
 }
 
 func tarModifierWrapperFunc(dst, path string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
