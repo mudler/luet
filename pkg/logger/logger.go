@@ -198,7 +198,7 @@ func msg(level string, withoutColor bool, msg ...interface{}) {
 	} else {
 		switch level {
 		case "warning":
-			levelMsg = Bold(Yellow(":construction: " + message)).BgBlack().String()
+			levelMsg = Yellow(":construction: warning" + message).BgBlack().String()
 		case "debug":
 			levelMsg = White(message).BgBlack().String()
 		case "info":
