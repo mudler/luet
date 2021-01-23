@@ -18,6 +18,7 @@ package backend
 import (
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/logger"
@@ -106,10 +107,16 @@ func (*SimpleImg) ImageAvailable(imagename string) bool {
 	return imageAvailable(imagename)
 }
 
+// ImageExists check if the given image is available locally
 func (*SimpleImg) ImageExists(imagename string) bool {
-	// NOOP: not implemented
-	// TODO: Since img doesn't have an inspect command,
-	// we need to parse the ls output manually
+	cmd := exec.Command("img", "ls")
+	out, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	if strings.Contains(string(out), imagename) {
+		return true
+	}
 	return false
 }
 
