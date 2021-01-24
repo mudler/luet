@@ -236,7 +236,20 @@ func (cs *LuetCompiler) stripFromRootfs(includes []string, rootfs string, includ
 	return nil
 }
 
-func (cs *LuetCompiler) unpackFs(rootfs string, concurrency int, p CompilationSpec) (Artifact, error) {
+func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p CompilationSpec, runnerOpts CompilerBackendOptions) (Artifact, error) {
+
+	rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not create tempdir")
+	}
+	defer os.RemoveAll(rootfs) // clean up
+
+	err = cs.Backend.ExtractRootfs(CompilerBackendOptions{
+		ImageName: runnerOpts.ImageName, Destination: rootfs}, keepPermissions)
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not extract rootfs")
+	}
+
 	if p.GetPackageDir() != "" {
 		Info(":tophat: Packing from output dir", p.GetPackageDir())
 		rootfs = filepath.Join(rootfs, p.GetPackageDir())
@@ -247,7 +260,7 @@ func (cs *LuetCompiler) unpackFs(rootfs string, concurrency int, p CompilationSp
 		cs.stripFromRootfs(p.GetIncludes(), rootfs, true)
 	}
 	if len(p.GetExcludes()) > 0 {
-		// strip from includes
+		// strip from excludes
 		cs.stripFromRootfs(p.GetExcludes(), rootfs, false)
 	}
 	artifact := NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
@@ -261,7 +274,14 @@ func (cs *LuetCompiler) unpackFs(rootfs string, concurrency int, p CompilationSp
 	return artifact, nil
 }
 
-func (cs *LuetCompiler) unpackDelta(rootfs string, concurrency int, keepPermissions bool, p CompilationSpec, builderOpts, runnerOpts CompilerBackendOptions) (Artifact, error) {
+func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p CompilationSpec, builderOpts, runnerOpts CompilerBackendOptions) (Artifact, error) {
+
+	rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not create tempdir")
+	}
+	defer os.RemoveAll(rootfs) // clean up
+
 	pkgTag := ":package: " + p.GetPackage().HumanReadableString()
 	if cs.Options.PullFirst && !cs.Backend.ImageExists(builderOpts.ImageName) && cs.Backend.ImageAvailable(builderOpts.ImageName) {
 		err := cs.Backend.DownloadImage(builderOpts)
@@ -271,12 +291,7 @@ func (cs *LuetCompiler) unpackDelta(rootfs string, concurrency int, keepPermissi
 	} else if !cs.Backend.ImageExists(builderOpts.ImageName) {
 		return nil, errors.New("No image found for " + builderOpts.ImageName)
 	}
-	if err := cs.Backend.ExportImage(builderOpts); err != nil {
-		return nil, errors.Wrap(err, "Could not export image"+builderOpts.ImageName)
-	}
-	if !cs.Options.KeepImageExport {
-		defer os.Remove(builderOpts.Destination)
-	}
+
 	Info(pkgTag, ":hammer: Generating delta")
 	diffs, err := cs.Backend.Changes(builderOpts, runnerOpts)
 	if err != nil {
@@ -456,38 +471,15 @@ func (cs *LuetCompiler) genArtifact(p CompilationSpec, builderOpts, runnerOpts C
 		return artifact, nil
 	}
 
-	// prepare folder content of the image with the package compiled inside
-	if err := cs.Backend.ExportImage(runnerOpts); err != nil {
-		return nil, errors.Wrap(err, "Failed exporting image")
-	}
-
-	if !cs.Options.KeepImageExport {
-		defer os.Remove(runnerOpts.Destination)
-	}
-
-	rootfs, err = ioutil.TempDir(p.GetOutputPath(), "rootfs")
-	if err != nil {
-		return nil, errors.Wrap(err, "Could not create tempdir")
-	}
-	defer os.RemoveAll(rootfs) // clean up
-
-	// TODO: Compression and such
-	err = cs.Backend.ExtractRootfs(CompilerBackendOptions{
-		ImageName:  runnerOpts.ImageName,
-		SourcePath: runnerOpts.Destination, Destination: rootfs}, keepPermissions)
-	if err != nil {
-		return nil, errors.Wrap(err, "Could not extract rootfs")
-	}
-
 	if p.UnpackedPackage() {
 		// Take content of container as a base for our package files
-		artifact, err = cs.unpackFs(rootfs, concurrency, p)
+		artifact, err = cs.unpackFs(concurrency, keepPermissions, p, runnerOpts)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while extracting image")
 		}
 	} else {
 		// Generate delta between the two images
-		artifact, err = cs.unpackDelta(rootfs, concurrency, keepPermissions, p, builderOpts, runnerOpts)
+		artifact, err = cs.unpackDelta(concurrency, keepPermissions, p, builderOpts, runnerOpts)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while generating delta")
 		}

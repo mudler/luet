@@ -79,8 +79,6 @@ Build packages specifying multiple definition trees:
 		viper.BindPFlag("wait", cmd.Flags().Lookup("wait"))
 		viper.BindPFlag("keep-images", cmd.Flags().Lookup("keep-images"))
 
-		LuetCfg.Viper.BindPFlag("keep-exported-images", cmd.Flags().Lookup("keep-exported-images"))
-
 		LuetCfg.Viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
 		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
 		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
@@ -105,7 +103,6 @@ Build packages specifying multiple definition trees:
 		keepImages := viper.GetBool("keep-images")
 		nodeps := viper.GetBool("nodeps")
 		onlydeps := viper.GetBool("onlydeps")
-		keepExportedImages := viper.GetBool("keep-exported-images")
 		onlyTarget, _ := cmd.Flags().GetBool("only-target-package")
 		full, _ := cmd.Flags().GetBool("full")
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
@@ -169,7 +166,6 @@ Build packages specifying multiple definition trees:
 		opts.OnlyDeps = onlydeps
 		opts.NoDeps = nodeps
 		opts.Wait = wait
-		opts.KeepImageExport = keepExportedImages
 		opts.PackageTargetOnly = onlyTarget
 		opts.BuildValuesFile = values
 		var solverOpts solver.Options
@@ -315,7 +311,6 @@ func init() {
 	buildCmd.Flags().Bool("keep-images", true, "Keep built docker images in the host")
 	buildCmd.Flags().Bool("nodeps", false, "Build only the target packages, skipping deps (it works only if you already built the deps locally, or by using --pull) ")
 	buildCmd.Flags().Bool("onlydeps", false, "Build only package dependencies")
-	buildCmd.Flags().Bool("keep-exported-images", false, "Keep exported images used during building")
 	buildCmd.Flags().Bool("only-target-package", false, "Build packages of only the required target. Otherwise builds all the necessary ones not present in the destination")
 	buildCmd.Flags().String("solver-type", "", "Solver strategy")
 	buildCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")

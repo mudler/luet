@@ -33,8 +33,7 @@ var _ = Describe("Docker image diffs", func() {
 	Context("Generate diffs from docker images", func() {
 		It("Detect no changes", func() {
 			opts := compiler.CompilerBackendOptions{
-				ImageName:   "alpine:latest",
-				Destination: "alpine:latest",
+				ImageName: "alpine:latest",
 			}
 			err := b.DownloadImage(opts)
 			Expect(err).ToNot(HaveOccurred())
@@ -58,11 +57,9 @@ var _ = Describe("Docker image diffs", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			layers, err := GenerateChanges(b, compiler.CompilerBackendOptions{
-				ImageName:   "quay.io/mocaccino/micro",
-				Destination: "quay.io/mocaccino/micro",
+				ImageName: "quay.io/mocaccino/micro",
 			}, compiler.CompilerBackendOptions{
-				ImageName:   "quay.io/mocaccino/extra",
-				Destination: "quay.io/mocaccino/extra",
+				ImageName: "quay.io/mocaccino/extra",
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(layers)).To(Equal(1))

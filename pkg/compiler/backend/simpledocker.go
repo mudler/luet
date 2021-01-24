@@ -184,8 +184,21 @@ type ManifestEntry struct {
 }
 
 func (b *SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerms bool) error {
-	src := opts.SourcePath
+	name := opts.ImageName
 	dst := opts.Destination
+
+	tempexport, err := ioutil.TempDir(dst, "tmprootfs")
+	if err != nil {
+		return errors.Wrap(err, "Error met while creating tempdir for rootfs")
+	}
+	defer os.RemoveAll(tempexport) // clean up
+
+	imageExport := filepath.Join(tempexport, "image.tar")
+	if err := b.ExportImage(compiler.CompilerBackendOptions{ImageName: name, Destination: imageExport}); err != nil {
+		return errors.Wrap(err, "failed while extracting rootfs for "+name)
+	}
+
+	src := imageExport
 
 	if src == "" && opts.ImageName != "" {
 		tempUnpack, err := ioutil.TempDir(dst, "tempUnpack")

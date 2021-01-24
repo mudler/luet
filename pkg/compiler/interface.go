@@ -50,7 +50,6 @@ type CompilerOptions struct {
 	PullFirst, KeepImg, Push bool
 	Concurrency              int
 	CompressionType          CompressionImplementation
-	KeepImageExport          bool
 
 	Wait            bool
 	OnlyDeps        bool

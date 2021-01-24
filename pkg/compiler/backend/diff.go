@@ -54,10 +54,7 @@ import (
 // ]
 func GenerateChanges(b compiler.CompilerBackend, fromImage, toImage compiler.CompilerBackendOptions) ([]compiler.ArtifactLayer, error) {
 
-	srcImage := fromImage.Destination
-	dstImage := toImage.Destination
-
-	res := compiler.ArtifactLayer{FromImage: srcImage, ToImage: dstImage}
+	res := compiler.ArtifactLayer{FromImage: fromImage.ImageName, ToImage: toImage.ImageName}
 
 	tmpdiffs, err := config.LuetCfg.GetSystem().TempDir("extraction")
 	if err != nil {
@@ -77,62 +74,22 @@ func GenerateChanges(b compiler.CompilerBackend, fromImage, toImage compiler.Com
 	}
 	defer os.RemoveAll(dstRootFS) // clean up
 
-	// Handle both files (.tar) or images. If parameters are beginning with / , don't export the images
-	if !strings.HasPrefix(srcImage, "/") {
-		srcImageTar, err := ioutil.TempFile(tmpdiffs, "srctar")
-		if err != nil {
-			return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while creating tempdir for rootfs")
-		}
-
-		defer os.Remove(srcImageTar.Name()) // clean up
-		srcImageExport := compiler.CompilerBackendOptions{
-			ImageName:   srcImage,
-			Destination: srcImageTar.Name(),
-		}
-		err = b.ExportImage(srcImageExport)
-		if err != nil {
-			return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while exporting src image "+srcImage)
-		}
-		srcImage = srcImageTar.Name()
-	}
-
 	srcImageExtract := compiler.CompilerBackendOptions{
-		SourcePath:  srcImage,
 		ImageName:   fromImage.ImageName,
 		Destination: srcRootFS,
 	}
 	err = b.ExtractRootfs(srcImageExtract, false) // No need to keep permissions as we just collect file diffs
 	if err != nil {
-		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while unpacking src image "+srcImage)
-	}
-
-	// Handle both files (.tar) or images. If parameters are beginning with / , don't export the images
-	if !strings.HasPrefix(dstImage, "/") {
-		dstImageTar, err := ioutil.TempFile(tmpdiffs, "dsttar")
-		if err != nil {
-			return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while creating tempdir for rootfs")
-		}
-
-		defer os.Remove(dstImageTar.Name()) // clean up
-		dstImageExport := compiler.CompilerBackendOptions{
-			ImageName:   dstImage,
-			Destination: dstImageTar.Name(),
-		}
-		err = b.ExportImage(dstImageExport)
-		if err != nil {
-			return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while exporting dst image "+dstImage)
-		}
-		dstImage = dstImageTar.Name()
+		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while unpacking src image "+fromImage.ImageName)
 	}
 
 	dstImageExtract := compiler.CompilerBackendOptions{
-		SourcePath:  dstImage,
 		ImageName:   toImage.ImageName,
 		Destination: dstRootFS,
 	}
 	err = b.ExtractRootfs(dstImageExtract, false)
 	if err != nil {
-		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while unpacking dst image "+dstImage)
+		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while unpacking dst image "+toImage.ImageName)
 	}
 
 	// Get Additions/Changes. dst -> src
