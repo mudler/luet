@@ -164,7 +164,7 @@ func (s *SimpleImg) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerm
 	if err != nil {
 		return errors.Wrap(err, "Failed extracting image: "+string(out))
 	}
-	Info(":tea: Image " + name + " extracted")
+	Debug(":tea: Image " + name + " extracted")
 	return nil
 }
 

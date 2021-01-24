@@ -175,7 +175,7 @@ func (*SimpleDocker) ExportImage(opts compiler.CompilerBackendOptions) error {
 		return errors.Wrap(err, "Failed exporting image: "+string(out))
 	}
 
-	Info(":whale: Exported image:", name)
+	Debug(":whale: Exported image:", name)
 	return nil
 }
 

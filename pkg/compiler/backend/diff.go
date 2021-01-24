@@ -21,6 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	. "github.com/mudler/luet/pkg/logger"
+
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/pkg/errors"
@@ -78,6 +80,7 @@ func GenerateChanges(b compiler.CompilerBackend, fromImage, toImage compiler.Com
 		ImageName:   fromImage.ImageName,
 		Destination: srcRootFS,
 	}
+	Debug("Extracting source image", fromImage.ImageName)
 	err = b.ExtractRootfs(srcImageExtract, false) // No need to keep permissions as we just collect file diffs
 	if err != nil {
 		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while unpacking src image "+fromImage.ImageName)
@@ -87,6 +90,7 @@ func GenerateChanges(b compiler.CompilerBackend, fromImage, toImage compiler.Com
 		ImageName:   toImage.ImageName,
 		Destination: dstRootFS,
 	}
+	Debug("Extracting destination image", toImage.ImageName)
 	err = b.ExtractRootfs(dstImageExtract, false)
 	if err != nil {
 		return []compiler.ArtifactLayer{}, errors.Wrap(err, "Error met while unpacking dst image "+toImage.ImageName)

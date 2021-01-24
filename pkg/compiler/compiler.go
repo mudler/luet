@@ -288,8 +288,6 @@ func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p Com
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not pull image")
 		}
-	} else if !cs.Backend.ImageExists(builderOpts.ImageName) {
-		return nil, errors.New("No image found for " + builderOpts.ImageName)
 	}
 
 	Info(pkgTag, ":hammer: Generating delta")
@@ -298,6 +296,7 @@ func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p Com
 		return nil, errors.Wrap(err, "Could not generate changes from layers")
 	}
 
+	Debug("Extracting image to grab files from delta")
 	if err := cs.Backend.ExtractRootfs(CompilerBackendOptions{
 		ImageName: runnerOpts.ImageName, Destination: rootfs}, keepPermissions); err != nil {
 		return nil, errors.Wrap(err, "Could not extract rootfs")
