@@ -297,6 +297,11 @@ func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p Com
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not generate changes from layers")
 	}
+
+	if err := cs.Backend.ExtractRootfs(CompilerBackendOptions{
+		ImageName: runnerOpts.ImageName, Destination: rootfs}, keepPermissions); err != nil {
+		return nil, errors.Wrap(err, "Could not extract rootfs")
+	}
 	artifact, err := ExtractArtifactFromDelta(rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions, p.GetIncludes(), p.GetExcludes(), cs.CompressionType)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not generate deltas")
