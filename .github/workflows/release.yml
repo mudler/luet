@@ -28,9 +28,6 @@ jobs:
         run: |
             sudo -E env "PATH=$PATH" \
                     env "LUET_BACKEND=img" \
-                    env "TEST_DOCKER_IMAGE=${{ secrets.DOCKER_TESTING_IMAGE }}" \
-                    env "UNIT_TEST_DOCKER_IMAGE=${{ secrets.DOCKER_TESTING_IMAGE }}" \
-                    env "UNIT_TEST_DOCKER_IMAGE_REPOSITORY=${{ secrets.DOCKER_TESTING_UNIT_TEST_IMAGE }}" \
                     make test-integration
       - name: Tests
         run: |
