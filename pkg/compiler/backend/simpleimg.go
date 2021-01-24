@@ -147,9 +147,15 @@ func (*SimpleImg) ExportImage(opts compiler.CompilerBackendOptions) error {
 }
 
 // ExtractRootfs extracts the docker image content inside the destination
-func (*SimpleImg) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerms bool) error {
+func (s *SimpleImg) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerms bool) error {
 	name := opts.ImageName
 	path := opts.Destination
+
+	if !s.ImageExists(name) {
+		if err := s.DownloadImage(opts); err != nil {
+			return errors.Wrap(err, "failed pulling image "+name+" during extraction")
+		}
+	}
 
 	os.RemoveAll(path)
 	buildarg := []string{"unpack", "-o", path, name}
