@@ -77,9 +77,10 @@ ENV PACKAGE_CATEGORY=app-admin`))
 				DockerFileName: "Dockerfile",
 				Destination:    filepath.Join(tmpdir2, "output1.tar"),
 			}
-			Expect(b.ImageDefinitionToTar(opts)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(filepath.Join(tmpdir2, "output1.tar"))).To(BeTrue())
+
 			Expect(b.BuildImage(opts)).ToNot(HaveOccurred())
+			Expect(b.ExportImage(opts)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(filepath.Join(tmpdir2, "output1.tar"))).To(BeTrue())
 
 			err = lspec.WriteStepImageDefinition(lspec.Image, filepath.Join(tmpdir, "LuetDockerfile"))
 			Expect(err).ToNot(HaveOccurred())
@@ -100,7 +101,9 @@ RUN echo bar > /test2`))
 				DockerFileName: "LuetDockerfile",
 				Destination:    filepath.Join(tmpdir, "output2.tar"),
 			}
-			Expect(b.ImageDefinitionToTar(opts2)).ToNot(HaveOccurred())
+
+			Expect(b.BuildImage(opts2)).ToNot(HaveOccurred())
+			Expect(b.ExportImage(opts2)).ToNot(HaveOccurred())
 			Expect(helpers.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
 
 			artifacts := []ArtifactNode{{
@@ -115,13 +118,23 @@ RUN echo bar > /test2`))
 
 			Expect(b.Changes(opts, opts2)).To(Equal(
 				[]ArtifactLayer{{
-					FromImage: filepath.Join(tmpdir2, "output1.tar"),
-					ToImage:   filepath.Join(tmpdir, "output2.tar"),
+					FromImage: "luet/base",
+					ToImage:   "test",
 					Diffs: ArtifactDiffs{
 						Additions: artifacts,
 					},
 				}}))
 
+			opts2 = CompilerBackendOptions{
+				ImageName:      "test",
+				SourcePath:     tmpdir,
+				DockerFileName: "LuetDockerfile",
+				Destination:    filepath.Join(tmpdir, "output3.tar"),
+			}
+
+			Expect(b.ImageDefinitionToTar(opts2)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(filepath.Join(tmpdir, "output3.tar"))).To(BeTrue())
+			Expect(b.ImageExists(opts2.ImageName)).To(BeFalse())
 		})
 
 		It("Detects available images", func() {
