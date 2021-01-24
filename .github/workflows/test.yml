@@ -18,6 +18,13 @@ jobs:
     - name: setup-docker
       uses: docker-practice/actions-setup-docker@0.0.1
     - name: Install deps
-      run: sudo apt-get install -y upx
+      run: |
+            sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
+            sudo curl -fSL "https://github.com/genuinetools/img/releases/download/v0.5.11/img-linux-amd64" -o "/usr/bin/img"
+            sudo chmod a+x "/usr/bin/img"
+    - name: Build
+      run: sudo -E env "PATH=$PATH" make multiarch-build-small
+    - name: Tests with Img backend
+      run: sudo -E env "PATH=$PATH" env "LUET_BACKEND=img" make test-integration
     - name: Tests
-      run: sudo -E env "PATH=$PATH" make deps multiarch-build-small test-integration test-coverage
+      run: sudo -E env "PATH=$PATH" make test-integration test-coverage
