@@ -22,6 +22,8 @@ jobs:
             sudo chmod a+x "/usr/bin/img"
       - name: Build test
         run: sudo -E env "PATH=$PATH" make multiarch-build-small
+      - name: Login to quay with img
+        run: echo ${{ secrets.DOCKER_TESTING_PASSWORD }} | sudo img login -u ${{ secrets.DOCKER_TESTING_USERNAME }} --password-stdin quay.io
       - name: Tests with Img backend
         run: |
             sudo -E env "PATH=$PATH" \
