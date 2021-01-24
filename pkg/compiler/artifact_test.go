@@ -87,7 +87,8 @@ ENV PACKAGE_CATEGORY=app-admin`))
 				DockerFileName: "Dockerfile",
 				Destination:    filepath.Join(tmpdir2, "output1.tar"),
 			}
-			Expect(b.ImageDefinitionToTar(opts)).ToNot(HaveOccurred())
+			Expect(b.BuildImage(opts)).ToNot(HaveOccurred())
+			Expect(b.ExportImage(opts)).ToNot(HaveOccurred())
 			Expect(helpers.Exists(filepath.Join(tmpdir2, "output1.tar"))).To(BeTrue())
 			Expect(b.BuildImage(opts)).ToNot(HaveOccurred())
 
@@ -110,7 +111,8 @@ RUN echo bar > /test2`))
 				DockerFileName: "LuetDockerfile",
 				Destination:    filepath.Join(tmpdir, "output2.tar"),
 			}
-			Expect(b.ImageDefinitionToTar(opts2)).ToNot(HaveOccurred())
+			Expect(b.BuildImage(opts2)).ToNot(HaveOccurred())
+			Expect(b.ExportImage(opts2)).ToNot(HaveOccurred())
 			Expect(helpers.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
 			diffs, err := b.Changes(opts, opts2)
 			Expect(err).ToNot(HaveOccurred())
@@ -127,13 +129,13 @@ RUN echo bar > /test2`))
 
 			Expect(diffs).To(Equal(
 				[]ArtifactLayer{{
-					FromImage: filepath.Join(tmpdir2, "output1.tar"),
-					ToImage:   filepath.Join(tmpdir, "output2.tar"),
+					FromImage: "luet/base",
+					ToImage:   "test",
 					Diffs: ArtifactDiffs{
 						Additions: artifacts,
 					},
 				}}))
-			err = b.ExtractRootfs(CompilerBackendOptions{SourcePath: filepath.Join(tmpdir, "output2.tar"), Destination: rootfs}, false)
+			err = b.ExtractRootfs(CompilerBackendOptions{ImageName: "test", Destination: rootfs}, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			artifact, err := ExtractArtifactFromDelta(rootfs, filepath.Join(tmpdir, "package.tar"), diffs, 2, false, []string{}, []string{}, None)
