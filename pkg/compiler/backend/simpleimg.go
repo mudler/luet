@@ -46,7 +46,7 @@ func (*SimpleImg) BuildImage(opts compiler.CompilerBackendOptions) error {
 	buildarg := []string{"build", "-f", dockerfileName, "-t", name, context}
 	Spinner(22)
 	defer SpinnerStop()
-	Debug(":tea: Building image " + name)
+	Info(":tea: Building image " + name)
 	cmd := exec.Command("img", buildarg...)
 	cmd.Dir = path
 	out, err := cmd.CombinedOutput()
