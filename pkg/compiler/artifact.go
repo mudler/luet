@@ -704,6 +704,19 @@ func worker(i int, wg *sync.WaitGroup, s <-chan CopyJob) {
 	}
 }
 
+func compileRegexes(regexes []string) []*regexp.Regexp {
+	var result []*regexp.Regexp
+	for _, i := range regexes {
+		r, e := regexp.Compile(i)
+		if e != nil {
+			Warning("Failed compiling regex:", e)
+			continue
+		}
+		result = append(result, r)
+	}
+	return result
+}
+
 // ExtractArtifactFromDelta extracts deltas from ArtifactLayer from an image in tar format
 func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurrency int, keepPerms bool, includes []string, excludes []string, t CompressionImplementation) (Artifact, error) {
 
@@ -737,15 +750,7 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 	// Handle includes in spec. If specified they filter what gets in the package
 
 	if len(includes) > 0 && len(excludes) == 0 {
-		var includeRegexp []*regexp.Regexp
-		for _, i := range includes {
-			r, e := regexp.Compile(i)
-			if e != nil {
-				Warning("Failed compiling regex:", e)
-				continue
-			}
-			includeRegexp = append(includeRegexp, r)
-		}
+		includeRegexp := compileRegexes(includes)
 		for _, l := range layers {
 			// Consider d.Additions (and d.Changes? - warn at least) only
 		ADDS:
@@ -766,15 +771,7 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 		}
 
 	} else if len(includes) == 0 && len(excludes) != 0 {
-		var excludeRegexp []*regexp.Regexp
-		for _, i := range excludes {
-			r, e := regexp.Compile(i)
-			if e != nil {
-				Warning("Failed compiling regex:", e)
-				continue
-			}
-			excludeRegexp = append(excludeRegexp, r)
-		}
+		excludeRegexp := compileRegexes(excludes)
 		for _, l := range layers {
 			// Consider d.Additions (and d.Changes? - warn at least) only
 		ADD:
@@ -795,25 +792,8 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 		}
 
 	} else if len(includes) != 0 && len(excludes) != 0 {
-
-		var includeRegexp []*regexp.Regexp
-		for _, i := range includes {
-			r, e := regexp.Compile(i)
-			if e != nil {
-				Warning("Failed compiling regex:", e)
-				continue
-			}
-			includeRegexp = append(includeRegexp, r)
-		}
-		var excludeRegexp []*regexp.Regexp
-		for _, i := range excludes {
-			r, e := regexp.Compile(i)
-			if e != nil {
-				Warning("Failed compiling regex:", e)
-				continue
-			}
-			excludeRegexp = append(excludeRegexp, r)
-		}
+		includeRegexp := compileRegexes(includes)
+		excludeRegexp := compileRegexes(excludes)
 
 		for _, l := range layers {
 			// Consider d.Additions (and d.Changes? - warn at least) only
