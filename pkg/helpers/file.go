@@ -21,9 +21,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	copy "github.com/otiai10/copy"
+	"github.com/pkg/errors"
 )
 
 func OrderFiles(target string, files []string) ([]string, []string) {
@@ -134,7 +136,30 @@ func EnsureDir(fileName string) error {
 // of the source file. The file mode will be copied from the source and
 // the copied data is synced/flushed to stable storage.
 func CopyFile(src, dst string) (err error) {
-	return copy.Copy(src, dst, copy.Options{OnSymlink: func(string) copy.SymlinkAction { return copy.Shallow }})
+	// Workaround for https://github.com/otiai10/copy/issues/47
+	fi, err := os.Lstat(src)
+	if err != nil {
+		return errors.Wrap(err, "error reading file info")
+	}
+
+	fm := fi.Mode()
+	switch {
+	case fm&os.ModeNamedPipe != 0:
+		EnsureDir(dst)
+		if err := syscall.Mkfifo(dst, uint32(fi.Mode())); err != nil {
+			return errors.Wrap(err, "failed creating pipe")
+		}
+		if stat, ok := fi.Sys().(*syscall.Stat_t); ok {
+			if err := os.Chown(dst, int(stat.Uid), int(stat.Gid)); err != nil {
+				return errors.Wrap(err, "failed chowning file")
+			}
+		}
+		return nil
+	}
+
+	return copy.Copy(src, dst, copy.Options{
+		Sync:      true,
+		OnSymlink: func(string) copy.SymlinkAction { return copy.Shallow }})
 }
 
 func IsDirectory(path string) (bool, error) {
@@ -151,5 +176,7 @@ func IsDirectory(path string) (bool, error) {
 func CopyDir(src string, dst string) (err error) {
 	src = filepath.Clean(src)
 	dst = filepath.Clean(dst)
-	return copy.Copy(src, dst, copy.Options{OnSymlink: func(string) copy.SymlinkAction { return copy.Shallow }})
+	return copy.Copy(src, dst, copy.Options{
+		Sync:      true,
+		OnSymlink: func(string) copy.SymlinkAction { return copy.Shallow }})
 }

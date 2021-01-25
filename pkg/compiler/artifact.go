@@ -373,7 +373,7 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 		}
 		// Create gzip writer.
 		w := gzip.NewWriter(dst)
-		w.SetConcurrency(concurrency, 10)
+		w.SetConcurrency(1<<20, concurrency)
 		defer w.Close()
 		defer dst.Close()
 		_, err = io.Copy(w, bufferedReader)
