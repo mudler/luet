@@ -244,10 +244,33 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 				Spinner(32)
 				solution, err := depSolver.Install(pkg.Packages{r})
 				ass := solution.SearchByName(r.GetPackageName())
-				if err == nil {
-					_, err = solution.Order(reciper.GetDatabase(), ass.Package.GetFingerPrint())
-				}
 				SpinnerStop()
+				if err == nil {
+					if ass == nil {
+
+						ans = errors.New(
+							fmt.Sprintf("[%9s] %s/%s-%s: solution doesn't retrieve package %s/%s-%s.",
+								checkType,
+								p.GetCategory(), p.GetName(), p.GetVersion(),
+								r.GetCategory(), r.GetName(), r.GetVersion(),
+							))
+
+						if LuetCfg.GetGeneral().Debug {
+							for idx, pa := range solution {
+								fmt.Println(fmt.Sprintf("[%9s] %s/%s-%s: solution %d: %s",
+									checkType,
+									p.GetCategory(), p.GetName(), p.GetVersion(), idx,
+									pa.Package.GetPackageName()))
+							}
+						}
+
+						Error(ans.Error())
+						opts.IncrBrokenDeps()
+						validpkg = false
+					} else {
+						_, err = solution.Order(reciper.GetDatabase(), ass.Package.GetFingerPrint())
+					}
+				}
 
 				if err != nil {
 
