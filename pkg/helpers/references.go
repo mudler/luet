@@ -1,0 +1,30 @@
+// Copyright © 2019-2020 Ettore Di Giacinto <mudler@gentoo.org>
+//                       David Cassany <dcassany@suse.com>
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, see <http://www.gnu.org/licenses/>.
+
+package helpers
+
+import (
+	"github.com/asaskevich/govalidator"
+	"strings"
+)
+
+func StripRegistryFromImage(image string) string {
+	img := strings.SplitN(image, "/", 2)
+	if len(img) == 2 && govalidator.IsURL(img[0]) {
+		return img[1]
+	}
+	return image
+}

@@ -5,6 +5,7 @@ go 1.14
 require (
 	github.com/DataDog/zstd v1.4.4 // indirect
 	github.com/Sabayon/pkgs-checker v0.7.2
+	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 	github.com/briandowns/spinner v1.7.0
 	github.com/cavaliercoder/grab v1.0.1-0.20201108051000-98a5bfe305ec

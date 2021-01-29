@@ -322,12 +322,10 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	// so the hash is unique also in cases where
 	// some package deps does have completely different
 	// depgraphs
-	// TODO: As the salt contains the packageImage ( in registry/organization/imagename:tag format)
-	// the images hashes are broken with registry mirrors.
-	// We should use the image tag, or pass by the package assertion hash which is unique
+	// TODO: We should use the image tag, or pass by the package assertion hash which is unique
 	// and identifies the deptree of the package.
 
-	fp := p.GetPackage().HashFingerprint(packageImage)
+	fp := p.GetPackage().HashFingerprint(helpers.StripRegistryFromImage(packageImage))
 
 	if buildertaggedImage == "" {
 		buildertaggedImage = cs.ImageRepository + ":builder-" + fp
