@@ -38,7 +38,8 @@ github.com/Microsoft/hcsshim/osversion
 github.com/Sabayon/pkgs-checker/pkg/gentoo
 # github.com/apex/log v1.1.1
 github.com/apex/log
-# github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535
+# github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
+## explicit
 github.com/asaskevich/govalidator
 # github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 ## explicit
@@ -70,7 +71,6 @@ github.com/containerd/containerd/containers
 github.com/containerd/containerd/content
 github.com/containerd/containerd/content/local
 github.com/containerd/containerd/content/proxy
-github.com/containerd/containerd/contrib/seccomp
 github.com/containerd/containerd/diff
 github.com/containerd/containerd/diff/apply
 github.com/containerd/containerd/diff/walking
@@ -89,7 +89,6 @@ github.com/containerd/containerd/metadata
 github.com/containerd/containerd/metadata/boltutil
 github.com/containerd/containerd/mount
 github.com/containerd/containerd/namespaces
-github.com/containerd/containerd/oci
 github.com/containerd/containerd/platforms
 github.com/containerd/containerd/plugin
 github.com/containerd/containerd/reference
@@ -175,10 +174,6 @@ github.com/docker/go-events
 # github.com/docker/go-units v0.4.0
 ## explicit
 github.com/docker/go-units
-# github.com/docker/libnetwork v0.8.0-dev.2.0.20200226230617-d8334ccdb9be
-github.com/docker/libnetwork/resolvconf
-github.com/docker/libnetwork/resolvconf/dns
-github.com/docker/libnetwork/types
 # github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7
 github.com/docker/libtrust
 # github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
@@ -297,8 +292,6 @@ github.com/huandu/xstrings
 github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
-# github.com/ishidawataru/sctp v0.0.0-20191218070446-00ab2ac2db07
-github.com/ishidawataru/sctp
 # github.com/jedib0t/go-pretty v4.3.0+incompatible
 ## explicit
 github.com/jedib0t/go-pretty/table
@@ -377,7 +370,6 @@ github.com/moby/buildkit/cmd/buildkitd/config
 github.com/moby/buildkit/control
 github.com/moby/buildkit/control/gateway
 github.com/moby/buildkit/executor
-github.com/moby/buildkit/executor/oci
 github.com/moby/buildkit/exporter
 github.com/moby/buildkit/exporter/containerimage
 github.com/moby/buildkit/exporter/containerimage/exptypes
@@ -423,11 +415,9 @@ github.com/moby/buildkit/util/binfmt_misc
 github.com/moby/buildkit/util/cond
 github.com/moby/buildkit/util/contentutil
 github.com/moby/buildkit/util/entitlements
-github.com/moby/buildkit/util/entitlements/security
 github.com/moby/buildkit/util/flightcontrol
 github.com/moby/buildkit/util/imageutil
 github.com/moby/buildkit/util/leaseutil
-github.com/moby/buildkit/util/network
 github.com/moby/buildkit/util/progress
 github.com/moby/buildkit/util/progress/logs
 github.com/moby/buildkit/util/pull
@@ -576,8 +566,6 @@ github.com/spf13/pflag
 github.com/spf13/viper
 # github.com/subosito/gotenv v1.2.0
 github.com/subosito/gotenv
-# github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2
-github.com/syndtr/gocapability/capability
 # github.com/tonistiigi/fsutil v0.0.0-20200326231323-c2c7d7b0e144
 github.com/tonistiigi/fsutil
 github.com/tonistiigi/fsutil/copy
