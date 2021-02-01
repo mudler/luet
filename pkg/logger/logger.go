@@ -173,7 +173,7 @@ func level2AtomicLevel(level string) zap.AtomicLevel {
 	}
 }
 
-func msg(level string, withoutColor bool, msg ...interface{}) {
+func Msg(level string, withoutColor, ln bool, msg ...interface{}) {
 	var message string
 	var confLevel, msgLevel int
 
@@ -219,11 +219,16 @@ func msg(level string, withoutColor bool, msg ...interface{}) {
 		log2File(level, message)
 	}
 
-	fmt.Println(levelMsg)
+	if ln {
+		fmt.Println(levelMsg)
+	} else {
+		fmt.Print(levelMsg)
+	}
+
 }
 
 func Warning(mess ...interface{}) {
-	msg("warning", false, mess...)
+	Msg("warning", false, true, mess...)
 	if LuetCfg.GetGeneral().FatalWarns {
 		os.Exit(2)
 	}
@@ -235,23 +240,23 @@ func Debug(mess ...interface{}) {
 		mess = append([]interface{}{fmt.Sprintf("DEBUG (%s:#%d:%v)",
 			path.Base(file), line, runtime.FuncForPC(pc).Name())}, mess...)
 	}
-	msg("debug", false, mess...)
+	Msg("debug", false, true, mess...)
 }
 
 func DebugC(mess ...interface{}) {
-	msg("debug", true, mess...)
+	Msg("debug", true, true, mess...)
 }
 
 func Info(mess ...interface{}) {
-	msg("info", false, mess...)
+	Msg("info", false, true, mess...)
 }
 
 func InfoC(mess ...interface{}) {
-	msg("info", true, mess...)
+	Msg("info", true, true, mess...)
 }
 
 func Error(mess ...interface{}) {
-	msg("error", false, mess...)
+	Msg("error", false, true, mess...)
 }
 
 func Fatal(mess ...interface{}) {
