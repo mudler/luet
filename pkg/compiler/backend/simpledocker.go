@@ -56,10 +56,11 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	Info(":whale2: Building image " + name)
 	cmd := exec.Command("docker", buildarg...)
 	cmd.Dir = path
-	out, err := cmd.CombinedOutput()
+	_, err := runCommand(cmd)
 	if err != nil {
-		return errors.Wrap(err, "Failed building image: "+string(out))
+		return err
 	}
+
 	Info(":whale: Building image " + name + " done")
 
 	if os.Getenv("DOCKER_SQUASH") == "true" {
@@ -75,12 +76,6 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 			return errors.Wrap(err, "Failed squashing image")
 		}
 		Info(":whale: Squashing image " + name + " done")
-	}
-
-	if config.LuetCfg.GetGeneral().ShowBuildOutput {
-		Info(string(out))
-	} else {
-		Debug(string(out))
 	}
 
 	return nil
