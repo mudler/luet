@@ -16,6 +16,7 @@
 package helpers
 
 import (
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -80,6 +81,20 @@ func ListDir(dir string) ([]string, error) {
 		})
 
 	return content, err
+}
+
+// DirectoryIsEmpty Checks wether the directory is empty or not
+func DirectoryIsEmpty(dir string) (bool, error) {
+	f, err := os.Open(dir)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	if _, err = f.Readdirnames(1); err == io.EOF {
+		return true, nil
+	}
+	return false, nil
 }
 
 // Touch creates an empty file

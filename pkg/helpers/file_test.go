@@ -33,6 +33,23 @@ var _ = Describe("Helpers", func() {
 		})
 	})
 
+	Context("DirectoryIsEmpty", func() {
+		It("Detects empty directory", func() {
+			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(testDir)
+			Expect(DirectoryIsEmpty(testDir)).To(BeTrue())
+		})
+		It("Detects directory with files", func() {
+			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(testDir)
+			err = Touch(filepath.Join(testDir, "foo"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(DirectoryIsEmpty(testDir)).To(BeFalse())
+		})
+	})
+
 	Context("Orders dir and files correctly", func() {
 		It("puts files first and folders at end", func() {
 			testDir, err := ioutil.TempDir(os.TempDir(), "test")
