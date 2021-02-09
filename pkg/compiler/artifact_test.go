@@ -175,7 +175,12 @@ RUN echo bar > /test2`))
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpWork) // clean up
 
+			Expect(os.MkdirAll(filepath.Join(tmpdir, "foo", "bar"), os.ModePerm)).ToNot(HaveOccurred())
+
 			err = ioutil.WriteFile(filepath.Join(tmpdir, "test"), testString, 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = ioutil.WriteFile(filepath.Join(tmpdir, "foo", "bar", "test"), testString, 0644)
 			Expect(err).ToNot(HaveOccurred())
 
 			artifact := NewPackageArtifact(filepath.Join(tmpWork, "fake.tar"))
@@ -198,6 +203,11 @@ RUN echo bar > /test2`))
 			Expect(err).ToNot(HaveOccurred())
 
 			content, err := ioutil.ReadFile(filepath.Join(result, "test"))
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(content).To(Equal(testString))
+
+			content, err = ioutil.ReadFile(filepath.Join(result, "foo", "bar", "test"))
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(content).To(Equal(testString))

@@ -248,7 +248,7 @@ func (a *PackageArtifact) SetPath(p string) {
 func (a *PackageArtifact) genDockerfile() string {
 	return `
 FROM scratch
-COPY * /`
+COPY . /`
 }
 
 // CreateArtifactForFile creates a new artifact from the given file
