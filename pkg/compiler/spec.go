@@ -114,12 +114,12 @@ func NewLuetCompilationSpec(b []byte, p pkg.Package) (CompilationSpec, error) {
 	spec.Package = p.(*pkg.DefaultPackage)
 	return &spec, nil
 }
-func (a *LuetCompilationSpec) GetSourceAssertion() solver.PackagesAssertions {
-	return a.SourceAssertion
+func (cs *LuetCompilationSpec) GetSourceAssertion() solver.PackagesAssertions {
+	return cs.SourceAssertion
 }
 
-func (a *LuetCompilationSpec) SetSourceAssertion(as solver.PackagesAssertions) {
-	a.SourceAssertion = as
+func (cs *LuetCompilationSpec) SetSourceAssertion(as solver.PackagesAssertions) {
+	cs.SourceAssertion = as
 }
 func (cs *LuetCompilationSpec) GetPackage() pkg.Package {
 	return cs.Package
@@ -155,6 +155,12 @@ func (cs *LuetCompilationSpec) GetExcludes() []string {
 
 func (cs *LuetCompilationSpec) GetRetrieve() []string {
 	return cs.Retrieve
+}
+
+// IsVirtual returns true if the spec is virtual.
+// A spec is virtual if the package is empty, and it has no image source to unpack from.
+func (cs *LuetCompilationSpec) IsVirtual() bool {
+	return cs.EmptyPackage() && !cs.HasImageSource()
 }
 
 func (cs *LuetCompilationSpec) GetSeedImage() string {
@@ -199,8 +205,11 @@ func (cs *LuetCompilationSpec) UnpackedPackage() bool {
 	return unpack
 }
 
+// HasImageSource returns true when the compilation spec has an image source.
+// a compilation spec has an image source when it depends on other packages or have a source image
+// explictly supplied
 func (cs *LuetCompilationSpec) HasImageSource() bool {
-	return len(cs.GetPackage().GetRequires()) != 0 || cs.GetImage() != ""
+	return (cs.Package != nil && len(cs.GetPackage().GetRequires()) != 0) || cs.GetImage() != ""
 }
 
 func (cs *LuetCompilationSpec) CopyRetrieves(dest string) error {

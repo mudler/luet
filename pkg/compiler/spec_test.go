@@ -51,6 +51,26 @@ var _ = Describe("Spec", func() {
 			Expect(newSpec2.All()).To(Equal([]CompilationSpec{testSpec3}))
 
 		})
+		Context("virtuals", func() {
+			When("is empty", func() {
+				It("is virtual", func() {
+					spec := &LuetCompilationSpec{}
+					Expect(spec.IsVirtual()).To(BeTrue())
+				})
+			})
+			When("has defined steps", func() {
+				It("is not a virtual", func() {
+					spec := &LuetCompilationSpec{Steps: []string{"foo"}}
+					Expect(spec.IsVirtual()).To(BeFalse())
+				})
+			})
+			When("has defined image", func() {
+				It("is not a virtual", func() {
+					spec := &LuetCompilationSpec{Image: "foo"}
+					Expect(spec.IsVirtual()).To(BeFalse())
+				})
+			})
+		})
 	})
 
 	Context("Simple package build definition", func() {

@@ -186,6 +186,7 @@ type CompilationSpec interface {
 	EmptyPackage() bool
 	UnpackedPackage() bool
 	HasImageSource() bool
+	IsVirtual() bool
 }
 
 type CompilationSpecs interface {
