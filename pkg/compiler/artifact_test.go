@@ -203,6 +203,44 @@ RUN echo bar > /test2`))
 			Expect(content).To(Equal(testString))
 		})
 
+		It("Generates empty packages images", func() {
+			b := NewSimpleDockerBackend()
+			imageprefix := "foo/"
+
+			tmpdir, err := ioutil.TempDir(os.TempDir(), "artifact")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			tmpWork, err := ioutil.TempDir(os.TempDir(), "artifact2")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpWork) // clean up
+
+			artifact := NewPackageArtifact(filepath.Join(tmpWork, "fake.tar"))
+			artifact.SetCompileSpec(&LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Version: "1.0"}})
+
+			err = artifact.Compress(tmpdir, 1)
+			Expect(err).ToNot(HaveOccurred())
+			resultingImage := imageprefix + "foo--1.0"
+			opts, err := artifact.GenerateFinalImage(resultingImage, b, false)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(opts.ImageName).To(Equal(resultingImage))
+
+			Expect(b.ImageExists(resultingImage)).To(BeTrue())
+
+			result, err := ioutil.TempDir(os.TempDir(), "result")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(result) // clean up
+
+			err = b.ExtractRootfs(CompilerBackendOptions{ImageName: resultingImage, Destination: result}, false)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(helpers.DirectoryIsEmpty(result)).To(BeFalse())
+			content, err := ioutil.ReadFile(filepath.Join(result, ".virtual"))
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(string(content)).To(Equal(""))
+		})
+
 		It("Retrieves uncompressed name", func() {
 			a := NewPackageArtifact("foo.tar.gz")
 			a.SetCompressionType(compiler.GZip)

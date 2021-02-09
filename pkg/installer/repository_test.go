@@ -315,5 +315,82 @@ urls:
 			Expect(a.Unpack(extracted, false)).ToNot(HaveOccurred())
 			Expect(helpers.Read(filepath.Join(extracted, "test6"))).To(Equal("artifact6\n"))
 		})
+
+		It("generates images of virtual packages", func() {
+			b := backend.NewSimpleDockerBackend()
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err = generalRecipe.Load("../../tests/fixtures/virtuals")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(5))
+
+			localcompiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+
+			spec, err := localcompiler.FromPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.99"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err = ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			spec.SetOutputPath(tmpdir)
+			localcompiler.SetConcurrency(1)
+
+			artifact, err := localcompiler.Compile(false, spec)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+
+			repo, err := dockerStubRepo(tmpdir, "../../tests/fixtures/virtuals", repoImage, true, true)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(repo.GetName()).To(Equal("test"))
+			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
+			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
+			err = repo.Write(repoImage, false, true)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", repoImage, "tree.tar.gz"))).To(BeTrue())
+			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", repoImage, "repository.meta.yaml.tar"))).To(BeTrue())
+			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", repoImage, "repository.yaml"))).To(BeTrue())
+			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", repoImage, "a-test-1.99"))).To(BeTrue())
+
+			extracted, err := ioutil.TempDir("", "extracted")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(extracted) // clean up
+
+			c := repo.Client()
+
+			f, err := c.DownloadFile("repository.yaml")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(helpers.Read(f)).To(ContainSubstring("name: test"))
+
+			a, err := c.DownloadArtifact(&compiler.PackageArtifact{
+				Path: "test.tar",
+				CompileSpec: &compiler.LuetCompilationSpec{
+					Package: &pkg.DefaultPackage{
+						Name:     "a",
+						Category: "test",
+						Version:  "1.99",
+					},
+				},
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(a.Unpack(extracted, false)).ToNot(HaveOccurred())
+
+			Expect(helpers.DirectoryIsEmpty(extracted)).To(BeFalse())
+			content, err := ioutil.ReadFile(filepath.Join(extracted, ".virtual"))
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(string(content)).To(Equal(""))
+		})
 	})
 })

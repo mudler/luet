@@ -290,13 +290,25 @@ func (a *PackageArtifact) GenerateFinalImage(imageName string, b CompilerBackend
 		return builderOpts, errors.Wrap(err, "error met while creating tempdir for "+a.Path)
 	}
 
+	if err := a.Unpack(uncompressedFiles, keepPerms); err != nil {
+		return builderOpts, errors.Wrap(err, "error met while uncompressing artifact "+a.Path)
+	}
+
+	empty, err := helpers.DirectoryIsEmpty(uncompressedFiles)
+	if err != nil {
+		return builderOpts, errors.Wrap(err, "error met while checking if directory is empty "+uncompressedFiles)
+	}
+
+	// See https://github.com/moby/moby/issues/38039.
+	// We can't generate FROM scratch empty images. Docker will refuse to export them
+	// workaround: Inject a .virtual empty file
+	if empty {
+		helpers.Touch(filepath.Join(uncompressedFiles, ".virtual"))
+	}
+
 	data := a.genDockerfile()
 	if err := ioutil.WriteFile(dockerFile, []byte(data), 0644); err != nil {
 		return builderOpts, errors.Wrap(err, "error met while rendering artifact dockerfile "+a.Path)
-	}
-
-	if err := a.Unpack(uncompressedFiles, keepPerms); err != nil {
-		return builderOpts, errors.Wrap(err, "error met while uncompressing artifact "+a.Path)
 	}
 
 	builderOpts = CompilerBackendOptions{
