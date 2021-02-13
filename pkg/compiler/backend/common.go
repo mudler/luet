@@ -21,7 +21,6 @@ import (
 
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
-	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/pkg/errors"
@@ -53,11 +52,6 @@ func runCommand(cmd *exec.Cmd) (string, error) {
 	ans := ""
 	writer := NewBackendWriter(!config.LuetCfg.GetGeneral().ShowBuildOutput)
 
-	if config.LuetCfg.GetGeneral().ShowBuildOutput {
-		// We have realtime output from command. Quiet spinner.
-		SpinnerStop()
-	}
-
 	cmd.Stdout = writer
 	cmd.Stderr = writer
 
@@ -82,9 +76,7 @@ func runCommand(cmd *exec.Cmd) (string, error) {
 		return "", errors.Wrap(err, errMsg)
 	}
 
-	if config.LuetCfg.GetGeneral().ShowBuildOutput {
-		Spinner(22)
-	} else {
+	if !config.LuetCfg.GetGeneral().ShowBuildOutput {
 		ans = writer.GetCombinedOutput()
 	}
 

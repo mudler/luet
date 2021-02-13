@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/pkg/errors"
@@ -46,6 +47,12 @@ func (*SimpleImg) BuildImage(opts compiler.CompilerBackendOptions) error {
 	buildarg := []string{"build", "-f", dockerfileName, "-t", name, context}
 
 	Info(":tea: Building image " + name)
+
+	if !config.LuetCfg.GetGeneral().ShowBuildOutput {
+		Spinner(22)
+		defer SpinnerStop()
+	}
+
 	cmd := exec.Command("img", buildarg...)
 	cmd.Dir = path
 	_, err := runCommand(cmd)
@@ -73,11 +80,13 @@ func (*SimpleImg) RemoveImage(opts compiler.CompilerBackendOptions) error {
 }
 
 func (*SimpleImg) DownloadImage(opts compiler.CompilerBackendOptions) error {
-
 	name := opts.ImageName
 	buildarg := []string{"pull", name}
-
 	Debug(":tea: Downloading image " + name)
+
+	Spinner(22)
+	defer SpinnerStop()
+
 	cmd := exec.Command("img", buildarg...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -138,6 +147,10 @@ func (*SimpleImg) ExportImage(opts compiler.CompilerBackendOptions) error {
 	path := opts.Destination
 	buildarg := []string{"save", "-o", path, name}
 	Debug(":tea: Saving image " + name)
+
+	Spinner(22)
+	defer SpinnerStop()
+
 	out, err := exec.Command("img", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed exporting image: "+string(out))
@@ -158,8 +171,13 @@ func (s *SimpleImg) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerm
 	}
 
 	os.RemoveAll(path)
+
 	buildarg := []string{"unpack", "-o", path, name}
 	Debug(":tea: Extracting image " + name)
+
+	Spinner(22)
+	defer SpinnerStop()
+
 	out, err := exec.Command("img", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed extracting image: "+string(out))
