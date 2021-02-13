@@ -148,8 +148,6 @@ func (cs *LuetCompiler) CompileWithReverseDeps(keepPermissions bool, ps Compilat
 }
 
 func (cs *LuetCompiler) CompileParallel(keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error) {
-	Spinner(22)
-	defer SpinnerStop()
 	all := make(chan CompilationSpec)
 	artifacts := []Artifact{}
 	mutex := &sync.Mutex{}

@@ -83,6 +83,8 @@ Build packages specifying multiple definition trees:
 		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
 		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
 		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
+		LuetCfg.Viper.BindPFlag("general.show_build_output", cmd.Flags().Lookup("live-output"))
+
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -154,6 +156,8 @@ Build packages specifying multiple definition trees:
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
 		LuetCfg.GetSolverOptions().Discount = float32(discount)
 		LuetCfg.GetSolverOptions().MaxAttempts = attempts
+
+		LuetCfg.GetGeneral().ShowBuildOutput = LuetCfg.Viper.GetBool("general.show_build_output")
 
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 
@@ -317,6 +321,7 @@ func init() {
 	buildCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	buildCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	buildCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
+	buildCmd.Flags().Bool("live-output", LuetCfg.GetGeneral().ShowBuildOutput, "Enable live output of the build phase.")
 
 	buildCmd.Flags().Bool("pretend", false, "Just print what packages will be compiled")
 

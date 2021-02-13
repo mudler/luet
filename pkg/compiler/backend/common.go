@@ -16,8 +16,14 @@
 package backend
 
 import (
-	"github.com/google/go-containerregistry/pkg/crane"
+	"fmt"
+	"os/exec"
+
 	"github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/config"
+
+	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -40,4 +46,39 @@ func NewBackend(s string) compiler.CompilerBackend {
 		compilerBackend = NewSimpleDockerBackend()
 	}
 	return compilerBackend
+}
+
+func runCommand(cmd *exec.Cmd) (string, error) {
+	ans := ""
+	writer := NewBackendWriter(!config.LuetCfg.GetGeneral().ShowBuildOutput)
+
+	cmd.Stdout = writer
+	cmd.Stderr = writer
+
+	err := cmd.Start()
+	if err != nil {
+		return "", errors.Wrap(err, "Failed starting build")
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		return "", errors.Wrap(err, "Failed waiting for building command")
+	}
+
+	res := cmd.ProcessState.ExitCode()
+	if res != 0 {
+		errMsg := fmt.Sprintf("Failed building image (exiting with %d)", res)
+		if !config.LuetCfg.GetGeneral().ShowBuildOutput {
+			errMsg = fmt.Sprintf("Failed building image (exiting with %d): %s",
+				res, writer.GetCombinedOutput())
+		}
+
+		return "", errors.Wrap(err, errMsg)
+	}
+
+	if !config.LuetCfg.GetGeneral().ShowBuildOutput {
+		ans = writer.GetCombinedOutput()
+	}
+
+	return ans, nil
 }

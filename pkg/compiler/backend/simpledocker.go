@@ -53,18 +53,30 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	}
 	buildarg := []string{"build", "-f", dockerfileName, "-t", name, context}
 
+	if !config.LuetCfg.GetGeneral().ShowBuildOutput {
+		Spinner(22)
+		defer SpinnerStop()
+	}
+
 	Info(":whale2: Building image " + name)
 	cmd := exec.Command("docker", buildarg...)
 	cmd.Dir = path
-	out, err := cmd.CombinedOutput()
+	_, err := runCommand(cmd)
 	if err != nil {
-		return errors.Wrap(err, "Failed building image: "+string(out))
+		return err
 	}
+
+	if !config.LuetCfg.GetGeneral().ShowBuildOutput {
+		SpinnerStop()
+	}
+
 	Info(":whale: Building image " + name + " done")
 
 	if os.Getenv("DOCKER_SQUASH") == "true" {
 		Info(":whale: Squashing image " + name)
 		var client *docker.Client
+
+		Spinner(22)
 
 		client, err = docker.NewClientFromEnv()
 		if err != nil {
@@ -74,13 +86,8 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 		if err != nil {
 			return errors.Wrap(err, "Failed squashing image")
 		}
-		Info(":whale: Squashing image " + name + " done")
-	}
 
-	if config.LuetCfg.GetGeneral().ShowBuildOutput {
-		Info(string(out))
-	} else {
-		Debug(string(out))
+		Info(":whale: Squashing image " + name + " done")
 	}
 
 	return nil
@@ -101,11 +108,16 @@ func (*SimpleDocker) DownloadImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	buildarg := []string{"pull", name}
 	Debug(":whale: Downloading image " + name)
+
+	Spinner(22)
+	defer SpinnerStop()
+
 	cmd := exec.Command("docker", buildarg...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed pulling image: "+string(out))
 	}
+
 	Info(":whale: Downloaded image:", name)
 	return nil
 }
@@ -142,6 +154,10 @@ func (*SimpleDocker) RemoveImage(opts compiler.CompilerBackendOptions) error {
 func (*SimpleDocker) Push(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
 	pusharg := []string{"push", name}
+
+	Spinner(22)
+	defer SpinnerStop()
+
 	out, err := exec.Command("docker", pusharg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed pushing image: "+string(out))
@@ -170,6 +186,10 @@ func (*SimpleDocker) ExportImage(opts compiler.CompilerBackendOptions) error {
 
 	buildarg := []string{"save", name, "-o", path}
 	Debug(":whale: Saving image " + name)
+
+	Spinner(22)
+	defer SpinnerStop()
+
 	out, err := exec.Command("docker", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed exporting image: "+string(out))
@@ -194,9 +214,15 @@ func (b *SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepP
 	defer os.RemoveAll(tempexport) // clean up
 
 	imageExport := filepath.Join(tempexport, "image.tar")
+
+	Spinner(22)
+	defer SpinnerStop()
+
 	if err := b.ExportImage(compiler.CompilerBackendOptions{ImageName: name, Destination: imageExport}); err != nil {
 		return errors.Wrap(err, "failed while extracting rootfs for "+name)
 	}
+
+	SpinnerStop()
 
 	src := imageExport
 
