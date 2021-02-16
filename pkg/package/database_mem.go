@@ -32,6 +32,7 @@ var DBInMemoryInstance = &InMemoryDatabase{
 	CacheNoVersion:   map[string]map[string]interface{}{},
 	ProvidesDatabase: map[string]map[string]Package{},
 	RevDepsDatabase:  map[string]map[string]Package{},
+	cached:           map[string]interface{}{},
 }
 
 type InMemoryDatabase struct {
