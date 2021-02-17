@@ -49,7 +49,7 @@ github.com/asdine/storm/codec/json
 github.com/asdine/storm/index
 github.com/asdine/storm/internal
 github.com/asdine/storm/q
-# github.com/briandowns/spinner v1.7.0
+# github.com/briandowns/spinner v1.12.1-0.20201220203425-e201aaea0a31
 ## explicit
 github.com/briandowns/spinner
 # github.com/cavaliercoder/grab v1.0.1-0.20201108051000-98a5bfe305ec
