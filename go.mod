@@ -7,7 +7,7 @@ require (
 	github.com/Sabayon/pkgs-checker v0.7.2
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
-	github.com/briandowns/spinner v1.7.0
+	github.com/briandowns/spinner v1.12.1-0.20201220203425-e201aaea0a31
 	github.com/cavaliercoder/grab v1.0.1-0.20201108051000-98a5bfe305ec
 	github.com/containerd/containerd v1.4.1-0.20201117152358-0edc412565dc
 	github.com/crillab/gophersat v1.3.2-0.20201023142334-3fc2ac466765

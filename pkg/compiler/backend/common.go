@@ -21,6 +21,7 @@ import (
 
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
+	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/pkg/errors"
@@ -49,8 +50,14 @@ func NewBackend(s string) compiler.CompilerBackend {
 }
 
 func runCommand(cmd *exec.Cmd) (string, error) {
+	buffered := !config.LuetCfg.GetGeneral().ShowBuildOutput
+	if buffered {
+		Spinner(22)
+		defer SpinnerStop()
+	}
+
 	ans := ""
-	writer := NewBackendWriter(!config.LuetCfg.GetGeneral().ShowBuildOutput)
+	writer := NewBackendWriter(buffered)
 
 	cmd.Stdout = writer
 	cmd.Stderr = writer
@@ -68,7 +75,7 @@ func runCommand(cmd *exec.Cmd) (string, error) {
 	res := cmd.ProcessState.ExitCode()
 	if res != 0 {
 		errMsg := fmt.Sprintf("Failed building image (exiting with %d)", res)
-		if !config.LuetCfg.GetGeneral().ShowBuildOutput {
+		if buffered {
 			errMsg = fmt.Sprintf("Failed building image (exiting with %d): %s",
 				res, writer.GetCombinedOutput())
 		}
@@ -76,7 +83,7 @@ func runCommand(cmd *exec.Cmd) (string, error) {
 		return "", errors.Wrap(err, errMsg)
 	}
 
-	if !config.LuetCfg.GetGeneral().ShowBuildOutput {
+	if buffered {
 		ans = writer.GetCombinedOutput()
 	}
 

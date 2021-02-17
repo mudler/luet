@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"sync"
 	. "github.com/mudler/luet/pkg/config"
 
 	"github.com/briandowns/spinner"
@@ -20,7 +21,7 @@ import (
 var s *spinner.Spinner = nil
 var z *zap.Logger = nil
 var aurora Aurora = nil
-
+var spinnerLock = sync.Mutex{}
 func NewSpinner() {
 	if s == nil {
 		s = spinner.New(
@@ -84,6 +85,8 @@ func ZapLogger() error {
 }
 
 func Spinner(i int) {
+	spinnerLock.Lock()
+	defer spinnerLock.Unlock()
 	var confLevel int
 	if LuetCfg.GetGeneral().Debug {
 		confLevel = 3
@@ -120,6 +123,8 @@ func SpinnerText(suffix, prefix string) {
 }
 
 func SpinnerStop() {
+	spinnerLock.Lock()
+	defer spinnerLock.Unlock()
 	var confLevel int
 	if LuetCfg.GetGeneral().Debug {
 		confLevel = 3

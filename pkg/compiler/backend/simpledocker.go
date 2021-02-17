@@ -53,21 +53,12 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	}
 	buildarg := []string{"build", "-f", dockerfileName, "-t", name, context}
 
-	if !config.LuetCfg.GetGeneral().ShowBuildOutput {
-		Spinner(22)
-		defer SpinnerStop()
-	}
-
 	Info(":whale2: Building image " + name)
 	cmd := exec.Command("docker", buildarg...)
 	cmd.Dir = path
 	_, err := runCommand(cmd)
 	if err != nil {
 		return err
-	}
-
-	if !config.LuetCfg.GetGeneral().ShowBuildOutput {
-		SpinnerStop()
 	}
 
 	Info(":whale: Building image " + name + " done")
@@ -77,7 +68,7 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 		var client *docker.Client
 
 		Spinner(22)
-
+		defer SpinnerStop()
 		client, err = docker.NewClientFromEnv()
 		if err != nil {
 			return errors.Wrap(err, "could not connect to the Docker daemon")

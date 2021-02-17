@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/mudler/luet/pkg/compiler"
-	"github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/pkg/errors"
@@ -47,11 +46,6 @@ func (*SimpleImg) BuildImage(opts compiler.CompilerBackendOptions) error {
 	buildarg := []string{"build", "-f", dockerfileName, "-t", name, context}
 
 	Info(":tea: Building image " + name)
-
-	if !config.LuetCfg.GetGeneral().ShowBuildOutput {
-		Spinner(22)
-		defer SpinnerStop()
-	}
 
 	cmd := exec.Command("img", buildarg...)
 	cmd.Dir = path
