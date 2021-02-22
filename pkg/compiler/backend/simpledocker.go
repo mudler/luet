@@ -56,7 +56,7 @@ func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	Info(":whale2: Building image " + name)
 	cmd := exec.Command("docker", buildarg...)
 	cmd.Dir = path
-	_, err := runCommand(cmd)
+	err := runCommand(cmd)
 	if err != nil {
 		return err
 	}

@@ -16,7 +16,6 @@
 package backend
 
 import (
-	"fmt"
 	"os/exec"
 
 	"github.com/mudler/luet/pkg/compiler"
@@ -49,43 +48,29 @@ func NewBackend(s string) compiler.CompilerBackend {
 	return compilerBackend
 }
 
-func runCommand(cmd *exec.Cmd) (string, error) {
+func runCommand(cmd *exec.Cmd) error {
+	output := ""
 	buffered := !config.LuetCfg.GetGeneral().ShowBuildOutput
-	if buffered {
-		Spinner(22)
-		defer SpinnerStop()
-	}
-
-	ans := ""
 	writer := NewBackendWriter(buffered)
 
 	cmd.Stdout = writer
 	cmd.Stderr = writer
 
+	if buffered {
+		Spinner(22)
+		defer SpinnerStop()
+	}
+
 	err := cmd.Start()
 	if err != nil {
-		return "", errors.Wrap(err, "Failed starting build")
+		return errors.Wrap(err, "Failed starting command")
 	}
 
 	err = cmd.Wait()
 	if err != nil {
-		return "", errors.Wrap(err, "Failed waiting for building command")
+		output = writer.GetCombinedOutput()
+		return errors.Wrapf(err, "Failed running command: %s", output)
 	}
 
-	res := cmd.ProcessState.ExitCode()
-	if res != 0 {
-		errMsg := fmt.Sprintf("Failed building image (exiting with %d)", res)
-		if buffered {
-			errMsg = fmt.Sprintf("Failed building image (exiting with %d): %s",
-				res, writer.GetCombinedOutput())
-		}
-
-		return "", errors.Wrap(err, errMsg)
-	}
-
-	if buffered {
-		ans = writer.GetCombinedOutput()
-	}
-
-	return ans, nil
+	return nil
 }

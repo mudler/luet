@@ -49,7 +49,7 @@ func (*SimpleImg) BuildImage(opts compiler.CompilerBackendOptions) error {
 
 	cmd := exec.Command("img", buildarg...)
 	cmd.Dir = path
-	_, err := runCommand(cmd)
+	err := runCommand(cmd)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,5 @@
 // Copyright © 2021 Daniele Rondina <geaaru@sabayonlinux.org>
+//                  Ettore Di Giacinto <mudler@sabayonlinux.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,21 +24,23 @@ import (
 
 type BackendWriter struct {
 	BufferedOutput bool
-	Buffer         bytes.Buffer
+	Buffer         *bytes.Buffer
 }
 
 func NewBackendWriter(buffered bool) *BackendWriter {
 	return &BackendWriter{
 		BufferedOutput: buffered,
+		Buffer:         &bytes.Buffer{},
 	}
 }
 
 func (b *BackendWriter) Write(p []byte) (int, error) {
 	if b.BufferedOutput {
 		return b.Buffer.Write(p)
-	} else {
-		Msg("info", false, false, (string(p)))
 	}
+
+	Msg("info", false, false, (string(p)))
+
 	return len(p), nil
 }
 
