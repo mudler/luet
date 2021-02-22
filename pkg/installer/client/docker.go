@@ -102,9 +102,9 @@ func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Ar
 		defer os.RemoveAll(temp)
 
 		for _, uri := range c.RepoData.Urls {
-			Debug("Downloading artifact", artifactName, "from", uri)
 
 			imageName := fmt.Sprintf("%s:%s", uri, artifact.GetCompileSpec().GetPackage().GetFingerPrint())
+			Info("Downloading image", imageName)
 
 			// imageName := fmt.Sprintf("%s/%s", uri, artifact.GetCompileSpec().GetPackage().GetPackageImageName())
 			err = downloadAndExtractDockerImage(imageName, temp)
