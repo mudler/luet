@@ -51,6 +51,7 @@ type LuetCompiler struct {
 	CompressionType           CompressionImplementation
 	Options                   CompilerOptions
 	SolverOptions             solver.Options
+	BackedArgs                []string
 }
 
 func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase, opt *CompilerOptions, solvopts solver.Options) Compiler {
@@ -70,7 +71,9 @@ func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase, opt *Compi
 		SolverOptions:   solvopts,
 	}
 }
-
+func (cs *LuetCompiler) SetBackendArgs(args []string) {
+	cs.BackedArgs = args
+}
 func (cs *LuetCompiler) SetConcurrency(i int) {
 	cs.Concurrency = i
 }
@@ -381,12 +384,14 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 		SourcePath:     buildDir,
 		DockerFileName: p.GetPackage().GetFingerPrint() + "-builder.dockerfile",
 		Destination:    p.Rel(p.GetPackage().GetFingerPrint() + "-builder.image.tar"),
+		BackendArgs:    cs.BackedArgs,
 	}
 	runnerOpts = CompilerBackendOptions{
 		ImageName:      packageImage,
 		SourcePath:     buildDir,
 		DockerFileName: p.GetPackage().GetFingerPrint() + ".dockerfile",
 		Destination:    p.Rel(p.GetPackage().GetFingerPrint() + ".image.tar"),
+		BackendArgs:    cs.BackedArgs,
 	}
 
 	buildAndPush := func(opts CompilerBackendOptions) error {

@@ -34,6 +34,8 @@ type Compiler interface {
 	FromDatabase(db pkg.PackageDatabase, minimum bool, dst string) ([]CompilationSpec, error)
 	SetBackend(CompilerBackend)
 	GetBackend() CompilerBackend
+
+	SetBackendArgs([]string)
 	SetCompressionType(t CompressionImplementation)
 }
 
@@ -43,6 +45,7 @@ type CompilerBackendOptions struct {
 	DockerFileName string
 	Destination    string
 	Context        string
+	BackendArgs    []string
 }
 
 type CompilerOptions struct {

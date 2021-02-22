@@ -35,20 +35,13 @@ func NewSimpleImgBackend() compiler.CompilerBackend {
 // TODO: Missing still: labels, and build args expansion
 func (*SimpleImg) BuildImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
-	path := opts.SourcePath
-	context := opts.Context
 
-	if context == "" {
-		context = "."
-	}
-	dockerfileName := opts.DockerFileName
-
-	buildarg := []string{"build", "-f", dockerfileName, "-t", name, context}
+	buildarg := genBuildCommand(opts)
 
 	Info(":tea: Building image " + name)
 
 	cmd := exec.Command("img", buildarg...)
-	cmd.Dir = path
+	cmd.Dir = opts.SourcePath
 	err := runCommand(cmd)
 	if err != nil {
 		return err

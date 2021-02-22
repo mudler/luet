@@ -74,3 +74,13 @@ func runCommand(cmd *exec.Cmd) error {
 
 	return nil
 }
+
+func genBuildCommand(opts compiler.CompilerBackendOptions) []string {
+	context := opts.Context
+
+	if context == "" {
+		context = "."
+	}
+	buildarg := append(opts.BackendArgs, "-f", opts.DockerFileName, "-t", opts.ImageName, context)
+	return append([]string{"build"}, buildarg...)
+}

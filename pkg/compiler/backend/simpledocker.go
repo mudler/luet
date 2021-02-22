@@ -44,18 +44,11 @@ func NewSimpleDockerBackend() compiler.CompilerBackend {
 // TODO: Missing still: labels, and build args expansion
 func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
-	path := opts.SourcePath
-	dockerfileName := opts.DockerFileName
-	context := opts.Context
 
-	if context == "" {
-		context = "."
-	}
-	buildarg := []string{"build", "-f", dockerfileName, "-t", name, context}
-
+	buildarg := genBuildCommand(opts)
 	Info(":whale2: Building image " + name)
 	cmd := exec.Command("docker", buildarg...)
-	cmd.Dir = path
+	cmd.Dir = opts.SourcePath
 	err := runCommand(cmd)
 	if err != nil {
 		return err
