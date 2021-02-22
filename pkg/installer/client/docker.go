@@ -71,6 +71,10 @@ func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Ar
 	//var u *url.URL = nil
 	var err error
 	var temp string
+
+	Spinner(22)
+	defer SpinnerStop()
+
 	var resultingArtifact compiler.Artifact
 	artifactName := path.Base(artifact.GetPath())
 	cacheFile := filepath.Join(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), artifactName)
