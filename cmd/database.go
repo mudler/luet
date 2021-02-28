@@ -36,6 +36,7 @@ func init() {
 
 	databaseGroupCmd.AddCommand(
 		NewDatabaseCreateCommand(),
+		NewDatabaseGetCommand(),
 		NewDatabaseRemoveCommand(),
 	)
 }
