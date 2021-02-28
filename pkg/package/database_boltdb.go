@@ -436,9 +436,9 @@ func (db *BoltDatabase) FindPackageLabel(labelKey string) (Packages, error) {
 func (db *BoltDatabase) FindPackageLabelMatch(pattern string) (Packages, error) {
 	var ans []Package
 
-	re := regexp.MustCompile(pattern)
-	if re == nil {
-		return nil, errors.New("Invalid regex " + pattern + "!")
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, errors.Wrap(err, "Invalid regex "+pattern+"!")
 	}
 
 	for _, pack := range db.World() {
@@ -450,12 +450,15 @@ func (db *BoltDatabase) FindPackageLabelMatch(pattern string) (Packages, error) 
 	return Packages(ans), nil
 }
 
+func (db *BoltDatabase) FindPackageByFile(pattern string) (Packages, error) {
+	return findPackageByFile(db, pattern)
+}
 func (db *BoltDatabase) FindPackageMatch(pattern string) (Packages, error) {
 	var ans []Package
 
-	re := regexp.MustCompile(pattern)
-	if re == nil {
-		return nil, errors.New("Invalid regex " + pattern + "!")
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, errors.Wrap(err, "Invalid regex "+pattern+"!")
 	}
 
 	for _, pack := range db.World() {

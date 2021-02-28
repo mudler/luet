@@ -560,3 +560,7 @@ func (db *InMemoryDatabase) FindPackageMatch(pattern string) (Packages, error) {
 
 	return Packages(ans), nil
 }
+
+func (db *InMemoryDatabase) FindPackageByFile(pattern string) (Packages, error) {
+	return findPackageByFile(db, pattern)
+}

@@ -52,6 +52,7 @@ type PackageSet interface {
 	FindPackageLabel(labelKey string) (Packages, error)
 	FindPackageLabelMatch(pattern string) (Packages, error)
 	FindPackageMatch(pattern string) (Packages, error)
+	FindPackageByFile(pattern string) (Packages, error)
 }
 
 type PackageFile struct {

@@ -21,6 +21,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -86,17 +87,17 @@ type LuetSystemRepositoryMetadata struct {
 	Index []*compiler.PackageArtifact `json:"index,omitempty"`
 }
 
-type LuetSearchModeType string
+type LuetSearchModeType int
 
 const (
-	SLabel      LuetSearchModeType = "label"
-	SRegexPkg   LuetSearchModeType = "regexPkg"
-	SRegexLabel LuetSearchModeType = "regexLabel"
+	SLabel      = iota
+	SRegexPkg   = iota
+	SRegexLabel = iota
+	FileSearch  = iota
 )
 
 type LuetSearchOpts struct {
-	Pattern string
-	Mode    LuetSearchModeType
+	Mode LuetSearchModeType
 }
 
 func NewLuetSystemRepositoryMetadata(file string, removeFile bool) (*LuetSystemRepositoryMetadata, error) {
@@ -404,6 +405,25 @@ func buildPackageIndex(path string, db pkg.PackageDatabase) ([]compiler.Artifact
 
 func (r *LuetSystemRepository) SetPriority(n int) {
 	r.LuetRepository.Priority = n
+}
+
+// FileSearch search a pattern among the artifacts in a repository
+func (r *LuetSystemRepository) FileSearch(pattern string) (pkg.Packages, error) {
+	var matches pkg.Packages
+	reg, err := regexp.Compile(pattern)
+	if err != nil {
+		return matches, err
+	}
+ARTIFACT:
+	for _, a := range r.GetIndex() {
+		for _, f := range a.GetFiles() {
+			if reg.MatchString(f) {
+				matches = append(matches, a.GetCompileSpec().GetPackage())
+				continue ARTIFACT
+			}
+		}
+	}
+	return matches, nil
 }
 
 func (r *LuetSystemRepository) GetName() string {
@@ -881,6 +901,16 @@ func (r *LuetSystemRepository) Client() Client {
 	return nil
 }
 
+func (r *LuetSystemRepository) SearchArtefact(p pkg.Package) (compiler.Artifact, error) {
+	for _, a := range r.GetIndex() {
+		if a.GetCompileSpec().GetPackage().Matches(p) {
+			return a, nil
+		}
+	}
+
+	return nil, errors.New("Not found")
+}
+
 func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	var repoUpdated bool = false
 	var treefs, metafs string
@@ -1129,8 +1159,9 @@ func (r Repositories) SyncDatabase(d pkg.PackageDatabase) {
 }
 
 type PackageMatch struct {
-	Repo    Repository
-	Package pkg.Package
+	Repo     Repository
+	Artifact compiler.Artifact
+	Package  pkg.Package
 }
 
 func (re Repositories) PackageMatches(p pkg.Packages) []PackageMatch {
@@ -1182,7 +1213,7 @@ PACKAGE:
 
 }
 
-func (re Repositories) SearchPackages(p string, o LuetSearchOpts) []PackageMatch {
+func (re Repositories) SearchPackages(p string, t LuetSearchModeType) []PackageMatch {
 	sort.Sort(re)
 	var matches []PackageMatch
 	var err error
@@ -1190,18 +1221,21 @@ func (re Repositories) SearchPackages(p string, o LuetSearchOpts) []PackageMatch
 	for _, r := range re {
 		var repoMatches pkg.Packages
 
-		switch o.Mode {
+		switch t {
 		case SRegexPkg:
 			repoMatches, err = r.GetTree().GetDatabase().FindPackageMatch(p)
 		case SLabel:
 			repoMatches, err = r.GetTree().GetDatabase().FindPackageLabel(p)
 		case SRegexLabel:
 			repoMatches, err = r.GetTree().GetDatabase().FindPackageLabelMatch(p)
+		case FileSearch:
+			repoMatches, err = r.FileSearch(p)
 		}
 
 		if err == nil && len(repoMatches) > 0 {
 			for _, pack := range repoMatches {
-				matches = append(matches, PackageMatch{Package: pack, Repo: r})
+				a, _ := r.SearchArtefact(pack)
+				matches = append(matches, PackageMatch{Package: pack, Repo: r, Artifact: a})
 			}
 		}
 	}
@@ -1210,13 +1244,13 @@ func (re Repositories) SearchPackages(p string, o LuetSearchOpts) []PackageMatch
 }
 
 func (re Repositories) SearchLabelMatch(s string) []PackageMatch {
-	return re.SearchPackages(s, LuetSearchOpts{Pattern: s, Mode: SRegexLabel})
+	return re.SearchPackages(s, SRegexLabel)
 }
 
 func (re Repositories) SearchLabel(s string) []PackageMatch {
-	return re.SearchPackages(s, LuetSearchOpts{Pattern: s, Mode: SLabel})
+	return re.SearchPackages(s, SLabel)
 }
 
 func (re Repositories) Search(s string) []PackageMatch {
-	return re.SearchPackages(s, LuetSearchOpts{Pattern: s, Mode: SRegexPkg})
+	return re.SearchPackages(s, SRegexPkg)
 }

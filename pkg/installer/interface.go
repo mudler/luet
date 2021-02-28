@@ -74,4 +74,6 @@ type Repository interface {
 	Serialize() (*LuetSystemRepositoryMetadata, LuetSystemRepositorySerialized)
 	GetBackend() compiler.CompilerBackend
 	SetBackend(b compiler.CompilerBackend)
+	FileSearch(pattern string) (pkg.Packages, error)
+	SearchArtefact(p pkg.Package) (compiler.Artifact, error)
 }

@@ -15,7 +15,11 @@
 
 package pkg
 
-import "github.com/pkg/errors"
+import (
+	"regexp"
+
+	"github.com/pkg/errors"
+)
 
 func clone(src, dst PackageDatabase) error {
 	for _, i := range src.World() {
@@ -35,4 +39,30 @@ func copy(src PackageDatabase) (PackageDatabase, error) {
 	}
 
 	return dst, nil
+}
+
+func findPackageByFile(db PackageDatabase, pattern string) (Packages, error) {
+
+	var ans []Package
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, errors.Wrap(err, "Invalid regex "+pattern+"!")
+	}
+
+PACKAGE:
+	for _, pack := range db.World() {
+		files, err := db.GetPackageFiles(pack)
+		if err == nil {
+			for _, f := range files {
+				if re.MatchString(f) {
+					ans = append(ans, pack)
+					continue PACKAGE
+				}
+			}
+		}
+	}
+
+	return Packages(ans), nil
+
 }

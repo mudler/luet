@@ -30,12 +30,13 @@ import (
 )
 
 type PackageResult struct {
-	Name       string `json:"name"`
-	Category   string `json:"category"`
-	Version    string `json:"version"`
-	Repository string `json:"repository"`
-	Target     string `json:"target"`
-	Hidden     bool   `json:"hidden"`
+	Name       string   `json:"name"`
+	Category   string   `json:"category"`
+	Version    string   `json:"version"`
+	Repository string   `json:"repository"`
+	Target     string   `json:"target"`
+	Hidden     bool     `json:"hidden"`
+	Files      []string `json:"files"`
 }
 
 type Results struct {
@@ -62,6 +63,205 @@ func packageToList(l list.Writer, repo string, p pkg.Package) {
 	l.AppendItem(fmt.Sprintf("Repository: %s ", repo))
 	l.AppendItem(fmt.Sprintf("Uri: %s ", strings.Join(p.GetURI(), "\n")))
 	l.UnIndent()
+}
+
+func searchLocally(term string, l list.Writer, t table.Writer, label, labelMatch, revdeps, hidden bool) Results {
+	var results Results
+
+	system := &installer.System{Database: LuetCfg.GetSystemDB(), Target: LuetCfg.GetSystem().Rootfs}
+
+	var err error
+	iMatches := pkg.Packages{}
+	if label {
+		iMatches, err = system.Database.FindPackageLabel(term)
+	} else if labelMatch {
+		iMatches, err = system.Database.FindPackageLabelMatch(term)
+	} else {
+		iMatches, err = system.Database.FindPackageMatch(term)
+	}
+
+	if err != nil {
+		Fatal("Error: " + err.Error())
+	}
+
+	for _, pack := range iMatches {
+		if !revdeps {
+			if !pack.IsHidden() || pack.IsHidden() && hidden {
+
+				t.AppendRow(packageToRow("system", pack))
+				packageToList(l, "system", pack)
+				f, _ := system.Database.GetPackageFiles(pack)
+				results.Packages = append(results.Packages,
+					PackageResult{
+						Name:       pack.GetName(),
+						Version:    pack.GetVersion(),
+						Category:   pack.GetCategory(),
+						Repository: "system",
+						Hidden:     pack.IsHidden(),
+						Files:      f,
+					})
+			}
+		} else {
+
+			packs, _ := system.Database.GetRevdeps(pack)
+			for _, revdep := range packs {
+				if !revdep.IsHidden() || revdep.IsHidden() && hidden {
+					t.AppendRow(packageToRow("system", pack))
+					packageToList(l, "system", pack)
+					f, _ := system.Database.GetPackageFiles(revdep)
+					results.Packages = append(results.Packages,
+						PackageResult{
+							Name:       revdep.GetName(),
+							Version:    revdep.GetVersion(),
+							Category:   revdep.GetCategory(),
+							Repository: "system",
+							Hidden:     revdep.IsHidden(),
+							Files:      f,
+						})
+				}
+			}
+		}
+	}
+	return results
+
+}
+func searchOnline(term string, l list.Writer, t table.Writer, label, labelMatch, revdeps, hidden bool) Results {
+	var results Results
+
+	repos := installer.Repositories{}
+	for _, repo := range LuetCfg.SystemRepositories {
+		if !repo.Enable {
+			continue
+		}
+		r := installer.NewSystemRepository(repo)
+		repos = append(repos, r)
+	}
+
+	inst := installer.NewLuetInstaller(
+		installer.LuetInstallerOptions{
+			Concurrency:   LuetCfg.GetGeneral().Concurrency,
+			SolverOptions: *LuetCfg.GetSolverOptions(),
+		},
+	)
+	inst.Repositories(repos)
+	synced, err := inst.SyncRepositories(false)
+	if err != nil {
+		Fatal("Error: " + err.Error())
+	}
+
+	Info("--- Search results (" + term + "): ---")
+
+	matches := []installer.PackageMatch{}
+	if label {
+		matches = synced.SearchLabel(term)
+	} else if labelMatch {
+		matches = synced.SearchLabelMatch(term)
+	} else {
+		matches = synced.Search(term)
+	}
+	for _, m := range matches {
+		if !revdeps {
+			if !m.Package.IsHidden() || m.Package.IsHidden() && hidden {
+				t.AppendRow(packageToRow(m.Repo.GetName(), m.Package))
+				packageToList(l, m.Repo.GetName(), m.Package)
+				results.Packages = append(results.Packages,
+					PackageResult{
+						Name:       m.Package.GetName(),
+						Version:    m.Package.GetVersion(),
+						Category:   m.Package.GetCategory(),
+						Repository: m.Repo.GetName(),
+						Hidden:     m.Package.IsHidden(),
+						Files:      m.Artifact.GetFiles(),
+					})
+			}
+		} else {
+			packs, _ := m.Repo.GetTree().GetDatabase().GetRevdeps(m.Package)
+			for _, revdep := range packs {
+				if !revdep.IsHidden() || revdep.IsHidden() && hidden {
+					t.AppendRow(packageToRow(m.Repo.GetName(), revdep))
+					packageToList(l, m.Repo.GetName(), revdep)
+					results.Packages = append(results.Packages,
+						PackageResult{
+							Name:       revdep.GetName(),
+							Version:    revdep.GetVersion(),
+							Category:   revdep.GetCategory(),
+							Repository: m.Repo.GetName(),
+							Hidden:     revdep.IsHidden(),
+							Files:      m.Artifact.GetFiles(),
+						})
+				}
+			}
+		}
+	}
+	return results
+}
+func searchLocalFiles(term string, l list.Writer, t table.Writer) Results {
+	var results Results
+	Info("--- Search results (" + term + "): ---")
+
+	matches, _ := LuetCfg.GetSystemDB().FindPackageByFile(term)
+	for _, pack := range matches {
+		t.AppendRow(packageToRow("system", pack))
+		packageToList(l, "system", pack)
+		f, _ := LuetCfg.GetSystemDB().GetPackageFiles(pack)
+		results.Packages = append(results.Packages,
+			PackageResult{
+				Name:       pack.GetName(),
+				Version:    pack.GetVersion(),
+				Category:   pack.GetCategory(),
+				Repository: "system",
+				Hidden:     pack.IsHidden(),
+				Files:      f,
+			})
+	}
+
+	return results
+}
+
+func searchFiles(term string, l list.Writer, t table.Writer) Results {
+	var results Results
+
+	repos := installer.Repositories{}
+	for _, repo := range LuetCfg.SystemRepositories {
+		if !repo.Enable {
+			continue
+		}
+		r := installer.NewSystemRepository(repo)
+		repos = append(repos, r)
+	}
+
+	inst := installer.NewLuetInstaller(
+		installer.LuetInstallerOptions{
+			Concurrency:   LuetCfg.GetGeneral().Concurrency,
+			SolverOptions: *LuetCfg.GetSolverOptions(),
+		},
+	)
+	inst.Repositories(repos)
+	synced, err := inst.SyncRepositories(false)
+	if err != nil {
+		Fatal("Error: " + err.Error())
+	}
+
+	Info("--- Search results (" + term + "): ---")
+
+	matches := []installer.PackageMatch{}
+
+	matches = synced.SearchPackages(term, installer.FileSearch)
+
+	for _, m := range matches {
+		t.AppendRow(packageToRow(m.Repo.GetName(), m.Package))
+		packageToList(l, m.Repo.GetName(), m.Package)
+		results.Packages = append(results.Packages,
+			PackageResult{
+				Name:       m.Package.GetName(),
+				Version:    m.Package.GetVersion(),
+				Category:   m.Package.GetCategory(),
+				Repository: m.Repo.GetName(),
+				Hidden:     m.Package.IsHidden(),
+				Files:      m.Artifact.GetFiles(),
+			})
+	}
+	return results
 }
 
 var searchCmd = &cobra.Command{
@@ -128,6 +328,7 @@ Search can also return results in the terminal in different ways: as terminal ou
 		searchWithLabelMatch, _ := cmd.Flags().GetBool("by-label-regex")
 		revdeps, _ := cmd.Flags().GetBool("revdeps")
 		tableMode, _ := cmd.Flags().GetBool("table")
+		files, _ := cmd.Flags().GetBool("files")
 
 		out, _ := cmd.Flags().GetString("output")
 		if out != "terminal" {
@@ -144,121 +345,15 @@ Search can also return results in the terminal in different ways: as terminal ou
 		t.AppendHeader(rows)
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 
-		if !installed {
-
-			repos := installer.Repositories{}
-			for _, repo := range LuetCfg.SystemRepositories {
-				if !repo.Enable {
-					continue
-				}
-				r := installer.NewSystemRepository(repo)
-				repos = append(repos, r)
-			}
-
-			inst := installer.NewLuetInstaller(
-				installer.LuetInstallerOptions{
-					Concurrency:   LuetCfg.GetGeneral().Concurrency,
-					SolverOptions: *LuetCfg.GetSolverOptions(),
-				},
-			)
-			inst.Repositories(repos)
-			synced, err := inst.SyncRepositories(false)
-			if err != nil {
-				Fatal("Error: " + err.Error())
-			}
-
-			Info("--- Search results (" + args[0] + "): ---")
-
-			matches := []installer.PackageMatch{}
-			if searchWithLabel {
-				matches = synced.SearchLabel(args[0])
-			} else if searchWithLabelMatch {
-				matches = synced.SearchLabelMatch(args[0])
-			} else {
-				matches = synced.Search(args[0])
-			}
-			for _, m := range matches {
-				if !revdeps {
-					if !m.Package.IsHidden() || m.Package.IsHidden() && hidden {
-						t.AppendRow(packageToRow(m.Repo.GetName(), m.Package))
-						packageToList(l, m.Repo.GetName(), m.Package)
-						results.Packages = append(results.Packages,
-							PackageResult{
-								Name:       m.Package.GetName(),
-								Version:    m.Package.GetVersion(),
-								Category:   m.Package.GetCategory(),
-								Repository: m.Repo.GetName(),
-								Hidden:     m.Package.IsHidden(),
-							})
-					}
-				} else {
-					packs, _ := m.Repo.GetTree().GetDatabase().GetRevdeps(m.Package)
-					for _, revdep := range packs {
-						if !revdep.IsHidden() || revdep.IsHidden() && hidden {
-							t.AppendRow(packageToRow(m.Repo.GetName(), revdep))
-							packageToList(l, m.Repo.GetName(), revdep)
-							results.Packages = append(results.Packages,
-								PackageResult{
-									Name:       revdep.GetName(),
-									Version:    revdep.GetVersion(),
-									Category:   revdep.GetCategory(),
-									Repository: m.Repo.GetName(),
-									Hidden:     revdep.IsHidden(),
-								})
-						}
-					}
-				}
-			}
-		} else {
-
-			system := &installer.System{Database: LuetCfg.GetSystemDB(), Target: LuetCfg.GetSystem().Rootfs}
-
-			var err error
-			iMatches := pkg.Packages{}
-			if searchWithLabel {
-				iMatches, err = system.Database.FindPackageLabel(args[0])
-			} else if searchWithLabelMatch {
-				iMatches, err = system.Database.FindPackageLabelMatch(args[0])
-			} else {
-				iMatches, err = system.Database.FindPackageMatch(args[0])
-			}
-
-			if err != nil {
-				Fatal("Error: " + err.Error())
-			}
-
-			for _, pack := range iMatches {
-				if !revdeps {
-					if !pack.IsHidden() || pack.IsHidden() && hidden {
-						t.AppendRow(packageToRow("system", pack))
-						packageToList(l, "system", pack)
-						results.Packages = append(results.Packages,
-							PackageResult{
-								Name:       pack.GetName(),
-								Version:    pack.GetVersion(),
-								Category:   pack.GetCategory(),
-								Repository: "system",
-								Hidden:     pack.IsHidden(),
-							})
-					}
-				} else {
-					packs, _ := system.Database.GetRevdeps(pack)
-					for _, revdep := range packs {
-						if !revdep.IsHidden() || revdep.IsHidden() && hidden {
-							t.AppendRow(packageToRow("system", pack))
-							packageToList(l, "system", pack)
-							results.Packages = append(results.Packages,
-								PackageResult{
-									Name:       revdep.GetName(),
-									Version:    revdep.GetVersion(),
-									Category:   revdep.GetCategory(),
-									Repository: "system",
-									Hidden:     revdep.IsHidden(),
-								})
-						}
-					}
-				}
-			}
+		switch {
+		case files && installed:
+			results = searchLocalFiles(args[0], l, t)
+		case files && !installed:
+			results = searchFiles(args[0], l, t)
+		case !installed:
+			results = searchOnline(args[0], l, t, searchWithLabel, searchWithLabelMatch, revdeps, hidden)
+		default:
+			results = searchLocally(args[0], l, t, searchWithLabel, searchWithLabelMatch, revdeps, hidden)
 		}
 
 		t.AppendFooter(rows)
@@ -309,6 +404,7 @@ func init() {
 	searchCmd.Flags().Bool("revdeps", false, "Search package reverse dependencies")
 	searchCmd.Flags().Bool("hidden", false, "Include hidden packages")
 	searchCmd.Flags().Bool("table", false, "show output in a table (wider screens)")
+	searchCmd.Flags().Bool("files", false, "Search between packages files")
 
 	RootCmd.AddCommand(searchCmd)
 }
