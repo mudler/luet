@@ -14,7 +14,7 @@ jobs:
       - name: setup-docker
         uses: docker-practice/actions-setup-docker@0.0.1
       - name: Login to quay
-        run: echo ${{ secrets.DOCKER_TESTING_PASSWORD }} | sudo docker login -u ${{ secrets.DOCKER_TESTING_USERNAME }} --password-stdin quay.io
+        run: echo ${{ secrets.DOCKER_TESTING_PASSWORD }} | sudo -E docker login -u ${{ secrets.DOCKER_TESTING_USERNAME }} --password-stdin quay.io
       - name: Install deps
         run: |
             sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
