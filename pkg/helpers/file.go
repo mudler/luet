@@ -16,6 +16,7 @@
 package helpers
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -172,9 +173,18 @@ func CopyFile(src, dst string) (err error) {
 		return nil
 	}
 
-	return copy.Copy(src, dst, copy.Options{
+	err = copy.Copy(src, dst, copy.Options{
 		Sync:      true,
 		OnSymlink: func(string) copy.SymlinkAction { return copy.Shallow }})
+	if err != nil {
+		return err
+	}
+	if stat, ok := fi.Sys().(*syscall.Stat_t); ok {
+		if err := os.Chown(dst, int(stat.Uid), int(stat.Gid)); err != nil {
+			fmt.Println("failed chowning", dst, err.Error())
+		}
+	}
+	return err
 }
 
 func IsDirectory(path string) (bool, error) {
