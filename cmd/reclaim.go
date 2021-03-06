@@ -15,8 +15,6 @@
 package cmd
 
 import (
-	"os"
-
 	installer "github.com/mudler/luet/pkg/installer"
 
 	. "github.com/mudler/luet/pkg/config"
@@ -31,6 +29,7 @@ var reclaimCmd = &cobra.Command{
 	PreRun: func(cmd *cobra.Command, args []string) {
 		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
 		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
+		LuetCfg.Viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
 		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
 	},
 	Long: `Reclaim tries to find association between packages in the online repositories and the system one.
@@ -40,6 +39,13 @@ var reclaimCmd = &cobra.Command{
 It scans the target file system, and if finds a match with a package available in the repositories, it marks as installed in the system database.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		dbpath := LuetCfg.Viper.GetString("system.database_path")
+		rootfs := LuetCfg.Viper.GetString("system.rootfs")
+		engine := LuetCfg.Viper.GetString("system.database_engine")
+
+		LuetCfg.System.DatabaseEngine = engine
+		LuetCfg.System.DatabasePath = dbpath
+		LuetCfg.System.Rootfs = rootfs
 
 		// This shouldn't be necessary, but we need to unmarshal the repositories to a concrete struct, thus we need to port them back to the Repositories type
 		repos := installer.Repositories{}
@@ -71,12 +77,11 @@ It scans the target file system, and if finds a match with a package available i
 }
 
 func init() {
-	path, err := os.Getwd()
-	if err != nil {
-		Fatal(err)
-	}
-	reclaimCmd.Flags().String("system-dbpath", path, "System db path")
-	reclaimCmd.Flags().String("system-target", path, "System rootpath")
+
+	reclaimCmd.Flags().String("system-dbpath", "", "System db path")
+	reclaimCmd.Flags().String("system-target", "", "System rootpath")
+	reclaimCmd.Flags().String("system-engine", "", "System DB engine")
+
 	reclaimCmd.Flags().Bool("force", false, "Skip errors and keep going (potentially harmful)")
 
 	RootCmd.AddCommand(reclaimCmd)

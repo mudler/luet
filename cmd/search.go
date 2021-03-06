@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/ghodss/yaml"
@@ -307,6 +306,7 @@ Search can also return results in the terminal in different ways: as terminal ou
 		LuetCfg.Viper.BindPFlag("installed", cmd.Flags().Lookup("installed"))
 		LuetCfg.Viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
 		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
+		LuetCfg.Viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
 		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
 		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
 	},
@@ -329,7 +329,13 @@ Search can also return results in the terminal in different ways: as terminal ou
 		revdeps, _ := cmd.Flags().GetBool("revdeps")
 		tableMode, _ := cmd.Flags().GetBool("table")
 		files, _ := cmd.Flags().GetBool("files")
+		dbpath := LuetCfg.Viper.GetString("system.database_path")
+		rootfs := LuetCfg.Viper.GetString("system.rootfs")
+		engine := LuetCfg.Viper.GetString("system.database_engine")
 
+		LuetCfg.System.DatabaseEngine = engine
+		LuetCfg.System.DatabasePath = dbpath
+		LuetCfg.System.Rootfs = rootfs
 		out, _ := cmd.Flags().GetString("output")
 		if out != "terminal" {
 			LuetCfg.GetLogging().SetLogLevel("error")
@@ -387,12 +393,10 @@ Search can also return results in the terminal in different ways: as terminal ou
 }
 
 func init() {
-	path, err := os.Getwd()
-	if err != nil {
-		Fatal(err)
-	}
-	searchCmd.Flags().String("system-dbpath", path, "System db path")
-	searchCmd.Flags().String("system-target", path, "System rootpath")
+	searchCmd.Flags().String("system-dbpath", "", "System db path")
+	searchCmd.Flags().String("system-target", "", "System rootpath")
+	searchCmd.Flags().String("system-engine", "", "System DB engine")
+
 	searchCmd.Flags().Bool("installed", false, "Search between system packages")
 	searchCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+AvailableResolvers+" )")
 	searchCmd.Flags().StringP("output", "o", "terminal", "Output format ( Defaults: terminal, available: json,yaml )")

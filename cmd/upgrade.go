@@ -15,8 +15,6 @@
 package cmd
 
 import (
-	"os"
-
 	. "github.com/mudler/luet/pkg/config"
 	installer "github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/logger"
@@ -38,6 +36,7 @@ var upgradeCmd = &cobra.Command{
 		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
 		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
 		LuetCfg.Viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
+		LuetCfg.Viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
 	},
 	Long: `Upgrades packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -64,7 +63,13 @@ var upgradeCmd = &cobra.Command{
 		sync, _ := cmd.Flags().GetBool("sync")
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		yes := LuetCfg.Viper.GetBool("yes")
+		dbpath := LuetCfg.Viper.GetString("system.database_path")
+		rootfs := LuetCfg.Viper.GetString("system.rootfs")
+		engine := LuetCfg.Viper.GetString("system.database_engine")
 
+		LuetCfg.System.DatabaseEngine = engine
+		LuetCfg.System.DatabasePath = dbpath
+		LuetCfg.System.Rootfs = rootfs
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
 		LuetCfg.GetSolverOptions().Discount = float32(discount)
@@ -102,12 +107,10 @@ var upgradeCmd = &cobra.Command{
 }
 
 func init() {
-	path, err := os.Getwd()
-	if err != nil {
-		Fatal(err)
-	}
-	upgradeCmd.Flags().String("system-dbpath", path, "System db path")
-	upgradeCmd.Flags().String("system-target", path, "System rootpath")
+	upgradeCmd.Flags().String("system-dbpath", "", "System db path")
+	upgradeCmd.Flags().String("system-target", "", "System rootpath")
+	upgradeCmd.Flags().String("system-engine", "", "System DB engine")
+
 	upgradeCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+AvailableResolvers+" )")
 	upgradeCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
 	upgradeCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")

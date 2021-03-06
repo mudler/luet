@@ -40,9 +40,18 @@ To return also files:
 		PreRun: func(cmd *cobra.Command, args []string) {
 			LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
 			LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
+			LuetCfg.Viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
+
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			showFiles, _ := cmd.Flags().GetBool("files")
+			dbpath := LuetCfg.Viper.GetString("system.database_path")
+			rootfs := LuetCfg.Viper.GetString("system.rootfs")
+			engine := LuetCfg.Viper.GetString("system.database_engine")
+
+			LuetCfg.System.DatabaseEngine = engine
+			LuetCfg.System.DatabasePath = dbpath
+			LuetCfg.System.Rootfs = rootfs
 
 			systemDB := LuetCfg.GetSystemDB()
 
@@ -78,6 +87,9 @@ To return also files:
 		},
 	}
 	c.Flags().Bool("files", false, "Show package files.")
+	c.Flags().String("system-dbpath", "", "System db path")
+	c.Flags().String("system-target", "", "System rootpath")
+	c.Flags().String("system-engine", "", "System DB engine")
 
 	return c
 }

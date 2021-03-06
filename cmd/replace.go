@@ -15,8 +15,6 @@
 package cmd
 
 import (
-	"os"
-
 	installer "github.com/mudler/luet/pkg/installer"
 	"github.com/mudler/luet/pkg/solver"
 
@@ -38,6 +36,7 @@ var replaceCmd = &cobra.Command{
 `,
 	PreRun: func(cmd *cobra.Command, args []string) {
 		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
+		LuetCfg.Viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
 		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
 		LuetCfg.Viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
 		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
@@ -64,6 +63,13 @@ var replaceCmd = &cobra.Command{
 		onlydeps := LuetCfg.Viper.GetBool("onlydeps")
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		yes := LuetCfg.Viper.GetBool("yes")
+		dbpath := LuetCfg.Viper.GetString("system.database_path")
+		rootfs := LuetCfg.Viper.GetString("system.rootfs")
+		engine := LuetCfg.Viper.GetString("system.database_engine")
+
+		LuetCfg.System.DatabaseEngine = engine
+		LuetCfg.System.DatabasePath = dbpath
+		LuetCfg.System.Rootfs = rootfs
 
 		for _, a := range args {
 			pack, err := helpers.ParsePackageStr(a)
@@ -127,12 +133,11 @@ var replaceCmd = &cobra.Command{
 }
 
 func init() {
-	path, err := os.Getwd()
-	if err != nil {
-		Fatal(err)
-	}
-	replaceCmd.Flags().String("system-dbpath", path, "System db path")
-	replaceCmd.Flags().String("system-target", path, "System rootpath")
+
+	replaceCmd.Flags().String("system-dbpath", "", "System db path")
+	replaceCmd.Flags().String("system-target", "", "System rootpath")
+	replaceCmd.Flags().String("system-engine", "", "System DB engine")
+
 	replaceCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+AvailableResolvers+" )")
 	replaceCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
 	replaceCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")

@@ -15,8 +15,6 @@
 package cmd
 
 import (
-	"os"
-
 	helpers "github.com/mudler/luet/cmd/helpers"
 	. "github.com/mudler/luet/pkg/config"
 	installer "github.com/mudler/luet/pkg/installer"
@@ -42,6 +40,7 @@ var uninstallCmd = &cobra.Command{
 		LuetCfg.Viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
 		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
 		LuetCfg.Viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
+		LuetCfg.Viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		toRemove := []pkg.Package{}
@@ -65,6 +64,13 @@ var uninstallCmd = &cobra.Command{
 		fullClean, _ := cmd.Flags().GetBool("full-clean")
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		yes := LuetCfg.Viper.GetBool("yes")
+		dbpath := LuetCfg.Viper.GetString("system.database_path")
+		rootfs := LuetCfg.Viper.GetString("system.rootfs")
+		engine := LuetCfg.Viper.GetString("system.database_engine")
+
+		LuetCfg.System.DatabaseEngine = engine
+		LuetCfg.System.DatabasePath = dbpath
+		LuetCfg.System.Rootfs = rootfs
 
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -101,12 +107,11 @@ var uninstallCmd = &cobra.Command{
 }
 
 func init() {
-	path, err := os.Getwd()
-	if err != nil {
-		Fatal(err)
-	}
-	uninstallCmd.Flags().String("system-dbpath", path, "System db path")
-	uninstallCmd.Flags().String("system-target", path, "System rootpath")
+
+	uninstallCmd.Flags().String("system-dbpath", "", "System db path")
+	uninstallCmd.Flags().String("system-target", "", "System rootpath")
+	uninstallCmd.Flags().String("system-engine", "", "System DB engine")
+
 	uninstallCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+AvailableResolvers+" )")
 	uninstallCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
 	uninstallCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")

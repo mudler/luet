@@ -15,8 +15,6 @@
 package cmd
 
 import (
-	"os"
-
 	installer "github.com/mudler/luet/pkg/installer"
 	"github.com/mudler/luet/pkg/solver"
 
@@ -51,6 +49,7 @@ To force install a package:
 	PreRun: func(cmd *cobra.Command, args []string) {
 		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
 		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
+		LuetCfg.Viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
 		LuetCfg.Viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
 		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
 		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
@@ -91,6 +90,14 @@ To force install a package:
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		yes := LuetCfg.Viper.GetBool("yes")
 
+		dbpath := LuetCfg.Viper.GetString("system.database_path")
+		rootfs := LuetCfg.Viper.GetString("system.rootfs")
+		engine := LuetCfg.Viper.GetString("system.database_engine")
+
+		LuetCfg.System.DatabaseEngine = engine
+		LuetCfg.System.DatabasePath = dbpath
+		LuetCfg.System.Rootfs = rootfs
+
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
 		LuetCfg.GetSolverOptions().Discount = float32(discount)
@@ -127,12 +134,10 @@ To force install a package:
 }
 
 func init() {
-	path, err := os.Getwd()
-	if err != nil {
-		Fatal(err)
-	}
-	installCmd.Flags().String("system-dbpath", path, "System db path")
-	installCmd.Flags().String("system-target", path, "System rootpath")
+	installCmd.Flags().String("system-dbpath", "", "System db path")
+	installCmd.Flags().String("system-target", "", "System rootpath")
+	installCmd.Flags().String("system-engine", "", "System DB engine")
+
 	installCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+AvailableResolvers+" )")
 	installCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
 	installCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
