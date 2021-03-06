@@ -57,6 +57,31 @@ var _ = Describe("BoltDB Database", func() {
 
 		})
 
+		It("Find package files", func() {
+			a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+			a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
+			a3 := NewPackage("A", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+			_, err := db.CreatePackage(a)
+			Expect(err).ToNot(HaveOccurred())
+
+			_, err = db.CreatePackage(a1)
+			Expect(err).ToNot(HaveOccurred())
+
+			_, err = db.CreatePackage(a3)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = db.SetPackageFiles(&PackageFile{PackageFingerprint: a.GetFingerPrint(), Files: []string{"foo"}})
+			Expect(err).ToNot(HaveOccurred())
+
+			err = db.SetPackageFiles(&PackageFile{PackageFingerprint: a1.GetFingerPrint(), Files: []string{"bar"}})
+			Expect(err).ToNot(HaveOccurred())
+
+			pack, err := db.FindPackageByFile("fo")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(pack)).To(Equal(1))
+			Expect(pack[0]).To(Equal(a))
+		})
+
 		It("Expands correctly", func() {
 
 			a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})

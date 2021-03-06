@@ -392,5 +392,80 @@ urls:
 
 			Expect(string(content)).To(Equal(""))
 		})
+
+		It("Searches files", func() {
+			repos := Repositories{
+				&LuetSystemRepository{
+					Index: compiler.ArtifactIndex{
+						&compiler.PackageArtifact{
+							CompileSpec: &compiler.LuetCompilationSpec{
+								Package: &pkg.DefaultPackage{},
+							},
+							Path:  "bar",
+							Files: []string{"boo"},
+						},
+						&compiler.PackageArtifact{
+							Path:  "d",
+							Files: []string{"baz"},
+						},
+					},
+				},
+			}
+
+			matches := repos.SearchPackages("bo", FileSearch)
+			Expect(len(matches)).To(Equal(1))
+			Expect(matches[0].Artifact.GetPath()).To(Equal("bar"))
+		})
+
+		It("Searches packages", func() {
+			repo := &LuetSystemRepository{
+				Index: compiler.ArtifactIndex{
+					&compiler.PackageArtifact{
+						Path: "foo",
+						CompileSpec: &compiler.LuetCompilationSpec{
+							Package: &pkg.DefaultPackage{
+								Name:     "foo",
+								Category: "bar",
+								Version:  "1.0",
+							},
+						},
+					},
+					&compiler.PackageArtifact{
+						Path: "baz",
+						CompileSpec: &compiler.LuetCompilationSpec{
+							Package: &pkg.DefaultPackage{
+								Name:     "foo",
+								Category: "baz",
+								Version:  "1.0",
+							},
+						},
+					},
+				},
+			}
+
+			a, err := repo.SearchArtefact(&pkg.DefaultPackage{
+				Name:     "foo",
+				Category: "baz",
+				Version:  "1.0",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(a.GetPath()).To(Equal("baz"))
+
+			a, err = repo.SearchArtefact(&pkg.DefaultPackage{
+				Name:     "foo",
+				Category: "bar",
+				Version:  "1.0",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(a.GetPath()).To(Equal("foo"))
+
+			// Doesn't exist. so must fail
+			_, err = repo.SearchArtefact(&pkg.DefaultPackage{
+				Name:     "foo",
+				Category: "bar",
+				Version:  "1.1",
+			})
+			Expect(err).To(HaveOccurred())
+		})
 	})
 })
