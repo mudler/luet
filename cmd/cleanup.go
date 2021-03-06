@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
+	. "github.com/mudler/luet/pkg/config"
 	config "github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
@@ -31,13 +32,24 @@ var cleanupCmd = &cobra.Command{
 	Use:   "cleanup",
 	Short: "Clean packages cache.",
 	Long:  `remove downloaded packages tarballs and clean cache directory`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
+		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
+		LuetCfg.Viper.BindPFlag("installed", cmd.Flags().Lookup("installed"))
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var cleaned int = 0
+		dbpath := LuetCfg.Viper.GetString("system.database_path")
+		rootfs := config.LuetCfg.Viper.GetString("system.rootfs")
+		engine := config.LuetCfg.Viper.GetString("system.database_engine")
 
+		LuetCfg.System.DatabaseEngine = engine
+		LuetCfg.System.DatabasePath = dbpath
+		LuetCfg.System.Rootfs = rootfs
 		// Check if cache dir exists
-		if helpers.Exists(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()) {
+		if helpers.Exists(LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()) {
 
-			files, err := ioutil.ReadDir(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath())
+			files, err := ioutil.ReadDir(LuetCfg.GetSystem().GetSystemPkgsCacheDirPath())
 			if err != nil {
 				Fatal("Error on read cachedir ", err.Error())
 			}
@@ -47,12 +59,12 @@ var cleanupCmd = &cobra.Command{
 					continue
 				}
 
-				if config.LuetCfg.GetGeneral().Debug {
+				if LuetCfg.GetGeneral().Debug {
 					Info("Removing ", file.Name())
 				}
 
 				err := os.RemoveAll(
-					filepath.Join(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), file.Name()))
+					filepath.Join(LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), file.Name()))
 				if err != nil {
 					Fatal("Error on removing", file.Name())
 				}
@@ -66,5 +78,8 @@ var cleanupCmd = &cobra.Command{
 }
 
 func init() {
+	cleanupCmd.Flags().String("system-dbpath", "", "System db path")
+	cleanupCmd.Flags().String("system-target", "", "System rootpath")
+	cleanupCmd.Flags().String("system-engine", "", "System DB engine")
 	RootCmd.AddCommand(cleanupCmd)
 }

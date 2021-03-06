@@ -73,7 +73,7 @@ testInstall2() {
     luet install -y --config $tmpdir/luet.yaml --system-target $tmpdir/foo test/c
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
-    assertTrue 'db not created' "[ ! -e '$tmpdir/foo/var/luetdb' ]"
+    assertTrue 'db not created' "[ ! -e '$tmpdir/foo/var/cache/luet/luet.db' ]"
     assertTrue 'package installed' "[ -e '$tmpdir/foo/c' ]"
 }
 
@@ -114,7 +114,7 @@ testInstall4() {
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package installed' "[ -e '$tmpdir/bad/c' ]"
-    assertTrue 'db created' "[ -d '$tmpdir/bad/var/luetdb' ]"
+    assertTrue 'db created' "[ -d '$tmpdir/bad/var/cache/luet' ]"
 }
 
 testCleanup4() {
