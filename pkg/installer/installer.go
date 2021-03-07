@@ -47,6 +47,7 @@ type LuetInstallerOptions struct {
 	CheckConflicts                                                 bool
 	SolverUpgrade, RemoveUnavailableOnUpgrade, UpgradeNewRevisions bool
 	Ask                                                            bool
+	DownloadOnly                                                   bool
 }
 
 type LuetInstaller struct {
@@ -304,6 +305,9 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 	if err := l.download(syncedRepos, match); err != nil {
 		return errors.Wrap(err, "Pre-downloading packages")
 	}
+	if l.Options.DownloadOnly {
+		return nil
+	}
 
 	err = l.Uninstall(s, toRemove...)
 	if err != nil && !l.Options.Force {
@@ -528,6 +532,10 @@ func (l *LuetInstaller) install(syncedRepos Repositories, toInstall map[string]A
 	// Install packages into rootfs in parallel.
 	if err := l.download(syncedRepos, toInstall); err != nil {
 		return errors.Wrap(err, "Downloading packages")
+	}
+
+	if l.Options.DownloadOnly {
+		return nil
 	}
 
 	all := make(chan ArtifactMatch)

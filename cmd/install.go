@@ -89,6 +89,7 @@ To force install a package:
 		onlydeps := LuetCfg.Viper.GetBool("onlydeps")
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		yes := LuetCfg.Viper.GetBool("yes")
+		downloadOnly, _ := cmd.Flags().GetBool("download-only")
 
 		dbpath := LuetCfg.Viper.GetString("system.database_path")
 		rootfs := LuetCfg.Viper.GetString("system.rootfs")
@@ -121,6 +122,7 @@ To force install a package:
 			Force:                       force,
 			OnlyDeps:                    onlydeps,
 			PreserveSystemEssentialData: true,
+			DownloadOnly:                downloadOnly,
 			Ask:                         !yes,
 		})
 		inst.Repositories(repos)
@@ -147,6 +149,7 @@ func init() {
 	installCmd.Flags().Bool("force", false, "Skip errors and keep going (potentially harmful)")
 	installCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
 	installCmd.Flags().BoolP("yes", "y", false, "Don't ask questions")
+	installCmd.Flags().Bool("download-only", false, "Download only")
 
 	RootCmd.AddCommand(installCmd)
 }

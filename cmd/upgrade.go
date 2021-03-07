@@ -66,6 +66,7 @@ var upgradeCmd = &cobra.Command{
 		dbpath := LuetCfg.Viper.GetString("system.database_path")
 		rootfs := LuetCfg.Viper.GetString("system.rootfs")
 		engine := LuetCfg.Viper.GetString("system.database_engine")
+		downloadOnly, _ := cmd.Flags().GetBool("download-only")
 
 		LuetCfg.System.DatabaseEngine = engine
 		LuetCfg.System.DatabasePath = dbpath
@@ -96,6 +97,7 @@ var upgradeCmd = &cobra.Command{
 			UpgradeNewRevisions:         sync,
 			PreserveSystemEssentialData: true,
 			Ask:                         !yes,
+			DownloadOnly:                downloadOnly,
 		})
 		inst.Repositories(repos)
 
@@ -123,6 +125,7 @@ func init() {
 	upgradeCmd.Flags().Bool("sync", false, "Upgrade packages with new revisions (experimental)")
 	upgradeCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
 	upgradeCmd.Flags().BoolP("yes", "y", false, "Don't ask questions")
+	upgradeCmd.Flags().Bool("download-only", false, "Download only")
 
 	RootCmd.AddCommand(upgradeCmd)
 }
