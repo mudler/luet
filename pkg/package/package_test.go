@@ -66,6 +66,17 @@ var _ = Describe("Package", func() {
 		})
 	})
 
+	Context("ImageID", func() {
+		It("Returns a correct ImageID escaping unsupported chars", func() {
+			p := NewPackage("A", "1.0+p1", []*DefaultPackage{}, []*DefaultPackage{})
+			Expect(p.ImageID()).To(Equal("A--1.0-p1"))
+		})
+		It("Returns a correct ImageID", func() {
+			p := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+			Expect(p.ImageID()).To(Equal("A--1.0"))
+		})
+	})
+
 	Context("Find label on packages", func() {
 		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
 		a.AddLabel("project1", "test1")

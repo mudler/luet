@@ -46,7 +46,7 @@ type Package interface {
 
 	GetFingerPrint() string
 	GetPackageName() string
-	GetPackageImageName() string
+	ImageID() string
 	Requires([]*DefaultPackage) Package
 	Conflicts([]*DefaultPackage) Package
 	Revdeps(PackageDatabase) Packages
@@ -289,8 +289,8 @@ func (p *DefaultPackage) GetPackageName() string {
 	return fmt.Sprintf("%s-%s", p.Name, p.Category)
 }
 
-func (p *DefaultPackage) GetPackageImageName() string {
-	return fmt.Sprintf("%s-%s:%s", p.Name, p.Category, p.Version)
+func (p *DefaultPackage) ImageID() string {
+	return strings.ReplaceAll(p.GetFingerPrint(), "+", "-")
 }
 
 // GetBuildTimestamp returns the package build timestamp

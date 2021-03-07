@@ -333,7 +333,7 @@ func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string,
 			return nil
 		}
 
-		packageImage := fmt.Sprintf("%s:%s", imagePrefix, artifact.GetCompileSpec().GetPackage().GetFingerPrint())
+		packageImage := fmt.Sprintf("%s:%s", imagePrefix, artifact.GetCompileSpec().GetPackage().ImageID())
 
 		if imagePush && b.ImageAvailable(packageImage) && !force {
 			Info("Image", packageImage, "already present, skipping. use --force-push to override")

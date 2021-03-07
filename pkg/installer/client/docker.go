@@ -107,7 +107,7 @@ func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Ar
 
 		for _, uri := range c.RepoData.Urls {
 
-			imageName := fmt.Sprintf("%s:%s", uri, artifact.GetCompileSpec().GetPackage().GetFingerPrint())
+			imageName := fmt.Sprintf("%s:%s", uri, artifact.GetCompileSpec().GetPackage().ImageID())
 			Info("Downloading image", imageName)
 
 			// imageName := fmt.Sprintf("%s/%s", uri, artifact.GetCompileSpec().GetPackage().GetPackageImageName())
