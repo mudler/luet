@@ -24,8 +24,6 @@ import (
 	"github.com/docker/go-units"
 	"github.com/pkg/errors"
 
-	imgworker "github.com/mudler/luet/pkg/installer/client/imgworker"
-
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
@@ -38,33 +36,6 @@ type DockerClient struct {
 
 func NewDockerClient(r RepoData) *DockerClient {
 	return &DockerClient{RepoData: r}
-}
-
-func downloadAndExtractDockerImage(image, dest string) error {
-	temp, err := config.LuetCfg.GetSystem().TempDir("contentstore")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(temp)
-	Debug("Temporary directory", temp)
-	c, err := imgworker.New(temp)
-	if err != nil {
-		return errors.Wrapf(err, "failed creating client")
-	}
-	defer c.Close()
-
-	// FROM Slightly adapted from genuinetools/img https://github.com/genuinetools/img/blob/54d0ca981c1260546d43961a538550eef55c87cf/pull.go
-	Debug("Pulling image", image)
-	listedImage, err := c.Pull(image)
-	if err != nil {
-		return errors.Wrapf(err, "failed listing images")
-
-	}
-	Debug("Pulled:", listedImage.Target.Digest)
-	Debug("Size:", units.BytesSize(float64(listedImage.ContentSize)))
-	Debug("Unpacking", image, "to", dest)
-	os.RemoveAll(dest)
-	return c.Unpack(image, dest)
 }
 
 func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Artifact, error) {
@@ -110,12 +81,21 @@ func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Ar
 			imageName := fmt.Sprintf("%s:%s", uri, artifact.GetCompileSpec().GetPackage().ImageID())
 			Info("Downloading image", imageName)
 
+			contentstore, err := config.LuetCfg.GetSystem().TempDir("contentstore")
+			if err != nil {
+				Warning("Cannot create contentstore", err.Error())
+				continue
+			}
+
 			// imageName := fmt.Sprintf("%s/%s", uri, artifact.GetCompileSpec().GetPackage().GetPackageImageName())
-			err = downloadAndExtractDockerImage(imageName, temp)
+			info, err := helpers.DownloadAndExtractDockerImage(contentstore, imageName, temp)
 			if err != nil {
 				Debug("Failed download of image", imageName)
 				continue
 			}
+
+			Info(fmt.Sprintf("Pulled: %s", info.Target.Digest))
+			Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.ContentSize))))
 			Debug("\nCompressing result ", filepath.Join(temp), "to", cacheFile)
 
 			newart := artifact
@@ -162,15 +142,23 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 			continue
 		}
 
-		Debug("Downloading file", name, "from", uri)
+		contentstore, err := config.LuetCfg.GetSystem().TempDir("contentstore")
+		if err != nil {
+			Warning("Cannot create contentstore", err.Error())
+			continue
+		}
 
 		imageName := fmt.Sprintf("%s:%s", uri, name)
-		//imageName := fmt.Sprintf("%s/%s:%s", uri, "repository", name)
-		err = downloadAndExtractDockerImage(imageName, temp)
+		Info("Downloading", imageName)
+
+		info, err := helpers.DownloadAndExtractDockerImage(contentstore, imageName, temp)
 		if err != nil {
 			Debug("Failed download of image", imageName)
 			continue
 		}
+
+		Info(fmt.Sprintf("Pulled: %s", info.Target.Digest))
+		Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.ContentSize))))
 
 		Debug("\nCopying file ", filepath.Join(temp, name), "to", file.Name())
 		err = helpers.CopyFile(filepath.Join(temp, name), file.Name())
