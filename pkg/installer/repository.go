@@ -81,6 +81,7 @@ type LuetSystemRepositorySerialized struct {
 	TreePath        string                        `json:"treepath"`
 	MetaPath        string                        `json:"metapath"`
 	RepositoryFiles map[string]LuetRepositoryFile `json:"repo_files"`
+	Verify          bool                          `json:"verify"`
 }
 
 type LuetSystemRepositoryMetadata struct {
@@ -274,19 +275,22 @@ func NewLuetSystemRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (Repos
 	if err != nil {
 		return nil, err
 	}
+	repo := config.NewLuetRepository(
+		p.Name,
+		p.Type,
+		p.Description,
+		p.Urls,
+		p.Priority,
+		true,
+		false,
+	)
+	repo.Verify = p.Verify
 
 	r := &LuetSystemRepository{
-		LuetRepository: config.NewLuetRepository(
-			p.Name,
-			p.Type,
-			p.Description,
-			p.Urls,
-			p.Priority,
-			true,
-			false,
-		),
+		LuetRepository:  repo,
 		RepositoryFiles: p.RepositoryFiles,
 	}
+
 	if p.Revision > 0 {
 		r.Revision = p.Revision
 	}
@@ -896,6 +900,7 @@ func (r *LuetSystemRepository) Client() Client {
 			client.RepoData{
 				Urls:           r.GetUrls(),
 				Authentication: r.GetAuthentication(),
+				Verify:         r.Verify,
 			})
 	}
 	return nil

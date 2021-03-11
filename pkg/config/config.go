@@ -161,6 +161,7 @@ type LuetRepository struct {
 	Authentication map[string]string `json:"auth,omitempty" yaml:"auth,omitempty" mapstructure:"auth,omitempty"`
 	TreePath       string            `json:"tree_path,omitempty" yaml:"tree_path,omitempty" mapstructure:"tree_path"`
 	MetaPath       string            `json:"meta_path,omitempty" yaml:"meta_path,omitempty" mapstructure:"meta_path"`
+	Verify         bool              `json:"verify,omitempty" yaml:"verify,omitempty" mapstructure:"verify"`
 
 	// Serialized options not used in repository configuration
 

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/containerd/containerd/namespaces"
+	dockertypes "github.com/docker/docker/api/types"
 	"github.com/genuinetools/img/types"
 	"github.com/moby/buildkit/control"
 	"github.com/moby/buildkit/session"
@@ -29,10 +30,11 @@ type Client struct {
 
 	sess *session.Session
 	ctx  context.Context
+	auth *dockertypes.AuthConfig
 }
 
 // New returns a new client for communicating with the buildkit controller.
-func New(root string) (*Client, error) {
+func New(root string, auth *dockertypes.AuthConfig) (*Client, error) {
 	// Native backend is fine, our images have just one layer. No need to depend on anything
 	backend := types.NativeBackend
 
@@ -45,6 +47,7 @@ func New(root string) (*Client, error) {
 		backend:   types.NativeBackend,
 		root:      root,
 		localDirs: nil,
+		auth:      auth,
 	}
 
 	if err := c.prepare(); err != nil {

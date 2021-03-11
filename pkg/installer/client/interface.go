@@ -18,4 +18,5 @@ package client
 type RepoData struct {
 	Urls           []string
 	Authentication map[string]string
+	Verify         bool
 }

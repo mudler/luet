@@ -16,11 +16,13 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/go-units"
 	"github.com/pkg/errors"
 
@@ -32,10 +34,17 @@ import (
 
 type DockerClient struct {
 	RepoData RepoData
+	auth     *types.AuthConfig
+	verify   bool
 }
 
 func NewDockerClient(r RepoData) *DockerClient {
-	return &DockerClient{RepoData: r}
+	auth := &types.AuthConfig{}
+
+	dat, _ := json.Marshal(r.Authentication)
+	json.Unmarshal(dat, auth)
+
+	return &DockerClient{RepoData: r, auth: auth}
 }
 
 func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Artifact, error) {
@@ -88,7 +97,7 @@ func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Ar
 			}
 
 			// imageName := fmt.Sprintf("%s/%s", uri, artifact.GetCompileSpec().GetPackage().GetPackageImageName())
-			info, err := helpers.DownloadAndExtractDockerImage(contentstore, imageName, temp)
+			info, err := helpers.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
 			if err != nil {
 				Debug("Failed download of image", imageName)
 				continue
@@ -151,7 +160,7 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 		imageName := fmt.Sprintf("%s:%s", uri, name)
 		Info("Downloading", imageName)
 
-		info, err := helpers.DownloadAndExtractDockerImage(contentstore, imageName, temp)
+		info, err := helpers.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
 		if err != nil {
 			Debug("Failed download of image", imageName)
 			continue

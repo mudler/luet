@@ -4,10 +4,8 @@ package imgworker
 
 import (
 	"context"
-	"os"
 
 	"github.com/moby/buildkit/session"
-	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/moby/buildkit/session/filesync"
 	"github.com/moby/buildkit/session/testutil"
 	"github.com/pkg/errors"
@@ -31,7 +29,7 @@ func (c *Client) Session(ctx context.Context) (*session.Session, session.Dialer,
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create session manager")
 	}
-	sessionName := "img"
+	sessionName := "luet"
 	s, err := session.NewSession(ctx, sessionName, "")
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create session")
@@ -41,7 +39,7 @@ func (c *Client) Session(ctx context.Context) (*session.Session, session.Dialer,
 		syncedDirs = append(syncedDirs, filesync.SyncedDir{Name: name, Dir: d})
 	}
 	s.Allow(filesync.NewFSSyncProvider(syncedDirs))
-	s.Allow(authprovider.NewDockerAuthProvider(os.Stderr))
+	s.Allow(NewDockerAuthProvider(c.auth))
 	return s, sessionDialer(s, m), err
 }
 

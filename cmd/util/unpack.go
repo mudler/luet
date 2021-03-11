@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/go-units"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
@@ -30,7 +31,7 @@ import (
 
 func NewUnpackCommand() *cobra.Command {
 
-	return &cobra.Command{
+	c := &cobra.Command{
 		Use:   "unpack image path",
 		Short: "Unpack a docker image natively",
 		Long: `unpack doesn't need the docker daemon to run, and unpacks a docker image in the specified directory:
@@ -53,20 +54,45 @@ func NewUnpackCommand() *cobra.Command {
 				os.Exit(1)
 			}
 
+			verify, _ := cmd.Flags().GetBool("verify")
+			user, _ := cmd.Flags().GetString("auth-username")
+			pass, _ := cmd.Flags().GetString("auth-password")
+			authType, _ := cmd.Flags().GetString("auth-type")
+			server, _ := cmd.Flags().GetString("auth-server-address")
+			identity, _ := cmd.Flags().GetString("auth-identity-token")
+			registryToken, _ := cmd.Flags().GetString("auth-registry-token")
+
 			temp, err := config.LuetCfg.GetSystem().TempDir("contentstore")
 			if err != nil {
 				Fatal("Cannot create a tempdir", err.Error())
 			}
 
 			Info("Downloading", image, "to", destination)
-			info, err := helpers.DownloadAndExtractDockerImage(temp, image, destination)
+			auth := &types.AuthConfig{
+				Username:      user,
+				Password:      pass,
+				ServerAddress: server,
+				Auth:          authType,
+				IdentityToken: identity,
+				RegistryToken: registryToken,
+			}
+
+			info, err := helpers.DownloadAndExtractDockerImage(temp, image, destination, auth, verify)
 			if err != nil {
 				Error(err.Error())
 				os.Exit(1)
 			}
-			Info(fmt.Sprintf("Pulled: %s", info.Target.Digest))
+			Info(fmt.Sprintf("Pulled: %s %s", info.Target.Digest, info.Name))
 			Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.ContentSize))))
 		},
 	}
 
+	c.Flags().String("auth-username", "", "Username to authenticate to registry/notary")
+	c.Flags().String("auth-password", "", "Password to authenticate to registry")
+	c.Flags().String("auth-type", "", "Auth type")
+	c.Flags().String("auth-server-address", "", "Authentication server address")
+	c.Flags().String("auth-identity-token", "", "Authentication identity token")
+	c.Flags().String("auth-registry-token", "", "Authentication registry token")
+	c.Flags().Bool("verify", false, "Verify signed images to notary before to pull")
+	return c
 }

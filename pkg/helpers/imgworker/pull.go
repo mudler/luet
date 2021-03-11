@@ -31,6 +31,7 @@ func (c *Client) Pull(image string) (*ListedImage, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	// Parse the image name and tag.
 	named, err := reference.ParseNormalizedNamed(image)
 	if err != nil {
@@ -114,7 +115,6 @@ func (c *Client) Pull(image string) (*ListedImage, error) {
 	if _, err := e.Export(ctx, exporter.Source{Ref: ref}); err != nil {
 		return nil, err
 	}
-
 	// Get the image.
 	img, err := opt.ImageStore.Get(ctx, image)
 	if err != nil {
