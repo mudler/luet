@@ -158,20 +158,23 @@ func searchOnline(term string, l list.Writer, t table.Writer, label, labelMatch,
 	} else {
 		matches = synced.Search(term)
 	}
+
 	for _, m := range matches {
 		if !revdeps {
 			if !m.Package.IsHidden() || m.Package.IsHidden() && hidden {
 				t.AppendRow(packageToRow(m.Repo.GetName(), m.Package))
 				packageToList(l, m.Repo.GetName(), m.Package)
-				results.Packages = append(results.Packages,
-					PackageResult{
-						Name:       m.Package.GetName(),
-						Version:    m.Package.GetVersion(),
-						Category:   m.Package.GetCategory(),
-						Repository: m.Repo.GetName(),
-						Hidden:     m.Package.IsHidden(),
-						Files:      m.Artifact.GetFiles(),
-					})
+				r := &PackageResult{
+					Name:       m.Package.GetName(),
+					Version:    m.Package.GetVersion(),
+					Category:   m.Package.GetCategory(),
+					Repository: m.Repo.GetName(),
+					Hidden:     m.Package.IsHidden(),
+				}
+				if m.Artifact != nil {
+					r.Files = m.Artifact.GetFiles()
+				}
+				results.Packages = append(results.Packages, *r)
 			}
 		} else {
 			packs, _ := m.Repo.GetTree().GetDatabase().GetRevdeps(m.Package)
@@ -179,15 +182,17 @@ func searchOnline(term string, l list.Writer, t table.Writer, label, labelMatch,
 				if !revdep.IsHidden() || revdep.IsHidden() && hidden {
 					t.AppendRow(packageToRow(m.Repo.GetName(), revdep))
 					packageToList(l, m.Repo.GetName(), revdep)
-					results.Packages = append(results.Packages,
-						PackageResult{
-							Name:       revdep.GetName(),
-							Version:    revdep.GetVersion(),
-							Category:   revdep.GetCategory(),
-							Repository: m.Repo.GetName(),
-							Hidden:     revdep.IsHidden(),
-							Files:      m.Artifact.GetFiles(),
-						})
+					r := &PackageResult{
+						Name:       revdep.GetName(),
+						Version:    revdep.GetVersion(),
+						Category:   revdep.GetCategory(),
+						Repository: m.Repo.GetName(),
+						Hidden:     revdep.IsHidden(),
+					}
+					if m.Artifact != nil {
+						r.Files = m.Artifact.GetFiles()
+					}
+					results.Packages = append(results.Packages, *r)
 				}
 			}
 		}
