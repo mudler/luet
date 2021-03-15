@@ -444,8 +444,17 @@ func (r *LuetSystemRepository) GetAuthentication() map[string]string {
 func (r *LuetSystemRepository) GetType() string {
 	return r.LuetRepository.Type
 }
+
 func (r *LuetSystemRepository) SetType(p string) {
 	r.LuetRepository.Type = p
+}
+
+func (r *LuetSystemRepository) GetVerify() bool {
+	return r.LuetRepository.Verify
+}
+
+func (r *LuetSystemRepository) SetVerify(p bool) {
+	r.LuetRepository.Verify = p
 }
 
 func (r *LuetSystemRepository) GetBackend() compiler.CompilerBackend {
@@ -1082,6 +1091,8 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	repo.SetType(r.GetType())
 	repo.SetPriority(r.GetPriority())
 	repo.SetName(r.GetName())
+	repo.SetVerify(r.GetVerify())
+
 	InfoC(
 		aurora.Yellow(":information_source:").String() +
 			aurora.Magenta("Repository: ").String() +
@@ -1105,6 +1116,7 @@ func (r *LuetSystemRepository) Serialize() (*LuetSystemRepositoryMetadata, LuetS
 		Revision:        r.Revision,
 		LastUpdate:      r.LastUpdate,
 		RepositoryFiles: r.RepositoryFiles,
+		Verify:          r.Verify,
 	}
 
 	// Check if is needed set the index or simply use

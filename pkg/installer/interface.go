@@ -76,4 +76,7 @@ type Repository interface {
 	SetBackend(b compiler.CompilerBackend)
 	FileSearch(pattern string) (pkg.Packages, error)
 	SearchArtefact(p pkg.Package) (compiler.Artifact, error)
+
+	SetVerify(bool)
+	GetVerify() bool
 }
