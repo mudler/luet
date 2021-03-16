@@ -328,6 +328,9 @@ func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string,
 		if err != nil {
 			return errors.Wrap(err, "Error reading yaml "+currentpath)
 		}
+		// Set the path relative to the file.
+		// The metadata contains the full path where the file was located during buildtime.
+		artifact.SetPath(filepath.Join(filepath.Dir(currentpath), filepath.Base(artifact.GetPath())))
 
 		// We want to include packages that are ONLY referenced in the tree.
 		// the ones which aren't should be deleted. (TODO: by another cli command?)
