@@ -20,6 +20,8 @@ import (
 	"os/exec"
 	"strings"
 
+	bus "github.com/mudler/luet/pkg/bus"
+
 	"github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/logger"
 
@@ -35,6 +37,7 @@ func NewSimpleImgBackend() compiler.CompilerBackend {
 // TODO: Missing still: labels, and build args expansion
 func (*SimpleImg) BuildImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
+	bus.Manager.Publish(bus.EventImagePreBuild, opts)
 
 	buildarg := genBuildCommand(opts)
 
@@ -46,6 +49,7 @@ func (*SimpleImg) BuildImage(opts compiler.CompilerBackendOptions) error {
 	if err != nil {
 		return err
 	}
+	bus.Manager.Publish(bus.EventImagePostBuild, opts)
 
 	Info(":tea: Building image " + name + " done")
 
@@ -68,6 +72,8 @@ func (*SimpleImg) RemoveImage(opts compiler.CompilerBackendOptions) error {
 
 func (*SimpleImg) DownloadImage(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
+	bus.Manager.Publish(bus.EventImagePrePull, opts)
+
 	buildarg := []string{"pull", name}
 	Debug(":tea: Downloading image " + name)
 
@@ -81,6 +87,7 @@ func (*SimpleImg) DownloadImage(opts compiler.CompilerBackendOptions) error {
 	}
 
 	Info(":tea: Image " + name + " downloaded")
+	bus.Manager.Publish(bus.EventImagePostPull, opts)
 
 	return nil
 }
@@ -181,12 +188,16 @@ func (i *SimpleImg) Changes(fromImage, toImage compiler.CompilerBackendOptions) 
 
 func (*SimpleImg) Push(opts compiler.CompilerBackendOptions) error {
 	name := opts.ImageName
+	bus.Manager.Publish(bus.EventImagePrePush, opts)
+
 	pusharg := []string{"push", name}
 	out, err := exec.Command("img", pusharg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed pushing image: "+string(out))
 	}
 	Info(":tea: Pushed image:", name)
+	bus.Manager.Publish(bus.EventImagePostPush, opts)
+
 	//Info(string(out))
 	return nil
 }

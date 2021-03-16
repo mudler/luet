@@ -397,7 +397,6 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	buildAndPush := func(opts CompilerBackendOptions) error {
 		buildImage := true
 		if cs.Options.PullFirst {
-			bus.Manager.Publish(bus.EventImagePrePull, opts)
 			err := cs.Backend.DownloadImage(opts)
 			if err == nil {
 				buildImage = false
@@ -405,20 +404,15 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 				Warning("Failed to download '" + opts.ImageName + "'. Will keep going and build the image unless you use --fatal")
 				Warning(err.Error())
 			}
-			bus.Manager.Publish(bus.EventImagePostPull, opts)
 		}
 		if buildImage {
-			bus.Manager.Publish(bus.EventImagePreBuild, opts)
 			if err := cs.Backend.BuildImage(opts); err != nil {
 				return errors.Wrap(err, "Could not build image: "+image+" "+opts.DockerFileName)
 			}
-			bus.Manager.Publish(bus.EventImagePostBuild, opts)
 			if cs.Options.Push {
-				bus.Manager.Publish(bus.EventImagePrePush, opts)
 				if err = cs.Backend.Push(opts); err != nil {
 					return errors.Wrap(err, "Could not push image: "+image+" "+opts.DockerFileName)
 				}
-				bus.Manager.Publish(bus.EventImagePostPush, opts)
 			}
 		}
 		return nil
