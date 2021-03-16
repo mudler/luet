@@ -32,6 +32,10 @@ import (
 	. "github.com/mudler/luet/pkg/logger"
 )
 
+const (
+	errImageDownloadMsg = "failed downloading image %s: %s"
+)
+
 type DockerClient struct {
 	RepoData RepoData
 	auth     *types.AuthConfig
@@ -99,7 +103,7 @@ func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Ar
 			// imageName := fmt.Sprintf("%s/%s", uri, artifact.GetCompileSpec().GetPackage().GetPackageImageName())
 			info, err := helpers.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
 			if err != nil {
-				Debug("Failed download of image", imageName)
+				Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
 				continue
 			}
 
@@ -162,7 +166,7 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 
 		info, err := helpers.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
 		if err != nil {
-			Debug("Failed download of image", imageName)
+			Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
 			continue
 		}
 
