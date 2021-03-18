@@ -281,7 +281,7 @@ func (b *SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepP
 		return err
 	}
 
-	err = export.UnPackLayers(layers_sha, dst, "")
+	err = export.UnPackLayers(layers_sha, dst, "containerd")
 	if err != nil {
 		return err
 	}
