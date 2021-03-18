@@ -1,0 +1,8 @@
+image: "busybox"
+
+steps:
+- adduser foo -D
+- addgroup bar
+- touch /foo
+- chown foo:bar /foo
+- chmod 500 /foo

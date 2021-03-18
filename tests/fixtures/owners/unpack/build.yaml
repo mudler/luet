@@ -1,0 +1,13 @@
+image: "busybox"
+
+steps:
+- adduser baz -D
+- addgroup ba
+- touch /bar
+- chown baz:ba /bar
+- chmod 600 /bar
+- ls -liah /bar
+unpack: true
+
+includes:
+- bar
