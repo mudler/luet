@@ -304,7 +304,7 @@ func init() {
 
 	buildCmd.Flags().StringSliceP("tree", "t", []string{path}, "Path of the tree to use.")
 	buildCmd.Flags().String("backend", "docker", "backend used (docker,img)")
-	buildCmd.Flags().Bool("privileged", false, "Privileged (Keep permissions)")
+	buildCmd.Flags().Bool("privileged", true, "Privileged (Keep permissions)")
 	buildCmd.Flags().String("database", "memory", "database used for solving (memory,boltdb)")
 	buildCmd.Flags().Bool("revdeps", false, "Build with revdeps")
 	buildCmd.Flags().Bool("all", false, "Build all specfiles in the tree")
