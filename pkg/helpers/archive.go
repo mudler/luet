@@ -95,9 +95,7 @@ func UntarProtect(src, dst string, sameOwner bool, protectedFiles []string, modi
 		replacerArchive := archive.ReplaceFileTarWrapper(in, mods)
 
 		opts := &archive.TarOptions{
-			// NOTE: NoLchown boolean is used for chmod of the symlink
-			// Probably it's needed set this always to true.
-			NoLchown:        true,
+			NoLchown:        false,
 			ExcludePatterns: []string{"dev/"}, // prevent 'operation not permitted'
 			ContinueOnError: true,
 		}
@@ -201,12 +199,8 @@ func Untar(src, dest string, sameOwner bool) error {
 	defer in.Close()
 
 	if sameOwner {
-		// PRE: i have root privileged.
-
 		opts := &archive.TarOptions{
-			// NOTE: NoLchown boolean is used for chmod of the symlink
-			// Probably it's needed set this always to true.
-			NoLchown:        true,
+			NoLchown:        false,
 			ExcludePatterns: []string{"dev/"}, // prevent 'operation not permitted'
 			ContinueOnError: true,
 		}

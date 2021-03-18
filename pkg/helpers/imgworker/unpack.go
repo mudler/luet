@@ -71,7 +71,7 @@ func (c *Client) Unpack(image, dest string) error {
 		// Unpack the tarfile to the rootfs path.
 		// FROM: https://godoc.org/github.com/moby/moby/pkg/archive#TarOptions
 		if err := archive.Untar(content.NewReader(layer), dest, &archive.TarOptions{
-			NoLchown:        true,
+			NoLchown:        false,
 			ExcludePatterns: []string{"dev/"}, // prevent 'operation not permitted'
 		}); err != nil {
 			return fmt.Errorf("extracting tar for %s to directory %s failed: %v", desc.Digest.String(), dest, err)
