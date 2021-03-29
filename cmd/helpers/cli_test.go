@@ -66,5 +66,37 @@ var _ = Describe("CLI Helpers", func() {
 			Expect(pack.GetCategory()).To(Equal("cat"))
 			Expect(pack.GetVersion()).To(Equal("1.2"))
 		})
+
+		It("accept gentoo regex parsing with with condition", func() {
+			pack, err := ParsePackageStr(">=cat/foo-1.2")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(pack.GetName()).To(Equal("foo"))
+			Expect(pack.GetCategory()).To(Equal("cat"))
+			Expect(pack.GetVersion()).To(Equal(">=1.2"))
+		})
+
+		It("accept gentoo regex parsing with with condition2", func() {
+			pack, err := ParsePackageStr("<cat/foo-1.2")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(pack.GetName()).To(Equal("foo"))
+			Expect(pack.GetCategory()).To(Equal("cat"))
+			Expect(pack.GetVersion()).To(Equal("<1.2"))
+		})
+
+		It("accept gentoo regex parsing with with condition3", func() {
+			pack, err := ParsePackageStr(">cat/foo-1.2")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(pack.GetName()).To(Equal("foo"))
+			Expect(pack.GetCategory()).To(Equal("cat"))
+			Expect(pack.GetVersion()).To(Equal(">1.2"))
+		})
+
+		It("accept gentoo regex parsing with with condition4", func() {
+			pack, err := ParsePackageStr("<=cat/foo-1.2")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(pack.GetName()).To(Equal("foo"))
+			Expect(pack.GetCategory()).To(Equal("cat"))
+			Expect(pack.GetVersion()).To(Equal("<=1.2"))
+		})
 	})
 })

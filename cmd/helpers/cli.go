@@ -56,7 +56,8 @@ func packageData(p string) (string, string) {
 }
 func ParsePackageStr(p string) (*pkg.DefaultPackage, error) {
 
-	if !strings.HasPrefix(p, "=") {
+	if !(strings.HasPrefix(p, "=") || strings.HasPrefix(p, ">") ||
+		strings.HasPrefix(p, "<")) {
 		ver := ">=0"
 		cat := ""
 		name := ""
