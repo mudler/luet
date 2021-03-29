@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2017-2019  Daniele Rondina <geaaru@sabayonlinux.org>
+Copyright (C) 2017-2021  Daniele Rondina <geaaru@sabayonlinux.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	version "github.com/hashicorp/go-version"
@@ -157,6 +158,15 @@ func (p *GentooPackage) GetPackageName() (ans string) {
 	return
 }
 
+func (p *GentooPackage) GetPackageNameWithSlot() (ans string) {
+	if p.Slot != "0" {
+		ans = fmt.Sprintf("%s:%s", p.GetPackageName(), p.Slot)
+	} else {
+		ans = p.GetPackageName()
+	}
+	return
+}
+
 func (p *GentooPackage) GetP() string {
 	return fmt.Sprintf("%s-%s", p.Name, p.GetPV())
 }
@@ -167,6 +177,11 @@ func (p *GentooPackage) GetPN() string {
 
 func (p *GentooPackage) GetPV() string {
 	return fmt.Sprintf("%s", p.Version)
+}
+
+func (p *GentooPackage) GetPackageNameWithCond() (ans string) {
+	ans = fmt.Sprintf("%s%s", p.Condition.String(), p.GetPackageName())
+	return
 }
 
 func (p *GentooPackage) GetPVR() (ans string) {
@@ -180,6 +195,201 @@ func (p *GentooPackage) GetPVR() (ans string) {
 
 func (p *GentooPackage) GetPF() string {
 	return fmt.Sprintf("%s-%s", p.GetPN(), p.GetPVR())
+}
+
+func (p *GentooPackage) getVersions(i *GentooPackage) (*version.Version, *version.Version, error) {
+	var v1 *version.Version = nil
+	var v2 *version.Version = nil
+	var err error
+
+	if p.Category != i.Category {
+		return v1, v2, errors.New(
+			fmt.Sprintf("Wrong category for package %s", i.Name))
+	}
+
+	if p.Name != i.Name {
+		return v1, v2, errors.New(
+			fmt.Sprintf("Wrong name for package %s", i.Name))
+	}
+
+	if p.Version == "" {
+		return v1, v2, errors.New(
+			fmt.Sprintf("Package without version. I can't compare versions."))
+	}
+
+	if i.Version == "" {
+		return v1, v2, errors.New(
+			fmt.Sprintf("Package supply without version. I can't compare versions."))
+	}
+
+	v1s := p.Version
+	v2s := i.Version
+
+	if p.VersionBuild != "" {
+		v1s = p.Version + "+" + p.VersionBuild
+	}
+	v1, err = version.NewVersion(v1s)
+	if err != nil {
+		return nil, nil, err
+	}
+	if i.VersionBuild != "" {
+		v2s = i.Version + "+" + i.VersionBuild
+	}
+	v2, err = version.NewVersion(v2s)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return v1, v2, nil
+}
+
+func (p *GentooPackage) orderDifferentPkgs(i *GentooPackage, mode int) bool {
+	if p.Category != i.Category {
+		if mode == 0 {
+			return p.Category < i.Category
+		}
+		return p.Category > i.Category
+	}
+	if mode == 0 {
+		return p.Name < i.Name
+	}
+	return p.Name > i.Name
+}
+
+func (p *GentooPackage) GreaterThan(i *GentooPackage) (bool, error) {
+	var ans bool
+	if p.Category != i.Category || p.Name != i.Name {
+		return p.orderDifferentPkgs(i, 1), nil
+	}
+	v1, v2, err := p.getVersions(i)
+	if err != nil {
+		return false, err
+	}
+
+	if v1.Equal(v2) {
+		// Order suffix and VersionBuild
+		versionsSuffix := []string{
+			p.VersionSuffix + "+" + p.VersionBuild,
+			i.VersionSuffix + "+" + i.VersionBuild,
+		}
+
+		sort.Strings(versionsSuffix)
+		if versionsSuffix[1] == p.VersionSuffix+"+"+p.VersionBuild {
+			ans = true
+		} else {
+			ans = false
+		}
+
+	} else {
+		ans = v1.GreaterThan(v2)
+	}
+	return ans, nil
+}
+
+func (p *GentooPackage) LessThan(i *GentooPackage) (bool, error) {
+	var ans bool
+
+	if p.Category != i.Category || p.Name != i.Name {
+		return p.orderDifferentPkgs(i, 0), nil
+	}
+	v1, v2, err := p.getVersions(i)
+	if err != nil {
+		return false, err
+	}
+
+	if v1.Equal(v2) {
+		// Order suffix and VersionBuild
+		versionsSuffix := []string{
+			p.VersionSuffix + "+" + p.VersionBuild,
+			i.VersionSuffix + "+" + i.VersionBuild,
+		}
+
+		sort.Strings(versionsSuffix)
+		if versionsSuffix[0] == p.VersionSuffix+"+"+p.VersionBuild {
+			ans = true
+		} else {
+			ans = false
+		}
+
+	} else {
+		ans = v1.LessThan(v2)
+	}
+	return ans, nil
+}
+
+func (p *GentooPackage) LessThanOrEqual(i *GentooPackage) (bool, error) {
+	var ans bool
+	if p.Category != i.Category || p.Name != i.Name {
+		return p.orderDifferentPkgs(i, 0), nil
+	}
+	v1, v2, err := p.getVersions(i)
+	if err != nil {
+		return false, err
+	}
+
+	if v1.Equal(v2) {
+		// Order suffix and VersionBuild
+		versionsSuffix := []string{
+			p.VersionSuffix + "+" + p.VersionBuild,
+			i.VersionSuffix + "+" + i.VersionBuild,
+		}
+
+		sort.Strings(versionsSuffix)
+		if versionsSuffix[0] == p.VersionSuffix+"+"+p.VersionBuild {
+			ans = true
+		} else {
+			ans = false
+		}
+
+	} else {
+		ans = v1.LessThanOrEqual(v2)
+	}
+	return ans, nil
+}
+
+func (p *GentooPackage) GreaterThanOrEqual(i *GentooPackage) (bool, error) {
+	var ans bool
+
+	if p.Category != i.Category || p.Name != i.Name {
+		return p.orderDifferentPkgs(i, 1), nil
+	}
+	v1, v2, err := p.getVersions(i)
+	if err != nil {
+		return false, err
+	}
+
+	if v1.Equal(v2) {
+		// Order suffix and VersionBuild
+		versionsSuffix := []string{
+			p.VersionSuffix + "+" + p.VersionBuild,
+			i.VersionSuffix + "+" + i.VersionBuild,
+		}
+
+		sort.Strings(versionsSuffix)
+		if versionsSuffix[1] == p.VersionSuffix+"+"+p.VersionBuild {
+			ans = true
+		} else {
+			ans = false
+		}
+
+	} else {
+		ans = v1.LessThanOrEqual(v2)
+	}
+	return ans, nil
+}
+
+func (p *GentooPackage) Equal(i *GentooPackage) (bool, error) {
+	v1, v2, err := p.getVersions(i)
+	if err != nil {
+		return false, err
+	}
+	ans := v1.Equal(v2)
+
+	if ans && (p.VersionSuffix != i.VersionSuffix || p.VersionBuild != i.VersionBuild) {
+		ans = false
+	}
+
+	return ans, nil
 }
 
 func (p *GentooPackage) Admit(i *GentooPackage) (bool, error) {
@@ -196,6 +406,11 @@ func (p *GentooPackage) Admit(i *GentooPackage) (bool, error) {
 	if p.Name != i.Name {
 		return false, errors.New(
 			fmt.Sprintf("Wrong name for package %s", i.Name))
+	}
+
+	// Check Slot
+	if p.Slot != "" && i.Slot != "" && p.Slot != i.Slot {
+		return false, nil
 	}
 
 	v1s := p.Version
@@ -358,12 +573,13 @@ func ParsePackageStr(pkg string) (*GentooPackage, error) {
 		"_beta[0-9-a-z]*",
 	)
 
-	words := strings.Split(pkg, "/")
-	if len(words) != 2 {
+	// The slash is used also in slot.
+	if strings.Index(pkg, "/") < 0 {
 		return nil, errors.New(fmt.Sprintf("Invalid package string %s", pkg))
 	}
-	ans.Category = words[0]
-	pkgname := words[1]
+
+	ans.Category = pkg[:strings.Index(pkg, "/")]
+	pkgname := pkg[strings.Index(pkg, "/")+1:]
 
 	// Validate category
 
@@ -412,16 +628,27 @@ func ParsePackageStr(pkg string) (*GentooPackage, error) {
 		}
 	}
 
+	// Check if there are use flags annotation
+	if strings.Index(pkgname, "[") > 0 {
+		useFlags := pkgname[strings.Index(pkgname, "[")+1 : strings.Index(pkgname, "]")]
+		ans.UseFlags = strings.Split(useFlags, ",")
+		p := pkgname[0:strings.Index(pkgname, "[")]
+		if strings.Index(pkgname, "]") < len(pkgname) {
+			p = p + pkgname[strings.Index(pkgname, "]")+1:len(pkgname)]
+		}
+		pkgname = p
+	}
+
 	// Check if has repository
 	if strings.Contains(pkgname, "::") {
-		words = strings.Split(pkgname, "::")
+		words := strings.Split(pkgname, "::")
 		ans.Repository = words[1]
 		pkgname = words[0]
 	}
 
 	// Check if has slot
 	if strings.Contains(pkgname, ":") {
-		words = strings.Split(pkgname, ":")
+		words := strings.Split(pkgname, ":")
 		ans.Slot = words[1]
 		pkgname = words[0]
 	}
@@ -465,4 +692,13 @@ func ParsePackageStr(pkg string) (*GentooPackage, error) {
 	}
 
 	return &ans, nil
+}
+
+type GentooPackageSorter []GentooPackage
+
+func (p GentooPackageSorter) Len() int      { return len(p) }
+func (p GentooPackageSorter) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+func (p GentooPackageSorter) Less(i, j int) bool {
+	ans, _ := p[i].LessThan(&p[j])
+	return ans
 }
