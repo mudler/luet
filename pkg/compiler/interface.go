@@ -49,7 +49,8 @@ type CompilerBackendOptions struct {
 }
 
 type CompilerOptions struct {
-	ImageRepository          string
+	PushImageRepository      string
+	PullImageRepository      []string
 	PullFirst, KeepImg, Push bool
 	Concurrency              int
 	CompressionType          CompressionImplementation
@@ -65,14 +66,14 @@ type CompilerOptions struct {
 
 func NewDefaultCompilerOptions() *CompilerOptions {
 	return &CompilerOptions{
-		ImageRepository: "luet/cache",
-		PullFirst:       false,
-		Push:            false,
-		CompressionType: None,
-		KeepImg:         true,
-		Concurrency:     runtime.NumCPU(),
-		OnlyDeps:        false,
-		NoDeps:          false,
+		PushImageRepository: "luet/cache",
+		PullFirst:           false,
+		Push:                false,
+		CompressionType:     None,
+		KeepImg:             true,
+		Concurrency:         runtime.NumCPU(),
+		OnlyDeps:            false,
+		NoDeps:              false,
 	}
 }
 

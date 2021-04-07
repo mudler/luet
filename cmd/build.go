@@ -154,6 +154,7 @@ Build packages specifying multiple definition trees:
 		discount := LuetCfg.Viper.GetFloat64("solver.discount")
 		rate := LuetCfg.Viper.GetFloat64("solver.rate")
 		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
+		pullRepo, _ := cmd.Flags().GetStringArray("pull-repository")
 
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -166,7 +167,8 @@ Build packages specifying multiple definition trees:
 
 		opts := compiler.NewDefaultCompilerOptions()
 		opts.SolverOptions = *LuetCfg.GetSolverOptions()
-		opts.ImageRepository = imageRepository
+		opts.PushImageRepository = imageRepository
+		opts.PullImageRepository = pullRepo
 		opts.PullFirst = pull
 		opts.KeepImg = keepImages
 		opts.Push = push
@@ -330,6 +332,7 @@ func init() {
 	buildCmd.Flags().Bool("live-output", LuetCfg.GetGeneral().ShowBuildOutput, "Enable live output of the build phase.")
 
 	buildCmd.Flags().Bool("pretend", false, "Just print what packages will be compiled")
+	buildCmd.Flags().StringArrayP("pull-repository", "p", []string{}, "A list of repositories to pull the cache from")
 
 	buildCmd.Flags().StringP("output", "o", "terminal", "Output format ( Defaults: terminal, available: json,yaml )")
 

@@ -1,4 +1,4 @@
-// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2019-2021 Ettore Di Giacinto <mudler@sabayon.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -43,9 +43,11 @@ const CollectionFile = "collection.yaml"
 
 type LuetCompiler struct {
 	*tree.CompilerRecipe
-	Backend                   CompilerBackend
-	Database                  pkg.PackageDatabase
-	ImageRepository           string
+	Backend             CompilerBackend
+	Database            pkg.PackageDatabase
+	PushImageRepository string
+	PullImageRepository []string
+
 	PullFirst, KeepImg, Clean bool
 	Concurrency               int
 	CompressionType           CompressionImplementation
@@ -56,28 +58,41 @@ type LuetCompiler struct {
 
 func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase, opt *CompilerOptions, solvopts solver.Options) Compiler {
 	// The CompilerRecipe will gives us a tree with only build deps listed.
+
+	if len(opt.PullImageRepository) == 0 {
+		opt.PullImageRepository = []string{opt.PushImageRepository}
+	}
+
 	return &LuetCompiler{
 		Backend: backend,
 		CompilerRecipe: &tree.CompilerRecipe{
-			tree.Recipe{Database: db},
+			Recipe: tree.Recipe{Database: db},
 		},
-		Database:        db,
-		ImageRepository: opt.ImageRepository,
-		PullFirst:       opt.PullFirst,
-		CompressionType: opt.CompressionType,
-		KeepImg:         opt.KeepImg,
-		Concurrency:     opt.Concurrency,
-		Options:         *opt,
-		SolverOptions:   solvopts,
+		Database:            db,
+		PushImageRepository: opt.PushImageRepository,
+		PullImageRepository: opt.PullImageRepository,
+		PullFirst:           opt.PullFirst,
+		CompressionType:     opt.CompressionType,
+		KeepImg:             opt.KeepImg,
+		Concurrency:         opt.Concurrency,
+		Options:             *opt,
+		SolverOptions:       solvopts,
 	}
 }
+
+// SetBackendArgs sets arbitrary backend arguments.
+// Those for example can be commands passed to the docker daemon during build phase,
+// as build-args, etc.
 func (cs *LuetCompiler) SetBackendArgs(args []string) {
 	cs.BackedArgs = args
 }
+
+// SetConcurrency sets the compiler concurrency
 func (cs *LuetCompiler) SetConcurrency(i int) {
 	cs.Concurrency = i
 }
 
+// SetCompressionType sets the compiler compression type for resulting artifacts
 func (cs *LuetCompiler) SetCompressionType(t CompressionImplementation) {
 	cs.CompressionType = t
 }
@@ -97,6 +112,7 @@ func (cs *LuetCompiler) compilerWorker(i int, wg *sync.WaitGroup, cspecs chan Co
 	}
 }
 
+// CompileWithReverseDeps compiles the supplied compilationspecs and their reverse dependencies
 func (cs *LuetCompiler) CompileWithReverseDeps(keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error) {
 	artifacts, err := cs.CompileParallel(keepPermissions, ps)
 	if len(err) != 0 {
@@ -117,28 +133,6 @@ func (cs *LuetCompiler) CompileWithReverseDeps(keepPermissions bool, ps Compilat
 
 			toCompile.Add(spec)
 		}
-		// for _, assertion := range a.GetSourceAssertion() {
-		// 	if assertion.Value && assertion.Package.Flagged() {
-		// 		spec, asserterr := cs.FromPackage(assertion.Package)
-		// 		if err != nil {
-		// 			return nil, append(err, asserterr)
-		// 		}
-		// 		w, asserterr := cs.Tree().World()
-		// 		if err != nil {
-		// 			return nil, append(err, asserterr)
-		// 		}
-		// 		revdeps := spec.GetPackage().Revdeps(&w)
-		// 		for _, r := range revdeps {
-		// 			spec, asserterr := cs.FromPackage(r)
-		// 			if asserterr != nil {
-		// 				return nil, append(err, asserterr)
-		// 			}
-		// 			spec.SetOutputPath(ps.All()[0].GetOutputPath())
-
-		// 			toCompile.Add(spec)
-		// 		}
-		// 	}
-		// }
 	}
 
 	uniques := toCompile.Unique().Remove(ps)
@@ -150,6 +144,8 @@ func (cs *LuetCompiler) CompileWithReverseDeps(keepPermissions bool, ps Compilat
 	return append(artifacts, artifacts2...), err
 }
 
+// CompileParallel compiles the supplied compilationspecs in parallel
+// to note, no specific heuristic is implemented, and the specs are run in parallel as they are.
 func (cs *LuetCompiler) CompileParallel(keepPermissions bool, ps CompilationSpecs) ([]Artifact, []error) {
 	all := make(chan CompilationSpec)
 	artifacts := []Artifact{}
@@ -329,13 +325,13 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	fp := p.GetPackage().HashFingerprint(helpers.StripRegistryFromImage(packageImage))
 
 	if buildertaggedImage == "" {
-		buildertaggedImage = cs.ImageRepository + ":builder-" + fp
+		buildertaggedImage = cs.PushImageRepository + ":builder-" + fp
 		Debug(pkgTag, "Creating intermediary image", buildertaggedImage, "from", image)
 	}
 
 	// TODO:  Cleanup, not actually hit
 	if packageImage == "" {
-		packageImage = cs.ImageRepository + ":builder-invalid" + fp
+		return runnerOpts, builderOpts, errors.New("no package image given")
 	}
 
 	p.SetSeedImage(image) // In this case, we ignore the build deps as we suppose that the image has them - otherwise we recompose the tree with a solver,
@@ -407,11 +403,11 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 		}
 		if buildImage {
 			if err := cs.Backend.BuildImage(opts); err != nil {
-				return errors.Wrap(err, "Could not build image: "+image+" "+opts.DockerFileName)
+				return errors.Wrapf(err, "Could not build image: %s %s", image, opts.DockerFileName)
 			}
 			if cs.Options.Push {
 				if err = cs.Backend.Push(opts); err != nil {
-					return errors.Wrap(err, "Could not push image: "+image+" "+opts.DockerFileName)
+					return errors.Wrapf(err, "Could not push image: %s %s", image, opts.DockerFileName)
 				}
 			}
 		}
@@ -420,7 +416,7 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	if len(p.GetPreBuildSteps()) != 0 {
 		Info(pkgTag, ":whale: Generating 'builder' image from", image, "as", buildertaggedImage, "with prelude steps")
 		if err := buildAndPush(builderOpts); err != nil {
-			return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
+			return builderOpts, runnerOpts, errors.Wrapf(err, "Could not push image: %s %s", image, builderOpts.DockerFileName)
 		}
 	}
 
@@ -428,7 +424,7 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	// acting as a docker tag.
 	Info(pkgTag, ":whale: Generating 'package' image from", buildertaggedImage, "as", packageImage, "with build steps")
 	if err := buildAndPush(runnerOpts); err != nil {
-		return builderOpts, runnerOpts, errors.Wrap(err, "Could not push image: "+image+" "+builderOpts.DockerFileName)
+		return builderOpts, runnerOpts, errors.Wrapf(err, "Could not push image: %s %s", image, runnerOpts.DockerFileName)
 	}
 
 	return builderOpts, runnerOpts, nil
@@ -501,19 +497,85 @@ func (cs *LuetCompiler) genArtifact(p CompilationSpec, builderOpts, runnerOpts C
 	return artifact, nil
 }
 
-func (cs *LuetCompiler) waitForImage(image string) {
-	if cs.Options.PullFirst && cs.Options.Wait && !cs.Backend.ImageAvailable(image) {
-		Info(fmt.Sprintf("Waiting for image %s to be available... :zzz:", image))
-		Spinner(22)
-		defer SpinnerStop()
-		for !cs.Backend.ImageAvailable(image) {
-			Info(fmt.Sprintf("Image %s not available yet, sleeping", image))
-			time.Sleep(5 * time.Second)
+func (cs *LuetCompiler) waitForImages(images []string) {
+	if cs.Options.PullFirst && cs.Options.Wait {
+		available, _ := oneOfImagesAvailable(images, cs.Backend)
+		if !available {
+			Info(fmt.Sprintf("Waiting for image %s to be available... :zzz:", images))
+			Spinner(22)
+			defer SpinnerStop()
+			for !available {
+				available, _ = oneOfImagesAvailable(images, cs.Backend)
+				Info(fmt.Sprintf("Image %s not available yet, sleeping", images))
+				time.Sleep(5 * time.Second)
+			}
 		}
 	}
 }
 
-func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage string,
+func oneOfImagesExists(images []string, b CompilerBackend) (bool, string) {
+	for _, i := range images {
+		if exists := b.ImageExists(i); exists {
+			return true, i
+		}
+	}
+	return false, ""
+}
+func oneOfImagesAvailable(images []string, b CompilerBackend) (bool, string) {
+	for _, i := range images {
+		if exists := b.ImageAvailable(i); exists {
+			return true, i
+		}
+	}
+	return false, ""
+}
+
+func (cs *LuetCompiler) resolveExistingImageHash(imageHash string) string {
+	var resolvedImage string
+	toChecklist := append([]string{fmt.Sprintf("%s:%s", cs.PushImageRepository, imageHash)},
+		genImageList(cs.PullImageRepository, imageHash)...)
+	if exists, which := oneOfImagesExists(toChecklist, cs.Backend); exists {
+		resolvedImage = which
+	}
+	if cs.Options.PullFirst {
+		if exists, which := oneOfImagesAvailable(toChecklist, cs.Backend); exists {
+			resolvedImage = which
+		}
+	}
+
+	if resolvedImage == "" {
+		resolvedImage = fmt.Sprintf("%s:%s", cs.PushImageRepository, imageHash)
+	}
+	return resolvedImage
+}
+
+func (cs *LuetCompiler) getImageArtifact(hash string, p CompilationSpec) (Artifact, error) {
+	// we check if there is an available image with the given hash and
+	// we return a full artifact if can be loaded locally.
+
+	toChecklist := append([]string{fmt.Sprintf("%s:%s", cs.PushImageRepository, hash)},
+		genImageList(cs.PullImageRepository, hash)...)
+
+	exists, _ := oneOfImagesExists(toChecklist, cs.Backend)
+	if art, err := LoadArtifactFromYaml(p); err == nil && exists { // If YAML is correctly loaded, and both images exists, no reason to rebuild.
+		Debug("Artifact reloaded from YAML. Skipping build")
+		return art, nil
+	}
+	cs.waitForImages(toChecklist)
+	available, _ := oneOfImagesAvailable(toChecklist, cs.Backend)
+	if exists || (cs.Options.PullFirst && available) {
+		Debug("Image available, returning empty artifact")
+		return &PackageArtifact{}, nil
+	}
+
+	return nil, errors.New("artifact not found")
+}
+
+// compileWithImage compiles a PackageTagHash image using the image source, and tagging an indermediate
+// image buildertaggedImage.
+// Images that can be resolved from repositories are prefered over the local ones if PullFirst is set to true
+// avoiding to rebuild images as much as possible
+func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage string, packageTagHash string,
 	concurrency int,
 	keepPermissions, keepImg bool,
 	p CompilationSpec, generateArtifact bool) (Artifact, error) {
@@ -526,17 +588,16 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	}
 
 	if !generateArtifact {
-		exists := cs.Backend.ImageExists(packageImage)
-		if art, err := LoadArtifactFromYaml(p); err == nil && exists { // If YAML is correctly loaded, and both images exists, no reason to rebuild.
-			Debug("Artifact reloaded from YAML. Skipping build")
-			return art, err
-		}
-		cs.waitForImage(packageImage)
-		if cs.Options.PullFirst && cs.Backend.ImageAvailable(packageImage) {
-			return &PackageArtifact{}, nil
+		// try to avoid regenerating the image if possible by checking the hash in the
+		// given repositories
+		// It is best effort. If we fail resolving, we will generate the images and keep going
+		if art, err := cs.getImageArtifact(packageTagHash, p); err == nil {
+			return art, nil
 		}
 	}
 
+	// always going to point at the destination from the repo defined
+	packageImage := fmt.Sprintf("%s:%s", cs.PushImageRepository, packageTagHash)
 	builderOpts, runnerOpts, err := cs.buildPackageImage(image, buildertaggedImage, packageImage, concurrency, keepPermissions, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed building package image")
@@ -561,6 +622,8 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage, packageImage
 	return cs.genArtifact(p, builderOpts, runnerOpts, concurrency, keepPermissions)
 }
 
+// FromDatabase returns all the available compilation specs from a database. If the minimum flag is returned
+// it will be computed a minimal subset that will guarantees that all packages are built ( if not targeting a single package explictly )
 func (cs *LuetCompiler) FromDatabase(db pkg.PackageDatabase, minimum bool, dst string) ([]CompilationSpec, error) {
 	compilerSpecs := NewLuetCompilationspecs()
 
@@ -608,6 +671,8 @@ func (cs *LuetCompiler) ComputeMinimumCompilableSet(p ...CompilationSpec) ([]Com
 	return result, nil
 }
 
+// ComputeDepTree computes the dependency tree of a compilation spec and returns solver assertions
+// in order to be able to compile the spec.
 func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssertions, error) {
 
 	s := solver.NewResolver(cs.SolverOptions, pkg.NewInMemoryDatabase(false), cs.Database, pkg.NewInMemoryDatabase(false), cs.Options.SolverOptions.Resolver())
@@ -637,7 +702,8 @@ func (cs *LuetCompiler) ComputeDepTree(p CompilationSpec) (solver.PackagesAssert
 	return assertions, nil
 }
 
-// Compile is non-parallel
+// Compile is a non-parallel version of CompileParallel. It builds the compilation specs and generates
+// an artifact
 func (cs *LuetCompiler) Compile(keepPermissions bool, p CompilationSpec) (Artifact, error) {
 	asserts, err := cs.ComputeDepTree(p)
 	if err != nil {
@@ -645,6 +711,14 @@ func (cs *LuetCompiler) Compile(keepPermissions bool, p CompilationSpec) (Artifa
 	}
 	p.SetSourceAssertion(asserts)
 	return cs.compile(cs.Concurrency, keepPermissions, p)
+}
+
+func genImageList(refs []string, hash string) []string {
+	var res []string
+	for _, r := range refs {
+		res = append(res, fmt.Sprintf("%s:%s", r, hash))
+	}
+	return res
 }
 
 func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p CompilationSpec) (Artifact, error) {
@@ -660,7 +734,6 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	}
 
 	targetAssertion := p.GetSourceAssertion().Search(p.GetPackage().GetFingerPrint())
-	targetPackageHash := cs.ImageRepository + ":" + targetAssertion.Hash.PackageHash
 
 	bus.Manager.Publish(bus.EventPackagePreBuild, struct {
 		CompileSpec CompilationSpec
@@ -673,7 +746,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 	// - If image is set we just generate a plain dockerfile
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
 	if p.GetImage() != "" {
-		return cs.compileWithImage(p.GetImage(), "", targetPackageHash, concurrency, keepPermissions, cs.KeepImg, p, true)
+		return cs.compileWithImage(p.GetImage(), "", targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.KeepImg, p, true)
 	}
 
 	// - If image is not set, we read a base_image. Then we will build one image from it to kick-off our build based
@@ -704,11 +777,8 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 				return nil, errors.Wrap(err, "Error while generating compilespec for "+assertion.Package.GetName())
 			}
 			compileSpec.SetOutputPath(p.GetOutputPath())
-
-			buildImageHash := cs.ImageRepository + ":" + assertion.Hash.BuildHash
-			currentPackageImageHash := cs.ImageRepository + ":" + assertion.Hash.PackageHash
-			Debug(pkgTag, "    :arrow_right_hook: :whale: Builder image from", buildImageHash)
-			Debug(pkgTag, "    :arrow_right_hook: :whale: Package image name", currentPackageImageHash)
+			Debug(pkgTag, "    :arrow_right_hook: :whale: Builder image from hash", assertion.Hash.BuildHash)
+			Debug(pkgTag, "    :arrow_right_hook: :whale: Package image from hash", assertion.Hash.PackageHash)
 
 			bus.Manager.Publish(bus.EventPackagePreBuild, struct {
 				CompileSpec CompilationSpec
@@ -718,10 +788,15 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 				Assert:      assertion,
 			})
 
-			lastHash = currentPackageImageHash
+			lastHash = assertion.Hash.PackageHash
+			// for the source instead, pick an image and a buildertaggedImage from hashes if they exists.
+			// otherways fallback to the pushed repo
+			// Resolve images from the hashtree
+			resolvedBuildImage := cs.resolveExistingImageHash(assertion.Hash.BuildHash)
 			if compileSpec.GetImage() != "" {
 				Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().HumanReadableString()+" from image")
-				artifact, err := cs.compileWithImage(compileSpec.GetImage(), buildImageHash, currentPackageImageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec, packageDeps)
+
+				artifact, err := cs.compileWithImage(compileSpec.GetImage(), resolvedBuildImage, assertion.Hash.PackageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec, packageDeps)
 				if err != nil {
 					return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().HumanReadableString())
 				}
@@ -731,11 +806,9 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 			}
 
 			Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().HumanReadableString()+" from tree")
-			artifact, err := cs.compileWithImage(buildImageHash, "", currentPackageImageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec, packageDeps)
+			artifact, err := cs.compileWithImage(resolvedBuildImage, "", assertion.Hash.PackageHash, concurrency, keepPermissions, cs.KeepImg, compileSpec, packageDeps)
 			if err != nil {
 				return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().HumanReadableString())
-				//	deperrs = append(deperrs, err)
-				//		break // stop at first error
 			}
 
 			bus.Manager.Publish(bus.EventPackagePostBuild, struct {
@@ -751,13 +824,14 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 		}
 
 	} else if len(dependencies) > 0 {
-		lastHash = cs.ImageRepository + ":" + dependencies[len(dependencies)-1].Hash.PackageHash
+		lastHash = dependencies[len(dependencies)-1].Hash.PackageHash
 	}
 
 	if !cs.Options.OnlyDeps {
+		resolvedBuildImage := cs.resolveExistingImageHash(lastHash)
 		Info(":rocket: All dependencies are satisfied, building package requested by the user", p.GetPackage().HumanReadableString())
-		Info(":package:", p.GetPackage().HumanReadableString(), " Using image: ", lastHash)
-		artifact, err := cs.compileWithImage(lastHash, "", targetPackageHash, concurrency, keepPermissions, cs.KeepImg, p, true)
+		Info(":package:", p.GetPackage().HumanReadableString(), " Using image: ", resolvedBuildImage)
+		artifact, err := cs.compileWithImage(resolvedBuildImage, "", targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.KeepImg, p, true)
 		if err != nil {
 			return artifact, err
 		}
@@ -780,6 +854,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 
 type templatedata map[string]interface{}
 
+// FromPackage returns a compilation spec from a package definition
 func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 
 	pack, err := cs.Database.FindPackageCandidate(p)
@@ -834,10 +909,12 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 	return NewLuetCompilationSpec(dataresult, pack)
 }
 
+// GetBackend returns the current compilation backend
 func (cs *LuetCompiler) GetBackend() CompilerBackend {
 	return cs.Backend
 }
 
+// SetBackend sets the compilation backend
 func (cs *LuetCompiler) SetBackend(b CompilerBackend) {
 	cs.Backend = b
 }

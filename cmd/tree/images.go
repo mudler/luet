@@ -57,6 +57,7 @@ func NewTreeImageCommand() *cobra.Command {
 
 			treePath, _ := cmd.Flags().GetStringArray("tree")
 			imageRepository := viper.GetString("image-repository")
+			pullRepo, _ := cmd.Flags().GetStringArray("pull-repository")
 
 			out, _ := cmd.Flags().GetString("output")
 			if out != "terminal" {
@@ -75,7 +76,8 @@ func NewTreeImageCommand() *cobra.Command {
 
 			opts := compiler.NewDefaultCompilerOptions()
 			opts.SolverOptions = *LuetCfg.GetSolverOptions()
-			opts.ImageRepository = imageRepository
+			opts.PushImageRepository = imageRepository
+			opts.PullImageRepository = pullRepo
 
 			solverOpts := solver.Options{Type: solver.SingleCoreSimple, Concurrency: 1}
 			luetCompiler := compiler.NewLuetCompiler(compilerBackend, reciper.GetDatabase(), opts, solverOpts)
@@ -135,6 +137,7 @@ func NewTreeImageCommand() *cobra.Command {
 	ans.Flags().StringP("output", "o", "terminal", "Output format ( Defaults: terminal, available: json,yaml )")
 	ans.Flags().StringArrayP("tree", "t", []string{path}, "Path of the tree to use.")
 	ans.Flags().String("image-repository", "luet/cache", "Default base image string for generated image")
+	ans.Flags().StringArrayP("pull-repository", "p", []string{}, "A list of repositories to pull the cache from")
 
 	return ans
 }
