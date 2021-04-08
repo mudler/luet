@@ -57,6 +57,17 @@ type CompilerRecipe struct {
 	Recipe
 }
 
+// CompilerRecipes copies tree 1:1 as they contain the specs
+// and the build context required for reproducible builds
+func (r *CompilerRecipe) Save(path string) error {
+	for _, p := range r.SourcePath {
+		if err := helpers.CopyDir(p, filepath.Join(path, filepath.Base(p))); err != nil {
+			return errors.Wrap(err, "while copying source tree")
+		}
+	}
+	return nil
+}
+
 func (r *CompilerRecipe) Load(path string) error {
 
 	r.SourcePath = append(r.SourcePath, path)
