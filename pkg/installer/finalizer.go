@@ -16,6 +16,7 @@
 package installer
 
 import (
+	"os"
 	"os/exec"
 
 	"github.com/ghodss/yaml"
@@ -48,7 +49,7 @@ func (f *LuetFinalizer) RunInstall(s *System) error {
 	for _, c := range f.Install {
 		toRun := append(args, c)
 		Info(":shell: Executing finalizer on ", s.Target, cmd, toRun)
-		if s.Target == "/" {
+		if s.Target == string(os.PathSeparator) {
 			cmd := exec.Command(cmd, toRun...)
 			stdoutStderr, err := cmd.CombinedOutput()
 			if err != nil {
