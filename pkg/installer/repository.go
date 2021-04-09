@@ -224,7 +224,7 @@ func GenerateRepository(name, descr, t string, urls []string,
 	b compiler.CompilerBackend, imagePrefix string, pushImages, force bool) (Repository, error) {
 
 	tr := tree.NewInstallerRecipe(db)
-	btr := tree.NewCompilerRecipe(db)
+	btr := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 
 	for _, treeDir := range treesDir {
 		if err := tr.Load(treeDir); err != nil {
