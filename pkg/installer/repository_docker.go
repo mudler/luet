@@ -112,6 +112,53 @@ func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string,
 	return art, nil
 }
 
+func (d *dockerRepositoryGenerator) pushFileFromArtifact(a compiler.Artifact, imageTree string, r *LuetSystemRepository) error {
+	Debug("Generating image", imageTree)
+	if opts, err := a.GenerateFinalImage(imageTree, r.GetBackend(), false); err != nil {
+		return errors.Wrap(err, "Failed generating metadata tree "+opts.ImageName)
+	}
+	if r.PushImages {
+		if err := pushImage(r.GetBackend(), imageTree, true); err != nil {
+			return errors.Wrapf(err, "Failed while pushing image: '%s'", imageTree)
+		}
+	}
+	return nil
+}
+
+func (d *dockerRepositoryGenerator) pushRepoMetadata(repospec string, r *LuetSystemRepository) error {
+	// create temp dir for metafile
+	metaDir, err := config.LuetCfg.GetSystem().TempDir("metadata")
+	if err != nil {
+		return errors.Wrap(err, "Error met while creating tempdir for metadata")
+	}
+	defer os.RemoveAll(metaDir) // clean up
+
+	tempRepoFile := filepath.Join(metaDir, REPOSITORY_SPECFILE+".tar")
+	if err := helpers.Tar(repospec, tempRepoFile); err != nil {
+		return errors.Wrap(err, "Error met while archiving repository file")
+	}
+
+	a := compiler.NewPackageArtifact(tempRepoFile)
+	imageRepo := fmt.Sprintf("%s:%s", d.imagePrefix, REPOSITORY_SPECFILE)
+
+	if err := d.pushFileFromArtifact(a, imageRepo, r); err != nil {
+		return errors.Wrap(err, "while pushing file from artifact")
+	}
+	return nil
+}
+
+func (d *dockerRepositoryGenerator) pushImageFromArtifact(a compiler.Artifact, r *LuetSystemRepository) error {
+	// we generate a new archive containing the required compressed file.
+	// TODO: Bundle all the extra files in 1 docker image only, instead of an image for each file
+	treeArchive, err := compiler.CreateArtifactForFile(a.GetPath())
+	if err != nil {
+		return errors.Wrap(err, "failed generating checksums for tree")
+	}
+	imageTree := fmt.Sprintf("%s:%s", d.imagePrefix, a.GetFileName())
+
+	return d.pushFileFromArtifact(treeArchive, imageTree, r)
+}
+
 // Generate creates a Docker luet repository
 func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefix string, resetRevision bool) error {
 	// - Iterate over meta, build final images, push them if necessary
@@ -124,7 +171,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 
 	repoTemp, err := config.LuetCfg.GetSystem().TempDir("repo")
 	if err != nil {
-		return errors.Wrap(err, "Error met while creating tempdir for repository")
+		return errors.Wrap(err, "error met while creating tempdir for repository")
 	}
 	defer os.RemoveAll(repoTemp) // clean up
 
@@ -159,72 +206,45 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 	})
 
 	// Create tree and repository file
-	a, err := r.AddTree(r.GetTree(), repoTemp, REPOFILE_TREE_KEY)
+	a, err := r.AddTree(r.GetTree(), repoTemp, REPOFILE_TREE_KEY, NewDefaultTreeRepositoryFile())
 	if err != nil {
-		return errors.Wrap(err, "Error met while adding archive to repository")
+		return errors.Wrap(err, "error met while adding runtime tree to repository")
 	}
 
 	// we generate a new archive containing the required compressed file.
 	// TODO: Bundle all the extra files in 1 docker image only, instead of an image for each file
-	treeArchive, err := compiler.CreateArtifactForFile(a.GetPath())
-	if err != nil {
-		return errors.Wrap(err, "Failed generating checksums for tree")
+	if err := d.pushImageFromArtifact(a, r); err != nil {
+		return errors.Wrap(err, "error met while pushing runtime tree")
 	}
-	imageTree := fmt.Sprintf("%s:%s", imagePrefix, a.GetFileName())
 
-	Debug("Generating image", imageTree)
-	if opts, err := treeArchive.GenerateFinalImage(imageTree, r.GetBackend(), false); err != nil {
-		return errors.Wrap(err, "Failed generating metadata tree "+opts.ImageName)
+	a, err = r.AddTree(r.BuildTree, repoTemp, REPOFILE_COMPILER_TREE_KEY, NewDefaultCompilerTreeRepositoryFile())
+	if err != nil {
+		return errors.Wrap(err, "error met while adding compiler tree to repository")
 	}
-	if r.PushImages {
-		if err := pushImage(r.GetBackend(), imageTree, true); err != nil {
-			return errors.Wrapf(err, "Failed while pushing image: '%s'", imageTree)
-		}
+	// we generate a new archive containing the required compressed file.
+	// TODO: Bundle all the extra files in 1 docker image only, instead of an image for each file
+	if err := d.pushImageFromArtifact(a, r); err != nil {
+		return errors.Wrap(err, "error met while pushing compiler tree")
 	}
 
 	// create temp dir for metafile
 	metaDir, err := config.LuetCfg.GetSystem().TempDir("metadata")
 	if err != nil {
-		return errors.Wrap(err, "Error met while creating tempdir for metadata")
+		return errors.Wrap(err, "error met while creating tempdir for metadata")
 	}
 	defer os.RemoveAll(metaDir) // clean up
 
 	a, err = r.AddMetadata(repospec, metaDir)
 	if err != nil {
-		return errors.Wrap(err, "Failed adding Metadata file to repository")
+		return errors.Wrap(err, "failed adding Metadata file to repository")
 	}
 
-	// Files are downloaded as-is from docker images
-	// we generate a new archive containing the required compressed file.
-	// TODO: Bundle all the extra files in 1 docker image only, instead of an image for each file
-	metaArchive, err := compiler.CreateArtifactForFile(a.GetPath())
-	if err != nil {
-		return errors.Wrap(err, "Failed generating checksums for tree")
-	}
-	imageMetaTree := fmt.Sprintf("%s:%s", imagePrefix, a.GetFileName())
-	if opts, err := metaArchive.GenerateFinalImage(imageMetaTree, r.GetBackend(), false); err != nil {
-		return errors.Wrap(err, "Failed generating metadata tree"+opts.ImageName)
-	}
-	if r.PushImages {
-		if err := pushImage(r.GetBackend(), imageMetaTree, true); err != nil {
-			return errors.Wrapf(err, "Failed while pushing image: '%s'", imageMetaTree)
-		}
+	if err := d.pushImageFromArtifact(a, r); err != nil {
+		return errors.Wrap(err, "error met while pushing docker image from artifact")
 	}
 
-	tempRepoFile := filepath.Join(metaDir, REPOSITORY_SPECFILE+".tar")
-	if err := helpers.Tar(repospec, tempRepoFile); err != nil {
-		return errors.Wrap(err, "Error met while archiving repository file")
-	}
-
-	a = compiler.NewPackageArtifact(tempRepoFile)
-	imageRepo := fmt.Sprintf("%s:%s", imagePrefix, REPOSITORY_SPECFILE)
-	if opts, err := a.GenerateFinalImage(imageRepo, r.GetBackend(), false); err != nil {
-		return errors.Wrap(err, "Failed generating repository image"+opts.ImageName)
-	}
-	if r.PushImages {
-		if err := pushImage(r.GetBackend(), imageRepo, true); err != nil {
-			return errors.Wrapf(err, "Failed while pushing image: '%s'", imageRepo)
-		}
+	if err := d.pushRepoMetadata(repospec, r); err != nil {
+		return errors.Wrap(err, "while pushing repository metadata tree")
 	}
 
 	bus.Manager.Publish(bus.EventRepositoryPostBuild, struct {

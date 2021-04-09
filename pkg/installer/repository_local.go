@@ -93,7 +93,7 @@ func (*localRepositoryGenerator) Generate(r *LuetSystemRepository, dst string, r
 	}
 
 	Info(fmt.Sprintf(
-		"For repository %s creating revision %d and last update %s...",
+		"Repository %s: creating revision %d and last update %s...",
 		r.Name, r.Revision, r.LastUpdate,
 	))
 
@@ -105,12 +105,16 @@ func (*localRepositoryGenerator) Generate(r *LuetSystemRepository, dst string, r
 		Path: dst,
 	})
 
-	if _, err := r.AddTree(r.GetTree(), dst, REPOFILE_TREE_KEY); err != nil {
-		return errors.Wrap(err, "Error met while adding archive to repository")
+	if _, err := r.AddTree(r.GetTree(), dst, REPOFILE_TREE_KEY, NewDefaultTreeRepositoryFile()); err != nil {
+		return errors.Wrap(err, "error met while adding runtime tree to repository")
+	}
+
+	if _, err := r.AddTree(r.BuildTree, dst, REPOFILE_COMPILER_TREE_KEY, NewDefaultCompilerTreeRepositoryFile()); err != nil {
+		return errors.Wrap(err, "error met while adding compiler tree to repository")
 	}
 
 	if _, err := r.AddMetadata(repospec, dst); err != nil {
-		return errors.Wrap(err, "Failed adding Metadata file to repository")
+		return errors.Wrap(err, "failed adding Metadata file to repository")
 	}
 
 	bus.Manager.Publish(bus.EventRepositoryPostBuild, struct {

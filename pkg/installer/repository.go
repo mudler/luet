@@ -439,6 +439,7 @@ func (r *LuetSystemRepository) BumpRevision(repospec string, resetRevision bool)
 }
 
 // AddMetadata adds the repository serialized content into the metadata key of the repository
+// It writes the serialized content to repospec, and writes the repository.meta.yaml file into dst
 func (r *LuetSystemRepository) AddMetadata(repospec, dst string) (compiler.Artifact, error) {
 	// Create Metadata struct and serialized repository
 	meta, serialized := r.Serialize()
@@ -476,19 +477,19 @@ func (r *LuetSystemRepository) AddMetadata(repospec, dst string) (compiler.Artif
 // AddTree adds a tree.Builder with the given key to the repository.
 // It will generate an artifact which will be then embedded in the repository manifest
 // It returns the generated artifacts and an error
-func (r *LuetSystemRepository) AddTree(t tree.Builder, dst, key string) (compiler.Artifact, error) {
+func (r *LuetSystemRepository) AddTree(t tree.Builder, dst, key string,f LuetRepositoryFile) (compiler.Artifact, error) {
 	// Create tree and repository file
 	archive, err := config.LuetCfg.GetSystem().TempDir("archive")
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating tempdir for archive")
 	}
 	defer os.RemoveAll(archive) // clean up
-	err = t.Save(archive)
-	if err != nil {
+
+	if err := t.Save(archive); err != nil {
 		return nil, errors.Wrap(err, "Error met while saving the tree")
 	}
 
-	a, err := r.AddRepositoryFile(archive, key, dst, NewDefaultTreeRepositoryFile())
+	a, err := r.AddRepositoryFile(archive, key, dst, f)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while adding archive to repository")
 	}
@@ -512,12 +513,11 @@ func (r *LuetSystemRepository) AddRepositoryFile(src, fileKey, repositoryRoot st
 		return a, errors.Wrap(err, "Error met while creating package archive")
 	}
 
-	// Update the tree name with the name created by compression selected.
-	treeFile.SetFileName(path.Base(a.GetPath()))
 	err = a.Hash()
 	if err != nil {
 		return a, errors.Wrap(err, "Failed generating checksums for tree")
 	}
+	// Update the tree name with the name created by compression selected.
 	treeFile.SetChecksums(a.GetChecksums())
 	treeFile.SetFileName(path.Base(a.GetPath()))
 
