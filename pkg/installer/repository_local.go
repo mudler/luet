@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -28,10 +27,8 @@ import (
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
-	"github.com/ghodss/yaml"
 	"github.com/mudler/luet/pkg/bus"
 	compiler "github.com/mudler/luet/pkg/compiler"
-	"github.com/mudler/luet/pkg/config"
 	"github.com/pkg/errors"
 )
 
@@ -81,6 +78,7 @@ func buildPackageIndex(path string, db pkg.PackageDatabase) ([]compiler.Artifact
 	return art, nil
 }
 
+// Generate creates a Local luet repository
 func (*localRepositoryGenerator) Generate(r *LuetSystemRepository, dst string, resetRevision bool) error {
 	err := os.MkdirAll(dst, os.ModePerm)
 	if err != nil {
@@ -89,19 +87,10 @@ func (*localRepositoryGenerator) Generate(r *LuetSystemRepository, dst string, r
 	r.LastUpdate = strconv.FormatInt(time.Now().Unix(), 10)
 
 	repospec := filepath.Join(dst, REPOSITORY_SPECFILE)
-	if resetRevision {
-		r.Revision = 0
-	} else {
-		if _, err := os.Stat(repospec); !os.IsNotExist(err) {
-			// Read existing file for retrieve revision
-			spec, err := r.ReadSpecFile(repospec, false)
-			if err != nil {
-				return err
-			}
-			r.Revision = spec.GetRevision()
-		}
+	// Increment the internal revision version by reading the one which is already available (if any)
+	if err := r.BumpRevision(repospec, resetRevision); err != nil {
+		return err
 	}
-	r.Revision++
 
 	Info(fmt.Sprintf(
 		"For repository %s creating revision %d and last update %s...",
@@ -116,85 +105,12 @@ func (*localRepositoryGenerator) Generate(r *LuetSystemRepository, dst string, r
 		Path: dst,
 	})
 
-	// Create tree and repository file
-	archive, err := config.LuetCfg.GetSystem().TempDir("archive")
-	if err != nil {
-		return errors.Wrap(err, "Error met while creating tempdir for archive")
-	}
-	defer os.RemoveAll(archive) // clean up
-
-	err = r.GetTree().Save(archive)
-	if err != nil {
-		return errors.Wrap(err, "Error met while saving the tree")
+	if _, err := r.AddTree(r.GetTree(), dst, REPOFILE_TREE_KEY); err != nil {
+		return errors.Wrap(err, "Error met while adding archive to repository")
 	}
 
-	treeFile, err := r.GetRepositoryFile(REPOFILE_TREE_KEY)
-	if err != nil {
-		treeFile = NewDefaultTreeRepositoryFile()
-		r.SetRepositoryFile(REPOFILE_TREE_KEY, treeFile)
-	}
-
-	a := compiler.NewPackageArtifact(filepath.Join(dst, treeFile.GetFileName()))
-	a.SetCompressionType(treeFile.GetCompressionType())
-	err = a.Compress(archive, 1)
-	if err != nil {
-		return errors.Wrap(err, "Error met while creating package archive")
-	}
-
-	// Update the tree name with the name created by compression selected.
-	treeFile.SetFileName(path.Base(a.GetPath()))
-	err = a.Hash()
-	if err != nil {
-		return errors.Wrap(err, "Failed generating checksums for tree")
-	}
-	treeFile.SetChecksums(a.GetChecksums())
-	r.SetRepositoryFile(REPOFILE_TREE_KEY, treeFile)
-
-	// Create Metadata struct and serialized repository
-	meta, serialized := r.Serialize()
-
-	// Create metadata file and repository file
-	metaTmpDir, err := config.LuetCfg.GetSystem().TempDir("metadata")
-	defer os.RemoveAll(metaTmpDir) // clean up
-	if err != nil {
-		return errors.Wrap(err, "Error met while creating tempdir for metadata")
-	}
-
-	metaFile, err := r.GetRepositoryFile(REPOFILE_META_KEY)
-	if err != nil {
-		metaFile = NewDefaultMetaRepositoryFile()
-		r.SetRepositoryFile(REPOFILE_META_KEY, metaFile)
-	}
-
-	repoMetaSpec := filepath.Join(metaTmpDir, REPOSITORY_METAFILE)
-	// Create repository.meta.yaml file
-	err = meta.WriteFile(repoMetaSpec)
-	if err != nil {
-		return err
-	}
-
-	a = compiler.NewPackageArtifact(filepath.Join(dst, metaFile.GetFileName()))
-	a.SetCompressionType(metaFile.GetCompressionType())
-	err = a.Compress(metaTmpDir, 1)
-	if err != nil {
-		return errors.Wrap(err, "Error met while archiving repository metadata")
-	}
-
-	metaFile.SetFileName(path.Base(a.GetPath()))
-	r.SetRepositoryFile(REPOFILE_META_KEY, metaFile)
-	err = a.Hash()
-	if err != nil {
-		return errors.Wrap(err, "Failed generating checksums for metadata")
-	}
-	metaFile.SetChecksums(a.GetChecksums())
-
-	data, err := yaml.Marshal(serialized)
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(repospec, data, os.ModePerm)
-	if err != nil {
-		return err
+	if _, err := r.AddMetadata(repospec, dst); err != nil {
+		return errors.Wrap(err, "Failed adding Metadata file to repository")
 	}
 
 	bus.Manager.Publish(bus.EventRepositoryPostBuild, struct {

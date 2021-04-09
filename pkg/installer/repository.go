@@ -18,6 +18,7 @@ package installer
 import (
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -61,7 +62,7 @@ type LuetSystemRepository struct {
 	*config.LuetRepository
 
 	Index           compiler.ArtifactIndex        `json:"index"`
-	Tree            tree.Builder                  `json:"-"`
+	BuildTree, Tree tree.Builder                  `json:"-"`
 	RepositoryFiles map[string]LuetRepositoryFile `json:"repo_files"`
 	Backend         compiler.CompilerBackend      `json:"-"`
 	PushImages      bool                          `json:"-"`
@@ -223,10 +224,13 @@ func GenerateRepository(name, descr, t string, urls []string,
 	b compiler.CompilerBackend, imagePrefix string, pushImages, force bool) (Repository, error) {
 
 	tr := tree.NewInstallerRecipe(db)
+	btr := tree.NewCompilerRecipe(db)
 
 	for _, treeDir := range treesDir {
-		err := tr.Load(treeDir)
-		if err != nil {
+		if err := tr.Load(treeDir); err != nil {
+			return nil, err
+		}
+		if err := btr.Load(treeDir); err != nil {
 			return nil, err
 		}
 	}
@@ -234,6 +238,7 @@ func GenerateRepository(name, descr, t string, urls []string,
 	repo := &LuetSystemRepository{
 		LuetRepository:  config.NewLuetRepository(name, t, descr, urls, priority, true, false),
 		Tree:            tr,
+		BuildTree:       btr,
 		RepositoryFiles: map[string]LuetRepositoryFile{},
 		PushImages:      pushImages,
 		ForcePush:       force,
@@ -414,6 +419,113 @@ func (r *LuetSystemRepository) IncrementRevision() {
 func (r *LuetSystemRepository) SetAuthentication(auth map[string]string) {
 	r.LuetRepository.Authentication = auth
 }
+
+// BumpRevision bumps the internal repository revision by reading the current one from repospec
+func (r *LuetSystemRepository) BumpRevision(repospec string, resetRevision bool) error {
+	if resetRevision {
+		r.Revision = 0
+	} else {
+		if _, err := os.Stat(repospec); !os.IsNotExist(err) {
+			// Read existing file for retrieve revision
+			spec, err := r.ReadSpecFile(repospec)
+			if err != nil {
+				return err
+			}
+			r.Revision = spec.GetRevision()
+		}
+	}
+	r.Revision++
+	return nil
+}
+
+// AddMetadata adds the repository serialized content into the metadata key of the repository
+func (r *LuetSystemRepository) AddMetadata(repospec, dst string) (compiler.Artifact, error) {
+	// Create Metadata struct and serialized repository
+	meta, serialized := r.Serialize()
+
+	// Create metadata file and repository file
+	metaTmpDir, err := config.LuetCfg.GetSystem().TempDir("metadata")
+	defer os.RemoveAll(metaTmpDir) // clean up
+	if err != nil {
+		return nil, errors.Wrap(err, "Error met while creating tempdir for metadata")
+	}
+
+	repoMetaSpec := filepath.Join(metaTmpDir, REPOSITORY_METAFILE)
+
+	// Create repository.meta.yaml file
+	err = meta.WriteFile(repoMetaSpec)
+	if err != nil {
+		return nil, err
+	}
+	a, err := r.AddRepositoryFile(metaTmpDir, REPOFILE_META_KEY, dst, NewDefaultMetaRepositoryFile())
+	if err != nil {
+		return a, errors.Wrap(err, "Error met while adding archive to repository")
+	}
+
+	data, err := yaml.Marshal(serialized)
+	if err != nil {
+		return a, err
+	}
+	err = ioutil.WriteFile(repospec, data, os.ModePerm)
+	if err != nil {
+		return a, err
+	}
+	return a, nil
+}
+
+// AddTree adds a tree.Builder with the given key to the repository.
+// It will generate an artifact which will be then embedded in the repository manifest
+// It returns the generated artifacts and an error
+func (r *LuetSystemRepository) AddTree(t tree.Builder, dst, key string) (compiler.Artifact, error) {
+	// Create tree and repository file
+	archive, err := config.LuetCfg.GetSystem().TempDir("archive")
+	if err != nil {
+		return nil, errors.Wrap(err, "Error met while creating tempdir for archive")
+	}
+	defer os.RemoveAll(archive) // clean up
+	err = t.Save(archive)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error met while saving the tree")
+	}
+
+	a, err := r.AddRepositoryFile(archive, key, dst, NewDefaultTreeRepositoryFile())
+	if err != nil {
+		return nil, errors.Wrap(err, "Error met while adding archive to repository")
+	}
+	return a, nil
+}
+
+// AddRepositoryFile adds a path to a key in the repository manifest.
+// The path will be compressed, and a default File has to be passed in case there is no entry into
+// the repository manifest
+func (r *LuetSystemRepository) AddRepositoryFile(src, fileKey, repositoryRoot string, defaults LuetRepositoryFile) (compiler.Artifact, error) {
+	treeFile, err := r.GetRepositoryFile(fileKey)
+	if err != nil {
+		treeFile = defaults
+		r.SetRepositoryFile(fileKey, treeFile)
+	}
+
+	a := compiler.NewPackageArtifact(filepath.Join(repositoryRoot, treeFile.GetFileName()))
+	a.SetCompressionType(treeFile.GetCompressionType())
+	err = a.Compress(src, 1)
+	if err != nil {
+		return a, errors.Wrap(err, "Error met while creating package archive")
+	}
+
+	// Update the tree name with the name created by compression selected.
+	treeFile.SetFileName(path.Base(a.GetPath()))
+	err = a.Hash()
+	if err != nil {
+		return a, errors.Wrap(err, "Failed generating checksums for tree")
+	}
+	treeFile.SetChecksums(a.GetChecksums())
+	treeFile.SetFileName(path.Base(a.GetPath()))
+
+	r.SetRepositoryFile(fileKey, treeFile)
+
+	return a, nil
+}
+
 func (r *LuetSystemRepository) GetRepositoryFile(name string) (LuetRepositoryFile, error) {
 	ans, ok := r.RepositoryFiles[name]
 	if ok {
@@ -425,15 +537,11 @@ func (r *LuetSystemRepository) SetRepositoryFile(name string, f LuetRepositoryFi
 	r.RepositoryFiles[name] = f
 }
 
-func (r *LuetSystemRepository) ReadSpecFile(file string, removeFile bool) (Repository, error) {
+func (r *LuetSystemRepository) ReadSpecFile(file string) (Repository, error) {
 	dat, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading file "+file)
 	}
-	if removeFile {
-		defer os.Remove(file)
-	}
-
 	var repo Repository
 	repo, err = NewLuetSystemRepositoryFromYaml(dat, pkg.NewInMemoryDatabase(false))
 	if err != nil {
@@ -536,7 +644,7 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	}
 
 	repobasedir := config.LuetCfg.GetSystem().GetRepoDatabaseDirPath(r.GetName())
-	repo, err := r.ReadSpecFile(file, false)
+	repo, err := r.ReadSpecFile(file)
 	if err != nil {
 		return nil, err
 	}
@@ -546,7 +654,7 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 
 	if r.Cached {
 		if !force {
-			localRepo, _ := r.ReadSpecFile(filepath.Join(repobasedir, REPOSITORY_SPECFILE), false)
+			localRepo, _ := r.ReadSpecFile(filepath.Join(repobasedir, REPOSITORY_SPECFILE))
 			if localRepo != nil {
 				if localRepo.GetRevision() == repo.GetRevision() &&
 					localRepo.GetLastUpdate() == repo.GetLastUpdate() {

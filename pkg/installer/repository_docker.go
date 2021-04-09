@@ -27,7 +27,6 @@ import (
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
-	"github.com/ghodss/yaml"
 	"github.com/mudler/luet/pkg/bus"
 	compiler "github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
@@ -113,6 +112,7 @@ func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string,
 	return art, nil
 }
 
+// Generate creates a Docker luet repository
 func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefix string, resetRevision bool) error {
 	// - Iterate over meta, build final images, push them if necessary
 	//   - while pushing, check if image already exists, and if exist push them only if --force is supplied
@@ -139,19 +139,11 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 	}
 
 	repospec := filepath.Join(repoTemp, REPOSITORY_SPECFILE)
-	if resetRevision {
-		r.Revision = 0
-	} else {
-		if _, err := os.Stat(repospec); !os.IsNotExist(err) {
-			// Read existing file for retrieve revision
-			spec, err := r.ReadSpecFile(repospec, false)
-			if err != nil {
-				return err
-			}
-			r.Revision = spec.GetRevision()
-		}
+
+	// Increment the internal revision version by reading the one which is already available (if any)
+	if err := r.BumpRevision(repospec, resetRevision); err != nil {
+		return err
 	}
-	r.Revision++
 
 	Info(fmt.Sprintf(
 		"For repository %s creating revision %d and last update %s...",
@@ -167,37 +159,10 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 	})
 
 	// Create tree and repository file
-	archive, err := config.LuetCfg.GetSystem().TempDir("archive")
+	a, err := r.AddTree(r.GetTree(), repoTemp, REPOFILE_TREE_KEY)
 	if err != nil {
-		return errors.Wrap(err, "Error met while creating tempdir for archive")
+		return errors.Wrap(err, "Error met while adding archive to repository")
 	}
-	defer os.RemoveAll(archive) // clean up
-	err = r.GetTree().Save(archive)
-	if err != nil {
-		return errors.Wrap(err, "Error met while saving the tree")
-	}
-
-	treeFile, err := r.GetRepositoryFile(REPOFILE_TREE_KEY)
-	if err != nil {
-		treeFile = NewDefaultTreeRepositoryFile()
-		r.SetRepositoryFile(REPOFILE_TREE_KEY, treeFile)
-	}
-
-	a := compiler.NewPackageArtifact(filepath.Join(repoTemp, treeFile.GetFileName()))
-	a.SetCompressionType(treeFile.GetCompressionType())
-	err = a.Compress(archive, 1)
-	if err != nil {
-		return errors.Wrap(err, "Error met while creating package archive")
-	}
-
-	// Update the tree name with the name created by compression selected.
-	treeFile.SetFileName(a.GetFileName())
-	err = a.Hash()
-	if err != nil {
-		return errors.Wrap(err, "Failed generating checksums for tree")
-	}
-	treeFile.SetChecksums(a.GetChecksums())
-	r.SetRepositoryFile(REPOFILE_TREE_KEY, treeFile)
 
 	// we generate a new archive containing the required compressed file.
 	// TODO: Bundle all the extra files in 1 docker image only, instead of an image for each file
@@ -206,6 +171,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 		return errors.Wrap(err, "Failed generating checksums for tree")
 	}
 	imageTree := fmt.Sprintf("%s:%s", imagePrefix, a.GetFileName())
+
 	Debug("Generating image", imageTree)
 	if opts, err := treeArchive.GenerateFinalImage(imageTree, r.GetBackend(), false); err != nil {
 		return errors.Wrap(err, "Failed generating metadata tree "+opts.ImageName)
@@ -216,29 +182,6 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 		}
 	}
 
-	// Create Metadata struct and serialized repository
-	meta, serialized := r.Serialize()
-
-	// Create metadata file and repository file
-	metaTmpDir, err := config.LuetCfg.GetSystem().TempDir("metadata")
-	if err != nil {
-		return errors.Wrap(err, "Error met while creating tempdir for metadata")
-	}
-	defer os.RemoveAll(metaTmpDir) // clean up
-
-	metaFile, err := r.GetRepositoryFile(REPOFILE_META_KEY)
-	if err != nil {
-		metaFile = NewDefaultMetaRepositoryFile()
-		r.SetRepositoryFile(REPOFILE_META_KEY, metaFile)
-	}
-
-	repoMetaSpec := filepath.Join(metaTmpDir, REPOSITORY_METAFILE)
-	// Create repository.meta.yaml file
-	err = meta.WriteFile(repoMetaSpec)
-	if err != nil {
-		return err
-	}
-
 	// create temp dir for metafile
 	metaDir, err := config.LuetCfg.GetSystem().TempDir("metadata")
 	if err != nil {
@@ -246,20 +189,10 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 	}
 	defer os.RemoveAll(metaDir) // clean up
 
-	a = compiler.NewPackageArtifact(filepath.Join(metaDir, metaFile.GetFileName()))
-	a.SetCompressionType(metaFile.GetCompressionType())
-	err = a.Compress(metaTmpDir, 1)
+	a, err = r.AddMetadata(repospec, metaDir)
 	if err != nil {
-		return errors.Wrap(err, "Error met while archiving repository metadata")
+		return errors.Wrap(err, "Failed adding Metadata file to repository")
 	}
-
-	metaFile.SetFileName(a.GetFileName())
-	r.SetRepositoryFile(REPOFILE_META_KEY, metaFile)
-	err = a.Hash()
-	if err != nil {
-		return errors.Wrap(err, "Failed generating checksums for metadata")
-	}
-	metaFile.SetChecksums(a.GetChecksums())
 
 	// Files are downloaded as-is from docker images
 	// we generate a new archive containing the required compressed file.
@@ -276,14 +209,6 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 		if err := pushImage(r.GetBackend(), imageMetaTree, true); err != nil {
 			return errors.Wrapf(err, "Failed while pushing image: '%s'", imageMetaTree)
 		}
-	}
-	data, err := yaml.Marshal(serialized)
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(repospec, data, os.ModePerm)
-	if err != nil {
-		return err
 	}
 
 	tempRepoFile := filepath.Join(metaDir, REPOSITORY_SPECFILE+".tar")
