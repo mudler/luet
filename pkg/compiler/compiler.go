@@ -854,13 +854,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p Compila
 
 type templatedata map[string]interface{}
 
-// FromPackage returns a compilation spec from a package definition
-func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
-
-	pack, err := cs.Database.FindPackageCandidate(p)
-	if err != nil {
-		return nil, err
-	}
+func (cs *LuetCompiler) templatePackage(pack pkg.Package) ([]byte, error) {
 
 	var dataresult []byte
 
@@ -877,36 +871,49 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "rendering file "+val)
 		}
+
 		packsRaw, err := pkg.GetRawPackages(data)
+		if err != nil {
+			return nil, errors.Wrap(err, "getting raw packages")
+		}
 
 		raw := packsRaw.Find(pack.GetName(), pack.GetCategory(), pack.GetVersion())
 
-		d := map[string]interface{}{}
-		if len(cs.Options.BuildValuesFile) > 0 {
-			defBuild, err := ioutil.ReadFile(cs.Options.BuildValuesFile)
-			if err != nil {
-				return nil, errors.Wrap(err, "rendering file "+val)
-			}
-			err = yaml.Unmarshal(defBuild, &d)
-			if err != nil {
-				return nil, errors.Wrap(err, "rendering file "+val)
-			}
+		dst, err := helpers.UnMarshalValues(cs.Options.BuildValuesFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "unmarshalling values")
 		}
 
-		dat, err := helpers.RenderHelm(string(dataBuild), raw, d)
+		dat, err := helpers.RenderHelm(string(dataBuild), raw, dst)
 		if err != nil {
 			return nil, errors.Wrap(err, "rendering file "+pack.Rel(BuildFile))
 		}
 		dataresult = []byte(dat)
 	} else {
-		out, err := helpers.RenderFiles(pack.Rel(BuildFile), val, cs.Options.BuildValuesFile)
+		out, err := helpers.RenderFiles(pack.Rel(BuildFile), val, cs.Options.BuildValuesFile...)
 		if err != nil {
 			return nil, errors.Wrap(err, "rendering file "+pack.Rel(BuildFile))
 		}
 		dataresult = []byte(out)
 	}
+	return dataresult, nil
 
-	return NewLuetCompilationSpec(dataresult, pack)
+}
+
+// FromPackage returns a compilation spec from a package definition
+func (cs *LuetCompiler) FromPackage(p pkg.Package) (CompilationSpec, error) {
+
+	pack, err := cs.Database.FindPackageCandidate(p)
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := cs.templatePackage(pack)
+	if err != nil {
+		return nil, errors.Wrap(err, "while rendering package template")
+	}
+
+	return NewLuetCompilationSpec(bytes, pack)
 }
 
 // GetBackend returns the current compilation backend

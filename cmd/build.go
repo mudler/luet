@@ -100,7 +100,7 @@ Build packages specifying multiple definition trees:
 		databaseType := viper.GetString("database")
 		compressionType := viper.GetString("compression")
 		imageRepository := viper.GetString("image-repository")
-		values := viper.GetString("values")
+		values := viper.GetStringSlice("values")
 		wait := viper.GetBool("wait")
 		push := viper.GetBool("push")
 		pull := viper.GetBool("pull")
@@ -311,7 +311,7 @@ func init() {
 	buildCmd.Flags().Bool("revdeps", false, "Build with revdeps")
 	buildCmd.Flags().Bool("all", false, "Build all specfiles in the tree")
 	buildCmd.Flags().Bool("full", false, "Build all packages (optimized)")
-	buildCmd.Flags().String("values", "", "Build values file to interpolate with each package")
+	buildCmd.Flags().StringSlice("values", []string{}, "Build values file to interpolate with each package")
 	buildCmd.Flags().StringSliceP("backend-args", "a", []string{}, "Backend args")
 
 	buildCmd.Flags().String("destination", filepath.Join(path, "build"), "Destination folder")
