@@ -22,6 +22,8 @@ import (
 	"regexp"
 	"strings"
 
+	. "github.com/mudler/luet/pkg/logger"
+
 	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	pkg "github.com/mudler/luet/pkg/package"
 	version "github.com/mudler/luet/pkg/versioner"
@@ -111,4 +113,10 @@ func ParsePackageStr(p string) (*pkg.DefaultPackage, error) {
 	}
 
 	return pack, nil
+}
+
+func CheckErr(err error) {
+	if err != nil {
+		Fatal(err)
+	}
 }

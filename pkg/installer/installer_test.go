@@ -23,9 +23,10 @@ import (
 	//	. "github.com/mudler/luet/pkg/installer"
 	compiler "github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
+	compression "github.com/mudler/luet/pkg/compiler/types/compression"
+	"github.com/mudler/luet/pkg/compiler/types/options"
+	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	"github.com/mudler/luet/pkg/helpers"
-	"github.com/mudler/luet/pkg/installer"
-	solver "github.com/mudler/luet/pkg/solver"
 
 	. "github.com/mudler/luet/pkg/installer"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -34,7 +35,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func stubRepo(tmpdir, tree string) (installer.Repository, error) {
+func stubRepo(tmpdir, tree string) (*LuetSystemRepository, error) {
 	return GenerateRepository(
 		"test",
 		"description",
@@ -47,6 +48,7 @@ func stubRepo(tmpdir, tree string) (installer.Repository, error) {
 }
 
 var _ = Describe("Installer", func() {
+
 	Context("Writes a repository definition", func() {
 		It("Writes a repo and can install packages from it", func() {
 			//repo:=NewLuetSystemRepository()
@@ -62,7 +64,9 @@ var _ = Describe("Installer", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(),
+				generalRecipe.GetDatabase(),
+				options.Concurrency(2))
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -77,12 +81,11 @@ var _ = Describe("Installer", func() {
 			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 
 			spec.SetOutputPath(tmpdir)
-			c.SetConcurrency(2)
 
-			artifact, err := c.Compile(false, spec)
+			a, err := c.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(a.Path)).To(BeTrue())
+			Expect(helpers.Untar(a.Path, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -178,7 +181,7 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
 			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(),
-				generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+				generalRecipe.GetDatabase(), options.Concurrency(2))
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -193,12 +196,11 @@ urls:
 			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 
 			spec.SetOutputPath(tmpdir)
-			c.SetConcurrency(2)
 
 			artifact, err := c.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -217,7 +219,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 
 			treeFile := NewDefaultTreeRepositoryFile()
-			treeFile.SetCompressionType(compiler.None)
+			treeFile.SetCompressionType(compression.None)
 			repo.SetRepositoryFile(REPOFILE_TREE_KEY, treeFile)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
@@ -298,7 +300,8 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(),
+				options.Concurrency(2))
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -313,12 +316,11 @@ urls:
 			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 
 			spec.SetOutputPath(tmpdir)
-			c.SetConcurrency(2)
 
 			artifact, err := c.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -423,7 +425,8 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(),
+				options.Concurrency(2))
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -438,12 +441,11 @@ urls:
 			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 
 			spec.SetOutputPath(tmpdir)
-			c.SetConcurrency(2)
 
 			artifact, err := c.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -518,7 +520,7 @@ urls:
 
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(1))
 
-			c = compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			c = compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase(), options.Concurrency(2))
 
 			spec, err = c.FromPackage(&pkg.DefaultPackage{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -526,11 +528,10 @@ urls:
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
 			spec.SetOutputPath(tmpdir2)
-			c.SetConcurrency(2)
 
 			artifact, err = c.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
+			Expect(helpers.Exists(artifact.Path)).To(BeTrue())
 
 			repo, err = stubRepo(tmpdir2, "../../tests/fixtures/alpine")
 			Expect(err).ToNot(HaveOccurred())
@@ -577,7 +578,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(2))
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -595,9 +596,8 @@ urls:
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
 			spec3.SetOutputPath(tmpdir)
-			c.SetConcurrency(2)
 
-			_, errs := c.CompileParallel(false, compiler.NewLuetCompilationspecs(spec, spec2, spec3))
+			_, errs := c.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2, spec3))
 
 			Expect(errs).To(BeEmpty())
 
@@ -695,8 +695,8 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 			Expect(len(generalRecipeNewRepo.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
-			c2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipeNewRepo.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(2))
+			c2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipeNewRepo.GetDatabase())
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -718,13 +718,12 @@ urls:
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdirnewrepo)
 			spec3.SetOutputPath(tmpdir)
-			c.SetConcurrency(2)
 
-			_, errs := c.CompileParallel(false, compiler.NewLuetCompilationspecs(spec, spec3))
+			_, errs := c.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec3))
 
 			Expect(errs).To(BeEmpty())
 
-			_, errs = c2.CompileParallel(false, compiler.NewLuetCompilationspecs(spec2))
+			_, errs = c2.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec2))
 			Expect(errs).To(BeEmpty())
 
 			repo, err := stubRepo(tmpdir, "../../tests/fixtures/upgrade_old_repo")
@@ -827,7 +826,12 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			c := compiler.NewLuetCompiler(
+				backend.NewSimpleDockerBackend(),
+				generalRecipe.GetDatabase(),
+				options.Concurrency(2),
+				options.WithCompressionType(compression.GZip),
+			)
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -844,9 +848,8 @@ urls:
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
 			spec3.SetOutputPath(tmpdir)
-			c.SetConcurrency(2)
-			c.SetCompressionType(compiler.GZip)
-			_, errs := c.CompileParallel(false, compiler.NewLuetCompilationspecs(spec, spec2, spec3))
+
+			_, errs := c.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2, spec3))
 
 			Expect(errs).To(BeEmpty())
 
@@ -985,7 +988,9 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(),
+				options.Concurrency(2),
+				options.WithCompressionType(compression.GZip))
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -1002,9 +1007,7 @@ urls:
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
 			spec3.SetOutputPath(tmpdir)
-			c.SetConcurrency(2)
-			c.SetCompressionType(compiler.GZip)
-			_, errs := c.CompileParallel(false, compiler.NewLuetCompilationspecs(spec, spec2, spec3))
+			_, errs := c.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2, spec3))
 
 			Expect(errs).To(BeEmpty())
 
@@ -1090,7 +1093,8 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(),
+				options.WithCompressionType(compression.GZip))
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -1104,9 +1108,7 @@ urls:
 			defer os.RemoveAll(tmpdir) // clean up
 			spec.SetOutputPath(tmpdir)
 			spec3.SetOutputPath(tmpdir)
-			c.SetConcurrency(1)
-			c.SetCompressionType(compiler.GZip)
-			_, errs := c.CompileParallel(false, compiler.NewLuetCompilationspecs(spec, spec3))
+			_, errs := c.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec3))
 
 			Expect(errs).To(BeEmpty())
 
@@ -1182,7 +1184,7 @@ urls:
 
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(3))
 
-			c = compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			c = compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase())
 
 			spec, err = c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.1"})
 			Expect(err).ToNot(HaveOccurred())
@@ -1192,7 +1194,7 @@ urls:
 			defer os.RemoveAll(tmpdir2) // clean up
 			spec.SetOutputPath(tmpdir2)
 
-			_, errs = c.CompileParallel(false, compiler.NewLuetCompilationspecs(spec))
+			_, errs = c.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 
 			Expect(errs).To(BeEmpty())
 

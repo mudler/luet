@@ -13,10 +13,10 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package backend_test
+package compiler_test
 
 import (
-	"github.com/mudler/luet/pkg/compiler"
+	. "github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/compiler/backend"
 
 	. "github.com/onsi/ginkgo"
@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("Docker image diffs", func() {
-	var b compiler.CompilerBackend
+	var b CompilerBackend
 
 	BeforeEach(func() {
 		b = NewSimpleDockerBackend()
@@ -32,7 +32,7 @@ var _ = Describe("Docker image diffs", func() {
 
 	Context("Generate diffs from docker images", func() {
 		It("Detect no changes", func() {
-			opts := compiler.CompilerBackendOptions{
+			opts := Options{
 				ImageName: "alpine:latest",
 			}
 			err := b.DownloadImage(opts)
@@ -47,18 +47,18 @@ var _ = Describe("Docker image diffs", func() {
 		})
 
 		It("Detects additions and changed files", func() {
-			err := b.DownloadImage(compiler.CompilerBackendOptions{
+			err := b.DownloadImage(Options{
 				ImageName: "quay.io/mocaccino/micro",
 			})
 			Expect(err).ToNot(HaveOccurred())
-			err = b.DownloadImage(compiler.CompilerBackendOptions{
+			err = b.DownloadImage(Options{
 				ImageName: "quay.io/mocaccino/extra",
 			})
 			Expect(err).ToNot(HaveOccurred())
 
-			layers, err := GenerateChanges(b, compiler.CompilerBackendOptions{
+			layers, err := GenerateChanges(b, Options{
 				ImageName: "quay.io/mocaccino/micro",
-			}, compiler.CompilerBackendOptions{
+			}, Options{
 				ImageName: "quay.io/mocaccino/extra",
 			})
 			Expect(err).ToNot(HaveOccurred())

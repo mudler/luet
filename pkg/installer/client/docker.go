@@ -26,7 +26,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/pkg/errors"
 
-	"github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/compiler/types/artifact"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
@@ -51,7 +51,7 @@ func NewDockerClient(r RepoData) *DockerClient {
 	return &DockerClient{RepoData: r, auth: auth}
 }
 
-func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Artifact, error) {
+func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.PackageArtifact, error) {
 	//var u *url.URL = nil
 	var err error
 	var temp string
@@ -59,8 +59,8 @@ func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Ar
 	Spinner(22)
 	defer SpinnerStop()
 
-	var resultingArtifact compiler.Artifact
-	artifactName := path.Base(artifact.GetPath())
+	var resultingArtifact *artifact.PackageArtifact
+	artifactName := path.Base(a.Path)
 	cacheFile := filepath.Join(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), artifactName)
 	Debug("Cache file", cacheFile)
 	if err := helpers.EnsureDir(cacheFile); err != nil {
@@ -78,9 +78,9 @@ func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Ar
 	// Check if file is already in cache
 	if helpers.Exists(cacheFile) {
 		Debug("Cache hit for artifact", artifactName)
-		resultingArtifact = artifact
-		resultingArtifact.SetPath(cacheFile)
-		resultingArtifact.SetChecksums(compiler.Checksums{})
+		resultingArtifact = a
+		resultingArtifact.Path = cacheFile
+		resultingArtifact.Checksums = artifact.Checksums{}
 	} else {
 
 		temp, err = config.LuetCfg.GetSystem().TempDir("tree")
@@ -91,7 +91,7 @@ func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Ar
 
 		for _, uri := range c.RepoData.Urls {
 
-			imageName := fmt.Sprintf("%s:%s", uri, artifact.GetCompileSpec().GetPackage().ImageID())
+			imageName := fmt.Sprintf("%s:%s", uri, a.CompileSpec.GetPackage().ImageID())
 			Info("Downloading image", imageName)
 
 			contentstore, err := config.LuetCfg.GetSystem().TempDir("contentstore")
@@ -111,11 +111,11 @@ func (c *DockerClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Ar
 			Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.ContentSize))))
 			Debug("\nCompressing result ", filepath.Join(temp), "to", cacheFile)
 
-			newart := artifact
+			newart := a
 			// We discard checksum, that are checked while during pull and unpack
-			newart.SetChecksums(compiler.Checksums{})
-			newart.SetPath(cacheFile)                    // First set to cache file
-			newart.SetPath(newart.GetUncompressedName()) // Calculate the real path from cacheFile
+			newart.Checksums = artifact.Checksums{}
+			newart.Path = cacheFile                    // First set to cache file
+			newart.Path = newart.GetUncompressedName() // Calculate the real path from cacheFile
 			err = newart.Compress(temp, 1)
 			if err != nil {
 				Error(fmt.Sprintf("Failed compressing package %s: %s", imageName, err.Error()))

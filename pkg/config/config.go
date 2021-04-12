@@ -65,6 +65,7 @@ type LuetGeneralConfig struct {
 }
 
 type LuetSolverOptions struct {
+	solver.Options
 	Type           string            `mapstructure:"type"`
 	LearnRate      float32           `mapstructure:"rate"`
 	Discount       float32           `mapstructure:"discount"`
@@ -159,8 +160,8 @@ type LuetRepository struct {
 	Enable         bool              `json:"enable" yaml:"enable" mapstructure:"enable"`
 	Cached         bool              `json:"cached,omitempty" yaml:"cached,omitempty" mapstructure:"cached,omitempty"`
 	Authentication map[string]string `json:"auth,omitempty" yaml:"auth,omitempty" mapstructure:"auth,omitempty"`
-	TreePath       string            `json:"tree_path,omitempty" yaml:"tree_path,omitempty" mapstructure:"tree_path"`
-	MetaPath       string            `json:"meta_path,omitempty" yaml:"meta_path,omitempty" mapstructure:"meta_path"`
+	TreePath       string            `json:"treepath,omitempty" yaml:"treepath,omitempty" mapstructure:"treepath"`
+	MetaPath       string            `json:"metapath,omitempty" yaml:"metapath,omitempty" mapstructure:"metapath"`
 	Verify         bool              `json:"verify,omitempty" yaml:"verify,omitempty" mapstructure:"verify"`
 
 	// Serialized options not used in repository configuration

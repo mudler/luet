@@ -114,9 +114,44 @@ foo: "bar"
 
 			Expect(err).ToNot(HaveOccurred())
 
-			res, err := RenderFiles(toTemplate, values, "")
+			res, err := RenderFiles(toTemplate, values)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(res).To(Equal("bar"))
+		})
+
+		It("Render files merging defaults", func() {
+			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(testDir)
+
+			toTemplate := filepath.Join(testDir, "totemplate.yaml")
+			values := filepath.Join(testDir, "values.yaml")
+			d := filepath.Join(testDir, "default.yaml")
+			d2 := filepath.Join(testDir, "default2.yaml")
+
+			writeFile(toTemplate, `{{.Values.foo}}{{.Values.bar}}{{.Values.b}}`)
+			writeFile(values, `
+foo: "bar"
+b: "f"
+`)
+			writeFile(d, `
+foo: "baz"
+`)
+
+			writeFile(d2, `
+foo: "do"
+bar: "nei"
+`)
+
+			Expect(err).ToNot(HaveOccurred())
+
+			res, err := RenderFiles(toTemplate, values, d2, d)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).To(Equal("bazneif"))
+
+			res, err = RenderFiles(toTemplate, values, d, d2)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).To(Equal("doneif"))
 		})
 
 		It("doesn't interpolate if no one provides the values", func() {

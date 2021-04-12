@@ -17,7 +17,6 @@ package backend
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -29,8 +28,6 @@ import (
 	docker "github.com/fsouza/go-dockerclient"
 	capi "github.com/mudler/docker-companion/api"
 
-	"github.com/mudler/luet/pkg/compiler"
-	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
 
@@ -39,12 +36,12 @@ import (
 
 type SimpleDocker struct{}
 
-func NewSimpleDockerBackend() compiler.CompilerBackend {
+func NewSimpleDockerBackend() *SimpleDocker {
 	return &SimpleDocker{}
 }
 
 // TODO: Missing still: labels, and build args expansion
-func (*SimpleDocker) BuildImage(opts compiler.CompilerBackendOptions) error {
+func (*SimpleDocker) BuildImage(opts Options) error {
 	name := opts.ImageName
 	bus.Manager.Publish(bus.EventImagePreBuild, opts)
 
@@ -93,7 +90,7 @@ func (*SimpleDocker) CopyImage(src, dst string) error {
 	return nil
 }
 
-func (*SimpleDocker) DownloadImage(opts compiler.CompilerBackendOptions) error {
+func (*SimpleDocker) DownloadImage(opts Options) error {
 	name := opts.ImageName
 	bus.Manager.Publish(bus.EventImagePrePull, opts)
 
@@ -132,7 +129,7 @@ func (*SimpleDocker) ImageAvailable(imagename string) bool {
 	return imageAvailable(imagename)
 }
 
-func (*SimpleDocker) RemoveImage(opts compiler.CompilerBackendOptions) error {
+func (*SimpleDocker) RemoveImage(opts Options) error {
 	name := opts.ImageName
 	buildarg := []string{"rmi", name}
 	out, err := exec.Command("docker", buildarg...).CombinedOutput()
@@ -144,7 +141,7 @@ func (*SimpleDocker) RemoveImage(opts compiler.CompilerBackendOptions) error {
 	return nil
 }
 
-func (*SimpleDocker) Push(opts compiler.CompilerBackendOptions) error {
+func (*SimpleDocker) Push(opts Options) error {
 	name := opts.ImageName
 	pusharg := []string{"push", name}
 	bus.Manager.Publish(bus.EventImagePrePush, opts)
@@ -163,7 +160,7 @@ func (*SimpleDocker) Push(opts compiler.CompilerBackendOptions) error {
 	return nil
 }
 
-func (s *SimpleDocker) ImageDefinitionToTar(opts compiler.CompilerBackendOptions) error {
+func (s *SimpleDocker) ImageDefinitionToTar(opts Options) error {
 	if err := s.BuildImage(opts); err != nil {
 		return errors.Wrap(err, "Failed building image")
 	}
@@ -176,7 +173,7 @@ func (s *SimpleDocker) ImageDefinitionToTar(opts compiler.CompilerBackendOptions
 	return nil
 }
 
-func (*SimpleDocker) ExportImage(opts compiler.CompilerBackendOptions) error {
+func (*SimpleDocker) ExportImage(opts Options) error {
 	name := opts.ImageName
 	path := opts.Destination
 
@@ -199,7 +196,7 @@ type ManifestEntry struct {
 	Layers []string `json:"Layers"`
 }
 
-func (b *SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerms bool) error {
+func (b *SimpleDocker) ExtractRootfs(opts Options, keepPerms bool) error {
 	name := opts.ImageName
 	dst := opts.Destination
 
@@ -214,7 +211,7 @@ func (b *SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepP
 	Spinner(22)
 	defer SpinnerStop()
 
-	if err := b.ExportImage(compiler.CompilerBackendOptions{ImageName: name, Destination: imageExport}); err != nil {
+	if err := b.ExportImage(Options{ImageName: name, Destination: imageExport}); err != nil {
 		return errors.Wrap(err, "failed while extracting rootfs for "+name)
 	}
 
@@ -229,7 +226,7 @@ func (b *SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepP
 		}
 		defer os.RemoveAll(tempUnpack) // clean up
 		imageExport := filepath.Join(tempUnpack, "image.tar")
-		if err := b.ExportImage(compiler.CompilerBackendOptions{ImageName: opts.ImageName, Destination: imageExport}); err != nil {
+		if err := b.ExportImage(Options{ImageName: opts.ImageName, Destination: imageExport}); err != nil {
 			return errors.Wrap(err, "while exporting image before extraction")
 		}
 		src = imageExport
@@ -292,22 +289,4 @@ func (b *SimpleDocker) ExtractRootfs(opts compiler.CompilerBackendOptions, keepP
 	// }
 
 	return nil
-}
-
-// Changes retrieves changes between image layers
-func (d *SimpleDocker) Changes(fromImage, toImage compiler.CompilerBackendOptions) ([]compiler.ArtifactLayer, error) {
-	diffs, err := GenerateChanges(d, fromImage, toImage)
-
-	if config.LuetCfg.GetGeneral().Debug {
-		summary := compiler.ComputeArtifactLayerSummary(diffs)
-		for _, l := range summary.Layers {
-			Debug(fmt.Sprintf("Diff %s -> %s: add %d (%d bytes), del %d (%d bytes), change %d (%d bytes)",
-				l.FromImage, l.ToImage,
-				l.AddFiles, l.AddSizes,
-				l.DelFiles, l.DelSizes,
-				l.ChangeFiles, l.ChangeSizes))
-		}
-	}
-
-	return diffs, err
 }

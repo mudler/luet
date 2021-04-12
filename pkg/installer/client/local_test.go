@@ -20,7 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
-	compiler "github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/compiler/types/artifact"
 	helpers "github.com/mudler/luet/pkg/helpers"
 
 	. "github.com/mudler/luet/pkg/installer/client"
@@ -56,10 +56,10 @@ var _ = Describe("Local client", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			c := NewLocalClient(RepoData{Urls: []string{tmpdir}})
-			path, err := c.DownloadArtifact(&compiler.PackageArtifact{Path: "test.txt"})
+			path, err := c.DownloadArtifact(&artifact.PackageArtifact{Path: "test.txt"})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Read(path.GetPath())).To(Equal("test"))
-			os.RemoveAll(path.GetPath())
+			Expect(helpers.Read(path.Path)).To(Equal("test"))
+			os.RemoveAll(path.Path)
 		})
 
 	})

@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package compiler_test
+package artifact_test
 
 import (
 	"io/ioutil"
@@ -22,7 +22,10 @@ import (
 
 	"github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/compiler/backend"
-	"github.com/mudler/luet/pkg/solver"
+	backend "github.com/mudler/luet/pkg/compiler/backend"
+	. "github.com/mudler/luet/pkg/compiler/types/artifact"
+	compression "github.com/mudler/luet/pkg/compiler/types/compression"
+	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 
 	. "github.com/mudler/luet/pkg/compiler"
 	helpers "github.com/mudler/luet/pkg/helpers"
@@ -43,12 +46,9 @@ var _ = Describe("Artifact", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
-			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
+			cc := NewLuetCompiler(nil, generalRecipe.GetDatabase())
+			lspec, err := cc.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
-
-			lspec, ok := spec.(*LuetCompilationSpec)
-			Expect(ok).To(BeTrue())
 
 			Expect(lspec.Steps).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 			Expect(lspec.Image).To(Equal("luet/base"))
@@ -81,7 +81,7 @@ ENV PACKAGE_NAME=enman
 ENV PACKAGE_VERSION=1.4.0
 ENV PACKAGE_CATEGORY=app-admin`))
 			b := NewSimpleDockerBackend()
-			opts := CompilerBackendOptions{
+			opts := backend.Options{
 				ImageName:      "luet/base",
 				SourcePath:     tmpdir,
 				DockerFileName: "Dockerfile",
@@ -105,7 +105,7 @@ ENV PACKAGE_VERSION=1.4.0
 ENV PACKAGE_CATEGORY=app-admin
 RUN echo foo > /test
 RUN echo bar > /test2`))
-			opts2 := CompilerBackendOptions{
+			opts2 := backend.Options{
 				ImageName:      "test",
 				SourcePath:     tmpdir,
 				DockerFileName: "LuetDockerfile",
@@ -114,7 +114,7 @@ RUN echo bar > /test2`))
 			Expect(b.BuildImage(opts2)).ToNot(HaveOccurred())
 			Expect(b.ExportImage(opts2)).ToNot(HaveOccurred())
 			Expect(helpers.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
-			diffs, err := b.Changes(opts, opts2)
+			diffs, err := compiler.GenerateChanges(b, opts, opts2)
 			Expect(err).ToNot(HaveOccurred())
 
 			artifacts := []ArtifactNode{{
@@ -135,13 +135,13 @@ RUN echo bar > /test2`))
 						Additions: artifacts,
 					},
 				}}))
-			err = b.ExtractRootfs(CompilerBackendOptions{ImageName: "test", Destination: rootfs}, false)
+			err = b.ExtractRootfs(backend.Options{ImageName: "test", Destination: rootfs}, false)
 			Expect(err).ToNot(HaveOccurred())
 
-			artifact, err := ExtractArtifactFromDelta(rootfs, filepath.Join(tmpdir, "package.tar"), diffs, 2, false, []string{}, []string{}, None)
+			a, err := ExtractArtifactFromDelta(rootfs, filepath.Join(tmpdir, "package.tar"), diffs, 2, false, []string{}, []string{}, compression.None)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Exists(filepath.Join(tmpdir, "package.tar"))).To(BeTrue())
-			err = helpers.Untar(artifact.GetPath(), unpacked, false)
+			err = helpers.Untar(a.Path, unpacked, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Exists(filepath.Join(unpacked, "test"))).To(BeTrue())
 			Expect(helpers.Exists(filepath.Join(unpacked, "test2"))).To(BeTrue())
@@ -152,13 +152,13 @@ RUN echo bar > /test2`))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(content2).To(Equal("bar\n"))
 
-			err = artifact.Hash()
+			err = a.Hash()
 			Expect(err).ToNot(HaveOccurred())
-			err = artifact.Verify()
+			err = a.Verify()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.CopyFile(filepath.Join(tmpdir, "output2.tar"), filepath.Join(tmpdir, "package.tar"))).ToNot(HaveOccurred())
 
-			err = artifact.Verify()
+			err = a.Verify()
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -183,13 +183,13 @@ RUN echo bar > /test2`))
 			err = ioutil.WriteFile(filepath.Join(tmpdir, "foo", "bar", "test"), testString, 0644)
 			Expect(err).ToNot(HaveOccurred())
 
-			artifact := NewPackageArtifact(filepath.Join(tmpWork, "fake.tar"))
-			artifact.SetCompileSpec(&LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Version: "1.0"}})
+			a := NewPackageArtifact(filepath.Join(tmpWork, "fake.tar"))
+			a.CompileSpec = &compilerspec.LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Version: "1.0"}}
 
-			err = artifact.Compress(tmpdir, 1)
+			err = a.Compress(tmpdir, 1)
 			Expect(err).ToNot(HaveOccurred())
 			resultingImage := imageprefix + "foo--1.0"
-			opts, err := artifact.GenerateFinalImage(resultingImage, b, false)
+			opts, err := a.GenerateFinalImage(resultingImage, b, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(opts.ImageName).To(Equal(resultingImage))
 
@@ -199,7 +199,7 @@ RUN echo bar > /test2`))
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(result) // clean up
 
-			err = b.ExtractRootfs(CompilerBackendOptions{ImageName: resultingImage, Destination: result}, false)
+			err = b.ExtractRootfs(backend.Options{ImageName: resultingImage, Destination: result}, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			content, err := ioutil.ReadFile(filepath.Join(result, "test"))
@@ -225,13 +225,13 @@ RUN echo bar > /test2`))
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpWork) // clean up
 
-			artifact := NewPackageArtifact(filepath.Join(tmpWork, "fake.tar"))
-			artifact.SetCompileSpec(&LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Version: "1.0"}})
+			a := NewPackageArtifact(filepath.Join(tmpWork, "fake.tar"))
+			a.CompileSpec = &compilerspec.LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Version: "1.0"}}
 
-			err = artifact.Compress(tmpdir, 1)
+			err = a.Compress(tmpdir, 1)
 			Expect(err).ToNot(HaveOccurred())
 			resultingImage := imageprefix + "foo--1.0"
-			opts, err := artifact.GenerateFinalImage(resultingImage, b, false)
+			opts, err := a.GenerateFinalImage(resultingImage, b, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(opts.ImageName).To(Equal(resultingImage))
 
@@ -241,7 +241,7 @@ RUN echo bar > /test2`))
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(result) // clean up
 
-			err = b.ExtractRootfs(CompilerBackendOptions{ImageName: resultingImage, Destination: result}, false)
+			err = b.ExtractRootfs(backend.Options{ImageName: resultingImage, Destination: result}, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(helpers.DirectoryIsEmpty(result)).To(BeFalse())
@@ -253,15 +253,15 @@ RUN echo bar > /test2`))
 
 		It("Retrieves uncompressed name", func() {
 			a := NewPackageArtifact("foo.tar.gz")
-			a.SetCompressionType(compiler.GZip)
+			a.CompressionType = (compression.GZip)
 			Expect(a.GetUncompressedName()).To(Equal("foo.tar"))
 
 			a = NewPackageArtifact("foo.tar.zst")
-			a.SetCompressionType(compiler.Zstandard)
+			a.CompressionType = compression.Zstandard
 			Expect(a.GetUncompressedName()).To(Equal("foo.tar"))
 
 			a = NewPackageArtifact("foo.tar")
-			a.SetCompressionType(compiler.None)
+			a.CompressionType = compression.None
 			Expect(a.GetUncompressedName()).To(Equal("foo.tar"))
 		})
 	})

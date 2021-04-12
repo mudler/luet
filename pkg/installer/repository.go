@@ -25,6 +25,9 @@ import (
 	"strconv"
 	"time"
 
+	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
+	compression "github.com/mudler/luet/pkg/compiler/types/compression"
+
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
@@ -53,9 +56,9 @@ const (
 )
 
 type LuetRepositoryFile struct {
-	FileName        string                             `json:"filename"`
-	CompressionType compiler.CompressionImplementation `json:"compressiontype,omitempty"`
-	Checksums       compiler.Checksums                 `json:"checksums,omitempty"`
+	FileName        string                     `json:"filename"`
+	CompressionType compression.Implementation `json:"compressiontype,omitempty"`
+	Checksums       artifact.Checksums         `json:"checksums,omitempty"`
 }
 
 type LuetSystemRepository struct {
@@ -71,22 +74,8 @@ type LuetSystemRepository struct {
 	imagePrefix string
 }
 
-type LuetSystemRepositorySerialized struct {
-	Name            string                        `json:"name"`
-	Description     string                        `json:"description,omitempty"`
-	Urls            []string                      `json:"urls"`
-	Priority        int                           `json:"priority"`
-	Type            string                        `json:"type"`
-	Revision        int                           `json:"revision,omitempty"`
-	LastUpdate      string                        `json:"last_update,omitempty"`
-	TreePath        string                        `json:"treepath"`
-	MetaPath        string                        `json:"metapath"`
-	RepositoryFiles map[string]LuetRepositoryFile `json:"repo_files"`
-	Verify          bool                          `json:"verify"`
-}
-
 type LuetSystemRepositoryMetadata struct {
-	Index []*compiler.PackageArtifact `json:"index,omitempty"`
+	Index []*artifact.PackageArtifact `json:"index,omitempty"`
 }
 
 type LuetSearchModeType int
@@ -156,21 +145,21 @@ func (m *LuetSystemRepositoryMetadata) ToArtifactIndex() (ans compiler.ArtifactI
 func NewDefaultTreeRepositoryFile() LuetRepositoryFile {
 	return LuetRepositoryFile{
 		FileName:        TREE_TARBALL,
-		CompressionType: compiler.GZip,
+		CompressionType: compression.GZip,
 	}
 }
 
 func NewDefaultCompilerTreeRepositoryFile() LuetRepositoryFile {
 	return LuetRepositoryFile{
 		FileName:        COMPILERTREE_TARBALL,
-		CompressionType: compiler.GZip,
+		CompressionType: compression.GZip,
 	}
 }
 
 func NewDefaultMetaRepositoryFile() LuetRepositoryFile {
 	return LuetRepositoryFile{
 		FileName:        REPOSITORY_METAFILE + ".tar",
-		CompressionType: compiler.None,
+		CompressionType: compression.None,
 	}
 }
 
@@ -191,28 +180,28 @@ func (f *LuetRepositoryFile) GetFileName() string {
 // SetCompressionType sets the compression type of the repository file.
 // Each repository can ship arbitrary file that will be downloaded by the client
 // in case of need, this sets the compression type that the client will use to uncompress the artifact
-func (f *LuetRepositoryFile) SetCompressionType(c compiler.CompressionImplementation) {
+func (f *LuetRepositoryFile) SetCompressionType(c compression.Implementation) {
 	f.CompressionType = c
 }
 
 // GetCompressionType gets the compression type of the repository file.
 // Each repository can ship arbitrary file that will be downloaded by the client
 // in case of need, this gets the compression type that the client will use to uncompress the artifact
-func (f *LuetRepositoryFile) GetCompressionType() compiler.CompressionImplementation {
+func (f *LuetRepositoryFile) GetCompressionType() compression.Implementation {
 	return f.CompressionType
 }
 
 // SetChecksums sets the checksum of the repository file.
 // Each repository can ship arbitrary file that will be downloaded by the client
 // in case of need, this sets the checksums that the client will use to verify the artifact
-func (f *LuetRepositoryFile) SetChecksums(c compiler.Checksums) {
+func (f *LuetRepositoryFile) SetChecksums(c artifact.Checksums) {
 	f.Checksums = c
 }
 
 // GetChecksums gets the checksum of the repository file.
 // Each repository can ship arbitrary file that will be downloaded by the client
 // in case of need, this gets the checksums that the client will use to verify the artifact
-func (f *LuetRepositoryFile) GetChecksums() compiler.Checksums {
+func (f *LuetRepositoryFile) GetChecksums() artifact.Checksums {
 	return f.Checksums
 }
 
@@ -221,7 +210,7 @@ func (f *LuetRepositoryFile) GetChecksums() compiler.Checksums {
 // In case the repository is local, it will build the package Index
 func GenerateRepository(name, descr, t string, urls []string,
 	priority int, src string, treesDir []string, db pkg.PackageDatabase,
-	b compiler.CompilerBackend, imagePrefix string, pushImages, force bool) (Repository, error) {
+	b compiler.CompilerBackend, imagePrefix string, pushImages, force bool) (*LuetSystemRepository, error) {
 
 	tr := tree.NewInstallerRecipe(db)
 	btr := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
@@ -253,44 +242,23 @@ func GenerateRepository(name, descr, t string, urls []string,
 	return repo, nil
 }
 
-func NewSystemRepository(repo config.LuetRepository) Repository {
+func NewSystemRepository(repo config.LuetRepository) *LuetSystemRepository {
 	return &LuetSystemRepository{
 		LuetRepository:  &repo,
 		RepositoryFiles: map[string]LuetRepositoryFile{},
 	}
 }
 
-func NewLuetSystemRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (Repository, error) {
-	var p *LuetSystemRepositorySerialized
+func NewLuetSystemRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (*LuetSystemRepository, error) {
+	var p *LuetSystemRepository
 	err := yaml.Unmarshal(data, &p)
 	if err != nil {
 		return nil, err
 	}
-	repo := config.NewLuetRepository(
-		p.Name,
-		p.Type,
-		p.Description,
-		p.Urls,
-		p.Priority,
-		true,
-		false,
-	)
-	repo.Verify = p.Verify
 
-	r := &LuetSystemRepository{
-		LuetRepository:  repo,
-		RepositoryFiles: p.RepositoryFiles,
-	}
+	p.Tree = tree.NewInstallerRecipe(db)
 
-	if p.Revision > 0 {
-		r.Revision = p.Revision
-	}
-	if p.LastUpdate != "" {
-		r.LastUpdate = p.LastUpdate
-	}
-	r.Tree = tree.NewInstallerRecipe(db)
-
-	return r, err
+	return p, err
 }
 
 func (r *LuetSystemRepository) SetPriority(n int) {
@@ -320,9 +288,9 @@ func (r *LuetSystemRepository) FileSearch(pattern string) (pkg.Packages, error) 
 	}
 ARTIFACT:
 	for _, a := range r.GetIndex() {
-		for _, f := range a.GetFiles() {
+		for _, f := range a.Files {
 			if reg.MatchString(f) {
-				matches = append(matches, a.GetCompileSpec().GetPackage())
+				matches = append(matches, a.CompileSpec.GetPackage())
 				continue ARTIFACT
 			}
 		}
@@ -440,7 +408,7 @@ func (r *LuetSystemRepository) BumpRevision(repospec string, resetRevision bool)
 
 // AddMetadata adds the repository serialized content into the metadata key of the repository
 // It writes the serialized content to repospec, and writes the repository.meta.yaml file into dst
-func (r *LuetSystemRepository) AddMetadata(repospec, dst string) (compiler.Artifact, error) {
+func (r *LuetSystemRepository) AddMetadata(repospec, dst string) (*artifact.PackageArtifact, error) {
 	// Create Metadata struct and serialized repository
 	meta, serialized := r.Serialize()
 
@@ -477,7 +445,7 @@ func (r *LuetSystemRepository) AddMetadata(repospec, dst string) (compiler.Artif
 // AddTree adds a tree.Builder with the given key to the repository.
 // It will generate an artifact which will be then embedded in the repository manifest
 // It returns the generated artifacts and an error
-func (r *LuetSystemRepository) AddTree(t tree.Builder, dst, key string,f LuetRepositoryFile) (compiler.Artifact, error) {
+func (r *LuetSystemRepository) AddTree(t tree.Builder, dst, key string, f LuetRepositoryFile) (*artifact.PackageArtifact, error) {
 	// Create tree and repository file
 	archive, err := config.LuetCfg.GetSystem().TempDir("archive")
 	if err != nil {
@@ -499,15 +467,15 @@ func (r *LuetSystemRepository) AddTree(t tree.Builder, dst, key string,f LuetRep
 // AddRepositoryFile adds a path to a key in the repository manifest.
 // The path will be compressed, and a default File has to be passed in case there is no entry into
 // the repository manifest
-func (r *LuetSystemRepository) AddRepositoryFile(src, fileKey, repositoryRoot string, defaults LuetRepositoryFile) (compiler.Artifact, error) {
+func (r *LuetSystemRepository) AddRepositoryFile(src, fileKey, repositoryRoot string, defaults LuetRepositoryFile) (*artifact.PackageArtifact, error) {
 	treeFile, err := r.GetRepositoryFile(fileKey)
 	if err != nil {
 		treeFile = defaults
 		r.SetRepositoryFile(fileKey, treeFile)
 	}
 
-	a := compiler.NewPackageArtifact(filepath.Join(repositoryRoot, treeFile.GetFileName()))
-	a.SetCompressionType(treeFile.GetCompressionType())
+	a := artifact.NewPackageArtifact(filepath.Join(repositoryRoot, treeFile.GetFileName()))
+	a.CompressionType = treeFile.GetCompressionType()
 	err = a.Compress(src, 1)
 	if err != nil {
 		return a, errors.Wrap(err, "Error met while creating package archive")
@@ -518,8 +486,8 @@ func (r *LuetSystemRepository) AddRepositoryFile(src, fileKey, repositoryRoot st
 		return a, errors.Wrap(err, "Failed generating checksums for tree")
 	}
 	// Update the tree name with the name created by compression selected.
-	treeFile.SetChecksums(a.GetChecksums())
-	treeFile.SetFileName(path.Base(a.GetPath()))
+	treeFile.SetChecksums(a.Checksums)
+	treeFile.SetFileName(path.Base(a.Path))
 
 	r.SetRepositoryFile(fileKey, treeFile)
 
@@ -537,12 +505,12 @@ func (r *LuetSystemRepository) SetRepositoryFile(name string, f LuetRepositoryFi
 	r.RepositoryFiles[name] = f
 }
 
-func (r *LuetSystemRepository) ReadSpecFile(file string) (Repository, error) {
+func (r *LuetSystemRepository) ReadSpecFile(file string) (*LuetSystemRepository, error) {
 	dat, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading file "+file)
 	}
-	var repo Repository
+	var repo *LuetSystemRepository
 	repo, err = NewLuetSystemRepositoryFromYaml(dat, pkg.NewInMemoryDatabase(false))
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading repository from file "+file)
@@ -563,7 +531,7 @@ func (r *LuetSystemRepository) ReadSpecFile(file string) (Repository, error) {
 
 type RepositoryGenerator interface {
 	Generate(*LuetSystemRepository, string, bool) error
-	Initialize(string, pkg.PackageDatabase) ([]compiler.Artifact, error)
+	Initialize(string, pkg.PackageDatabase) ([]*artifact.PackageArtifact, error)
 }
 
 func (r *LuetSystemRepository) getGenerator() (RepositoryGenerator, error) {
@@ -616,9 +584,9 @@ func (r *LuetSystemRepository) Client() Client {
 	return nil
 }
 
-func (r *LuetSystemRepository) SearchArtefact(p pkg.Package) (compiler.Artifact, error) {
+func (r *LuetSystemRepository) SearchArtefact(p pkg.Package) (*artifact.PackageArtifact, error) {
 	for _, a := range r.GetIndex() {
-		if a.GetCompileSpec().GetPackage().Matches(p) {
+		if a.CompileSpec.GetPackage().Matches(p) {
 			return a, nil
 		}
 	}
@@ -626,7 +594,7 @@ func (r *LuetSystemRepository) SearchArtefact(p pkg.Package) (compiler.Artifact,
 	return nil, errors.New("Not found")
 }
 
-func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
+func (r *LuetSystemRepository) Sync(force bool) (*LuetSystemRepository, error) {
 	var repoUpdated bool = false
 	var treefs, metafs string
 	aurora := GetAurora()
@@ -699,9 +667,9 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 		defer os.Remove(downloadedTreeFile)
 
 		// Treat the file as artifact, in order to verify it
-		treeFileArtifact := compiler.NewPackageArtifact(downloadedTreeFile)
-		treeFileArtifact.SetChecksums(treeFile.GetChecksums())
-		treeFileArtifact.SetCompressionType(treeFile.GetCompressionType())
+		treeFileArtifact := artifact.NewPackageArtifact(downloadedTreeFile)
+		treeFileArtifact.Checksums = treeFile.GetChecksums()
+		treeFileArtifact.CompressionType = treeFile.GetCompressionType()
 
 		err = treeFileArtifact.Verify()
 		if err != nil {
@@ -717,9 +685,9 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 		}
 		defer os.Remove(downloadedMeta)
 
-		metaFileArtifact := compiler.NewPackageArtifact(downloadedMeta)
-		metaFileArtifact.SetChecksums(metaFile.GetChecksums())
-		metaFileArtifact.SetCompressionType(metaFile.GetCompressionType())
+		metaFileArtifact := artifact.NewPackageArtifact(downloadedMeta)
+		metaFileArtifact.Checksums = metaFile.GetChecksums()
+		metaFileArtifact.CompressionType = metaFile.GetCompressionType()
 
 		err = metaFileArtifact.Verify()
 		if err != nil {
@@ -806,30 +774,20 @@ func (r *LuetSystemRepository) Sync(force bool) (Repository, error) {
 	return repo, nil
 }
 
-func (r *LuetSystemRepository) Serialize() (*LuetSystemRepositoryMetadata, LuetSystemRepositorySerialized) {
+func (r *LuetSystemRepository) Serialize() (*LuetSystemRepositoryMetadata, LuetSystemRepository) {
 
-	serialized := LuetSystemRepositorySerialized{
-		Name:            r.Name,
-		Description:     r.Description,
-		Urls:            r.Urls,
-		Priority:        r.Priority,
-		Type:            r.Type,
-		Revision:        r.Revision,
-		LastUpdate:      r.LastUpdate,
-		RepositoryFiles: r.RepositoryFiles,
-		Verify:          r.Verify,
-	}
+	serialized := *r
+	serialized.Authentication = nil
 
 	// Check if is needed set the index or simply use
 	// value returned by CleanPath
-	r.Index = r.Index.CleanPath()
+	serialized.Index = serialized.Index.CleanPath()
 
 	meta := &LuetSystemRepositoryMetadata{
-		Index: []*compiler.PackageArtifact{},
+		Index: []*artifact.PackageArtifact{},
 	}
 	for _, a := range r.Index {
-		art := a.(*compiler.PackageArtifact)
-		meta.Index = append(meta.Index, art)
+		meta.Index = append(meta.Index, a)
 	}
 
 	return meta, serialized
@@ -877,8 +835,8 @@ func (r Repositories) SyncDatabase(d pkg.PackageDatabase) {
 }
 
 type PackageMatch struct {
-	Repo     Repository
-	Artifact compiler.Artifact
+	Repo     *LuetSystemRepository
+	Artifact *artifact.PackageArtifact
 	Package  pkg.Package
 }
 

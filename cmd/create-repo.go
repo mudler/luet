@@ -18,8 +18,9 @@ import (
 	"os"
 	"path/filepath"
 
+	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/pkg/compiler"
-	"github.com/mudler/luet/pkg/compiler/backend"
+	"github.com/mudler/luet/pkg/compiler/types/compression"
 	. "github.com/mudler/luet/pkg/config"
 	installer "github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/logger"
@@ -74,7 +75,7 @@ Create a repository from the metadata description defined in the luet.yaml confi
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
-		var repo installer.Repository
+		var repo *installer.LuetSystemRepository
 
 		treePaths := viper.GetStringSlice("tree")
 		dst := viper.GetString("output")
@@ -93,7 +94,8 @@ Create a repository from the metadata description defined in the luet.yaml confi
 
 		treeFile := installer.NewDefaultTreeRepositoryFile()
 		metaFile := installer.NewDefaultMetaRepositoryFile()
-		compilerBackend := backend.NewBackend(backendType)
+		compilerBackend, err := compiler.NewBackend(backendType)
+		helpers.CheckErr(err)
 		force := viper.GetBool("force-push")
 		imagePush := viper.GetBool("push-images")
 
@@ -130,7 +132,7 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		}
 
 		if treetype != "" {
-			treeFile.SetCompressionType(compiler.CompressionImplementation(treetype))
+			treeFile.SetCompressionType(compression.Implementation(treetype))
 		}
 
 		if treeName != "" {
@@ -138,7 +140,7 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		}
 
 		if metatype != "" {
-			metaFile.SetCompressionType(compiler.CompressionImplementation(metatype))
+			metaFile.SetCompressionType(compression.Implementation(metatype))
 		}
 
 		if metaName != "" {

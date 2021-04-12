@@ -24,23 +24,23 @@ import (
 	"strings"
 	"time"
 
+	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/mudler/luet/pkg/bus"
-	compiler "github.com/mudler/luet/pkg/compiler"
 	"github.com/pkg/errors"
 )
 
 type localRepositoryGenerator struct{}
 
-func (l *localRepositoryGenerator) Initialize(path string, db pkg.PackageDatabase) ([]compiler.Artifact, error) {
+func (l *localRepositoryGenerator) Initialize(path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
 	return buildPackageIndex(path, db)
 }
 
-func buildPackageIndex(path string, db pkg.PackageDatabase) ([]compiler.Artifact, error) {
+func buildPackageIndex(path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
 
-	var art []compiler.Artifact
+	var art []*artifact.PackageArtifact
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
 
 		if !strings.HasSuffix(info.Name(), ".metadata.yaml") {
@@ -52,20 +52,20 @@ func buildPackageIndex(path string, db pkg.PackageDatabase) ([]compiler.Artifact
 			return errors.Wrap(err, "Error reading file "+currentpath)
 		}
 
-		artifact, err := compiler.NewPackageArtifactFromYaml(dat)
+		a, err := artifact.NewPackageArtifactFromYaml(dat)
 		if err != nil {
 			return errors.Wrap(err, "Error reading yaml "+currentpath)
 		}
 
 		// We want to include packages that are ONLY referenced in the tree.
 		// the ones which aren't should be deleted. (TODO: by another cli command?)
-		if _, notfound := db.FindPackage(artifact.GetCompileSpec().GetPackage()); notfound != nil {
+		if _, notfound := db.FindPackage(a.CompileSpec.GetPackage()); notfound != nil {
 			Debug(fmt.Sprintf("Package %s not found in tree. Ignoring it.",
-				artifact.GetCompileSpec().GetPackage().HumanReadableString()))
+				a.CompileSpec.GetPackage().HumanReadableString()))
 			return nil
 		}
 
-		art = append(art, artifact)
+		art = append(art, a)
 
 		return nil
 	}

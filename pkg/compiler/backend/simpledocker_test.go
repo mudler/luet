@@ -16,9 +16,11 @@
 package backend_test
 
 import (
+	"github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/compiler/backend"
 	. "github.com/mudler/luet/pkg/compiler/backend"
-	"github.com/mudler/luet/pkg/solver"
+	"github.com/mudler/luet/pkg/compiler/types/artifact"
 
 	"io/ioutil"
 	"os"
@@ -41,12 +43,9 @@ var _ = Describe("Docker backend", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
-			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
+			cc := NewLuetCompiler(nil, generalRecipe.GetDatabase())
+			lspec, err := cc.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
-
-			lspec, ok := spec.(*LuetCompilationSpec)
-			Expect(ok).To(BeTrue())
 
 			Expect(lspec.Steps).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 			Expect(lspec.Image).To(Equal("luet/base"))
@@ -71,7 +70,7 @@ ENV PACKAGE_NAME=enman
 ENV PACKAGE_VERSION=1.4.0
 ENV PACKAGE_CATEGORY=app-admin`))
 			b := NewSimpleDockerBackend()
-			opts := CompilerBackendOptions{
+			opts := backend.Options{
 				ImageName:      "luet/base",
 				SourcePath:     tmpdir,
 				DockerFileName: "Dockerfile",
@@ -95,7 +94,7 @@ ENV PACKAGE_VERSION=1.4.0
 ENV PACKAGE_CATEGORY=app-admin
 RUN echo foo > /test
 RUN echo bar > /test2`))
-			opts2 := CompilerBackendOptions{
+			opts2 := backend.Options{
 				ImageName:      "test",
 				SourcePath:     tmpdir,
 				DockerFileName: "LuetDockerfile",
@@ -106,26 +105,26 @@ RUN echo bar > /test2`))
 			Expect(b.ExportImage(opts2)).ToNot(HaveOccurred())
 			Expect(helpers.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
 
-			artifacts := []ArtifactNode{{
+			artifacts := []artifact.ArtifactNode{{
 				Name: "/luetbuild/LuetDockerfile",
 				Size: 175,
 			}}
 			if os.Getenv("DOCKER_BUILDKIT") == "1" {
-				artifacts = append(artifacts, ArtifactNode{Name: "/etc/resolv.conf", Size: 0})
+				artifacts = append(artifacts, artifact.ArtifactNode{Name: "/etc/resolv.conf", Size: 0})
 			}
-			artifacts = append(artifacts, ArtifactNode{Name: "/test", Size: 4})
-			artifacts = append(artifacts, ArtifactNode{Name: "/test2", Size: 4})
+			artifacts = append(artifacts, artifact.ArtifactNode{Name: "/test", Size: 4})
+			artifacts = append(artifacts, artifact.ArtifactNode{Name: "/test2", Size: 4})
 
-			Expect(b.Changes(opts, opts2)).To(Equal(
-				[]ArtifactLayer{{
+			Expect(compiler.GenerateChanges(b, opts, opts2)).To(Equal(
+				[]artifact.ArtifactLayer{{
 					FromImage: "luet/base",
 					ToImage:   "test",
-					Diffs: ArtifactDiffs{
+					Diffs: artifact.ArtifactDiffs{
 						Additions: artifacts,
 					},
 				}}))
 
-			opts2 = CompilerBackendOptions{
+			opts2 = backend.Options{
 				ImageName:      "test",
 				SourcePath:     tmpdir,
 				DockerFileName: "LuetDockerfile",

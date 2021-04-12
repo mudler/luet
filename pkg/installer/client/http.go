@@ -24,9 +24,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/mudler/luet/pkg/compiler/types/artifact"
 	. "github.com/mudler/luet/pkg/logger"
 
-	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 
@@ -66,13 +66,13 @@ func Round(input float64) float64 {
 	return math.Floor(input + 0.5)
 }
 
-func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Artifact, error) {
+func (c *HttpClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.PackageArtifact, error) {
 	var u *url.URL = nil
 	var err error
 	var req *grab.Request
 	var temp string
 
-	artifactName := path.Base(artifact.GetPath())
+	artifactName := path.Base(a.Path)
 	cacheFile := filepath.Join(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), artifactName)
 	ok := false
 
@@ -168,8 +168,8 @@ func (c *HttpClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Arti
 		}
 	}
 
-	newart := artifact
-	newart.SetPath(cacheFile)
+	newart := a
+	newart.Path = cacheFile
 	return newart, nil
 }
 

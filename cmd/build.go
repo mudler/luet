@@ -23,7 +23,11 @@ import (
 	"github.com/ghodss/yaml"
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/pkg/compiler"
-	"github.com/mudler/luet/pkg/compiler/backend"
+	"github.com/mudler/luet/pkg/compiler/types/artifact"
+	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
+
+	"github.com/mudler/luet/pkg/compiler/types/compression"
+	"github.com/mudler/luet/pkg/compiler/types/options"
 	. "github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -118,10 +122,11 @@ Build packages specifying multiple definition trees:
 			LuetCfg.GetLogging().SetLogLevel("error")
 		}
 		pretend, _ := cmd.Flags().GetBool("pretend")
-		compilerSpecs := compiler.NewLuetCompilationspecs()
+		compilerSpecs := compilerspec.NewLuetCompilationspecs()
 		var db pkg.PackageDatabase
 
-		compilerBackend := backend.NewBackend(backendType)
+		compilerBackend, err := compiler.NewBackend(backendType)
+		helpers.CheckErr(err)
 
 		switch databaseType {
 		case "memory":
@@ -129,9 +134,7 @@ Build packages specifying multiple definition trees:
 
 		case "boltdb":
 			tmpdir, err := ioutil.TempDir("", "package")
-			if err != nil {
-				Fatal(err)
-			}
+			helpers.CheckErr(err)
 			db = pkg.NewBoltDatabase(tmpdir)
 
 		}
@@ -141,11 +144,7 @@ Build packages specifying multiple definition trees:
 
 		for _, src := range treePaths {
 			Info("Loading tree", src)
-
-			err := generalRecipe.Load(src)
-			if err != nil {
-				Fatal("Error: " + err.Error())
-			}
+			helpers.CheckErr(generalRecipe.Load(src))
 		}
 
 		Info("Building in", dst)
@@ -156,38 +155,41 @@ Build packages specifying multiple definition trees:
 		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
 		pullRepo, _ := cmd.Flags().GetStringArray("pull-repository")
 
-		LuetCfg.GetSolverOptions().Type = stype
-		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
-		LuetCfg.GetSolverOptions().Discount = float32(discount)
-		LuetCfg.GetSolverOptions().MaxAttempts = attempts
-
 		LuetCfg.GetGeneral().ShowBuildOutput = LuetCfg.Viper.GetBool("general.show_build_output")
 
-		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
-
-		opts := compiler.NewDefaultCompilerOptions()
-		opts.SolverOptions = *LuetCfg.GetSolverOptions()
-		opts.PushImageRepository = imageRepository
-		opts.PullImageRepository = pullRepo
-		opts.PullFirst = pull
-		opts.KeepImg = keepImages
-		opts.Push = push
-		opts.OnlyDeps = onlydeps
-		opts.NoDeps = nodeps
-		opts.Wait = wait
-		opts.PackageTargetOnly = onlyTarget
-		opts.BuildValuesFile = values
-		var solverOpts solver.Options
-		if concurrent {
-			solverOpts = solver.Options{Type: solver.ParallelSimple, Concurrency: concurrency}
-		} else {
-			solverOpts = solver.Options{Type: solver.SingleCoreSimple, Concurrency: concurrency}
+		opts := &LuetSolverOptions{
+			Type:        stype,
+			LearnRate:   float32(rate),
+			Discount:    float32(discount),
+			MaxAttempts: attempts,
 		}
 
-		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), opts, solverOpts)
-		luetCompiler.SetBackendArgs(backendArgs)
-		luetCompiler.SetConcurrency(concurrency)
-		luetCompiler.SetCompressionType(compiler.CompressionImplementation(compressionType))
+		Debug("Solver", opts.CompactString())
+
+		if concurrent {
+			opts.Options = solver.Options{Type: solver.ParallelSimple, Concurrency: concurrency}
+		} else {
+			opts.Options = solver.Options{Type: solver.SingleCoreSimple, Concurrency: concurrency}
+		}
+
+		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(),
+			options.NoDeps(nodeps),
+			options.WithBackendType(backendType),
+			options.PushImages(push),
+			options.WithBuildValues(values),
+			options.WithPullRepositories(pullRepo),
+			options.WithPushRepository(imageRepository),
+			options.WithSolverOptions(*opts),
+			options.Wait(wait),
+			options.OnlyTarget(onlyTarget),
+			options.PullFirst(pull),
+			options.KeepImg(keepImages),
+			options.OnlyDeps(onlydeps),
+			options.BackendArgs(backendArgs),
+			options.Concurrency(concurrency),
+			options.WithCompressionType(compression.Implementation(compressionType)),
+		)
+
 		if full {
 			specs, err := luetCompiler.FromDatabase(generalRecipe.GetDatabase(), true, dst)
 			if err != nil {
@@ -228,13 +230,13 @@ Build packages specifying multiple definition trees:
 			}
 		}
 
-		var artifact []compiler.Artifact
+		var artifact []*artifact.PackageArtifact
 		var errs []error
 		if revdeps {
 			artifact, errs = luetCompiler.CompileWithReverseDeps(privileged, compilerSpecs)
 
 		} else if pretend {
-			toCalculate := []compiler.CompilationSpec{}
+			toCalculate := []*compilerspec.LuetCompilationSpec{}
 			if full {
 				var err error
 				toCalculate, err = luetCompiler.ComputeMinimumCompilableSet(compilerSpecs.All()...)
@@ -284,6 +286,7 @@ Build packages specifying multiple definition trees:
 				}
 			}
 		} else {
+
 			artifact, errs = luetCompiler.CompileParallel(privileged, compilerSpecs)
 		}
 		if len(errs) != 0 {
@@ -293,7 +296,7 @@ Build packages specifying multiple definition trees:
 			Fatal("Bailing out")
 		}
 		for _, a := range artifact {
-			Info("Artifact generated:", a.GetPath())
+			Info("Artifact generated:", a.Path)
 		}
 	},
 }

@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package compiler
+package artifact
 
 import (
 	"archive/tar"
@@ -36,6 +36,9 @@ import (
 	"sync"
 
 	bus "github.com/mudler/luet/pkg/bus"
+	backend "github.com/mudler/luet/pkg/compiler/backend"
+	compression "github.com/mudler/luet/pkg/compiler/types/compression"
+	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	. "github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
@@ -45,54 +48,25 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-type CompressionImplementation string
-
-const (
-	None      CompressionImplementation = "none" // e.g. tar for standard packages
-	GZip      CompressionImplementation = "gzip"
-	Zstandard CompressionImplementation = "zstd"
-)
-
-type ArtifactIndex []Artifact
-
-func (i ArtifactIndex) CleanPath() ArtifactIndex {
-	newIndex := ArtifactIndex{}
-	for _, n := range i {
-		art := n.(*PackageArtifact)
-		// FIXME: This is a dup and makes difficult to add attributes to artifacts
-		newIndex = append(newIndex, &PackageArtifact{
-			Path:            path.Base(n.GetPath()),
-			SourceAssertion: art.SourceAssertion,
-			CompileSpec:     art.CompileSpec,
-			Dependencies:    art.Dependencies,
-			CompressionType: art.CompressionType,
-			Checksums:       art.Checksums,
-			Files:           art.Files,
-		})
-	}
-	return newIndex
-	//Update if exists, otherwise just create
-}
-
 //  When compiling, we write also a fingerprint.metadata.yaml file with PackageArtifact. In this way we can have another command to create the repository
 // which will consist in just of an repository.yaml which is just the repository structure with the list of package artifact.
 // In this way a generic client can fetch the packages and, after unpacking the tree, performing queries to install packages.
 type PackageArtifact struct {
 	Path string `json:"path"`
 
-	Dependencies    []*PackageArtifact        `json:"dependencies"`
-	CompileSpec     *LuetCompilationSpec      `json:"compilationspec"`
-	Checksums       Checksums                 `json:"checksums"`
-	SourceAssertion solver.PackagesAssertions `json:"-"`
-	CompressionType CompressionImplementation `json:"compressiontype"`
-	Files           []string                  `json:"files"`
+	Dependencies    []*PackageArtifact                `json:"dependencies"`
+	CompileSpec     *compilerspec.LuetCompilationSpec `json:"compilationspec"`
+	Checksums       Checksums                         `json:"checksums"`
+	SourceAssertion solver.PackagesAssertions         `json:"-"`
+	CompressionType compression.Implementation        `json:"compressiontype"`
+	Files           []string                          `json:"files"`
 }
 
-func NewPackageArtifact(path string) Artifact {
-	return &PackageArtifact{Path: path, Dependencies: []*PackageArtifact{}, Checksums: Checksums{}, CompressionType: None}
+func NewPackageArtifact(path string) *PackageArtifact {
+	return &PackageArtifact{Path: path, Dependencies: []*PackageArtifact{}, Checksums: Checksums{}, CompressionType: compression.None}
 }
 
-func NewPackageArtifactFromYaml(data []byte) (Artifact, error) {
+func NewPackageArtifactFromYaml(data []byte) (*PackageArtifact, error) {
 	p := &PackageArtifact{Checksums: Checksums{}}
 	err := yaml.Unmarshal(data, &p)
 	if err != nil {
@@ -100,42 +74,6 @@ func NewPackageArtifactFromYaml(data []byte) (Artifact, error) {
 	}
 
 	return p, err
-}
-
-func LoadArtifactFromYaml(spec CompilationSpec) (Artifact, error) {
-
-	metaFile := spec.GetPackage().GetFingerPrint() + ".metadata.yaml"
-	dat, err := ioutil.ReadFile(spec.Rel(metaFile))
-	if err != nil {
-		return nil, errors.Wrap(err, "Error reading file "+metaFile)
-	}
-	art, err := NewPackageArtifactFromYaml(dat)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error writing file "+metaFile)
-	}
-	// It is relative, set it back to abs
-	art.SetPath(spec.Rel(art.GetPath()))
-	return art, nil
-}
-
-func (a *PackageArtifact) SetCompressionType(t CompressionImplementation) {
-	a.CompressionType = t
-}
-
-func (a *PackageArtifact) GetChecksums() Checksums {
-	return a.Checksums
-}
-
-func (a *PackageArtifact) SetChecksums(c Checksums) {
-	a.Checksums = c
-}
-
-func (a *PackageArtifact) SetFiles(f []string) {
-	a.Files = f
-}
-
-func (a *PackageArtifact) GetFiles() []string {
-	return a.Files
 }
 
 func (a *PackageArtifact) Hash() error {
@@ -181,8 +119,8 @@ func (a *PackageArtifact) WriteYaml(dst string) error {
 	}
 	//p := a.CompileSpec.GetPackage().GetPath()
 
-	mangle.GetCompileSpec().GetPackage().SetPath("")
-	for _, ass := range mangle.GetCompileSpec().GetSourceAssertion() {
+	mangle.CompileSpec.GetPackage().SetPath("")
+	for _, ass := range mangle.CompileSpec.GetSourceAssertion() {
 		ass.Package.SetPath("")
 	}
 
@@ -191,7 +129,7 @@ func (a *PackageArtifact) WriteYaml(dst string) error {
 		return errors.Wrap(err, "While marshalling for PackageArtifact YAML")
 	}
 
-	err = ioutil.WriteFile(filepath.Join(dst, a.GetCompileSpec().GetPackage().GetFingerPrint()+".metadata.yaml"), data, os.ModePerm)
+	err = ioutil.WriteFile(filepath.Join(dst, a.CompileSpec.GetPackage().GetFingerPrint()+".metadata.yaml"), data, os.ModePerm)
 	if err != nil {
 		return errors.Wrap(err, "While writing PackageArtifact YAML")
 	}
@@ -201,48 +139,8 @@ func (a *PackageArtifact) WriteYaml(dst string) error {
 	return nil
 }
 
-func (a *PackageArtifact) GetSourceAssertion() solver.PackagesAssertions {
-	return a.SourceAssertion
-}
-
-func (a *PackageArtifact) SetCompileSpec(as CompilationSpec) {
-	a.CompileSpec = as.(*LuetCompilationSpec)
-}
-
-func (a *PackageArtifact) GetCompileSpec() CompilationSpec {
-	return a.CompileSpec
-}
-
-func (a *PackageArtifact) SetSourceAssertion(as solver.PackagesAssertions) {
-	a.SourceAssertion = as
-}
-
-func (a *PackageArtifact) GetDependencies() []Artifact {
-	ret := []Artifact{}
-	for _, d := range a.Dependencies {
-		ret = append(ret, d)
-	}
-	return ret
-}
-
-func (a *PackageArtifact) SetDependencies(d []Artifact) {
-	ret := []*PackageArtifact{}
-	for _, dd := range d {
-		ret = append(ret, dd.(*PackageArtifact))
-	}
-	a.Dependencies = ret
-}
-
-func (a *PackageArtifact) GetPath() string {
-	return a.Path
-}
-
 func (a *PackageArtifact) GetFileName() string {
-	return path.Base(a.GetPath())
-}
-
-func (a *PackageArtifact) SetPath(p string) {
-	a.Path = p
+	return path.Base(a.Path)
 }
 
 func (a *PackageArtifact) genDockerfile() string {
@@ -274,9 +172,13 @@ func CreateArtifactForFile(s string, opts ...func(*PackageArtifact)) (*PackageAr
 	return a, a.Compress(archive, 1)
 }
 
+type ImageBuilder interface {
+	BuildImage(backend.Options) error
+}
+
 // GenerateFinalImage takes an artifact and builds a Docker image with its content
-func (a *PackageArtifact) GenerateFinalImage(imageName string, b CompilerBackend, keepPerms bool) (CompilerBackendOptions, error) {
-	builderOpts := CompilerBackendOptions{}
+func (a *PackageArtifact) GenerateFinalImage(imageName string, b ImageBuilder, keepPerms bool) (backend.Options, error) {
+	builderOpts := backend.Options{}
 	archive, err := LuetCfg.GetSystem().TempDir("archive")
 	if err != nil {
 		return builderOpts, errors.Wrap(err, "error met while creating tempdir for "+a.Path)
@@ -311,7 +213,7 @@ func (a *PackageArtifact) GenerateFinalImage(imageName string, b CompilerBackend
 		return builderOpts, errors.Wrap(err, "error met while rendering artifact dockerfile "+a.Path)
 	}
 
-	builderOpts = CompilerBackendOptions{
+	builderOpts = backend.Options{
 		ImageName:      imageName,
 		SourcePath:     archive,
 		DockerFileName: dockerFile,
@@ -326,7 +228,7 @@ func (a *PackageArtifact) GenerateFinalImage(imageName string, b CompilerBackend
 func (a *PackageArtifact) Compress(src string, concurrency int) error {
 	switch a.CompressionType {
 
-	case Zstandard:
+	case compression.Zstandard:
 		err := helpers.Tar(src, a.Path)
 		if err != nil {
 			return err
@@ -364,7 +266,7 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 
 		a.Path = zstdFile
 		return nil
-	case GZip:
+	case compression.GZip:
 		err := helpers.Tar(src, a.Path)
 		if err != nil {
 			return err
@@ -409,10 +311,10 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 
 func (a *PackageArtifact) getCompressedName() string {
 	switch a.CompressionType {
-	case Zstandard:
+	case compression.Zstandard:
 		return a.Path + ".zst"
 
-	case GZip:
+	case compression.GZip:
 		return a.Path + ".gz"
 	}
 	return a.Path
@@ -421,7 +323,7 @@ func (a *PackageArtifact) getCompressedName() string {
 // GetUncompressedName returns the artifact path without the extension suffix
 func (a *PackageArtifact) GetUncompressedName() string {
 	switch a.CompressionType {
-	case Zstandard, GZip:
+	case compression.Zstandard, compression.GZip:
 		return strings.TrimSuffix(a.Path, filepath.Ext(a.Path))
 	}
 	return a.Path
@@ -509,13 +411,13 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 	tarModifier := helpers.NewTarModifierWrapper(dst, tarModifierWrapperFunc)
 
 	switch a.CompressionType {
-	case Zstandard:
+	case compression.Zstandard:
 		// Create the uncompressed archive
-		archive, err := os.Create(a.GetPath() + ".uncompressed")
+		archive, err := os.Create(a.Path + ".uncompressed")
 		if err != nil {
 			return err
 		}
-		defer os.RemoveAll(a.GetPath() + ".uncompressed")
+		defer os.RemoveAll(a.Path + ".uncompressed")
 		defer archive.Close()
 
 		original, err := os.Open(a.Path)
@@ -534,22 +436,22 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 
 		_, err = io.Copy(archive, d)
 		if err != nil {
-			return errors.Wrap(err, "Cannot copy to "+a.GetPath()+".uncompressed")
+			return errors.Wrap(err, "Cannot copy to "+a.Path+".uncompressed")
 		}
 
-		err = helpers.UntarProtect(a.GetPath()+".uncompressed", dst,
+		err = helpers.UntarProtect(a.Path+".uncompressed", dst,
 			LuetCfg.GetGeneral().SameOwner, protectedFiles, tarModifier)
 		if err != nil {
 			return err
 		}
 		return nil
-	case GZip:
+	case compression.GZip:
 		// Create the uncompressed archive
-		archive, err := os.Create(a.GetPath() + ".uncompressed")
+		archive, err := os.Create(a.Path + ".uncompressed")
 		if err != nil {
 			return err
 		}
-		defer os.RemoveAll(a.GetPath() + ".uncompressed")
+		defer os.RemoveAll(a.Path + ".uncompressed")
 		defer archive.Close()
 
 		original, err := os.Open(a.Path)
@@ -567,10 +469,10 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 
 		_, err = io.Copy(archive, r)
 		if err != nil {
-			return errors.Wrap(err, "Cannot copy to "+a.GetPath()+".uncompressed")
+			return errors.Wrap(err, "Cannot copy to "+a.Path+".uncompressed")
 		}
 
-		err = helpers.UntarProtect(a.GetPath()+".uncompressed", dst,
+		err = helpers.UntarProtect(a.Path+".uncompressed", dst,
 			LuetCfg.GetGeneral().SameOwner, protectedFiles, tarModifier)
 		if err != nil {
 			return err
@@ -578,7 +480,7 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 		return nil
 	// Defaults to tar only (covers when "none" is supplied)
 	default:
-		return helpers.UntarProtect(a.GetPath(), dst, LuetCfg.GetGeneral().SameOwner,
+		return helpers.UntarProtect(a.Path, dst, LuetCfg.GetGeneral().SameOwner,
 			protectedFiles, tarModifier)
 	}
 	return errors.New("Compression type must be supplied")
@@ -588,12 +490,12 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 func (a *PackageArtifact) FileList() ([]string, error) {
 	var tr *tar.Reader
 	switch a.CompressionType {
-	case Zstandard:
-		archive, err := os.Create(a.GetPath() + ".uncompressed")
+	case compression.Zstandard:
+		archive, err := os.Create(a.Path + ".uncompressed")
 		if err != nil {
 			return []string{}, err
 		}
-		defer os.RemoveAll(a.GetPath() + ".uncompressed")
+		defer os.RemoveAll(a.Path + ".uncompressed")
 		defer archive.Close()
 
 		original, err := os.Open(a.Path)
@@ -609,13 +511,13 @@ func (a *PackageArtifact) FileList() ([]string, error) {
 		}
 		defer r.Close()
 		tr = tar.NewReader(r)
-	case GZip:
+	case compression.GZip:
 		// Create the uncompressed archive
-		archive, err := os.Create(a.GetPath() + ".uncompressed")
+		archive, err := os.Create(a.Path + ".uncompressed")
 		if err != nil {
 			return []string{}, err
 		}
-		defer os.RemoveAll(a.GetPath() + ".uncompressed")
+		defer os.RemoveAll(a.Path + ".uncompressed")
 		defer archive.Close()
 
 		original, err := os.Open(a.Path)
@@ -634,7 +536,7 @@ func (a *PackageArtifact) FileList() ([]string, error) {
 
 	// Defaults to tar only (covers when "none" is supplied)
 	default:
-		tarFile, err := os.Open(a.GetPath())
+		tarFile, err := os.Open(a.Path)
 		if err != nil {
 			return []string{}, errors.Wrap(err, "Could not open package archive")
 		}
@@ -729,8 +631,24 @@ func compileRegexes(regexes []string) []*regexp.Regexp {
 	return result
 }
 
+type ArtifactNode struct {
+	Name string `json:"Name"`
+	Size int    `json:"Size"`
+}
+type ArtifactDiffs struct {
+	Additions []ArtifactNode `json:"Adds"`
+	Deletions []ArtifactNode `json:"Dels"`
+	Changes   []ArtifactNode `json:"Mods"`
+}
+
+type ArtifactLayer struct {
+	FromImage string        `json:"Image1"`
+	ToImage   string        `json:"Image2"`
+	Diffs     ArtifactDiffs `json:"Diff"`
+}
+
 // ExtractArtifactFromDelta extracts deltas from ArtifactLayer from an image in tar format
-func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurrency int, keepPerms bool, includes []string, excludes []string, t CompressionImplementation) (Artifact, error) {
+func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurrency int, keepPerms bool, includes []string, excludes []string, t compression.Implementation) (*PackageArtifact, error) {
 
 	archive, err := LuetCfg.GetSystem().TempDir("archive")
 	if err != nil {
@@ -852,45 +770,10 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 	wg.Wait()
 
 	a := NewPackageArtifact(dst)
-	a.SetCompressionType(t)
+	a.CompressionType = t
 	err = a.Compress(archive, concurrency)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating package archive")
 	}
 	return a, nil
-}
-
-func ComputeArtifactLayerSummary(diffs []ArtifactLayer) ArtifactLayersSummary {
-
-	ans := ArtifactLayersSummary{
-		Layers: make([]ArtifactLayerSummary, 0),
-	}
-
-	for _, layer := range diffs {
-		sum := ArtifactLayerSummary{
-			FromImage:   layer.FromImage,
-			ToImage:     layer.ToImage,
-			AddFiles:    0,
-			AddSizes:    0,
-			DelFiles:    0,
-			DelSizes:    0,
-			ChangeFiles: 0,
-			ChangeSizes: 0,
-		}
-		for _, a := range layer.Diffs.Additions {
-			sum.AddFiles++
-			sum.AddSizes += int64(a.Size)
-		}
-		for _, d := range layer.Diffs.Deletions {
-			sum.DelFiles++
-			sum.DelSizes += int64(d.Size)
-		}
-		for _, c := range layer.Diffs.Changes {
-			sum.ChangeFiles++
-			sum.ChangeSizes += int64(c.Size)
-		}
-		ans.Layers = append(ans.Layers, sum)
-	}
-
-	return ans
 }

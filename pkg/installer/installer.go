@@ -24,9 +24,10 @@ import (
 	"strings"
 	"sync"
 
+	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
+
 	. "github.com/logrusorgru/aurora"
 	"github.com/mudler/luet/pkg/bus"
-	compiler "github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	. "github.com/mudler/luet/pkg/logger"
@@ -58,11 +59,11 @@ type LuetInstaller struct {
 
 type ArtifactMatch struct {
 	Package    pkg.Package
-	Artifact   compiler.Artifact
-	Repository Repository
+	Artifact   *artifact.PackageArtifact
+	Repository *LuetSystemRepository
 }
 
-func NewLuetInstaller(opts LuetInstallerOptions) Installer {
+func NewLuetInstaller(opts LuetInstallerOptions) *LuetInstaller {
 	return &LuetInstaller{Options: opts}
 }
 
@@ -106,11 +107,11 @@ func (l *LuetInstaller) computeUpgrade(syncedRepos Repositories, s *System) (pkg
 				continue
 			}
 			for _, artefact := range matches[0].Repo.GetIndex() {
-				if artefact.GetCompileSpec().GetPackage() == nil {
+				if artefact.CompileSpec.GetPackage() == nil {
 					return uninstall, toInstall, errors.New("Package in compilespec empty")
 
 				}
-				if artefact.GetCompileSpec().GetPackage().Matches(p) && artefact.GetCompileSpec().GetPackage().GetBuildTimestamp() != p.GetBuildTimestamp() {
+				if artefact.CompileSpec.GetPackage().Matches(p) && artefact.CompileSpec.GetPackage().GetBuildTimestamp() != p.GetBuildTimestamp() {
 					toInstall = append(toInstall, matches[0].Package).Unique()
 					uninstall = append(uninstall, p).Unique()
 				}
@@ -406,12 +407,12 @@ func (l *LuetInstaller) Reclaim(s *System) error {
 	for _, repo := range syncedRepos {
 		for _, artefact := range repo.GetIndex() {
 			Debug("Checking if",
-				artefact.GetCompileSpec().GetPackage().HumanReadableString(),
+				artefact.CompileSpec.GetPackage().HumanReadableString(),
 				"from", repo.GetName(), "is installed")
 		FILES:
-			for _, f := range artefact.GetFiles() {
+			for _, f := range artefact.Files {
 				if helpers.Exists(filepath.Join(s.Target, f)) {
-					p, err := repo.GetTree().GetDatabase().FindPackage(artefact.GetCompileSpec().GetPackage())
+					p, err := repo.GetTree().GetDatabase().FindPackage(artefact.CompileSpec.GetPackage())
 					if err != nil {
 						return err
 					}
@@ -435,7 +436,7 @@ func (l *LuetInstaller) Reclaim(s *System) error {
 		if err != nil && !l.Options.Force {
 			return errors.Wrap(err, "Failed creating package")
 		}
-		s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: pack.GetFingerPrint(), Files: match.Artifact.GetFiles()})
+		s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: pack.GetFingerPrint(), Files: match.Artifact.Files})
 		Info(":zap:Reclaimed package:", pack.HumanReadableString())
 	}
 	Info("Done!")
@@ -512,11 +513,11 @@ func (l *LuetInstaller) computeInstall(syncedRepos Repositories, cp pkg.Packages
 		}
 	A:
 		for _, artefact := range matches[0].Repo.GetIndex() {
-			if artefact.GetCompileSpec().GetPackage() == nil {
+			if artefact.CompileSpec.GetPackage() == nil {
 				return toInstall, p, solution, allRepos, errors.New("Package in compilespec empty")
 			}
-			if matches[0].Package.Matches(artefact.GetCompileSpec().GetPackage()) {
-				currentPack.SetBuildTimestamp(artefact.GetCompileSpec().GetPackage().GetBuildTimestamp())
+			if matches[0].Package.Matches(artefact.CompileSpec.GetPackage()) {
+				currentPack.SetBuildTimestamp(artefact.CompileSpec.GetPackage().GetBuildTimestamp())
 				// Filter out already installed
 				if _, err := s.Database.FindPackage(currentPack); err != nil {
 					toInstall[currentPack.GetFingerPrint()] = ArtifactMatch{Package: currentPack, Artifact: artefact, Repository: matches[0].Repo}
@@ -602,7 +603,7 @@ func (l *LuetInstaller) install(syncedRepos Repositories, toInstall map[string]A
 	return s.ExecuteFinalizers(toFinalize)
 }
 
-func (l *LuetInstaller) downloadPackage(a ArtifactMatch) (compiler.Artifact, error) {
+func (l *LuetInstaller) downloadPackage(a ArtifactMatch) (*artifact.PackageArtifact, error) {
 
 	artifact, err := a.Repository.Client().DownloadArtifact(a.Artifact)
 	if err != nil {
@@ -616,26 +617,26 @@ func (l *LuetInstaller) downloadPackage(a ArtifactMatch) (compiler.Artifact, err
 	return artifact, nil
 }
 
-func (l *LuetInstaller) installPackage(a ArtifactMatch, s *System) error {
+func (l *LuetInstaller) installPackage(m ArtifactMatch, s *System) error {
 
-	artifact, err := l.downloadPackage(a)
+	a, err := l.downloadPackage(m)
 	if err != nil && !l.Options.Force {
 		return errors.Wrap(err, "Failed downloading package")
 	}
 
-	files, err := artifact.FileList()
+	files, err := a.FileList()
 	if err != nil && !l.Options.Force {
 		return errors.Wrap(err, "Could not open package archive")
 	}
 
-	err = artifact.Unpack(s.Target, true)
+	err = a.Unpack(s.Target, true)
 	if err != nil && !l.Options.Force {
 		return errors.Wrap(err, "Error met while unpacking rootfs")
 	}
 
 	// First create client and download
 	// Then unpack to system
-	return s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: a.Package.GetFingerPrint(), Files: files})
+	return s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: m.Package.GetFingerPrint(), Files: files})
 }
 
 func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch) error {
@@ -855,4 +856,4 @@ func (l *LuetInstaller) Uninstall(s *System, packs ...pkg.Package) error {
 	return uninstall()
 }
 
-func (l *LuetInstaller) Repositories(r []Repository) { l.PackageRepositories = r }
+func (l *LuetInstaller) Repositories(r []*LuetSystemRepository) { l.PackageRepositories = r }

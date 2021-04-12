@@ -72,7 +72,7 @@ func NewRepoListCommand() *cobra.Command {
 					if repo.Cached {
 
 						r := installer.NewSystemRepository(repo)
-						localRepo, _ := r.(*installer.LuetSystemRepository).ReadSpecFile(filepath.Join(repobasedir,
+						localRepo, _ := r.ReadSpecFile(filepath.Join(repobasedir,
 							installer.REPOSITORY_SPECFILE))
 						if localRepo != nil {
 							tsec, _ := strconv.ParseInt(localRepo.GetLastUpdate(), 10, 64)

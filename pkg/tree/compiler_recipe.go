@@ -103,7 +103,7 @@ func (r *CompilerRecipe) Load(path string) error {
 			compileDefPath := pack.Rel(CompilerDefinitionFile)
 			if helpers.Exists(compileDefPath) {
 
-				dat, err := helpers.RenderFiles(compileDefPath, currentpath, "")
+				dat, err := helpers.RenderFiles(compileDefPath, currentpath)
 				if err != nil {
 					return errors.Wrap(err,
 						"Error templating file "+CompilerDefinitionFile+" from "+

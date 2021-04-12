@@ -13,13 +13,13 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package compiler_test
+package artifact_test
 
 import (
 	"io/ioutil"
 	"os"
 
-	. "github.com/mudler/luet/pkg/compiler"
+	. "github.com/mudler/luet/pkg/compiler/types/artifact"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -20,7 +20,9 @@ import (
 	"os"
 	"path/filepath"
 
-	compiler "github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/compiler/types/artifact"
+	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
+
 	helpers "github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
 
@@ -54,9 +56,9 @@ var _ = Describe("Docker client", func() {
 		})
 
 		It("Downloads artifacts", func() {
-			f, err := c.DownloadArtifact(&compiler.PackageArtifact{
+			f, err := c.DownloadArtifact(&artifact.PackageArtifact{
 				Path: "test.tar",
-				CompileSpec: &compiler.LuetCompilationSpec{
+				CompileSpec: &compilerspec.LuetCompilationSpec{
 					Package: &pkg.DefaultPackage{
 						Name:     "c",
 						Category: "test",
@@ -71,7 +73,7 @@ var _ = Describe("Docker client", func() {
 			Expect(f.Unpack(tmpdir, false)).ToNot(HaveOccurred())
 			Expect(helpers.Read(filepath.Join(tmpdir, "c"))).To(Equal("c\n"))
 			Expect(helpers.Read(filepath.Join(tmpdir, "cd"))).To(Equal("c\n"))
-			os.RemoveAll(f.GetPath())
+			os.RemoveAll(f.Path)
 		})
 	})
 })

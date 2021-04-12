@@ -172,7 +172,7 @@ func searchOnline(term string, l list.Writer, t table.Writer, label, labelMatch,
 					Hidden:     m.Package.IsHidden(),
 				}
 				if m.Artifact != nil {
-					r.Files = m.Artifact.GetFiles()
+					r.Files = m.Artifact.Files
 				}
 				results.Packages = append(results.Packages, *r)
 			}
@@ -190,7 +190,7 @@ func searchOnline(term string, l list.Writer, t table.Writer, label, labelMatch,
 						Hidden:     revdep.IsHidden(),
 					}
 					if m.Artifact != nil {
-						r.Files = m.Artifact.GetFiles()
+						r.Files = m.Artifact.Files
 					}
 					results.Packages = append(results.Packages, *r)
 				}
@@ -262,7 +262,7 @@ func searchFiles(term string, l list.Writer, t table.Writer) Results {
 				Category:   m.Package.GetCategory(),
 				Repository: m.Repo.GetName(),
 				Hidden:     m.Package.IsHidden(),
-				Files:      m.Artifact.GetFiles(),
+				Files:      m.Artifact.Files,
 			})
 	}
 	return results

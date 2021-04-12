@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"io/ioutil"
-	"sort"
 
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
@@ -39,13 +38,13 @@ func RenderHelm(template string, values, d map[string]interface{}) (string, erro
 
 type templatedata map[string]interface{}
 
+// UnMarshalValues unmarshal values files and joins them into a unique templatedata
+// the join happens from right to left, so any rightmost value file overwrites the content of the ones before it.
 func UnMarshalValues(values []string) (templatedata, error) {
 	dst := templatedata{}
 	if len(values) > 0 {
-		allbv := values
-		sort.Sort(sort.Reverse(sort.StringSlice(allbv)))
-		for _, bv := range allbv {
-			current := map[string]interface{}{}
+		for _, bv := range reverse(values) {
+			current := templatedata{}
 
 			defBuild, err := ioutil.ReadFile(bv)
 			if err != nil {
@@ -61,6 +60,13 @@ func UnMarshalValues(values []string) (templatedata, error) {
 		}
 	}
 	return dst, nil
+}
+
+func reverse(s []string) []string {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+	return s
 }
 
 func RenderFiles(toTemplate, valuesFile string, defaultFile ...string) (string, error) {

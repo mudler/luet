@@ -20,10 +20,10 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/compiler/types/artifact"
 	"github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 
-	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/helpers"
 )
 
@@ -35,11 +35,11 @@ func NewLocalClient(r RepoData) *LocalClient {
 	return &LocalClient{RepoData: r}
 }
 
-func (c *LocalClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Artifact, error) {
+func (c *LocalClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.PackageArtifact, error) {
 	var err error
 
 	rootfs := ""
-	artifactName := path.Base(artifact.GetPath())
+	artifactName := path.Base(a.Path)
 	cacheFile := filepath.Join(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), artifactName)
 
 	if !config.LuetCfg.ConfigFromHost {
@@ -74,8 +74,8 @@ func (c *LocalClient) DownloadArtifact(artifact compiler.Artifact) (compiler.Art
 		}
 	}
 
-	newart := artifact
-	newart.SetPath(cacheFile)
+	newart := a
+	newart.Path = cacheFile
 	return newart, nil
 }
 

@@ -20,7 +20,9 @@ import (
 	"time"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
-	"github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/compiler/types/artifact"
+	"github.com/mudler/luet/pkg/compiler/types/compression"
+	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	. "github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 
@@ -64,21 +66,21 @@ Afterwards, you can use the content generated and associate it with a tree and a
 			Fatal("Invalid package string ", packageName, ": ", err.Error())
 		}
 
-		spec := &compiler.LuetCompilationSpec{Package: p}
-		artifact := compiler.NewPackageArtifact(filepath.Join(dst, p.GetFingerPrint()+".package.tar"))
-		artifact.SetCompressionType(compiler.CompressionImplementation(compressionType))
-		err = artifact.Compress(sourcePath, concurrency)
+		spec := &compilerspec.LuetCompilationSpec{Package: p}
+		a := artifact.NewPackageArtifact(filepath.Join(dst, p.GetFingerPrint()+".package.tar"))
+		a.CompressionType = compression.Implementation(compressionType)
+		err = a.Compress(sourcePath, concurrency)
 		if err != nil {
 			Fatal("failed compressing ", packageName, ": ", err.Error())
 		}
-		artifact.SetCompileSpec(spec)
-		filelist, err := artifact.FileList()
+		a.CompileSpec = spec
+		filelist, err := a.FileList()
 		if err != nil {
 			Fatal("failed generating file list for ", packageName, ": ", err.Error())
 		}
-		artifact.SetFiles(filelist)
-		artifact.GetCompileSpec().GetPackage().SetBuildTimestamp(time.Now().String())
-		err = artifact.WriteYaml(dst)
+		a.Files = filelist
+		a.CompileSpec.GetPackage().SetBuildTimestamp(time.Now().String())
+		err = a.WriteYaml(dst)
 		if err != nil {
 			Fatal("failed writing metadata yaml file for ", packageName, ": ", err.Error())
 		}

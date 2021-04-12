@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package compiler
+package artifact
 
 import (
 
@@ -43,7 +43,7 @@ type HashOptions struct {
 }
 
 // Generate generates all Checksums supported for the artifact
-func (c *Checksums) Generate(a Artifact) error {
+func (c *Checksums) Generate(a *PackageArtifact) error {
 	return c.generateSHA256(a)
 }
 
@@ -56,13 +56,13 @@ func (c Checksums) Compare(d Checksums) error {
 	return nil
 }
 
-func (c *Checksums) generateSHA256(a Artifact) error {
+func (c *Checksums) generateSHA256(a *PackageArtifact) error {
 	return c.generateSum(a, HashOptions{Hasher: sha256.New(), Type: SHA256})
 }
 
-func (c *Checksums) generateSum(a Artifact, opts HashOptions) error {
+func (c *Checksums) generateSum(a *PackageArtifact, opts HashOptions) error {
 
-	f, err := os.Open(a.GetPath())
+	f, err := os.Open(a.Path)
 	if err != nil {
 		return err
 	}

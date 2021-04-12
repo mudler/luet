@@ -24,6 +24,9 @@ import (
 	"strings"
 	"time"
 
+	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
+
+	"github.com/mudler/luet/pkg/compiler/backend"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
@@ -40,7 +43,7 @@ type dockerRepositoryGenerator struct {
 	imagePush, force bool
 }
 
-func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDatabase) ([]compiler.Artifact, error) {
+func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
 	return generatePackageImages(l.b, l.imagePrefix, path, db, l.imagePush, l.force)
 }
 
@@ -49,12 +52,12 @@ func pushImage(b compiler.CompilerBackend, image string, force bool) error {
 		Debug("Image", image, "already present, skipping")
 		return nil
 	}
-	return b.Push(compiler.CompilerBackendOptions{ImageName: image})
+	return b.Push(backend.Options{ImageName: image})
 }
 
-func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string, db pkg.PackageDatabase, imagePush, force bool) ([]compiler.Artifact, error) {
+func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string, db pkg.PackageDatabase, imagePush, force bool) ([]*artifact.PackageArtifact, error) {
 	Info("Generating docker images for packages in", imagePrefix)
-	var art []compiler.Artifact
+	var art []*artifact.PackageArtifact
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
 
 		if !strings.HasSuffix(info.Name(), ".metadata.yaml") {
@@ -66,30 +69,30 @@ func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string,
 			return errors.Wrap(err, "Error reading file "+currentpath)
 		}
 
-		artifact, err := compiler.NewPackageArtifactFromYaml(dat)
+		a, err := artifact.NewPackageArtifactFromYaml(dat)
 		if err != nil {
 			return errors.Wrap(err, "Error reading yaml "+currentpath)
 		}
 		// Set the path relative to the file.
 		// The metadata contains the full path where the file was located during buildtime.
-		artifact.SetPath(filepath.Join(filepath.Dir(currentpath), filepath.Base(artifact.GetPath())))
+		a.Path = filepath.Join(filepath.Dir(currentpath), filepath.Base(a.Path))
 
 		// We want to include packages that are ONLY referenced in the tree.
 		// the ones which aren't should be deleted. (TODO: by another cli command?)
-		if _, notfound := db.FindPackage(artifact.GetCompileSpec().GetPackage()); notfound != nil {
+		if _, notfound := db.FindPackage(a.CompileSpec.Package); notfound != nil {
 			Debug(fmt.Sprintf("Package %s not found in tree. Ignoring it.",
-				artifact.GetCompileSpec().GetPackage().HumanReadableString()))
+				a.CompileSpec.Package.HumanReadableString()))
 			return nil
 		}
 
-		packageImage := fmt.Sprintf("%s:%s", imagePrefix, artifact.GetCompileSpec().GetPackage().ImageID())
+		packageImage := fmt.Sprintf("%s:%s", imagePrefix, a.CompileSpec.GetPackage().ImageID())
 
 		if imagePush && b.ImageAvailable(packageImage) && !force {
 			Info("Image", packageImage, "already present, skipping. use --force-push to override")
 		} else {
 			Info("Generating final image", packageImage,
-				"for package ", artifact.GetCompileSpec().GetPackage().HumanReadableString())
-			if opts, err := artifact.GenerateFinalImage(packageImage, b, true); err != nil {
+				"for package ", a.CompileSpec.GetPackage().HumanReadableString())
+			if opts, err := a.GenerateFinalImage(packageImage, b, true); err != nil {
 				return errors.Wrap(err, "Failed generating metadata tree"+opts.ImageName)
 			}
 		}
@@ -99,7 +102,7 @@ func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string,
 			}
 		}
 
-		art = append(art, artifact)
+		art = append(art, a)
 
 		return nil
 	}
@@ -112,7 +115,7 @@ func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string,
 	return art, nil
 }
 
-func (d *dockerRepositoryGenerator) pushFileFromArtifact(a compiler.Artifact, imageTree string, r *LuetSystemRepository) error {
+func (d *dockerRepositoryGenerator) pushFileFromArtifact(a *artifact.PackageArtifact, imageTree string, r *LuetSystemRepository) error {
 	Debug("Generating image", imageTree)
 	if opts, err := a.GenerateFinalImage(imageTree, r.GetBackend(), false); err != nil {
 		return errors.Wrap(err, "Failed generating metadata tree "+opts.ImageName)
@@ -138,7 +141,7 @@ func (d *dockerRepositoryGenerator) pushRepoMetadata(repospec string, r *LuetSys
 		return errors.Wrap(err, "Error met while archiving repository file")
 	}
 
-	a := compiler.NewPackageArtifact(tempRepoFile)
+	a := artifact.NewPackageArtifact(tempRepoFile)
 	imageRepo := fmt.Sprintf("%s:%s", d.imagePrefix, REPOSITORY_SPECFILE)
 
 	if err := d.pushFileFromArtifact(a, imageRepo, r); err != nil {
@@ -147,10 +150,10 @@ func (d *dockerRepositoryGenerator) pushRepoMetadata(repospec string, r *LuetSys
 	return nil
 }
 
-func (d *dockerRepositoryGenerator) pushImageFromArtifact(a compiler.Artifact, r *LuetSystemRepository) error {
+func (d *dockerRepositoryGenerator) pushImageFromArtifact(a *artifact.PackageArtifact, r *LuetSystemRepository) error {
 	// we generate a new archive containing the required compressed file.
 	// TODO: Bundle all the extra files in 1 docker image only, instead of an image for each file
-	treeArchive, err := compiler.CreateArtifactForFile(a.GetPath())
+	treeArchive, err := artifact.CreateArtifactForFile(a.Path)
 	if err != nil {
 		return errors.Wrap(err, "failed generating checksums for tree")
 	}
@@ -176,11 +179,11 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 	defer os.RemoveAll(repoTemp) // clean up
 
 	if r.GetBackend().ImageAvailable(imageRepository) {
-		if err := r.GetBackend().DownloadImage(compiler.CompilerBackendOptions{ImageName: imageRepository}); err != nil {
+		if err := r.GetBackend().DownloadImage(backend.Options{ImageName: imageRepository}); err != nil {
 			return errors.Wrapf(err, "while downloading '%s'", imageRepository)
 		}
 
-		if err := r.GetBackend().ExtractRootfs(compiler.CompilerBackendOptions{ImageName: imageRepository, Destination: repoTemp}, false); err != nil {
+		if err := r.GetBackend().ExtractRootfs(backend.Options{ImageName: imageRepository, Destination: repoTemp}, false); err != nil {
 			return errors.Wrapf(err, "while extracting '%s'", imageRepository)
 		}
 	}

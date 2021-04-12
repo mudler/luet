@@ -18,7 +18,6 @@ package backend
 import (
 	"os/exec"
 
-	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 
@@ -36,16 +35,13 @@ func imageAvailable(image string) bool {
 	return err == nil
 }
 
-func NewBackend(s string) compiler.CompilerBackend {
-	var compilerBackend compiler.CompilerBackend
-
-	switch s {
-	case ImgBackend:
-		compilerBackend = NewSimpleImgBackend()
-	case DockerBackend:
-		compilerBackend = NewSimpleDockerBackend()
-	}
-	return compilerBackend
+type Options struct {
+	ImageName      string
+	SourcePath     string
+	DockerFileName string
+	Destination    string
+	Context        string
+	BackendArgs    []string
 }
 
 func runCommand(cmd *exec.Cmd) error {
@@ -75,7 +71,7 @@ func runCommand(cmd *exec.Cmd) error {
 	return nil
 }
 
-func genBuildCommand(opts compiler.CompilerBackendOptions) []string {
+func genBuildCommand(opts Options) []string {
 	context := opts.Context
 
 	if context == "" {

@@ -22,7 +22,6 @@ import (
 
 	bus "github.com/mudler/luet/pkg/bus"
 
-	"github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/pkg/errors"
@@ -30,12 +29,12 @@ import (
 
 type SimpleImg struct{}
 
-func NewSimpleImgBackend() compiler.CompilerBackend {
+func NewSimpleImgBackend() *SimpleImg {
 	return &SimpleImg{}
 }
 
 // TODO: Missing still: labels, and build args expansion
-func (*SimpleImg) BuildImage(opts compiler.CompilerBackendOptions) error {
+func (*SimpleImg) BuildImage(opts Options) error {
 	name := opts.ImageName
 	bus.Manager.Publish(bus.EventImagePreBuild, opts)
 
@@ -56,7 +55,7 @@ func (*SimpleImg) BuildImage(opts compiler.CompilerBackendOptions) error {
 	return nil
 }
 
-func (*SimpleImg) RemoveImage(opts compiler.CompilerBackendOptions) error {
+func (*SimpleImg) RemoveImage(opts Options) error {
 	name := opts.ImageName
 	buildarg := []string{"rm", name}
 	Spinner(22)
@@ -70,7 +69,7 @@ func (*SimpleImg) RemoveImage(opts compiler.CompilerBackendOptions) error {
 	return nil
 }
 
-func (*SimpleImg) DownloadImage(opts compiler.CompilerBackendOptions) error {
+func (*SimpleImg) DownloadImage(opts Options) error {
 	name := opts.ImageName
 	bus.Manager.Publish(bus.EventImagePrePull, opts)
 
@@ -123,7 +122,7 @@ func (*SimpleImg) ImageExists(imagename string) bool {
 	return false
 }
 
-func (s *SimpleImg) ImageDefinitionToTar(opts compiler.CompilerBackendOptions) error {
+func (s *SimpleImg) ImageDefinitionToTar(opts Options) error {
 	if err := s.BuildImage(opts); err != nil {
 		return errors.Wrap(err, "Failed building image")
 	}
@@ -136,7 +135,7 @@ func (s *SimpleImg) ImageDefinitionToTar(opts compiler.CompilerBackendOptions) e
 	return nil
 }
 
-func (*SimpleImg) ExportImage(opts compiler.CompilerBackendOptions) error {
+func (*SimpleImg) ExportImage(opts Options) error {
 	name := opts.ImageName
 	path := opts.Destination
 	buildarg := []string{"save", "-o", path, name}
@@ -154,7 +153,7 @@ func (*SimpleImg) ExportImage(opts compiler.CompilerBackendOptions) error {
 }
 
 // ExtractRootfs extracts the docker image content inside the destination
-func (s *SimpleImg) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerms bool) error {
+func (s *SimpleImg) ExtractRootfs(opts Options, keepPerms bool) error {
 	name := opts.ImageName
 	path := opts.Destination
 
@@ -180,13 +179,7 @@ func (s *SimpleImg) ExtractRootfs(opts compiler.CompilerBackendOptions, keepPerm
 	return nil
 }
 
-// TODO: Use container-diff (https://github.com/GoogleContainerTools/container-diff) for checking out layer diffs
-// Changes uses container-diff (https://github.com/GoogleContainerTools/container-diff) for retrieving out layer diffs
-func (i *SimpleImg) Changes(fromImage, toImage compiler.CompilerBackendOptions) ([]compiler.ArtifactLayer, error) {
-	return GenerateChanges(i, fromImage, toImage)
-}
-
-func (*SimpleImg) Push(opts compiler.CompilerBackendOptions) error {
+func (*SimpleImg) Push(opts Options) error {
 	name := opts.ImageName
 	bus.Manager.Publish(bus.EventImagePrePush, opts)
 

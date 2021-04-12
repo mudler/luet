@@ -25,6 +25,7 @@ import (
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
+	"github.com/mudler/luet/pkg/compiler/types/options"
 	. "github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -74,13 +75,15 @@ func NewTreeImageCommand() *cobra.Command {
 			}
 			compilerBackend := backend.NewSimpleDockerBackend()
 
-			opts := compiler.NewDefaultCompilerOptions()
-			opts.SolverOptions = *LuetCfg.GetSolverOptions()
-			opts.PushImageRepository = imageRepository
-			opts.PullImageRepository = pullRepo
-
-			solverOpts := solver.Options{Type: solver.SingleCoreSimple, Concurrency: 1}
-			luetCompiler := compiler.NewLuetCompiler(compilerBackend, reciper.GetDatabase(), opts, solverOpts)
+			opts := *LuetCfg.GetSolverOptions()
+			opts.Options = solver.Options{Type: solver.SingleCoreSimple, Concurrency: 1}
+			luetCompiler := compiler.NewLuetCompiler(
+				compilerBackend,
+				reciper.GetDatabase(),
+				options.WithPushRepository(imageRepository),
+				options.WithPullRepositories(pullRepo),
+				options.WithSolverOptions(opts),
+			)
 
 			a := args[0]
 

@@ -26,18 +26,19 @@ import (
 
 	"github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
+	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
+
+	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
 	config "github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
-	"github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/installer"
 	pkg "github.com/mudler/luet/pkg/package"
-	"github.com/mudler/luet/pkg/solver"
 	"github.com/mudler/luet/pkg/tree"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-func dockerStubRepo(tmpdir, tree, image string, push, force bool) (installer.Repository, error) {
+func dockerStubRepo(tmpdir, tree, image string, push, force bool) (*LuetSystemRepository, error) {
 	return GenerateRepository(
 		"test",
 		"description",
@@ -64,7 +65,7 @@ var _ = Describe("Repository", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -79,12 +80,11 @@ var _ = Describe("Repository", func() {
 			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
 
 			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -132,11 +132,11 @@ var _ = Describe("Repository", func() {
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(1))
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase())
 			spec2, err := compiler2.FromPackage(&pkg.DefaultPackage{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -153,18 +153,16 @@ var _ = Describe("Repository", func() {
 
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
-			compiler2.SetConcurrency(1)
 
 			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 
 			artifact2, err := compiler2.Compile(false, spec2)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact2.GetPath())).To(BeTrue())
-			Expect(helpers.Untar(artifact2.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(artifact2.Path)).To(BeTrue())
+			Expect(helpers.Untar(artifact2.Path, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -254,7 +252,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			localcompiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			localcompiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := localcompiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -266,12 +264,11 @@ urls:
 			defer os.RemoveAll(tmpdir) // clean up
 
 			spec.SetOutputPath(tmpdir)
-			localcompiler.SetConcurrency(1)
 
-			artifact, err := localcompiler.Compile(false, spec)
+			a, err := localcompiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(a.Path)).To(BeTrue())
+			Expect(helpers.Untar(a.Path, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -300,9 +297,9 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Read(f)).To(ContainSubstring("name: test"))
 
-			a, err := c.DownloadArtifact(&compiler.PackageArtifact{
+			a, err = c.DownloadArtifact(&artifact.PackageArtifact{
 				Path: "test.tar",
-				CompileSpec: &compiler.LuetCompilationSpec{
+				CompileSpec: &compilerspec.LuetCompilationSpec{
 					Package: &pkg.DefaultPackage{
 						Name:     "b",
 						Category: "test",
@@ -329,7 +326,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(5))
 
-			localcompiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), compiler.NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			localcompiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := localcompiler.FromPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.99"})
 			Expect(err).ToNot(HaveOccurred())
@@ -341,12 +338,11 @@ urls:
 			defer os.RemoveAll(tmpdir) // clean up
 
 			spec.SetOutputPath(tmpdir)
-			localcompiler.SetConcurrency(1)
 
-			artifact, err := localcompiler.Compile(false, spec)
+			a, err := localcompiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(a.Path)).To(BeTrue())
+			Expect(helpers.Untar(a.Path, tmpdir, false)).ToNot(HaveOccurred())
 
 			repo, err := dockerStubRepo(tmpdir, "../../tests/fixtures/virtuals", repoImage, true, true)
 			Expect(err).ToNot(HaveOccurred())
@@ -372,9 +368,9 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			Expect(helpers.Read(f)).To(ContainSubstring("name: test"))
 
-			a, err := c.DownloadArtifact(&compiler.PackageArtifact{
+			a, err = c.DownloadArtifact(&artifact.PackageArtifact{
 				Path: "test.tar",
-				CompileSpec: &compiler.LuetCompilationSpec{
+				CompileSpec: &compilerspec.LuetCompilationSpec{
 					Package: &pkg.DefaultPackage{
 						Name:     "a",
 						Category: "test",
@@ -397,14 +393,14 @@ urls:
 			repos := Repositories{
 				&LuetSystemRepository{
 					Index: compiler.ArtifactIndex{
-						&compiler.PackageArtifact{
-							CompileSpec: &compiler.LuetCompilationSpec{
+						&artifact.PackageArtifact{
+							CompileSpec: &compilerspec.LuetCompilationSpec{
 								Package: &pkg.DefaultPackage{},
 							},
 							Path:  "bar",
 							Files: []string{"boo"},
 						},
-						&compiler.PackageArtifact{
+						&artifact.PackageArtifact{
 							Path:  "d",
 							Files: []string{"baz"},
 						},
@@ -414,15 +410,15 @@ urls:
 
 			matches := repos.SearchPackages("bo", FileSearch)
 			Expect(len(matches)).To(Equal(1))
-			Expect(matches[0].Artifact.GetPath()).To(Equal("bar"))
+			Expect(matches[0].Artifact.Path).To(Equal("bar"))
 		})
 
 		It("Searches packages", func() {
 			repo := &LuetSystemRepository{
 				Index: compiler.ArtifactIndex{
-					&compiler.PackageArtifact{
+					&artifact.PackageArtifact{
 						Path: "foo",
-						CompileSpec: &compiler.LuetCompilationSpec{
+						CompileSpec: &compilerspec.LuetCompilationSpec{
 							Package: &pkg.DefaultPackage{
 								Name:     "foo",
 								Category: "bar",
@@ -430,9 +426,9 @@ urls:
 							},
 						},
 					},
-					&compiler.PackageArtifact{
+					&artifact.PackageArtifact{
 						Path: "baz",
-						CompileSpec: &compiler.LuetCompilationSpec{
+						CompileSpec: &compilerspec.LuetCompilationSpec{
 							Package: &pkg.DefaultPackage{
 								Name:     "foo",
 								Category: "baz",
@@ -449,7 +445,7 @@ urls:
 				Version:  "1.0",
 			})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(a.GetPath()).To(Equal("baz"))
+			Expect(a.Path).To(Equal("baz"))
 
 			a, err = repo.SearchArtefact(&pkg.DefaultPackage{
 				Name:     "foo",
@@ -457,7 +453,7 @@ urls:
 				Version:  "1.0",
 			})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(a.GetPath()).To(Equal("foo"))
+			Expect(a.Path).To(Equal("foo"))
 
 			// Doesn't exist. so must fail
 			_, err = repo.SearchArtefact(&pkg.DefaultPackage{

@@ -13,11 +13,13 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package compiler
+package compilerspec
 
 import (
 	"io/ioutil"
 	"path/filepath"
+
+	options "github.com/mudler/luet/pkg/compiler/types/options"
 
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
@@ -27,7 +29,7 @@ import (
 
 type LuetCompilationspecs []LuetCompilationSpec
 
-func NewLuetCompilationspecs(s ...CompilationSpec) CompilationSpecs {
+func NewLuetCompilationspecs(s ...*LuetCompilationSpec) *LuetCompilationspecs {
 	all := LuetCompilationspecs{}
 
 	for _, spec := range s {
@@ -40,7 +42,7 @@ func (specs LuetCompilationspecs) Len() int {
 	return len(specs)
 }
 
-func (specs *LuetCompilationspecs) Remove(s CompilationSpecs) CompilationSpecs {
+func (specs *LuetCompilationspecs) Remove(s *LuetCompilationspecs) *LuetCompilationspecs {
 	newSpecs := LuetCompilationspecs{}
 SPECS:
 	for _, spec := range specs.All() {
@@ -54,16 +56,12 @@ SPECS:
 	return &newSpecs
 }
 
-func (specs *LuetCompilationspecs) Add(s CompilationSpec) {
-	c, ok := s.(*LuetCompilationSpec)
-	if !ok {
-		panic("LuetCompilationspecs supports only []LuetCompilationSpec")
-	}
-	*specs = append(*specs, *c)
+func (specs *LuetCompilationspecs) Add(s *LuetCompilationSpec) {
+	*specs = append(*specs, *s)
 }
 
-func (specs *LuetCompilationspecs) All() []CompilationSpec {
-	var cspecs []CompilationSpec
+func (specs *LuetCompilationspecs) All() []*LuetCompilationSpec {
+	var cspecs []*LuetCompilationSpec
 	for i, _ := range *specs {
 		f := (*specs)[i]
 		cspecs = append(cspecs, &f)
@@ -72,7 +70,7 @@ func (specs *LuetCompilationspecs) All() []CompilationSpec {
 	return cspecs
 }
 
-func (specs *LuetCompilationspecs) Unique() CompilationSpecs {
+func (specs *LuetCompilationspecs) Unique() *LuetCompilationspecs {
 	newSpecs := LuetCompilationspecs{}
 	seen := map[string]bool{}
 
@@ -103,9 +101,11 @@ type LuetCompilationSpec struct {
 	Unpack     bool     `json:"unpack"`
 	Includes   []string `json:"includes"`
 	Excludes   []string `json:"excludes"`
+
+	BuildOptions options.Compiler `json:"build_options"`
 }
 
-func NewLuetCompilationSpec(b []byte, p pkg.Package) (CompilationSpec, error) {
+func NewLuetCompilationSpec(b []byte, p pkg.Package) (*LuetCompilationSpec, error) {
 	var spec LuetCompilationSpec
 	err := yaml.Unmarshal(b, &spec)
 	if err != nil {
@@ -116,6 +116,10 @@ func NewLuetCompilationSpec(b []byte, p pkg.Package) (CompilationSpec, error) {
 }
 func (cs *LuetCompilationSpec) GetSourceAssertion() solver.PackagesAssertions {
 	return cs.SourceAssertion
+}
+
+func (cs *LuetCompilationSpec) SetBuildOptions(b options.Compiler) {
+	cs.BuildOptions = b
 }
 
 func (cs *LuetCompilationSpec) SetSourceAssertion(as solver.PackagesAssertions) {

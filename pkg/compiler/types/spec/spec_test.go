@@ -13,17 +13,18 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package compiler_test
+package compilerspec_test
 
 import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
+	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
+
 	. "github.com/mudler/luet/pkg/compiler"
 	helpers "github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
-	"github.com/mudler/luet/pkg/solver"
 	"github.com/mudler/luet/pkg/tree"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -32,41 +33,41 @@ import (
 var _ = Describe("Spec", func() {
 	Context("Luet specs", func() {
 		It("Allows normal operations", func() {
-			testSpec := &LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Category: "a", Version: "0"}}
-			testSpec2 := &LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "bar", Category: "a", Version: "0"}}
-			testSpec3 := &LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "baz", Category: "a", Version: "0"}}
-			testSpec4 := &LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Category: "a", Version: "0"}}
+			testSpec := &compilerspec.LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Category: "a", Version: "0"}}
+			testSpec2 := &compilerspec.LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "bar", Category: "a", Version: "0"}}
+			testSpec3 := &compilerspec.LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "baz", Category: "a", Version: "0"}}
+			testSpec4 := &compilerspec.LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Category: "a", Version: "0"}}
 
-			specs := NewLuetCompilationspecs(testSpec, testSpec2)
+			specs := compilerspec.NewLuetCompilationspecs(testSpec, testSpec2)
 			Expect(specs.Len()).To(Equal(2))
-			Expect(specs.All()).To(Equal([]CompilationSpec{testSpec, testSpec2}))
+			Expect(specs.All()).To(Equal([]*compilerspec.LuetCompilationSpec{testSpec, testSpec2}))
 			specs.Add(testSpec3)
-			Expect(specs.All()).To(Equal([]CompilationSpec{testSpec, testSpec2, testSpec3}))
+			Expect(specs.All()).To(Equal([]*compilerspec.LuetCompilationSpec{testSpec, testSpec2, testSpec3}))
 			specs.Add(testSpec4)
-			Expect(specs.All()).To(Equal([]CompilationSpec{testSpec, testSpec2, testSpec3, testSpec4}))
+			Expect(specs.All()).To(Equal([]*compilerspec.LuetCompilationSpec{testSpec, testSpec2, testSpec3, testSpec4}))
 			newSpec := specs.Unique()
-			Expect(newSpec.All()).To(Equal([]CompilationSpec{testSpec, testSpec2, testSpec3}))
+			Expect(newSpec.All()).To(Equal([]*compilerspec.LuetCompilationSpec{testSpec, testSpec2, testSpec3}))
 
-			newSpec2 := specs.Remove(NewLuetCompilationspecs(testSpec, testSpec2))
-			Expect(newSpec2.All()).To(Equal([]CompilationSpec{testSpec3}))
+			newSpec2 := specs.Remove(compilerspec.NewLuetCompilationspecs(testSpec, testSpec2))
+			Expect(newSpec2.All()).To(Equal([]*compilerspec.LuetCompilationSpec{testSpec3}))
 
 		})
 		Context("virtuals", func() {
 			When("is empty", func() {
 				It("is virtual", func() {
-					spec := &LuetCompilationSpec{}
+					spec := &compilerspec.LuetCompilationSpec{}
 					Expect(spec.IsVirtual()).To(BeTrue())
 				})
 			})
 			When("has defined steps", func() {
 				It("is not a virtual", func() {
-					spec := &LuetCompilationSpec{Steps: []string{"foo"}}
+					spec := &compilerspec.LuetCompilationSpec{Steps: []string{"foo"}}
 					Expect(spec.IsVirtual()).To(BeFalse())
 				})
 			})
 			When("has defined image", func() {
 				It("is not a virtual", func() {
-					spec := &LuetCompilationSpec{Image: "foo"}
+					spec := &compilerspec.LuetCompilationSpec{Image: "foo"}
 					Expect(spec.IsVirtual()).To(BeFalse())
 				})
 			})
@@ -82,12 +83,9 @@ var _ = Describe("Spec", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
-			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
+			compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase())
+			lspec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
-
-			lspec, ok := spec.(*LuetCompilationSpec)
-			Expect(ok).To(BeTrue())
 
 			Expect(lspec.Steps).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 			Expect(lspec.Image).To(Equal("luet/base"))
@@ -137,12 +135,9 @@ RUN echo bar > /test2`))
 
 		Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-		compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
-		spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.0"})
+		compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase())
+		lspec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.0"})
 		Expect(err).ToNot(HaveOccurred())
-
-		lspec, ok := spec.(*LuetCompilationSpec)
-		Expect(ok).To(BeTrue())
 
 		Expect(lspec.Steps).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 		Expect(lspec.Image).To(Equal("luet/base"))

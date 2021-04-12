@@ -21,9 +21,11 @@ import (
 
 	. "github.com/mudler/luet/pkg/compiler"
 	sd "github.com/mudler/luet/pkg/compiler/backend"
+	"github.com/mudler/luet/pkg/compiler/types/compression"
+	"github.com/mudler/luet/pkg/compiler/types/options"
+	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	helpers "github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
-	"github.com/mudler/luet/pkg/solver"
 	"github.com/mudler/luet/pkg/tree"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -39,7 +41,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(2))
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -54,12 +56,11 @@ var _ = Describe("Compiler", func() {
 			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(2)
 
 			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-			Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -83,7 +84,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(1))
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -98,12 +99,11 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(2)
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec, spec2))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2))
 			Expect(errs).To(BeNil())
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 
 		})
@@ -118,7 +118,7 @@ var _ = Describe("Compiler", func() {
 
 			err = generalRecipe.Load("../../tests/fixtures/templates")
 			Expect(err).ToNot(HaveOccurred())
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 			pkg, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
@@ -142,7 +142,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(2))
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "c", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -159,15 +159,14 @@ var _ = Describe("Compiler", func() {
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
 			spec3.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(2)
 
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec, spec2, spec3))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2, spec3))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(3))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 
 			Expect(helpers.Exists(spec.Rel("test3"))).To(BeTrue())
@@ -199,7 +198,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(1))
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "extra", Category: "layer", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -207,23 +206,22 @@ var _ = Describe("Compiler", func() {
 			Expect(err).ToNot(HaveOccurred())
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
-			artifacts2, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec2))
+			artifacts2, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec2))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts2)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 
 			for _, artifact := range artifacts2 {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 
 			Expect(helpers.Exists(spec.Rel("etc/hosts"))).To(BeTrue())
@@ -241,7 +239,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -250,15 +248,14 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
 
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("marvin"))).To(BeTrue())
@@ -276,7 +273,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -285,15 +282,14 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
 
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("marvin"))).To(BeTrue())
@@ -312,7 +308,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -321,15 +317,14 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
 
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("marvin"))).To(BeTrue())
@@ -348,7 +343,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -357,14 +352,13 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Exists(spec.Rel("marvin"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
@@ -382,7 +376,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -391,14 +385,13 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Exists(spec.Rel("marvin"))).ToNot(BeTrue())
 			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
@@ -416,7 +409,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -425,14 +418,13 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Exists(spec.Rel("var/lib/udhcpd"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("marvin"))).To(BeTrue())
@@ -454,7 +446,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "pkgs-checker", Category: "package", Version: "9999"})
 			Expect(err).ToNot(HaveOccurred())
@@ -463,15 +455,14 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
 
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Untar(spec.Rel("extra-layer-0.1.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
 
@@ -495,7 +486,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -504,16 +495,15 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
 
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
-			Expect(len(artifacts[0].GetDependencies())).To(Equal(1))
+			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Untar(spec.Rel("c-test-1.0.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
 
@@ -539,7 +529,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -548,16 +538,15 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
 
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
-			Expect(len(artifacts[0].GetDependencies())).To(Equal(1))
+			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Untar(spec.Rel("c-test-1.0.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
 
@@ -581,7 +570,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "extra", Category: "layer", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
@@ -591,13 +580,13 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileWithReverseDeps(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileWithReverseDeps(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(2))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Untar(spec.Rel("extra-layer-0.1.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
 
@@ -619,7 +608,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(10))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "vhba", Category: "sys-fs-5.4.2", Version: "20190410"})
 			Expect(err).ToNot(HaveOccurred())
@@ -629,13 +618,13 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
-			Expect(len(artifacts[0].GetDependencies())).To(Equal(6))
+			Expect(len(artifacts[0].Dependencies)).To(Equal(6))
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Untar(spec.Rel("vhba-sys-fs-5.4.2-20190410.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
 			Expect(helpers.Exists(spec.Rel("sabayon-build-portage-layer-0.20191126.package.tar"))).To(BeTrue())
@@ -658,19 +647,19 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileWithReverseDeps(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileWithReverseDeps(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(4))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 
 			// A deps on B, so A artifacts are here:
@@ -710,7 +699,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(2))
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "c", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -722,17 +711,16 @@ var _ = Describe("Compiler", func() {
 			defer os.RemoveAll(tmpdir) // clean up
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(2)
 
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.GetPath())).To(BeTrue())
-				Expect(helpers.Untar(artifact.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 
-				for _, d := range artifact.GetDependencies() {
-					Expect(helpers.Exists(d.GetPath())).To(BeTrue())
-					Expect(helpers.Untar(d.GetPath(), tmpdir, false)).ToNot(HaveOccurred())
+				for _, d := range artifact.Dependencies {
+					Expect(helpers.Exists(d.Path)).To(BeTrue())
+					Expect(helpers.Untar(d.Path, tmpdir, false)).ToNot(HaveOccurred())
 				}
 			}
 
@@ -753,7 +741,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "runtime", Category: "layer", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
@@ -765,12 +753,11 @@ var _ = Describe("Compiler", func() {
 			defer os.RemoveAll(tmpdir) // clean up
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
 
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
-			Expect(len(artifacts[0].GetDependencies())).To(Equal(1))
+			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
 			Expect(helpers.Untar(spec.Rel("runtime-layer-0.1.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
 			Expect(helpers.Exists(spec.Rel("bin/busybox"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("var"))).ToNot(BeTrue())
@@ -786,7 +773,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{
 				Name:     "dironly",
@@ -814,12 +801,10 @@ var _ = Describe("Compiler", func() {
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir2)
 
-			compiler.SetConcurrency(1)
-
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec, spec2))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(2))
-			Expect(len(artifacts[0].GetDependencies())).To(Equal(0))
+			Expect(len(artifacts[0].Dependencies)).To(Equal(0))
 
 			Expect(helpers.Untar(spec.Rel("dironly-test-1.0.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
 			Expect(helpers.Exists(spec.Rel("test1"))).To(BeTrue())
@@ -841,11 +826,11 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "runtime", Category: "layer", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
-			compiler.SetCompressionType(GZip)
+			compiler.Options.CompressionType = compression.GZip
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
 			tmpdir, err := ioutil.TempDir("", "tree")
@@ -853,12 +838,11 @@ var _ = Describe("Compiler", func() {
 			defer os.RemoveAll(tmpdir) // clean up
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
 
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
-			Expect(len(artifacts[0].GetDependencies())).To(Equal(1))
+			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
 			Expect(helpers.Exists(spec.Rel("runtime-layer-0.1.package.tar.gz"))).To(BeTrue())
 			Expect(helpers.Exists(spec.Rel("runtime-layer-0.1.package.tar"))).To(BeFalse())
 			Expect(artifacts[0].Unpack(tmpdir, false)).ToNot(HaveOccurred())
@@ -877,7 +861,7 @@ var _ = Describe("Compiler", func() {
 			err := generalRecipe.Load("../../tests/fixtures/includeimage")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			specs, err := compiler.FromDatabase(generalRecipe.GetDatabase(), true, "")
 			Expect(err).ToNot(HaveOccurred())
@@ -896,11 +880,11 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), NewDefaultCompilerOptions(), solver.Options{Type: solver.SingleCoreSimple})
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "runtime", Category: "layer", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
-			compiler.SetCompressionType(GZip)
+			compiler.Options.CompressionType = compression.GZip
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
 			tmpdir, err := ioutil.TempDir("", "tree")
@@ -908,20 +892,19 @@ var _ = Describe("Compiler", func() {
 			defer os.RemoveAll(tmpdir) // clean up
 
 			spec.SetOutputPath(tmpdir)
-			compiler.SetConcurrency(1)
 
-			artifacts, errs := compiler.CompileParallel(false, NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
-			Expect(len(artifacts[0].GetDependencies())).To(Equal(1))
-			Expect(artifacts[0].GetFiles()).To(ContainElement("bin/busybox"))
+			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
+			Expect(artifacts[0].Files).To(ContainElement("bin/busybox"))
 
 			Expect(helpers.Exists(spec.Rel("runtime-layer-0.1.metadata.yaml"))).To(BeTrue())
 
 			art, err := LoadArtifactFromYaml(spec)
 			Expect(err).ToNot(HaveOccurred())
 
-			files := art.GetFiles()
+			files := art.Files
 			Expect(files).To(ContainElement("bin/busybox"))
 		})
 	})

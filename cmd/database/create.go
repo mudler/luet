@@ -18,7 +18,8 @@ package cmd_database
 import (
 	"io/ioutil"
 
-	"github.com/mudler/luet/pkg/compiler"
+	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
+
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
@@ -66,21 +67,21 @@ For reference, inspect a "metadata.yaml" file generated while running "luet buil
 				if err != nil {
 					Fatal("Failed reading ", a, ": ", err.Error())
 				}
-				art, err := compiler.NewPackageArtifactFromYaml(dat)
+				art, err := artifact.NewPackageArtifactFromYaml(dat)
 				if err != nil {
 					Fatal("Failed reading yaml ", a, ": ", err.Error())
 				}
 
-				files := art.GetFiles()
+				files := art.Files
 
-				if _, err := systemDB.CreatePackage(art.GetCompileSpec().GetPackage()); err != nil {
+				if _, err := systemDB.CreatePackage(art.CompileSpec.GetPackage()); err != nil {
 					Fatal("Failed to create ", a, ": ", err.Error())
 				}
-				if err := systemDB.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: art.GetCompileSpec().GetPackage().GetFingerPrint(), Files: files}); err != nil {
+				if err := systemDB.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: art.CompileSpec.GetPackage().GetFingerPrint(), Files: files}); err != nil {
 					Fatal("Failed setting package files for ", a, ": ", err.Error())
 				}
 
-				Info(art.GetCompileSpec().GetPackage().HumanReadableString(), " created")
+				Info(art.CompileSpec.GetPackage().HumanReadableString(), " created")
 			}
 
 		},
