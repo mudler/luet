@@ -276,6 +276,9 @@ github.com/google/go-containerregistry/pkg/v1/types
 github.com/google/go-containerregistry/pkg/v1/v1util
 # github.com/google/gofuzz v1.1.0
 github.com/google/gofuzz
+# github.com/google/renameio v1.0.0
+## explicit
+github.com/google/renameio
 # github.com/google/shlex v0.0.0-20150127133951-6f45313302b9
 github.com/google/shlex
 # github.com/google/uuid v1.1.1
@@ -316,6 +319,7 @@ github.com/heroku/docker-registry-client/registry
 # github.com/huandu/xstrings v1.3.1
 github.com/huandu/xstrings
 # github.com/imdario/mergo v0.3.8
+## explicit
 github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
