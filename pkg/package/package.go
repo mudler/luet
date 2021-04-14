@@ -113,6 +113,10 @@ type Package interface {
 	GetBuildTimestamp() string
 
 	Clone() Package
+
+	GetMetadataFilePath() string
+	SetTreeDir(s string)
+	GetTreeDir() string
 }
 
 type Tree interface {
@@ -210,6 +214,11 @@ func (t *DefaultPackage) JSON() ([]byte, error) {
 	return buffer.Bytes(), err
 }
 
+// GetMetadataFilePath returns the canonical name of an artifact metadata file
+func (d *DefaultPackage) GetMetadataFilePath() string {
+	return d.GetFingerPrint() + ".metadata.yaml"
+}
+
 // DefaultPackage represent a standard package definition
 type DefaultPackage struct {
 	ID               int               `storm:"id,increment" json:"id"` // primary key with auto increment
@@ -235,6 +244,8 @@ type DefaultPackage struct {
 	BuildTimestamp string   `json:"buildtimestamp,omitempty"`
 
 	Labels map[string]string `json:"labels,omitempty"` // Affects YAML field names too.
+
+	treeDir string
 }
 
 // State represent the package state
@@ -251,6 +262,12 @@ func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*D
 	}
 }
 
+func (p *DefaultPackage) SetTreeDir(s string) {
+	p.treeDir = s
+}
+func (p *DefaultPackage) GetTreeDir() string {
+	return p.treeDir
+}
 func (p *DefaultPackage) String() string {
 	b, err := p.JSON()
 	if err != nil {

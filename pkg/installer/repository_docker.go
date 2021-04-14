@@ -44,23 +44,22 @@ type dockerRepositoryGenerator struct {
 }
 
 func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
-	return generatePackageImages(l.b, l.imagePrefix, path, db, l.imagePush, l.force)
-}
 
-func pushImage(b compiler.CompilerBackend, image string, force bool) error {
-	if b.ImageAvailable(image) && !force {
-		Debug("Image", image, "already present, skipping")
-		return nil
-	}
-	return b.Push(backend.Options{ImageName: image})
-}
-
-func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string, db pkg.PackageDatabase, imagePush, force bool) ([]*artifact.PackageArtifact, error) {
-	Info("Generating docker images for packages in", imagePrefix)
+	Info("Generating docker images for packages in", l.imagePrefix)
 	var art []*artifact.PackageArtifact
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
+		if err != nil {
+			Debug("Skipping", info.Name(), err.Error())
+			return nil
+		}
 
-		if !strings.HasSuffix(info.Name(), ".metadata.yaml") {
+		if strings.HasSuffix(info.Name(), ".metadata.yaml") {
+			a := artifact.NewPackageArtifact(info.Name())
+			imageRepo := fmt.Sprintf("%s:%s", l.imagePrefix, filepath.Base(info.Name()))
+
+			if err := l.pushFileFromArtifact(a, imageRepo); err != nil {
+				return errors.Wrap(err, "while pushing file from artifact")
+			}
 			return nil // Skip with no errors
 		}
 
@@ -85,19 +84,19 @@ func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string,
 			return nil
 		}
 
-		packageImage := fmt.Sprintf("%s:%s", imagePrefix, a.CompileSpec.GetPackage().ImageID())
+		packageImage := fmt.Sprintf("%s:%s", l.imagePrefix, a.CompileSpec.GetPackage().ImageID())
 
-		if imagePush && b.ImageAvailable(packageImage) && !force {
+		if l.imagePush && l.b.ImageAvailable(packageImage) && !l.force {
 			Info("Image", packageImage, "already present, skipping. use --force-push to override")
 		} else {
 			Info("Generating final image", packageImage,
 				"for package ", a.CompileSpec.GetPackage().HumanReadableString())
-			if opts, err := a.GenerateFinalImage(packageImage, b, true); err != nil {
+			if opts, err := a.GenerateFinalImage(packageImage, l.b, true); err != nil {
 				return errors.Wrap(err, "Failed generating metadata tree"+opts.ImageName)
 			}
 		}
-		if imagePush {
-			if err := pushImage(b, packageImage, force); err != nil {
+		if l.imagePush {
+			if err := pushImage(l.b, packageImage, l.force); err != nil {
 				return errors.Wrapf(err, "Failed while pushing image: '%s'", packageImage)
 			}
 		}
@@ -115,13 +114,21 @@ func generatePackageImages(b compiler.CompilerBackend, imagePrefix, path string,
 	return art, nil
 }
 
-func (d *dockerRepositoryGenerator) pushFileFromArtifact(a *artifact.PackageArtifact, imageTree string, r *LuetSystemRepository) error {
+func pushImage(b compiler.CompilerBackend, image string, force bool) error {
+	if b.ImageAvailable(image) && !force {
+		Debug("Image", image, "already present, skipping")
+		return nil
+	}
+	return b.Push(backend.Options{ImageName: image})
+}
+
+func (d *dockerRepositoryGenerator) pushFileFromArtifact(a *artifact.PackageArtifact, imageTree string) error {
 	Debug("Generating image", imageTree)
-	if opts, err := a.GenerateFinalImage(imageTree, r.GetBackend(), false); err != nil {
+	if opts, err := a.GenerateFinalImage(imageTree, d.b, false); err != nil {
 		return errors.Wrap(err, "Failed generating metadata tree "+opts.ImageName)
 	}
-	if r.PushImages {
-		if err := pushImage(r.GetBackend(), imageTree, true); err != nil {
+	if d.imagePush {
+		if err := pushImage(d.b, imageTree, true); err != nil {
 			return errors.Wrapf(err, "Failed while pushing image: '%s'", imageTree)
 		}
 	}
@@ -144,13 +151,13 @@ func (d *dockerRepositoryGenerator) pushRepoMetadata(repospec string, r *LuetSys
 	a := artifact.NewPackageArtifact(tempRepoFile)
 	imageRepo := fmt.Sprintf("%s:%s", d.imagePrefix, REPOSITORY_SPECFILE)
 
-	if err := d.pushFileFromArtifact(a, imageRepo, r); err != nil {
+	if err := d.pushFileFromArtifact(a, imageRepo); err != nil {
 		return errors.Wrap(err, "while pushing file from artifact")
 	}
 	return nil
 }
 
-func (d *dockerRepositoryGenerator) pushImageFromArtifact(a *artifact.PackageArtifact, r *LuetSystemRepository) error {
+func (d *dockerRepositoryGenerator) pushImageFromArtifact(a *artifact.PackageArtifact, b compiler.CompilerBackend) error {
 	// we generate a new archive containing the required compressed file.
 	// TODO: Bundle all the extra files in 1 docker image only, instead of an image for each file
 	treeArchive, err := artifact.CreateArtifactForFile(a.Path)
@@ -159,7 +166,7 @@ func (d *dockerRepositoryGenerator) pushImageFromArtifact(a *artifact.PackageArt
 	}
 	imageTree := fmt.Sprintf("%s:%s", d.imagePrefix, a.GetFileName())
 
-	return d.pushFileFromArtifact(treeArchive, imageTree, r)
+	return d.pushFileFromArtifact(treeArchive, imageTree)
 }
 
 // Generate creates a Docker luet repository
@@ -216,7 +223,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 
 	// we generate a new archive containing the required compressed file.
 	// TODO: Bundle all the extra files in 1 docker image only, instead of an image for each file
-	if err := d.pushImageFromArtifact(a, r); err != nil {
+	if err := d.pushImageFromArtifact(a, d.b); err != nil {
 		return errors.Wrap(err, "error met while pushing runtime tree")
 	}
 
@@ -226,7 +233,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 	}
 	// we generate a new archive containing the required compressed file.
 	// TODO: Bundle all the extra files in 1 docker image only, instead of an image for each file
-	if err := d.pushImageFromArtifact(a, r); err != nil {
+	if err := d.pushImageFromArtifact(a, d.b); err != nil {
 		return errors.Wrap(err, "error met while pushing compiler tree")
 	}
 
@@ -242,7 +249,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 		return errors.Wrap(err, "failed adding Metadata file to repository")
 	}
 
-	if err := d.pushImageFromArtifact(a, r); err != nil {
+	if err := d.pushImageFromArtifact(a, d.b); err != nil {
 		return errors.Wrap(err, "error met while pushing docker image from artifact")
 	}
 

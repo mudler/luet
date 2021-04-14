@@ -62,6 +62,11 @@ type PackageArtifact struct {
 	Files           []string                          `json:"files"`
 }
 
+func (p *PackageArtifact) ShallowCopy() *PackageArtifact {
+	copy := *p
+	return &copy
+}
+
 func NewPackageArtifact(path string) *PackageArtifact {
 	return &PackageArtifact{Path: path, Dependencies: []*PackageArtifact{}, Checksums: Checksums{}, CompressionType: compression.None}
 }
@@ -129,7 +134,7 @@ func (a *PackageArtifact) WriteYaml(dst string) error {
 		return errors.Wrap(err, "While marshalling for PackageArtifact YAML")
 	}
 
-	err = ioutil.WriteFile(filepath.Join(dst, a.CompileSpec.GetPackage().GetFingerPrint()+".metadata.yaml"), data, os.ModePerm)
+	err = ioutil.WriteFile(filepath.Join(dst, a.CompileSpec.GetPackage().GetMetadataFilePath()), data, os.ModePerm)
 	if err != nil {
 		return errors.Wrap(err, "While writing PackageArtifact YAML")
 	}

@@ -70,16 +70,6 @@ To force install a package:
 			toInstall = append(toInstall, pack)
 		}
 
-		// This shouldn't be necessary, but we need to unmarshal the repositories to a concrete struct, thus we need to port them back to the Repositories type
-		repos := installer.Repositories{}
-		for _, repo := range LuetCfg.SystemRepositories {
-			if !repo.Enable {
-				continue
-			}
-			r := installer.NewSystemRepository(repo)
-			repos = append(repos, r)
-		}
-
 		stype := LuetCfg.Viper.GetString("solver.type")
 		discount := LuetCfg.Viper.GetFloat64("solver.discount")
 		rate := LuetCfg.Viper.GetFloat64("solver.rate")
@@ -111,6 +101,7 @@ To force install a package:
 		}
 
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
+		repos := installer.SystemRepositories(LuetCfg)
 
 		// Load config protect configs
 		installer.LoadConfigProtectConfs(LuetCfg)

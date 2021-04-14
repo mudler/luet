@@ -16,6 +16,7 @@
 package installer
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -27,6 +28,7 @@ import (
 
 	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
 	compression "github.com/mudler/luet/pkg/compiler/types/compression"
+	"go.uber.org/multierr"
 
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
@@ -98,6 +100,40 @@ func NewLuetSystemRepositoryMetadata(file string, removeFile bool) (*LuetSystemR
 		return nil, err
 	}
 	return ans, nil
+}
+
+// SystemRepositories returns the repositories from the local configuration file
+func SystemRepositories(c *config.LuetConfig) Repositories {
+	repos := Repositories{}
+	for _, repo := range c.SystemRepositories {
+		if !repo.Enable {
+			continue
+		}
+		r := NewSystemRepository(repo)
+		repos = append(repos, r)
+	}
+	return repos
+}
+
+// LoadBuildTree loads to the tree the compilation specs from the system repositories
+func LoadBuildTree(t tree.Builder, db pkg.PackageDatabase, c *config.LuetConfig) error {
+	var reserr error
+	repos := SystemRepositories(c)
+	for _, r := range repos {
+		repodir, err := config.LuetCfg.GetSystem().TempDir(r.Name)
+		if err != nil {
+			reserr = multierr.Append(reserr, err)
+		}
+		if err := r.SyncBuildMetadata(repodir); err != nil {
+			reserr = multierr.Append(reserr, err)
+		}
+		if err := t.Load(filepath.Join(repodir, "tree")); err != nil {
+			reserr = multierr.Append(reserr, err)
+		}
+	}
+	repos.SyncDatabase(db)
+
+	return reserr
 }
 
 func (m *LuetSystemRepositoryMetadata) WriteFile(path string) error {
@@ -471,7 +507,7 @@ func (r *LuetSystemRepository) AddRepositoryFile(src, fileKey, repositoryRoot st
 	treeFile, err := r.GetRepositoryFile(fileKey)
 	if err != nil {
 		treeFile = defaults
-		r.SetRepositoryFile(fileKey, treeFile)
+		//	r.SetRepositoryFile(fileKey, treeFile)
 	}
 
 	a := artifact.NewPackageArtifact(filepath.Join(repositoryRoot, treeFile.GetFileName()))
@@ -594,6 +630,70 @@ func (r *LuetSystemRepository) SearchArtefact(p pkg.Package) (*artifact.PackageA
 	return nil, errors.New("Not found")
 }
 
+func (r *LuetSystemRepository) getRepoFile(c Client, key string) (*artifact.PackageArtifact, error) {
+
+	treeFile, err := r.GetRepositoryFile(key)
+	if err != nil {
+		return nil, errors.Wrapf(err, "key %s not present in the repository", key)
+	}
+
+	// Get Tree
+	downloadedTreeFile, err := c.DownloadFile(treeFile.GetFileName())
+	if err != nil {
+		return nil, errors.Wrap(err, "While downloading "+treeFile.GetFileName())
+	}
+	//defer os.Remove(downloadedTreeFile)
+
+	treeFileArtifact := artifact.NewPackageArtifact(downloadedTreeFile)
+	treeFileArtifact.Checksums = treeFile.GetChecksums()
+	treeFileArtifact.CompressionType = treeFile.GetCompressionType()
+
+	err = treeFileArtifact.Verify()
+	if err != nil {
+		return nil, errors.Wrap(err, "file integrity check failure")
+	}
+
+	return treeFileArtifact, nil
+
+}
+
+func (r *LuetSystemRepository) SyncBuildMetadata(path string) error {
+
+	repo, err := r.Sync(false)
+	if err != nil {
+		return errors.Wrap(err, "while syncronizing repository")
+	}
+
+	c := repo.Client()
+	if c == nil {
+		return errors.New("no client could be generated from repository")
+	}
+
+	a, err := repo.getRepoFile(c, REPOFILE_COMPILER_TREE_KEY)
+	if err != nil {
+		return fmt.Errorf("failed while getting: %s", REPOFILE_COMPILER_TREE_KEY)
+	}
+
+	defer os.RemoveAll(a.Path)
+
+	if err := a.Unpack(filepath.Join(path, "tree"), false); err != nil {
+		return errors.Wrapf(err, "while unpacking: %s", REPOFILE_COMPILER_TREE_KEY)
+	}
+
+	for _, ai := range repo.GetTree().GetDatabase().World() {
+		// Retrieve remote repository.yaml for retrieve revision and date
+		file, err := c.DownloadFile(ai.GetMetadataFilePath())
+		if err != nil {
+			return errors.Wrapf(err, "while downloading metadata for %s", ai.HumanReadableString())
+		}
+		if err := helpers.Move(file, filepath.Join(path, ai.GetMetadataFilePath())); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *LuetSystemRepository) Sync(force bool) (*LuetSystemRepository, error) {
 	var repoUpdated bool = false
 	var treefs, metafs string
@@ -612,7 +712,7 @@ func (r *LuetSystemRepository) Sync(force bool) (*LuetSystemRepository, error) {
 	}
 
 	repobasedir := config.LuetCfg.GetSystem().GetRepoDatabaseDirPath(r.GetName())
-	repo, err := r.ReadSpecFile(file)
+	downloadedRepoMeta, err := r.ReadSpecFile(file)
 	if err != nil {
 		return nil, err
 	}
@@ -624,8 +724,8 @@ func (r *LuetSystemRepository) Sync(force bool) (*LuetSystemRepository, error) {
 		if !force {
 			localRepo, _ := r.ReadSpecFile(filepath.Join(repobasedir, REPOSITORY_SPECFILE))
 			if localRepo != nil {
-				if localRepo.GetRevision() == repo.GetRevision() &&
-					localRepo.GetLastUpdate() == repo.GetLastUpdate() {
+				if localRepo.GetRevision() == downloadedRepoMeta.GetRevision() &&
+					localRepo.GetLastUpdate() == downloadedRepoMeta.GetLastUpdate() {
 					repoUpdated = true
 				}
 			}
@@ -652,47 +752,22 @@ func (r *LuetSystemRepository) Sync(force bool) (*LuetSystemRepository, error) {
 		}
 	}
 
-	// POST: treeFile and metaFile are present. I check this inside
-	// ReadSpecFile and NewLuetSystemRepositoryFromYaml
-	treeFile, _ := repo.GetRepositoryFile(REPOFILE_TREE_KEY)
-	metaFile, _ := repo.GetRepositoryFile(REPOFILE_META_KEY)
-
+	// treeFile and metaFile must be present, they aren't optional
 	if !repoUpdated {
 
-		// Get Tree
-		downloadedTreeFile, err := c.DownloadFile(treeFile.GetFileName())
+		treeFileArtifact, err := downloadedRepoMeta.getRepoFile(c, REPOFILE_TREE_KEY)
 		if err != nil {
-			return nil, errors.Wrap(err, "While downloading "+treeFile.GetFileName())
+			return nil, errors.Wrapf(err, "while fetching '%s'", REPOFILE_TREE_KEY)
 		}
-		defer os.Remove(downloadedTreeFile)
-
-		// Treat the file as artifact, in order to verify it
-		treeFileArtifact := artifact.NewPackageArtifact(downloadedTreeFile)
-		treeFileArtifact.Checksums = treeFile.GetChecksums()
-		treeFileArtifact.CompressionType = treeFile.GetCompressionType()
-
-		err = treeFileArtifact.Verify()
-		if err != nil {
-			return nil, errors.Wrap(err, "Tree integrity check failure")
-		}
+		defer os.Remove(treeFileArtifact.Path)
 
 		Debug("Tree tarball for the repository " + r.GetName() + " downloaded correctly.")
 
-		// Get Repository Metadata
-		downloadedMeta, err := c.DownloadFile(metaFile.GetFileName())
+		metaFileArtifact, err := downloadedRepoMeta.getRepoFile(c, REPOFILE_META_KEY)
 		if err != nil {
-			return nil, errors.Wrap(err, "While downloading "+metaFile.GetFileName())
+			return nil, errors.Wrapf(err, "while fetching '%s'", REPOFILE_META_KEY)
 		}
-		defer os.Remove(downloadedMeta)
-
-		metaFileArtifact := artifact.NewPackageArtifact(downloadedMeta)
-		metaFileArtifact.Checksums = metaFile.GetChecksums()
-		metaFileArtifact.CompressionType = metaFile.GetCompressionType()
-
-		err = metaFileArtifact.Verify()
-		if err != nil {
-			return nil, errors.Wrap(err, "Metadata integrity check failure")
-		}
+		defer os.Remove(metaFileArtifact.Path)
 
 		Debug("Metadata tarball for the repository " + r.GetName() + " downloaded correctly.")
 
@@ -722,17 +797,17 @@ func (r *LuetSystemRepository) Sync(force bool) (*LuetSystemRepository, error) {
 			return nil, errors.Wrap(err, "Error met while unpacking metadata")
 		}
 
-		tsec, _ := strconv.ParseInt(repo.GetLastUpdate(), 10, 64)
+		tsec, _ := strconv.ParseInt(downloadedRepoMeta.GetLastUpdate(), 10, 64)
 
 		InfoC(
 			aurora.Bold(
-				aurora.Red(":house: Repository "+repo.GetName()+" revision: ")).String() +
-				aurora.Bold(aurora.Green(repo.GetRevision())).String() + " - " +
+				aurora.Red(":house: Repository "+downloadedRepoMeta.GetName()+" revision: ")).String() +
+				aurora.Bold(aurora.Green(downloadedRepoMeta.GetRevision())).String() + " - " +
 				aurora.Bold(aurora.Green(time.Unix(tsec, 0).String())).String(),
 		)
 
 	} else {
-		Info("Repository", repo.GetName(), "is already up to date.")
+		Info("Repository", downloadedRepoMeta.GetName(), "is already up to date.")
 	}
 
 	meta, err := NewLuetSystemRepositoryMetadata(
@@ -741,7 +816,7 @@ func (r *LuetSystemRepository) Sync(force bool) (*LuetSystemRepository, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "While processing "+REPOSITORY_METAFILE)
 	}
-	repo.SetIndex(meta.ToArtifactIndex())
+	downloadedRepoMeta.SetIndex(meta.ToArtifactIndex())
 
 	reciper := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
 	err = reciper.Load(treefs)
@@ -749,29 +824,33 @@ func (r *LuetSystemRepository) Sync(force bool) (*LuetSystemRepository, error) {
 		return nil, errors.Wrap(err, "Error met while unpacking rootfs")
 	}
 
-	repo.SetTree(reciper)
-	repo.SetTreePath(treefs)
+	downloadedRepoMeta.SetTree(reciper)
+	downloadedRepoMeta.SetTreePath(treefs)
 
 	// Copy the local available data to the one which was synced
 	// e.g. locally we can override the type (disk), or priority
 	// while remotely it could be advertized differently
-	repo.SetUrls(r.GetUrls())
-	repo.SetAuthentication(r.GetAuthentication())
-	repo.SetType(r.GetType())
-	repo.SetPriority(r.GetPriority())
-	repo.SetName(r.GetName())
-	repo.SetVerify(r.GetVerify())
+	r.fill(downloadedRepoMeta)
 
 	InfoC(
 		aurora.Yellow(":information_source:").String() +
 			aurora.Magenta("Repository: ").String() +
-			aurora.Green(aurora.Bold(repo.GetName()).String()).String() +
+			aurora.Green(aurora.Bold(downloadedRepoMeta.GetName()).String()).String() +
 			aurora.Magenta(" Priority: ").String() +
-			aurora.Bold(aurora.Green(repo.GetPriority())).String() +
+			aurora.Bold(aurora.Green(downloadedRepoMeta.GetPriority())).String() +
 			aurora.Magenta(" Type: ").String() +
-			aurora.Bold(aurora.Green(repo.GetType())).String(),
+			aurora.Bold(aurora.Green(downloadedRepoMeta.GetType())).String(),
 	)
-	return repo, nil
+	return downloadedRepoMeta, nil
+}
+
+func (r *LuetSystemRepository) fill(r2 *LuetSystemRepository) {
+	r2.SetUrls(r.GetUrls())
+	r2.SetAuthentication(r.GetAuthentication())
+	r2.SetType(r.GetType())
+	r2.SetPriority(r.GetPriority())
+	r2.SetName(r.GetName())
+	r2.SetVerify(r.GetVerify())
 }
 
 func (r *LuetSystemRepository) Serialize() (*LuetSystemRepositoryMetadata, LuetSystemRepository) {

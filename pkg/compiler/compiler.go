@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/imdario/mergo"
 	bus "github.com/mudler/luet/pkg/bus"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
@@ -37,6 +38,7 @@ import (
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 )
 
 const BuildFile = "build.yaml"
@@ -48,19 +50,11 @@ type ArtifactIndex []*artifact.PackageArtifact
 func (i ArtifactIndex) CleanPath() ArtifactIndex {
 	newIndex := ArtifactIndex{}
 	for _, art := range i {
-		// FIXME: This is a dup and makes difficult to add attributes to artifacts
-		newIndex = append(newIndex, &artifact.PackageArtifact{
-			Path:            path.Base(art.Path),
-			SourceAssertion: art.SourceAssertion,
-			CompileSpec:     art.CompileSpec,
-			Dependencies:    art.Dependencies,
-			CompressionType: art.CompressionType,
-			Checksums:       art.Checksums,
-			Files:           art.Files,
-		})
+		copy := art.ShallowCopy()
+		copy.Path = path.Base(art.Path)
+		newIndex = append(newIndex, copy)
 	}
 	return newIndex
-	//Update if exists, otherwise just create
 }
 
 type LuetCompiler struct {
@@ -544,7 +538,7 @@ func (cs *LuetCompiler) resolveExistingImageHash(imageHash string) string {
 }
 
 func LoadArtifactFromYaml(spec *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
-	metaFile := spec.GetPackage().GetFingerPrint() + ".metadata.yaml"
+	metaFile := spec.GetPackage().GetMetadataFilePath()
 	dat, err := ioutil.ReadFile(spec.Rel(metaFile))
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading file "+metaFile)
@@ -731,6 +725,12 @@ func genImageList(refs []string, hash string) []string {
 }
 
 func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
+	if len(p.BuildOptions.PullImageRepository) != 0 {
+		orig := cs.Options.PullImageRepository
+		cs.Options.PullImageRepository = append(orig, p.BuildOptions.PullImageRepository...)
+		defer func() { cs.Options.PullImageRepository = orig }()
+	}
+
 	Info(":package: Compiling", p.GetPackage().HumanReadableString(), ".... :coffee:")
 
 	Debug(fmt.Sprintf("%s: has images %t, empty package: %t", p.GetPackage().HumanReadableString(), p.HasImageSource(), p.EmptyPackage()))
@@ -866,7 +866,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 
 type templatedata map[string]interface{}
 
-func (cs *LuetCompiler) templatePackage(pack pkg.Package) ([]byte, error) {
+func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack pkg.Package) ([]byte, error) {
 
 	var dataresult []byte
 	val := pack.Rel(DefinitionFile)
@@ -876,7 +876,7 @@ func (cs *LuetCompiler) templatePackage(pack pkg.Package) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "unmarshalling values")
 	}
-	cs.Options.BuildValues = []map[string]interface{}{(map[string]interface{})(dst)}
+	cs.Options.BuildValues = append(vals, (map[string]interface{})(dst))
 
 	if _, err := os.Stat(pack.Rel(CollectionFile)); err == nil {
 		val = pack.Rel(CollectionFile)
@@ -897,14 +897,46 @@ func (cs *LuetCompiler) templatePackage(pack pkg.Package) ([]byte, error) {
 		}
 
 		raw := packsRaw.Find(pack.GetName(), pack.GetCategory(), pack.GetVersion())
+		td := templatedata{}
+		if len(vals) > 0 {
+			for _, bv := range vals {
+				current := templatedata(bv)
+				if err := mergo.Merge(&td, current); err != nil {
+					return nil, errors.Wrap(err, "merging values maps")
+				}
+			}
+		}
 
-		dat, err := helpers.RenderHelm(string(dataBuild), raw, dst)
+		if err := mergo.Merge(&td, raw); err != nil {
+			return nil, errors.Wrap(err, "merging values maps")
+		}
+
+		dat, err := helpers.RenderHelm(string(dataBuild), td, dst)
 		if err != nil {
 			return nil, errors.Wrap(err, "rendering file "+pack.Rel(BuildFile))
 		}
 		dataresult = []byte(dat)
 	} else {
-		out, err := helpers.RenderFiles(pack.Rel(BuildFile), val, cs.Options.BuildValuesFile...)
+		bv := cs.Options.BuildValuesFile
+		if len(vals) > 0 {
+			valuesdir, err := ioutil.TempDir("", "genvalues")
+			if err != nil {
+				return nil, errors.Wrap(err, "Could not create tempdir")
+			}
+			defer os.RemoveAll(valuesdir) // clean up
+			for _, b := range vals {
+				out, err := yaml.Marshal(b)
+				if err != nil {
+					return nil, errors.Wrap(err, "while marshalling values file")
+				}
+				f := filepath.Join(valuesdir, helpers.RandStringRunes(20))
+				if err := ioutil.WriteFile(f, out, os.ModePerm); err != nil {
+					return nil, errors.Wrap(err, "while writing temporary values file")
+				}
+				bv = append([]string{f}, bv...)
+			}
+		}
+		out, err := helpers.RenderFiles(pack.Rel(BuildFile), val, bv...)
 		if err != nil {
 			return nil, errors.Wrap(err, "rendering file "+pack.Rel(BuildFile))
 		}
@@ -922,12 +954,43 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (*compilerspec.LuetCompilatio
 		return nil, err
 	}
 
-	bytes, err := cs.templatePackage(pack)
+	opts := options.Compiler{}
+
+	artifactMetadataFile := filepath.Join(p.GetTreeDir(), p.GetMetadataFilePath())
+
+	if fi, err := os.Stat(artifactMetadataFile); err == nil {
+		f, err := os.Open(fi.Name())
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not open %s", fi.Name())
+		}
+		dat, err := ioutil.ReadAll(f)
+		if err != nil {
+			return nil, err
+		}
+		art, err := artifact.NewPackageArtifactFromYaml(dat)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not decode package from yaml")
+		}
+
+		opts = art.CompileSpec.BuildOptions
+		opts.PushImageRepository = ""
+
+	} else if !os.IsNotExist(err) {
+		Debug("error reading already existing artifact metadata file: ", err.Error())
+	}
+
+	bytes, err := cs.templatePackage(opts.BuildValues, pack)
 	if err != nil {
 		return nil, errors.Wrap(err, "while rendering package template")
 	}
 
-	return compilerspec.NewLuetCompilationSpec(bytes, pack)
+	newSpec, err := compilerspec.NewLuetCompilationSpec(bytes, pack)
+	if err != nil {
+		return nil, err
+	}
+	newSpec.BuildOptions = opts
+
+	return newSpec, err
 }
 
 // GetBackend returns the current compilation backend

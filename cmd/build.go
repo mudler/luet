@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -25,6 +24,7 @@ import (
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/types/artifact"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
+	"github.com/mudler/luet/pkg/installer"
 
 	"github.com/mudler/luet/pkg/compiler/types/compression"
 	"github.com/mudler/luet/pkg/compiler/types/options"
@@ -44,17 +44,17 @@ var buildCmd = &cobra.Command{
 	Long: `Builds one or more packages from a tree (current directory is implied):
 
 	$ luet build utils/busybox utils/yq ...
-	
+
 Builds all packages
-	
+
 	$ luet build --all
-	
+
 Builds only the leaf packages:
-	
+
 	$ luet build --full
 
 Build package revdeps:
-	
+
 	$ luet build --revdeps utils/yq
 
 Build package without dependencies (needs the images already in the host, or either need to be available online):
@@ -69,7 +69,6 @@ Build packages specifying multiple definition trees:
 		viper.BindPFlag("destination", cmd.Flags().Lookup("destination"))
 		viper.BindPFlag("backend", cmd.Flags().Lookup("backend"))
 		viper.BindPFlag("privileged", cmd.Flags().Lookup("privileged"))
-		viper.BindPFlag("database", cmd.Flags().Lookup("database"))
 		viper.BindPFlag("revdeps", cmd.Flags().Lookup("revdeps"))
 		viper.BindPFlag("all", cmd.Flags().Lookup("all"))
 		viper.BindPFlag("compression", cmd.Flags().Lookup("compression"))
@@ -101,7 +100,6 @@ Build packages specifying multiple definition trees:
 		privileged := viper.GetBool("privileged")
 		revdeps := viper.GetBool("revdeps")
 		all := viper.GetBool("all")
-		databaseType := viper.GetString("database")
 		compressionType := viper.GetString("compression")
 		imageRepository := viper.GetString("image-repository")
 		values := viper.GetStringSlice("values")
@@ -122,25 +120,24 @@ Build packages specifying multiple definition trees:
 			LuetCfg.GetLogging().SetLogLevel("error")
 		}
 		pretend, _ := cmd.Flags().GetBool("pretend")
+		fromRepo, _ := cmd.Flags().GetBool("from-repositories")
+
 		compilerSpecs := compilerspec.NewLuetCompilationspecs()
 		var db pkg.PackageDatabase
 
 		compilerBackend, err := compiler.NewBackend(backendType)
 		helpers.CheckErr(err)
 
-		switch databaseType {
-		case "memory":
-			db = pkg.NewInMemoryDatabase(false)
-
-		case "boltdb":
-			tmpdir, err := ioutil.TempDir("", "package")
-			helpers.CheckErr(err)
-			db = pkg.NewBoltDatabase(tmpdir)
-
-		}
+		db = pkg.NewInMemoryDatabase(false)
 		defer db.Clean()
 
 		generalRecipe := tree.NewCompilerRecipe(db)
+
+		if fromRepo {
+			if err := installer.LoadBuildTree(generalRecipe, db, LuetCfg); err != nil {
+				Warning("errors while loading trees from repositories", err.Error())
+			}
+		}
 
 		for _, src := range treePaths {
 			Info("Loading tree", src)
@@ -202,7 +199,6 @@ Build packages specifying multiple definition trees:
 			}
 		} else if !all {
 			for _, a := range args {
-
 				pack, err := helpers.ParsePackageStr(a)
 				if err != nil {
 					Fatal("Invalid package string ", a, ": ", err.Error())
@@ -310,7 +306,6 @@ func init() {
 	buildCmd.Flags().StringSliceP("tree", "t", []string{path}, "Path of the tree to use.")
 	buildCmd.Flags().String("backend", "docker", "backend used (docker,img)")
 	buildCmd.Flags().Bool("privileged", true, "Privileged (Keep permissions)")
-	buildCmd.Flags().String("database", "memory", "database used for solving (memory,boltdb)")
 	buildCmd.Flags().Bool("revdeps", false, "Build with revdeps")
 	buildCmd.Flags().Bool("all", false, "Build all specfiles in the tree")
 	buildCmd.Flags().Bool("full", false, "Build all packages (optimized)")
@@ -333,6 +328,7 @@ func init() {
 	buildCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	buildCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
 	buildCmd.Flags().Bool("live-output", LuetCfg.GetGeneral().ShowBuildOutput, "Enable live output of the build phase.")
+	buildCmd.Flags().Bool("from-repositories", false, "Consume the user-defined repositories to pull specfiles from")
 
 	buildCmd.Flags().Bool("pretend", false, "Just print what packages will be compiled")
 	buildCmd.Flags().StringArrayP("pull-repository", "p", []string{}, "A list of repositories to pull the cache from")

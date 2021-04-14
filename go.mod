@@ -20,8 +20,10 @@ require (
 	github.com/genuinetools/img v0.5.11
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-containerregistry v0.2.1
+	github.com/google/renameio v1.0.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-version v1.2.1
+	github.com/imdario/mergo v0.3.8
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/jedib0t/go-pretty/v6 v6.0.5
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
@@ -51,7 +53,7 @@ require (
 	github.com/theupdateframework/notary v0.7.0
 	go.etcd.io/bbolt v1.3.5
 	go.uber.org/atomic v1.5.1 // indirect
-	go.uber.org/multierr v1.4.0 // indirect
+	go.uber.org/multierr v1.4.0
 	go.uber.org/zap v1.13.0
 	google.golang.org/grpc v1.29.1
 	gopkg.in/yaml.v2 v2.3.0

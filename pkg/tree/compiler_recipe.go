@@ -98,6 +98,7 @@ func (r *CompilerRecipe) Load(path string) error {
 			}
 			// Path is set only internally when tree is loaded from disk
 			pack.SetPath(filepath.Dir(currentpath))
+			pack.SetTreeDir(path)
 
 			// Instead of rdeps, have a different tree for build deps.
 			compileDefPath := pack.Rel(CompilerDefinitionFile)
@@ -126,18 +127,25 @@ func (r *CompilerRecipe) Load(path string) error {
 			}
 
 		case CollectionFile:
+
 			dat, err := ioutil.ReadFile(currentpath)
 			if err != nil {
 				return errors.Wrap(err, "Error reading file "+currentpath)
 			}
+
 			packs, err := pkg.DefaultPackagesFromYaml(dat)
 			if err != nil {
 				return errors.Wrap(err, "Error reading yaml "+currentpath)
 			}
+
 			packsRaw, err := pkg.GetRawPackages(dat)
+			if err != nil {
+				return errors.Wrap(err, "Error reading raw packages from "+currentpath)
+			}
 
 			for _, pack := range packs {
 				pack.SetPath(filepath.Dir(currentpath))
+				pack.SetTreeDir(path)
 
 				// Instead of rdeps, have a different tree for build deps.
 				compileDefPath := pack.Rel(CompilerDefinitionFile)
@@ -170,9 +178,7 @@ func (r *CompilerRecipe) Load(path string) error {
 					return errors.Wrap(err, "Error creating package "+pack.GetName())
 				}
 			}
-
 		}
-
 		return nil
 	}
 

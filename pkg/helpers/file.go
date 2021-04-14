@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sort"
@@ -26,9 +27,40 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/renameio"
 	copy "github.com/otiai10/copy"
 	"github.com/pkg/errors"
 )
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func RandStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
+
+func Move(src, dst string) error {
+	f, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	t, err := renameio.TempFile("", dst)
+	if err != nil {
+		return err
+	}
+	defer t.Cleanup()
+
+	_, err = io.Copy(t, f)
+	if err != nil {
+		return err
+	}
+	return t.CloseAtomicallyReplace()
+}
 
 func OrderFiles(target string, files []string) ([]string, []string) {
 
