@@ -956,12 +956,12 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (*compilerspec.LuetCompilatio
 
 	opts := options.Compiler{}
 
-	artifactMetadataFile := filepath.Join(p.GetTreeDir(), p.GetMetadataFilePath())
-
-	if fi, err := os.Stat(artifactMetadataFile); err == nil {
-		f, err := os.Open(fi.Name())
+	artifactMetadataFile := filepath.Join(p.GetTreeDir(), "..", p.GetMetadataFilePath())
+	Debug("Checking if metadata file is present", artifactMetadataFile)
+	if _, err := os.Stat(artifactMetadataFile); err == nil {
+		f, err := os.Open(artifactMetadataFile)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not open %s", fi.Name())
+			return nil, errors.Wrapf(err, "could not open %s", artifactMetadataFile)
 		}
 		dat, err := ioutil.ReadAll(f)
 		if err != nil {
@@ -972,11 +972,14 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (*compilerspec.LuetCompilatio
 			return nil, errors.Wrap(err, "could not decode package from yaml")
 		}
 
+		Debug("Read build options:", art.CompileSpec.BuildOptions)
 		opts = art.CompileSpec.BuildOptions
 		opts.PushImageRepository = ""
 
 	} else if !os.IsNotExist(err) {
 		Debug("error reading already existing artifact metadata file: ", err.Error())
+	} else if os.IsNotExist(err) {
+		Debug("metadata file not present, skipping", artifactMetadataFile)
 	}
 
 	bytes, err := cs.templatePackage(opts.BuildValues, pack)

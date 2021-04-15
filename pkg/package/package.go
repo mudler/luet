@@ -117,6 +117,8 @@ type Package interface {
 	GetMetadataFilePath() string
 	SetTreeDir(s string)
 	GetTreeDir() string
+
+	JSON() ([]byte, error)
 }
 
 type Tree interface {
@@ -245,7 +247,7 @@ type DefaultPackage struct {
 
 	Labels map[string]string `json:"labels,omitempty"` // Affects YAML field names too.
 
-	treeDir string
+	TreeDir string `json:"treedir,omitempty"`
 }
 
 // State represent the package state
@@ -263,10 +265,10 @@ func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*D
 }
 
 func (p *DefaultPackage) SetTreeDir(s string) {
-	p.treeDir = s
+	p.TreeDir = s
 }
 func (p *DefaultPackage) GetTreeDir() string {
-	return p.treeDir
+	return p.TreeDir
 }
 func (p *DefaultPackage) String() string {
 	b, err := p.JSON()

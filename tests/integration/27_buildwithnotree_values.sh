@@ -181,6 +181,121 @@ EOF
 }
 
 
+testBuildWithNoTree3() {
+    cat <<EOF > $tmpdir/default.yaml
+bb: "newinterpolation"
+foo: "sq"
+EOF
+    mkdir $tmpdir/testbuild3
+    mkdir $tmpdir/emptytree
+    luet build --from-repositories --values $tmpdir/default.yaml --tree $tmpdir/emptytree --config $tmpdir/luet.yaml test/c --destination $tmpdir/testbuild3 --compression gzip --all 
+    buildst=$?
+    assertEquals 'builds successfully' "$buildst" "0"
+    assertTrue 'create package B' "[ -e '$tmpdir/testbuild3/b-distro-0.3.package.tar.gz' ]"
+    assertTrue 'create package A' "[ -e '$tmpdir/testbuild3/a-distro-0.1.package.tar.gz' ]"
+    assertTrue 'create package C' "[ -e '$tmpdir/testbuild3/c-distro-0.3.package.tar.gz' ]"
+    assertTrue 'create package foo' "[ -e '$tmpdir/testbuild3/foo-test-1.1.package.tar.gz' ]"
+}
+
+testRepo3() {
+    assertTrue 'no repository' "[ ! -e '$tmpdir/testbuild3/repository.yaml' ]"
+    luet create-repo --config $tmpdir/luet.yaml --from-repositories --tree $tmpdir/emptytree \
+    --output $tmpdir/testbuild3 \
+    --packages $tmpdir/testbuild3 \
+    --name "test" \
+    --descr "Test Repo" \
+    --urls $tmpdir/testrootfs \
+    --type disk
+
+    createst=$?
+    assertEquals 'create repo successfully' "$createst" "0"
+    assertTrue 'create repository' "[ -e '$tmpdir/testbuild3/repository.yaml' ]"
+}
+
+testInstall3() {
+    mkdir $tmpdir/testrootfs3
+
+    cat <<EOF > $tmpdir/luet2.yaml
+general:
+  debug: true
+system:
+  rootfs: $tmpdir/testrootfs3
+  database_path: "/"
+  database_engine: "boltdb"
+config_from_host: true
+repositories:
+   - name: "main"
+     type: "disk"
+     enable: true
+     urls:
+       - "$tmpdir/testbuild3"
+EOF
+    luet install -y --config $tmpdir/luet2.yaml distro/a
+    installst=$?
+    assertEquals 'install test successfully' "$installst" "0"
+
+    assertTrue 'package installed A' "[ -e '$tmpdir/testrootfs3/a' ]"
+    # Build time can interpolate on fields which aren't package properties.
+    assertTrue 'extra field on A' "[ -e '$tmpdir/testrootfs3/build-extra-sq' ]"
+    assertTrue 'package installed A interpolated with values' "[ -e '$tmpdir/testrootfs3/a-newinterpolation' ]"
+    # Finalizers can interpolate only on package field. No extra fields are allowed at this time.
+    assertTrue 'finalizer executed on A' "[ -e '$tmpdir/testrootfs3/finalize-a' ]"
+
+    installed=$(luet --config $tmpdir/luet2.yaml search --installed .)
+    searchst=$?
+    assertEquals 'search exists successfully' "$searchst" "0"
+
+    assertContains 'contains distro/a-0.1' "$installed" 'distro/a-0.1'
+
+    luet uninstall -y --config $tmpdir/luet2.yaml distro/a
+    installst=$?
+    assertEquals 'install test successfully' "$installst" "0"
+
+    # We do the same check for the others
+    luet install -y --config $tmpdir/luet2.yaml distro/b
+    installst=$?
+    assertEquals 'install test successfully' "$installst" "0"
+
+    assertTrue 'package installed B' "[ -e '$tmpdir/testrootfs3/b' ]"
+    assertTrue 'package installed B interpolated with values' "[ -e '$tmpdir/testrootfs3/b-newinterpolation' ]"
+    assertTrue 'extra field on B' "[ -e '$tmpdir/testrootfs3/build-extra-sq' ]"
+    assertTrue 'finalizer executed on B' "[ -e '$tmpdir/testrootfs3/finalize-b' ]"
+    installed=$(luet --config $tmpdir/luet2.yaml search --installed .)
+    searchst=$?
+    assertEquals 'search exists successfully' "$searchst" "0"
+
+    assertContains 'contains distro/b-0.3' "$installed" 'distro/b-0.3'
+
+    luet uninstall -y --config $tmpdir/luet2.yaml distro/b
+    installst=$?
+    assertEquals 'install test successfully' "$installst" "0"
+
+    luet install -y --config $tmpdir/luet2.yaml distro/c
+    installst=$?
+    assertEquals 'install test successfully' "$installst" "0"
+
+    assertTrue 'package installed C' "[ -e '$tmpdir/testrootfs3/c' ]"
+    assertTrue 'extra field on C' "[ -e '$tmpdir/testrootfs3/build-extra-sq' ]"
+    assertTrue 'package installed C interpolated with values' "[ -e '$tmpdir/testrootfs3/c-newinterpolation' ]"
+    assertTrue 'finalizer executed on C' "[ -e '$tmpdir/testrootfs3/finalize-c' ]"
+
+    installed=$(luet --config $tmpdir/luet2.yaml search --installed .)
+    searchst=$?
+    assertEquals 'search exists successfully' "$searchst" "0"
+
+    assertContains 'contains distro/c-0.3' "$installed" 'distro/c-0.3'
+
+    luet uninstall -y --config $tmpdir/luet2.yaml distro/c
+    installst=$?
+    assertEquals 'install test successfully' "$installst" "0"
+
+    luet install -y --config $tmpdir/luet2.yaml test/foo
+    installst=$?
+    assertEquals 'install test successfully' "$installst" "0"
+
+    assertTrue 'package installed foo' "[ -e '$tmpdir/testrootfs3/foo' ]"
+    assertTrue 'package installed foo interpolated with values' "[ -e '$tmpdir/testrootfs3/foo-newinterpolation' ]"
+}
 
 # Load shUnit2.
 . "$ROOT_DIR/tests/integration/shunit2"/shunit2

@@ -42,6 +42,10 @@ func buildPackageIndex(path string, db pkg.PackageDatabase) ([]*artifact.Package
 
 	var art []*artifact.PackageArtifact
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
+		if err != nil {
+			Debug("Failed walking", err.Error())
+			return err
+		}
 
 		if !strings.HasSuffix(info.Name(), ".metadata.yaml") {
 			return nil // Skip with no errors
