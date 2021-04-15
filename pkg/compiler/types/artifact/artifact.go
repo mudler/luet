@@ -156,14 +156,20 @@ COPY . /`
 
 // CreateArtifactForFile creates a new artifact from the given file
 func CreateArtifactForFile(s string, opts ...func(*PackageArtifact)) (*PackageArtifact, error) {
-
+	if _, err := os.Stat(s); os.IsNotExist(err) {
+		return nil, errors.Wrap(err, "artifact path doesn't exist")
+	}
 	fileName := path.Base(s)
 	archive, err := LuetCfg.GetSystem().TempDir("archive")
 	if err != nil {
 		return nil, errors.Wrap(err, "error met while creating tempdir for "+s)
 	}
 	defer os.RemoveAll(archive) // clean up
-	helpers.CopyFile(s, filepath.Join(archive, fileName))
+	dst := filepath.Join(archive, fileName)
+	if err := helpers.CopyFile(s, dst); err != nil {
+		return nil, errors.Wrapf(err, "error while copying %s to %s", s, dst)
+	}
+
 	artifact, err := LuetCfg.GetSystem().TempDir("artifact")
 	if err != nil {
 		return nil, errors.Wrap(err, "error met while creating tempdir for "+s)

@@ -44,7 +44,7 @@ func stubRepo(tmpdir, tree string) (*LuetSystemRepository, error) {
 		1,
 		tmpdir,
 		[]string{tree},
-		pkg.NewInMemoryDatabase(false), nil, "", false, false)
+		pkg.NewInMemoryDatabase(false), nil, "", false, false, false, nil)
 }
 
 var _ = Describe("Installer", func() {
@@ -342,7 +342,7 @@ urls:
 				[]string{tmpdir}, 1,
 				tmpdir,
 				[]string{"../../tests/fixtures/buildable"},
-				pkg.NewInMemoryDatabase(false), nil, "", false, false)
+				pkg.NewInMemoryDatabase(false), nil, "", false, false, false, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
@@ -468,7 +468,7 @@ urls:
 				1,
 				tmpdir,
 				[]string{"../../tests/fixtures/buildable"},
-				pkg.NewInMemoryDatabase(false), nil, "", false, false)
+				pkg.NewInMemoryDatabase(false), nil, "", false, false, false, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(helpers.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())

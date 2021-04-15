@@ -47,7 +47,7 @@ func dockerStubRepo(tmpdir, tree, image string, push, force bool) (*LuetSystemRe
 		1,
 		tmpdir,
 		[]string{tree},
-		pkg.NewInMemoryDatabase(false), backend.NewSimpleDockerBackend(), image, push, force)
+		pkg.NewInMemoryDatabase(false), backend.NewSimpleDockerBackend(), image, push, force, false, nil)
 }
 
 var _ = Describe("Repository", func() {

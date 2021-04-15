@@ -52,15 +52,17 @@ func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDataba
 			Debug("Skipping", info.Name(), err.Error())
 			return nil
 		}
+		if info.IsDir() {
+			Debug("Skipping directories")
+			return nil
+		}
 
-		if strings.HasSuffix(info.Name(), ".metadata.yaml") {
-			a := artifact.NewPackageArtifact(info.Name())
-			imageRepo := fmt.Sprintf("%s:%s", l.imagePrefix, filepath.Base(info.Name()))
+		if !strings.HasSuffix(info.Name(), ".metadata.yaml") {
+			return nil
+		}
 
-			if err := l.pushFileFromArtifact(a, imageRepo); err != nil {
-				return errors.Wrap(err, "while pushing file from artifact")
-			}
-			return nil // Skip with no errors
+		if err := l.pushImageFromArtifact(artifact.NewPackageArtifact(currentpath), l.b); err != nil {
+			return errors.Wrap(err, "while pushing metadata file associated to the artifact")
 		}
 
 		dat, err := ioutil.ReadFile(currentpath)

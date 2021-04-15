@@ -752,7 +752,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 		Assert:      *targetAssertion,
 	})
 
-	// Update compilespec build options
+	// Update compilespec build options - it will be then serialized into the compilation metadata file
 	p.SetBuildOptions(cs.Options)
 
 	// - If image is set we just generate a plain dockerfile

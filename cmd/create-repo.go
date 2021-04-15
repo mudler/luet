@@ -91,6 +91,7 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		metaName := viper.GetString("meta-filename")
 		source_repo := viper.GetString("repo")
 		backendType := viper.GetString("backend")
+		fromRepo, _ := cmd.Flags().GetBool("from-repositories")
 
 		treeFile := installer.NewDefaultTreeRepositoryFile()
 		metaFile := installer.NewDefaultMetaRepositoryFile()
@@ -102,9 +103,7 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		if source_repo != "" {
 			// Search for system repository
 			lrepo, err := LuetCfg.GetSystemRepository(source_repo)
-			if err != nil {
-				Fatal("Error: " + err.Error())
-			}
+			helpers.CheckErr(err)
 
 			if len(treePaths) <= 0 {
 				treePaths = []string{lrepo.TreePath}
@@ -120,15 +119,19 @@ Create a repository from the metadata description defined in the luet.yaml confi
 				lrepo.Priority,
 				packages,
 				treePaths,
-				pkg.NewInMemoryDatabase(false), compilerBackend, dst, imagePush, force)
+				pkg.NewInMemoryDatabase(false),
+				compilerBackend,
+				dst,
+				imagePush,
+				force,
+				fromRepo,
+				LuetCfg)
+			helpers.CheckErr(err)
 
 		} else {
 			repo, err = installer.GenerateRepository(name, descr, t, urls, 1, packages,
-				treePaths, pkg.NewInMemoryDatabase(false), compilerBackend, dst, imagePush, force)
-		}
-
-		if err != nil {
-			Fatal("Error: " + err.Error())
+				treePaths, pkg.NewInMemoryDatabase(false), compilerBackend, dst, imagePush, force, fromRepo, LuetCfg)
+			helpers.CheckErr(err)
 		}
 
 		if treetype != "" {
@@ -151,17 +154,15 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		repo.SetRepositoryFile(installer.REPOFILE_META_KEY, metaFile)
 
 		err = repo.Write(dst, reset, true)
-		if err != nil {
-			Fatal("Error: " + err.Error())
-		}
+		helpers.CheckErr(err)
+
 	},
 }
 
 func init() {
 	path, err := os.Getwd()
-	if err != nil {
-		Fatal(err)
-	}
+	helpers.CheckErr(err)
+
 	createrepoCmd.Flags().String("packages", filepath.Join(path, "build"), "Packages folder (output from build)")
 	createrepoCmd.Flags().StringSliceP("tree", "t", []string{path}, "Path of the source trees to use.")
 	createrepoCmd.Flags().String("output", filepath.Join(path, "build"), "Destination for generated archives. With 'docker' repository type, it should be an image reference (e.g 'foo/bar')")
@@ -180,6 +181,7 @@ func init() {
 	createrepoCmd.Flags().String("tree-filename", installer.TREE_TARBALL, "Repository tree filename")
 	createrepoCmd.Flags().String("meta-compression", "none", "Compression alg: none, gzip, zstd")
 	createrepoCmd.Flags().String("meta-filename", installer.REPOSITORY_METAFILE+".tar", "Repository metadata filename")
+	createrepoCmd.Flags().Bool("from-repositories", false, "Consume the user-defined repositories to pull specfiles from")
 
 	RootCmd.AddCommand(createrepoCmd)
 }

@@ -254,13 +254,18 @@ func (f *LuetRepositoryFile) GetChecksums() artifact.Checksums {
 // In case the repository is local, it will build the package Index
 func GenerateRepository(name, descr, t string, urls []string,
 	priority int, src string, treesDir []string, db pkg.PackageDatabase,
-	b compiler.CompilerBackend, imagePrefix string, pushImages, force bool) (*LuetSystemRepository, error) {
+	b compiler.CompilerBackend, imagePrefix string, pushImages, force, fromRepo bool, c *config.LuetConfig) (*LuetSystemRepository, error) {
 
-	tr := tree.NewInstallerRecipe(db)
+	// 1: First filter the runtime db to only the metadata we actually have
+
 	btr := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+	runtimeTree := pkg.NewInMemoryDatabase(false)
+
+	tempTree := pkg.NewInMemoryDatabase(false)
+	temptr := tree.NewInstallerRecipe(tempTree)
 
 	for _, treeDir := range treesDir {
-		if err := tr.Load(treeDir); err != nil {
+		if err := temptr.Load(treeDir); err != nil {
 			return nil, err
 		}
 		if err := btr.Load(treeDir); err != nil {
@@ -268,9 +273,33 @@ func GenerateRepository(name, descr, t string, urls []string,
 		}
 	}
 
+	// 2: if fromRepo, build a new tree like the compiler is doing and use it to source the above specs,
+	// instead of local tree
+
+	repodb := pkg.NewInMemoryDatabase(false)
+	generalRecipe := tree.NewCompilerRecipe(repodb)
+
+	if fromRepo {
+		if err := LoadBuildTree(generalRecipe, repodb, c); err != nil {
+			Warning("errors while loading trees from repositories", err.Error())
+		}
+
+		if err := repodb.Clone(tempTree); err != nil {
+			Warning("errors while cloning trees from repositories", err.Error())
+		}
+
+	}
+
+	// Pick only atoms in db which have a real metadata for runtime db (tr)
+	for _, p := range tempTree.World() {
+		if _, err := os.Stat(filepath.Join(src, p.GetMetadataFilePath())); err == nil {
+			runtimeTree.CreatePackage(p)
+		}
+	}
+
 	repo := &LuetSystemRepository{
 		LuetRepository:  config.NewLuetRepository(name, t, descr, urls, priority, true, false),
-		Tree:            tr,
+		Tree:            tree.NewInstallerRecipe(runtimeTree),
 		BuildTree:       btr,
 		RepositoryFiles: map[string]LuetRepositoryFile{},
 		PushImages:      pushImages,
@@ -918,7 +947,6 @@ func (r Repositories) SyncDatabase(d pkg.PackageDatabase) {
 			}
 		}
 	}
-
 }
 
 type PackageMatch struct {
