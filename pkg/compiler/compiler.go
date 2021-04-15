@@ -907,7 +907,7 @@ func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack pkg.
 			}
 		}
 
-		if err := mergo.Merge(&td, raw); err != nil {
+		if err := mergo.Merge(&td, templatedata(raw)); err != nil {
 			return nil, errors.Wrap(err, "merging values maps")
 		}
 
