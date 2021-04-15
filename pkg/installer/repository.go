@@ -127,10 +127,18 @@ func LoadBuildTree(t tree.Builder, db pkg.PackageDatabase, c *config.LuetConfig)
 		if err := r.SyncBuildMetadata(repodir); err != nil {
 			reserr = multierr.Append(reserr, err)
 		}
-		if err := t.Load(filepath.Join(repodir, "tree")); err != nil {
+
+		generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+		if err := generalRecipe.Load(filepath.Join(repodir, "tree")); err != nil {
 			reserr = multierr.Append(reserr, err)
 		}
+		if err := generalRecipe.GetDatabase().Clone(t.GetDatabase()); err != nil {
+			reserr = multierr.Append(reserr, err)
+		}
+
+		r.SetTree(generalRecipe)
 	}
+
 	repos.SyncDatabase(db)
 
 	return reserr
