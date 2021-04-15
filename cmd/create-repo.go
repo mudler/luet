@@ -23,7 +23,8 @@ import (
 	"github.com/mudler/luet/pkg/compiler/types/compression"
 	. "github.com/mudler/luet/pkg/config"
 	installer "github.com/mudler/luet/pkg/installer"
-	. "github.com/mudler/luet/pkg/logger"
+
+	//	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/spf13/cobra"
