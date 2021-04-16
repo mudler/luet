@@ -153,39 +153,7 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 		Info(":memo: note: will consider new build revisions while upgrading")
 	}
 
-	Spinner(32)
-	uninstall, toInstall, err := l.computeUpgrade(syncedRepos, s)
-	if err != nil {
-		return errors.Wrap(err, "failed computing upgrade")
-	}
-	SpinnerStop()
-
-	if len(uninstall) > 0 {
-		Info(":recycle: Packages that are going to be removed from the system:\n ", Yellow(packsToList(uninstall)).BgBlack().String())
-	}
-
-	if len(toInstall) > 0 {
-		Info(":zap:Packages that are going to be installed in the system:\n ", Green(packsToList(toInstall)).BgBlack().String())
-	}
-
-	if len(toInstall) == 0 && len(uninstall) == 0 {
-		Info("Nothing to do")
-		return nil
-	}
-
-	if l.Options.Ask {
-		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
-		if Ask() {
-			l.Options.Ask = false // Don't prompt anymore
-			return l.swap(syncedRepos, uninstall, toInstall, s, true)
-		} else {
-			return errors.New("Aborted by user")
-		}
-	}
-
-	Spinner(32)
-	defer SpinnerStop()
-	return l.swap(syncedRepos, uninstall, toInstall, s, true)
+	return l.checkAndUpgrade(syncedRepos, s)
 }
 
 func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
@@ -321,6 +289,42 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 	return l.install(syncedRepos, match, packages, assertions, allRepos, s)
 }
 
+func (l *LuetInstaller) checkAndUpgrade(r Repositories, s *System) error {
+	Spinner(32)
+	uninstall, toInstall, err := l.computeUpgrade(r, s)
+	if err != nil {
+		return errors.Wrap(err, "failed computing upgrade")
+	}
+	SpinnerStop()
+
+	if len(uninstall) > 0 {
+		Info(":recycle: Packages that are going to be removed from the system:\n ", Yellow(packsToList(uninstall)).BgBlack().String())
+	}
+
+	if len(toInstall) > 0 {
+		Info(":zap:Packages that are going to be installed in the system:\n ", Green(packsToList(toInstall)).BgBlack().String())
+	}
+
+	if len(toInstall) == 0 && len(uninstall) == 0 {
+		Info("Nothing to do")
+		return nil
+	}
+
+	if l.Options.Ask {
+		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
+		if Ask() {
+			l.Options.Ask = false // Don't prompt anymore
+			return l.swap(r, uninstall, toInstall, s, true)
+		} else {
+			return errors.New("Aborted by user")
+		}
+	}
+
+	Spinner(32)
+	defer SpinnerStop()
+	return l.swap(r, uninstall, toInstall, s, true)
+}
+
 func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 	syncedRepos, err := l.SyncRepositories(true)
 	if err != nil {
@@ -328,12 +332,9 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 	}
 
 	if len(s.Database.World()) > 0 {
-		_, toInstall, err := l.computeUpgrade(syncedRepos, s)
-		if err != nil {
-			return errors.Wrap(err, "failed computing upgrade")
-		}
-		if len(toInstall) > 0 {
-			return errors.New("Upgrades present. Upgrade first")
+		Info(":thinking: Checking for available upgrades")
+		if err := l.checkAndUpgrade(syncedRepos, s); err != nil {
+			return errors.Wrap(err, "while checking upgrades before install")
 		}
 	}
 
