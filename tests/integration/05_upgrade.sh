@@ -95,13 +95,6 @@ testInstall() {
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
 
-    luet install -y --config $tmpdir/luet.yaml test/a@1.1
-    assertTrue 'package installed A' "[ -e '$tmpdir/testrootfs/testaa' ]"
-    installst=$?
-    assertEquals 'install test successfully' "$installst" "0"
-    assertTrue 'package keeps old A' "[ -e '$tmpdir/testrootfs/testaa' ]"
-    assertTrue 'package new A was not installed' "[ ! -e '$tmpdir/testrootfs/testlatest' ]"
-
     luet install -y --config $tmpdir/luet.yaml test/c@1.0
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
