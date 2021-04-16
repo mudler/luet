@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export LUET_NOLOCK=true
+TEST_PORT="${TEST_PORT:-9090}"
 
 oneTimeSetUp() {
 export tmpdir="$(mktemp -d)"
@@ -8,6 +9,7 @@ export tmpdir="$(mktemp -d)"
 
 oneTimeTearDown() {
     rm -rf "$tmpdir"
+    kill '%1' || true
 }
 
 testBuild() {
@@ -32,6 +34,7 @@ testRepo() {
     createst=$?
     assertEquals 'create repo successfully' "$createst" "0"
     assertTrue 'create repository' "[ -e '$tmpdir/testbuild/repository.yaml' ]"
+    luet serve-repo --dir $tmpdir/testbuild --port $TEST_PORT &
 }
 
 testConfig() {
@@ -45,10 +48,10 @@ system:
 config_from_host: true
 repositories:
    - name: "main"
-     type: "disk"
+     type: "http"
      enable: true
      urls:
-       - "$tmpdir/testbuild"
+       - "http://127.0.0.1:$TEST_PORT"
 EOF
     luet config --config $tmpdir/luet.yaml
     res=$?

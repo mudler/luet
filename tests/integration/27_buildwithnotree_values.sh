@@ -7,7 +7,6 @@ export tmpdir="$(mktemp -d)"
 }
 
 oneTimeTearDown() {
-    echo "keeping $tmpdir"
     rm -rf "$tmpdir"
 }
 
