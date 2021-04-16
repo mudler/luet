@@ -327,6 +327,16 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 		return err
 	}
 
+	if len(s.Database.World()) > 0 {
+		_, toInstall, err := l.computeUpgrade(syncedRepos, s)
+		if err != nil {
+			return errors.Wrap(err, "failed computing upgrade")
+		}
+		if len(toInstall) > 0 {
+			return errors.New("Upgrades present. Upgrade first")
+		}
+	}
+
 	match, packages, assertions, allRepos, err := l.computeInstall(syncedRepos, cp, s)
 	if err != nil {
 		return err
