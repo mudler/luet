@@ -895,15 +895,16 @@ func (r *LuetSystemRepository) Serialize() (*LuetSystemRepositoryMetadata, LuetS
 	serialized := *r
 	serialized.Authentication = nil
 
-	// Check if is needed set the index or simply use
-	// value returned by CleanPath
-	serialized.Index = serialized.Index.CleanPath()
+	serialized.Index = compiler.ArtifactIndex{}
 
 	meta := &LuetSystemRepositoryMetadata{
 		Index: []*artifact.PackageArtifact{},
 	}
 	for _, a := range r.Index {
-		meta.Index = append(meta.Index, a)
+		cp := *a
+		copy := &cp
+		copy.Path = filepath.Base(copy.Path)
+		meta.Index = append(meta.Index, copy)
 	}
 
 	return meta, serialized
