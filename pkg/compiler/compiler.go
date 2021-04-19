@@ -724,12 +724,21 @@ func genImageList(refs []string, hash string) []string {
 	return res
 }
 
-func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
+func (cs *LuetCompiler) inheritSpecBuildOptions(p *compilerspec.LuetCompilationSpec) {
 	if len(p.BuildOptions.PullImageRepository) != 0 {
-		orig := cs.Options.PullImageRepository
-		cs.Options.PullImageRepository = append(orig, p.BuildOptions.PullImageRepository...)
-		defer func() { cs.Options.PullImageRepository = orig }()
+		cs.Options.PullImageRepository = append(cs.Options.PullImageRepository, p.BuildOptions.PullImageRepository...)
 	}
+	if len(p.BuildOptions.PushImageRepository) != 0 {
+		cs.Options.PullImageRepository = append(cs.Options.PullImageRepository, p.BuildOptions.PushImageRepository)
+	}
+}
+
+func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
+
+	// Inherit build options from compilation specs metadata
+	orig := cs.Options.PullImageRepository
+	defer func() { cs.Options.PullImageRepository = orig }()
+	cs.inheritSpecBuildOptions(p)
 
 	Info(":package: Compiling", p.GetPackage().HumanReadableString(), ".... :coffee:")
 
