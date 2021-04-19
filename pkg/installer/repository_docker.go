@@ -166,7 +166,7 @@ func (d *dockerRepositoryGenerator) pushImageFromArtifact(a *artifact.PackageArt
 	if err != nil {
 		return errors.Wrap(err, "failed generating checksums for tree")
 	}
-	imageTree := fmt.Sprintf("%s:%s", d.imagePrefix, a.GetFileName())
+	imageTree := fmt.Sprintf("%s:%s", d.imagePrefix, helpers.StripInvalidStringsFromImage(a.GetFileName()))
 
 	return d.pushFileFromArtifact(treeArchive, imageTree)
 }

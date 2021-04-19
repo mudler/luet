@@ -309,7 +309,7 @@ func (p *DefaultPackage) GetPackageName() string {
 }
 
 func (p *DefaultPackage) ImageID() string {
-	return strings.ReplaceAll(p.GetFingerPrint(), "+", "-")
+	return helpers.StripInvalidStringsFromImage(p.GetFingerPrint())
 }
 
 // GetBuildTimestamp returns the package build timestamp

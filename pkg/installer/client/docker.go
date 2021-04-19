@@ -136,6 +136,7 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 }
 
 func (c *DockerClient) DownloadFile(name string) (string, error) {
+	name = helpers.StripInvalidStringsFromImage(name)
 	var file *os.File = nil
 	var err error
 	var temp string

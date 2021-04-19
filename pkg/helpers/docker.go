@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/hex"
 	"os"
+	"strings"
 
 	"github.com/docker/cli/cli/trust"
 	"github.com/docker/distribution/reference"
@@ -121,4 +122,8 @@ func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthCon
 	os.RemoveAll(dest)
 	err = c.Unpack(image, dest)
 	return listedImage, err
+}
+
+func StripInvalidStringsFromImage(s string) string {
+	return strings.ReplaceAll(s, "+", "-")
 }
