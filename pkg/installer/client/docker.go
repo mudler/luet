@@ -29,6 +29,7 @@ import (
 	"github.com/mudler/luet/pkg/compiler/types/artifact"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
+	"github.com/mudler/luet/pkg/helpers/imgworker"
 	. "github.com/mudler/luet/pkg/logger"
 )
 
@@ -136,11 +137,10 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 }
 
 func (c *DockerClient) DownloadFile(name string) (string, error) {
-	name = helpers.StripInvalidStringsFromImage(name)
 	var file *os.File = nil
 	var err error
-	var temp string
-
+	var temp, contentstore string
+	var info *imgworker.ListedImage
 	// Files should be in URI/repository:<file>
 	ok := false
 
@@ -150,22 +150,21 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 	}
 
 	for _, uri := range c.RepoData.Urls {
-
 		file, err = config.LuetCfg.GetSystem().TempFile("DockerClient")
 		if err != nil {
 			continue
 		}
 
-		contentstore, err := config.LuetCfg.GetSystem().TempDir("contentstore")
+		contentstore, err = config.LuetCfg.GetSystem().TempDir("contentstore")
 		if err != nil {
 			Warning("Cannot create contentstore", err.Error())
 			continue
 		}
 
-		imageName := fmt.Sprintf("%s:%s", uri, name)
+		imageName := fmt.Sprintf("%s:%s", uri, helpers.StripInvalidStringsFromImage(name))
 		Info("Downloading", imageName)
 
-		info, err := helpers.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
+		info, err = helpers.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
 		if err != nil {
 			Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
 			continue
@@ -176,7 +175,6 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 
 		Debug("\nCopying file ", filepath.Join(temp, name), "to", file.Name())
 		err = helpers.CopyFile(filepath.Join(temp, name), file.Name())
-
 		if err != nil {
 			continue
 		}

@@ -3,11 +3,13 @@
 export LUET_NOLOCK=true
 
 oneTimeSetUp() {
-export tmpdir="$(mktemp -d)"
+  export tmpdir="$(mktemp -d)"
+  docker images --filter='reference=luet/cache' --format='{{.Repository}}:{{.Tag}}' | xargs -r docker rmi
 }
 
 oneTimeTearDown() {
     rm -rf "$tmpdir"
+    docker images --filter='reference=luet/cache' --format='{{.Repository}}:{{.Tag}}' | xargs -r docker rmi
 }
 
 testConfig() {
@@ -39,12 +41,17 @@ testBuild() {
 
     mkdir $tmpdir/testbuild
     mkdir $tmpdir/empty
-    luet build --tree "$tmpdir/empty" --config $tmpdir/luet.yaml --from-repositories --destination $tmpdir/testbuild --compression zstd test/c@1.0 test/z > /dev/null
+    build_output=$(luet build --pull --tree "$tmpdir/empty" \
+    --config $tmpdir/luet.yaml --concurrency 1 \
+    --from-repositories --destination $tmpdir/testbuild --compression zstd test/c@1.0 test/z test/interpolated)
     buildst=$?
+    echo "$build_output"
     assertEquals 'builds successfully' "$buildst" "0"
     assertTrue 'create package dep B' "[ -e '$tmpdir/testbuild/b-test-1.0.package.tar.zst' ]"
     assertTrue 'create package' "[ -e '$tmpdir/testbuild/c-test-1.0.package.tar.zst' ]"
     assertTrue 'create package Z' "[ -e '$tmpdir/testbuild/z-test-1.0+2.package.tar.zst' ]"
+    assertTrue 'create package interpolated' "[ -e '$tmpdir/testbuild/interpolated-test-1.0+2.package.tar.zst' ]"
+    assertContains 'Does use the upstream cache without specifying it' "$build_output" "Downloaded image: quay.io/mocaccinoos/integration-test-cache:6490e800fe443b99328fc363529aee74bda513930fb27ce6ab814d692bba068e"
 }
 
 testRepo() {
@@ -95,11 +102,12 @@ testInstall() {
     # Disable tests which require a DOCKER registry
     [ -z "${TEST_DOCKER_IMAGE:-}" ] && startSkipping
 
-    luet install -y --config $tmpdir/luet-client.yaml test/c@1.0 test/z
+    luet install -y --config $tmpdir/luet-client.yaml test/c@1.0 test/z test/interpolated
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/c' ]"
     assertTrue 'package Z installed' "[ -e '$tmpdir/testrootfs/z' ]"
+    assertTrue 'package interpolated installed' "[ -e '$tmpdir/testrootfs/interpolated-baz-bar' ]"
 }
 
 testReInstall() {

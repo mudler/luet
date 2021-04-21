@@ -102,7 +102,7 @@ type LuetCompilationSpec struct {
 	Includes   []string `json:"includes"`
 	Excludes   []string `json:"excludes"`
 
-	BuildOptions options.Compiler `json:"build_options"`
+	BuildOptions *options.Compiler `json:"build_options"`
 }
 
 func NewLuetCompilationSpec(b []byte, p pkg.Package) (*LuetCompilationSpec, error) {
@@ -119,7 +119,7 @@ func (cs *LuetCompilationSpec) GetSourceAssertion() solver.PackagesAssertions {
 }
 
 func (cs *LuetCompilationSpec) SetBuildOptions(b options.Compiler) {
-	cs.BuildOptions = b
+	cs.BuildOptions = &b
 }
 
 func (cs *LuetCompilationSpec) SetSourceAssertion(as solver.PackagesAssertions) {

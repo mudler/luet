@@ -1,0 +1,3 @@
+steps:
+  - echo s > /interpolated-{{.Values.foo}}-{{.Values.extra}}
+image: "alpine"
