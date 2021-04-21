@@ -39,11 +39,12 @@ testBuild() {
 
     mkdir $tmpdir/testbuild
     mkdir $tmpdir/empty
-    luet build --tree "$tmpdir/empty" --config $tmpdir/luet.yaml --from-repositories --destination $tmpdir/testbuild --compression zstd test/c@1.0 > /dev/null
+    luet build --tree "$tmpdir/empty" --config $tmpdir/luet.yaml --from-repositories --destination $tmpdir/testbuild --compression zstd test/c@1.0 test/z > /dev/null
     buildst=$?
     assertEquals 'builds successfully' "$buildst" "0"
     assertTrue 'create package dep B' "[ -e '$tmpdir/testbuild/b-test-1.0.package.tar.zst' ]"
     assertTrue 'create package' "[ -e '$tmpdir/testbuild/c-test-1.0.package.tar.zst' ]"
+    assertTrue 'create package Z' "[ -e '$tmpdir/testbuild/z-test-1.0+2.package.tar.zst' ]"
 }
 
 testRepo() {
@@ -94,10 +95,11 @@ testInstall() {
     # Disable tests which require a DOCKER registry
     [ -z "${TEST_DOCKER_IMAGE:-}" ] && startSkipping
 
-    luet install -y --config $tmpdir/luet-client.yaml test/c@1.0
+    luet install -y --config $tmpdir/luet-client.yaml test/c@1.0 test/z
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/c' ]"
+    assertTrue 'package Z installed' "[ -e '$tmpdir/testrootfs/z' ]"
 }
 
 testReInstall() {

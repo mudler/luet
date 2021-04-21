@@ -12,18 +12,19 @@ oneTimeTearDown() {
 
 testBuild() {
     mkdir $tmpdir/testbuild
-    luet build --tree "$ROOT_DIR/tests/fixtures/buildableseed" --destination $tmpdir/testbuild --compression zstd test/c@1.0 > /dev/null
+    luet build --tree "$ROOT_DIR/tests/fixtures/docker_repo" --destination $tmpdir/testbuild --compression zstd test/c@1.0 test/z > /dev/null
     buildst=$?
     assertEquals 'builds successfully' "$buildst" "0"
     assertTrue 'create package dep B' "[ -e '$tmpdir/testbuild/b-test-1.0.package.tar.zst' ]"
     assertTrue 'create package' "[ -e '$tmpdir/testbuild/c-test-1.0.package.tar.zst' ]"
+    assertTrue 'create package z' "[ -e '$tmpdir/testbuild/z-test-1.0+2.package.tar.zst' ]"
 }
 
 testRepo() {
     # Disable tests which require a DOCKER registry
     [ -z "${TEST_DOCKER_IMAGE:-}" ] && startSkipping
 
-    luet create-repo --tree "$ROOT_DIR/tests/fixtures/buildableseed" \
+    luet create-repo --tree "$ROOT_DIR/tests/fixtures/docker_repo" \
     --output "${TEST_DOCKER_IMAGE}" \
     --packages $tmpdir/testbuild \
     --name "test" \
@@ -65,10 +66,11 @@ testInstall() {
     # Disable tests which require a DOCKER registry
     [ -z "${TEST_DOCKER_IMAGE:-}" ] && startSkipping
 
-    luet install -y --config $tmpdir/luet.yaml test/c@1.0
+    luet install -y --config $tmpdir/luet.yaml test/c@1.0 test/z
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/c' ]"
+    assertTrue 'package Z installed' "[ -e '$tmpdir/testrootfs/z' ]"
 }
 
 testReInstall() {
@@ -85,10 +87,11 @@ testUnInstall() {
     # Disable tests which require a DOCKER registry
     [ -z "${TEST_DOCKER_IMAGE:-}" ] && startSkipping
 
-    luet uninstall -y --config $tmpdir/luet.yaml test/c@1.0
+    luet uninstall -y --config $tmpdir/luet.yaml test/c@1.0 test/z
     installst=$?
     assertEquals 'uninstall test successfully' "$installst" "0"
     assertTrue 'package uninstalled' "[ ! -e '$tmpdir/testrootfs/c' ]"
+    assertTrue 'package Z uninstalled' "[ ! -e '$tmpdir/testrootfs/z' ]"
 }
 
 testInstallAgain() {
@@ -96,11 +99,13 @@ testInstallAgain() {
     [ -z "${TEST_DOCKER_IMAGE:-}" ] && startSkipping
 
     assertTrue 'package uninstalled' "[ ! -e '$tmpdir/testrootfs/c' ]"
-    output=$(luet install -y --config $tmpdir/luet.yaml test/c@1.0)
+    output=$(luet install -y --config $tmpdir/luet.yaml test/c@1.0 test/z)
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertNotContains 'contains warning' "$output" 'No packages to install'
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/c' ]"
+    assertTrue 'package Z installed' "[ -e '$tmpdir/testrootfs/z' ]"
+    assertTrue 'package Z in cache' "[ -e '$tmpdir/testrootfs/packages/z-test-1.0+2.package.tar.zst' ]"
     assertTrue 'package in cache' "[ -e '$tmpdir/testrootfs/packages/c-test-1.0.package.tar.zst' ]"
 }
 

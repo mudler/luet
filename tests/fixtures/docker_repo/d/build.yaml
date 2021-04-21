@@ -1,0 +1,11 @@
+prelude:
+  - echo foo > /test
+  - echo bar > /test2
+steps:
+  - echo s > /d
+  - echo dd > /dd
+requires:
+- category: "test"
+  name: "c"
+  version: "1.0"
+
