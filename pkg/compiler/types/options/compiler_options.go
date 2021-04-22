@@ -38,6 +38,7 @@ type Compiler struct {
 	BuildValues     []map[string]interface{}
 
 	PackageTargetOnly bool
+	Rebuild           bool
 
 	BackendArgs []string
 
@@ -127,6 +128,13 @@ func PullFirst(b bool) func(cfg *Compiler) error {
 func KeepImg(b bool) func(cfg *Compiler) error {
 	return func(cfg *Compiler) error {
 		cfg.KeepImg = b
+		return nil
+	}
+}
+
+func Rebuild(b bool) func(cfg *Compiler) error {
+	return func(cfg *Compiler) error {
+		cfg.Rebuild = b
 		return nil
 	}
 }

@@ -111,6 +111,8 @@ Build packages specifying multiple definition trees:
 		onlydeps := viper.GetBool("onlydeps")
 		onlyTarget, _ := cmd.Flags().GetBool("only-target-package")
 		full, _ := cmd.Flags().GetBool("full")
+		rebuild, _ := cmd.Flags().GetBool("rebuild")
+
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		var results Results
 		backendArgs := viper.GetStringSlice("backend-args")
@@ -176,6 +178,7 @@ Build packages specifying multiple definition trees:
 			options.WithBuildValues(values),
 			options.WithPullRepositories(pullRepo),
 			options.WithPushRepository(imageRepository),
+			options.Rebuild(rebuild),
 			options.WithSolverOptions(*opts),
 			options.Wait(wait),
 			options.OnlyTarget(onlyTarget),
@@ -329,7 +332,7 @@ func init() {
 	buildCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
 	buildCmd.Flags().Bool("live-output", LuetCfg.GetGeneral().ShowBuildOutput, "Enable live output of the build phase.")
 	buildCmd.Flags().Bool("from-repositories", false, "Consume the user-defined repositories to pull specfiles from")
-
+	buildCmd.Flags().Bool("rebuild", false, "To combine with --pull. Allows to rebuild the target package even if an image is available, against a local values file")
 	buildCmd.Flags().Bool("pretend", false, "Just print what packages will be compiled")
 	buildCmd.Flags().StringArrayP("pull-repository", "p", []string{}, "A list of repositories to pull the cache from")
 

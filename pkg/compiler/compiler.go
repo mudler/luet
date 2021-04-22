@@ -606,7 +606,8 @@ func (cs *LuetCompiler) compileWithImage(image, builderHash string, packageTagHa
 	}
 
 	packageImage := fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, packageTagHash)
-	buildertaggedImage := fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, builderHash)
+	remoteBuildertaggedImage := fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, builderHash)
+	builderResolved := cs.resolveExistingImageHash(builderHash, p)
 	//generated := false
 	// if buildertaggedImage == "" {
 	// 	buildertaggedImage = fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, buildertaggedImage)
@@ -614,15 +615,13 @@ func (cs *LuetCompiler) compileWithImage(image, builderHash string, packageTagHa
 	// 	//	Debug(pkgTag, "Creating intermediary image", buildertaggedImage, "from", image)
 	// }
 
-	if cs.Options.PullFirst {
+	if cs.Options.PullFirst && !cs.Options.Rebuild {
 		Debug("Checking if an image is already available")
 		// FIXUP here. If packageimage hash exists and pull is true, generate package
 		resolved := cs.resolveExistingImageHash(packageTagHash, p)
 
-		builderResolved := cs.resolveExistingImageHash(builderHash, p)
-
 		//
-		if resolved != packageImage && buildertaggedImage != builderResolved { // an image is there already
+		if resolved != packageImage && remoteBuildertaggedImage != builderResolved { // an image is there already
 			Debug("Images available for", p.Package.HumanReadableString(), "generating artifact from remote images:", resolved)
 			return cs.genArtifact(p, backend.Options{ImageName: builderResolved}, backend.Options{ImageName: resolved}, concurrency, keepPermissions)
 		} else {
@@ -631,7 +630,7 @@ func (cs *LuetCompiler) compileWithImage(image, builderHash string, packageTagHa
 	}
 
 	// always going to point at the destination from the repo defined
-	builderOpts, runnerOpts, err := cs.buildPackageImage(image, buildertaggedImage, packageImage, concurrency, keepPermissions, p)
+	builderOpts, runnerOpts, err := cs.buildPackageImage(image, builderResolved, packageImage, concurrency, keepPermissions, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed building package image")
 	}
