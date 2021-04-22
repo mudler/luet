@@ -51,7 +51,9 @@ testBuild() {
     assertTrue 'create package' "[ -e '$tmpdir/testbuild/c-test-1.0.package.tar.zst' ]"
     assertTrue 'create package Z' "[ -e '$tmpdir/testbuild/z-test-1.0+2.package.tar.zst' ]"
     assertTrue 'create package interpolated' "[ -e '$tmpdir/testbuild/interpolated-test-1.0+2.package.tar.zst' ]"
-    assertContains 'Does use the upstream cache without specifying it' "$build_output" "Downloaded image: quay.io/mocaccinoos/integration-test-cache:6490e800fe443b99328fc363529aee74bda513930fb27ce6ab814d692bba068e"
+    assertContains 'Does use the upstream cache without specifying it test/c' "$build_output" "Images available for test/c-1.0 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:d620e573c81eab36a9dc5cc314e80fd7b6e04aeff26127de4225bf24fe1f8e71"
+    assertContains 'Does use the upstream cache without specifying it test/z' "$build_output" "Images available for test/z-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:b0f34b0d2d271f0f2619324476b2857b3b39ca895bddc2474a741f3c8c1acbbc"
+    assertContains 'Does use the upstream cache without specifying it test/interpolated' "$build_output" "Images available for test/interpolated-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:c1f11f48113cd71d8795a06c7b49e1558bd7211d2aa88f5d79a3334f0393c64d"
 }
 
 testRepo() {

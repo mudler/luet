@@ -3,11 +3,13 @@
 export LUET_NOLOCK=true
 
 oneTimeSetUp() {
-export tmpdir="$(mktemp -d)"
+    export tmpdir="$(mktemp -d)"
+    docker images --filter='reference=luet/cache' --format='{{.Repository}}:{{.Tag}}' | xargs -r docker rmi
 }
 
 oneTimeTearDown() {
     rm -rf "$tmpdir"
+    docker images --filter='reference=luet/cache' --format='{{.Repository}}:{{.Tag}}' | xargs -r docker rmi
 }
 
 testBuild() {
@@ -15,7 +17,7 @@ testBuild() {
 bb: "ttt"
 EOF
     mkdir $tmpdir/testbuild
-    luet build --tree "$ROOT_DIR/tests/fixtures/build_values" --values $tmpdir/default.yaml --destination $tmpdir/testbuild --compression gzip --all 
+    luet build --tree "$ROOT_DIR/tests/fixtures/build_values" --values $tmpdir/default.yaml --destination $tmpdir/testbuild --compression gzip  distro/a distro/b test/foo distro/c
     buildst=$?
     assertEquals 'builds successfully' "$buildst" "0"
     assertTrue 'create package B' "[ -e '$tmpdir/testbuild/b-distro-0.3.package.tar.gz' ]"
@@ -63,7 +65,7 @@ EOF
 testBuildWithNoTree() {
     mkdir $tmpdir/testbuild2
     mkdir $tmpdir/emptytree
-    luet build --from-repositories --tree $tmpdir/emptytree --config $tmpdir/luet.yaml test/c --destination $tmpdir/testbuild2 --compression gzip --all 
+    luet build --from-repositories --tree $tmpdir/emptytree --config $tmpdir/luet.yaml distro/c --destination $tmpdir/testbuild2 --compression gzip distro/a distro/b test/foo distro/c
     buildst=$?
     assertEquals 'builds successfully' "$buildst" "0"
     assertTrue 'create package B' "[ -e '$tmpdir/testbuild2/b-distro-0.3.package.tar.gz' ]"
@@ -187,7 +189,7 @@ foo: "sq"
 EOF
     mkdir $tmpdir/testbuild3
     mkdir $tmpdir/emptytree
-    luet build --from-repositories --values $tmpdir/default.yaml --tree $tmpdir/emptytree --config $tmpdir/luet.yaml test/c --destination $tmpdir/testbuild3 --compression gzip --all 
+    luet build --from-repositories --values $tmpdir/default.yaml --tree $tmpdir/emptytree --config $tmpdir/luet.yaml distro/c --destination $tmpdir/testbuild3 --compression gzip distro/a distro/b test/foo
     buildst=$?
     assertEquals 'builds successfully' "$buildst" "0"
     assertTrue 'create package B' "[ -e '$tmpdir/testbuild3/b-distro-0.3.package.tar.gz' ]"

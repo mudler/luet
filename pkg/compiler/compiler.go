@@ -295,6 +295,17 @@ func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p *co
 	return artifact, nil
 }
 
+func (cs *LuetCompiler) genBuilderImageTag(p *compilerspec.LuetCompilationSpec, packageImage string) string {
+	// Use packageImage as salt into the fp being used
+	// so the hash is unique also in cases where
+	// some package deps does have completely different
+	// depgraphs
+	// TODO: We should use the image tag, or pass by the package assertion hash which is unique
+	// and identifies the deptree of the package.
+	return fmt.Sprintf("builder-%s", p.GetPackage().HashFingerprint(helpers.StripRegistryFromImage(packageImage)))
+
+}
+
 func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImage string,
 	concurrency int, keepPermissions bool,
 	p *compilerspec.LuetCompilationSpec) (backend.Options, backend.Options, error) {
@@ -302,20 +313,6 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	var runnerOpts, builderOpts backend.Options
 
 	pkgTag := ":package: " + p.GetPackage().HumanReadableString()
-
-	// Use packageImage as salt into the fp being used
-	// so the hash is unique also in cases where
-	// some package deps does have completely different
-	// depgraphs
-	// TODO: We should use the image tag, or pass by the package assertion hash which is unique
-	// and identifies the deptree of the package.
-
-	fp := p.GetPackage().HashFingerprint(helpers.StripRegistryFromImage(packageImage))
-
-	if buildertaggedImage == "" {
-		buildertaggedImage = cs.Options.PushImageRepository + ":builder-" + fp
-		Debug(pkgTag, "Creating intermediary image", buildertaggedImage, "from", image)
-	}
 
 	// TODO:  Cleanup, not actually hit
 	if packageImage == "" {
@@ -354,9 +351,15 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 		return builderOpts, runnerOpts, errors.Wrap(err, "Could not generate image definition")
 	}
 
-	if len(p.GetPreBuildSteps()) == 0 {
-		buildertaggedImage = image
-	}
+	// Even if we don't have prelude steps, we want to push
+	// An intermediate image to tag images which are outside of the tree.
+	// Those don't have an hash otherwise, and thus makes build unreproducible
+	// see SKIPBUILD for the other logic
+	// if len(p.GetPreBuildSteps()) == 0 {
+	// 	buildertaggedImage = image
+	// }
+	// We might want to skip this phase but replacing with a tag that we push. But in case
+	// steps in prelude are == 0 those are equivalent.
 
 	// Then we write the step image, which uses the builder one
 	if err := p.WriteStepImageDefinition(buildertaggedImage, filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+".dockerfile")); err != nil {
@@ -401,12 +404,13 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 		}
 		return nil
 	}
-	if len(p.GetPreBuildSteps()) != 0 {
-		Info(pkgTag, ":whale: Generating 'builder' image from", image, "as", buildertaggedImage, "with prelude steps")
-		if err := buildAndPush(builderOpts); err != nil {
-			return builderOpts, runnerOpts, errors.Wrapf(err, "Could not push image: %s %s", image, builderOpts.DockerFileName)
-		}
+	// SKIPBUILD
+	//	if len(p.GetPreBuildSteps()) != 0 {
+	Info(pkgTag, ":whale: Generating 'builder' image from", image, "as", buildertaggedImage, "with prelude steps")
+	if err := buildAndPush(builderOpts); err != nil {
+		return builderOpts, runnerOpts, errors.Wrapf(err, "Could not push image: %s %s", image, builderOpts.DockerFileName)
 	}
+	//}
 
 	// Even if we might not have any steps to build, we do that so we can tag the image used in this moment and use that to cache it in a registry, or in the system.
 	// acting as a docker tag.
@@ -425,7 +429,7 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 	var rootfs string
 	var err error
 	pkgTag := ":package: " + p.GetPackage().HumanReadableString()
-
+	Debug(pkgTag, "Generating artifact")
 	// We can't generate delta in this case. It implies the package is a virtual, and nothing has to be done really
 	if p.EmptyPackage() {
 		fakePackage := p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar")
@@ -520,6 +524,7 @@ func oneOfImagesAvailable(images []string, b CompilerBackend) (bool, string) {
 
 func (cs *LuetCompiler) resolveExistingImageHash(imageHash string, p *compilerspec.LuetCompilationSpec) string {
 	var resolvedImage string
+	Debug("Resolving image hash for", p.Package.HumanReadableString(), "hash", imageHash, "Pull repositories", p.BuildOptions.PullImageRepository)
 	toChecklist := append([]string{fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, imageHash)},
 		genImageList(p.BuildOptions.PullImageRepository, imageHash)...)
 	if exists, which := oneOfImagesExists(toChecklist, cs.Backend); exists {
@@ -555,6 +560,7 @@ func LoadArtifactFromYaml(spec *compilerspec.LuetCompilationSpec) (*artifact.Pac
 func (cs *LuetCompiler) getImageArtifact(hash string, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
 	// we check if there is an available image with the given hash and
 	// we return a full artifact if can be loaded locally.
+	Debug("Get image artifact for", p.Package.HumanReadableString(), "hash", hash, "Pull repositories", p.BuildOptions.PullImageRepository)
 
 	toChecklist := append([]string{fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, hash)},
 		genImageList(p.BuildOptions.PullImageRepository, hash)...)
@@ -578,7 +584,7 @@ func (cs *LuetCompiler) getImageArtifact(hash string, p *compilerspec.LuetCompil
 // image buildertaggedImage.
 // Images that can be resolved from repositories are prefered over the local ones if PullFirst is set to true
 // avoiding to rebuild images as much as possible
-func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage string, packageTagHash string,
+func (cs *LuetCompiler) compileWithImage(image, builderHash string, packageTagHash string,
 	concurrency int,
 	keepPermissions, keepImg bool,
 	p *compilerspec.LuetCompilationSpec, generateArtifact bool) (*artifact.PackageArtifact, error) {
@@ -591,16 +597,40 @@ func (cs *LuetCompiler) compileWithImage(image, buildertaggedImage string, packa
 	}
 
 	if !generateArtifact {
-		// try to avoid regenerating the image if possible by checking the hash in the
-		// given repositories
-		// It is best effort. If we fail resolving, we will generate the images and keep going
 		if art, err := cs.getImageArtifact(packageTagHash, p); err == nil {
+			// try to avoid regenerating the image if possible by checking the hash in the
+			// given repositories
+			// It is best effort. If we fail resolving, we will generate the images and keep going
 			return art, nil
 		}
 	}
 
-	// always going to point at the destination from the repo defined
 	packageImage := fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, packageTagHash)
+	buildertaggedImage := fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, builderHash)
+	//generated := false
+	// if buildertaggedImage == "" {
+	// 	buildertaggedImage = fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, buildertaggedImage)
+	// 	generated = true
+	// 	//	Debug(pkgTag, "Creating intermediary image", buildertaggedImage, "from", image)
+	// }
+
+	if cs.Options.PullFirst {
+		Debug("Checking if an image is already available")
+		// FIXUP here. If packageimage hash exists and pull is true, generate package
+		resolved := cs.resolveExistingImageHash(packageTagHash, p)
+
+		builderResolved := cs.resolveExistingImageHash(builderHash, p)
+
+		//
+		if resolved != packageImage && buildertaggedImage != builderResolved { // an image is there already
+			Debug("Images available for", p.Package.HumanReadableString(), "generating artifact from remote images:", resolved)
+			return cs.genArtifact(p, backend.Options{ImageName: builderResolved}, backend.Options{ImageName: resolved}, concurrency, keepPermissions)
+		} else {
+			Debug("Images not available for", p.Package.HumanReadableString())
+		}
+	}
+
+	// always going to point at the destination from the repo defined
 	builderOpts, runnerOpts, err := cs.buildPackageImage(image, buildertaggedImage, packageImage, concurrency, keepPermissions, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed building package image")
@@ -726,7 +756,7 @@ func genImageList(refs []string, hash string) []string {
 }
 
 func (cs *LuetCompiler) inheritSpecBuildOptions(p *compilerspec.LuetCompilationSpec) {
-	Debug("Build options before inherit", p.BuildOptions)
+	Debug(p.GetPackage().HumanReadableString(), "Build options before inherit", p.BuildOptions)
 
 	// Append push repositories from buildpsec buildoptions as pull if found.
 	// This allows to resolve the hash automatically if we pulled the metadata from
@@ -740,7 +770,7 @@ func (cs *LuetCompiler) inheritSpecBuildOptions(p *compilerspec.LuetCompilationS
 		p.BuildOptions.PullImageRepository = append(p.BuildOptions.PullImageRepository, cs.Options.PullImageRepository...)
 		Debug("Inheriting pull repository from PullImageRepository buildoptions", p.BuildOptions.PullImageRepository)
 	}
-	Debug("Build options after inherit", p.BuildOptions)
+	Debug(p.GetPackage().HumanReadableString(), "Build options after inherit", p.BuildOptions)
 }
 
 func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
@@ -772,12 +802,14 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 
 	// Update compilespec build options - it will be then serialized into the compilation metadata file
 	//p.SetBuildOptions(cs.Options)
-	cs.inheritSpecBuildOptions(p)
+	p.BuildOptions.PushImageRepository = cs.Options.PushImageRepository
+	p.BuildOptions.BuildValues = cs.Options.BuildValues
+	//p.BuildOptions.BuildValuesFile = cs.Options.BuildValuesFile
 
 	// - If image is set we just generate a plain dockerfile
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
 	if p.GetImage() != "" {
-		return cs.compileWithImage(p.GetImage(), "", targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, p, true)
+		return cs.compileWithImage(p.GetImage(), cs.genBuilderImageTag(p, targetAssertion.Hash.PackageHash), targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, p, true)
 	}
 
 	// - If image is not set, we read a base_image. Then we will build one image from it to kick-off our build based
@@ -833,7 +865,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 			if compileSpec.GetImage() != "" {
 				Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().HumanReadableString()+" from image")
 
-				a, err := cs.compileWithImage(compileSpec.GetImage(), resolvedBuildImage, assertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, compileSpec, packageDeps)
+				a, err := cs.compileWithImage(compileSpec.GetImage(), assertion.Hash.BuildHash, assertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, compileSpec, packageDeps)
 				if err != nil {
 					return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().HumanReadableString())
 				}
@@ -843,7 +875,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 			}
 
 			Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().HumanReadableString()+" from tree")
-			a, err := cs.compileWithImage(resolvedBuildImage, "", assertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, compileSpec, packageDeps)
+			a, err := cs.compileWithImage(resolvedBuildImage, cs.genBuilderImageTag(compileSpec, targetAssertion.Hash.PackageHash), assertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, compileSpec, packageDeps)
 			if err != nil {
 				return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().HumanReadableString())
 			}
@@ -868,7 +900,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 		resolvedBuildImage := cs.resolveExistingImageHash(lastHash, p)
 		Info(":rocket: All dependencies are satisfied, building package requested by the user", p.GetPackage().HumanReadableString())
 		Info(":package:", p.GetPackage().HumanReadableString(), " Using image: ", resolvedBuildImage)
-		a, err := cs.compileWithImage(resolvedBuildImage, "", targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, p, true)
+		a, err := cs.compileWithImage(resolvedBuildImage, cs.genBuilderImageTag(p, targetAssertion.Hash.PackageHash), targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, p, true)
 		if err != nil {
 			return a, err
 		}
@@ -998,7 +1030,9 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (*compilerspec.LuetCompilatio
 		}
 
 		Debug("Read build options:", art.CompileSpec.BuildOptions, "from", artifactMetadataFile)
-		opts = *art.CompileSpec.BuildOptions
+		if art.CompileSpec.BuildOptions != nil {
+			opts = *art.CompileSpec.BuildOptions
+		}
 	} else if !os.IsNotExist(err) {
 		Debug("error reading artifact metadata file: ", err.Error())
 	} else if os.IsNotExist(err) {
