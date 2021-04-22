@@ -241,7 +241,6 @@ EOF
     assertTrue 'package installed A interpolated with values' "[ -e '$tmpdir/testrootfs3/a-newinterpolation' ]"
     # Finalizers can interpolate only on package field. No extra fields are allowed at this time.
     assertTrue 'finalizer executed on A' "[ -e '$tmpdir/testrootfs3/finalize-a' ]"
-
     installed=$(luet --config $tmpdir/luet2.yaml search --installed .)
     searchst=$?
     assertEquals 'search exists successfully' "$searchst" "0"

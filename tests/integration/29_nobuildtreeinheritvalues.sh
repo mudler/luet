@@ -41,18 +41,22 @@ testBuild() {
     cat <<EOF > $tmpdir/default.yaml
 extra: "an"
 EOF
+
     mkdir $tmpdir/testbuild
     mkdir $tmpdir/empty
+
+    # With --rebuild, the package gets ignored
     build_output=$(luet build --pull --tree "$tmpdir/empty" \
     --config $tmpdir/luet.yaml --values $tmpdir/default.yaml --concurrency 1 \
     --from-repositories --destination $tmpdir/testbuild --compression zstd test/c@1.0 test/z test/interpolated)
     buildst=$?
+    echo "$build_output"
     assertEquals 'builds successfully' "$buildst" "0"
     assertTrue 'create package dep B' "[ -e '$tmpdir/testbuild/b-test-1.0.package.tar.zst' ]"
     assertTrue 'create package' "[ -e '$tmpdir/testbuild/c-test-1.0.package.tar.zst' ]"
     assertTrue 'create package Z' "[ -e '$tmpdir/testbuild/z-test-1.0+2.package.tar.zst' ]"
     assertTrue 'create package interpolated' "[ -e '$tmpdir/testbuild/interpolated-test-1.0+2.package.tar.zst' ]"
-    assertContains 'Does use the upstream cache without specifying it' "$build_output" "Generating 'builder' image from quay.io/mocaccinoos/integration-test-cache:79d7107d13d578b362e6a7bf10ec850efce26316405b8d732ce8f9e004d64281 as luet/cache:builder-09e1e5824824b770c9dec10b4d846132"
+    assertContains 'Does use the upstream cache without specifying it' "$build_output" "Images available for test/interpolated-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:c1f11f48113cd71d8795a06c7b49e1558bd7211d2aa88f5d79a3334f0393c64d"
 }
 
 testRepo() {
@@ -109,7 +113,7 @@ testInstall() {
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/c' ]"
     assertTrue 'package Z installed' "[ -e '$tmpdir/testrootfs/z' ]"
     ls -liah $tmpdir/testrootfs/
-    assertTrue 'package interpolated installed' "[ -e '$tmpdir/testrootfs/interpolated-baz-an' ]"
+    assertTrue 'package interpolated installed' "[ -e '$tmpdir/testrootfs/interpolated-baz-bar' ]"
 }
 
 testReInstall() {
