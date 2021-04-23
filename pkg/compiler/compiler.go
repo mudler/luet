@@ -474,7 +474,7 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 
 	filelist, err := a.FileList()
 	if err != nil {
-		return a, errors.Wrap(err, "Failed getting package list")
+		return a, errors.Wrapf(err, "Failed getting package list for '%s' '%s'", a.Path, a.CompileSpec.Package.HumanReadableString())
 	}
 
 	a.Files = filelist
@@ -802,7 +802,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 	// Update compilespec build options - it will be then serialized into the compilation metadata file
 	//p.SetBuildOptions(cs.Options)
 	p.BuildOptions.PushImageRepository = cs.Options.PushImageRepository
-	p.BuildOptions.BuildValues = cs.Options.BuildValues
+	//p.BuildOptions.BuildValues = cs.Options.BuildValues
 	//p.BuildOptions.BuildValuesFile = cs.Options.BuildValuesFile
 
 	// - If image is set we just generate a plain dockerfile
@@ -922,17 +922,10 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 
 type templatedata map[string]interface{}
 
-func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack pkg.Package) ([]byte, error) {
+func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack pkg.Package, dst templatedata) ([]byte, error) {
 
 	var dataresult []byte
 	val := pack.Rel(DefinitionFile)
-
-	// Update processed build values
-	dst, err := helpers.UnMarshalValues(cs.Options.BuildValuesFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "unmarshalling values")
-	}
-	cs.Options.BuildValues = append(vals, (map[string]interface{})(dst))
 
 	if _, err := os.Stat(pack.Rel(CollectionFile)); err == nil {
 		val = pack.Rel(CollectionFile)
@@ -1038,7 +1031,14 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (*compilerspec.LuetCompilatio
 		Debug("metadata file not present, skipping", artifactMetadataFile)
 	}
 
-	bytes, err := cs.templatePackage(opts.BuildValues, pack)
+	// Update processed build values
+	dst, err := helpers.UnMarshalValues(cs.Options.BuildValuesFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "unmarshalling values")
+	}
+	opts.BuildValues = append(opts.BuildValues, (map[string]interface{})(dst))
+
+	bytes, err := cs.templatePackage(opts.BuildValues, pack, templatedata(dst))
 	if err != nil {
 		return nil, errors.Wrap(err, "while rendering package template")
 	}
