@@ -197,8 +197,16 @@ func (l *LuetInstaller) Swap(toRemove pkg.Packages, toInstall pkg.Packages, s *S
 			toRemoveFinal = append(toRemoveFinal, pp)
 		}
 	}
+	o := Option{
+		FullUninstall:      false,
+		Force:              true,
+		CheckConflicts:     false,
+		FullCleanUninstall: false,
+		NoDeps:             l.Options.NoDeps,
+		OnlyDeps:           false,
+	}
 
-	return l.swap(syncedRepos, toRemoveFinal, toInstall, s)
+	return l.swap(o, syncedRepos, toRemoveFinal, toInstall, s)
 }
 
 func (l *LuetInstaller) computeSwap(o Option, syncedRepos Repositories, toRemove pkg.Packages, toInstall pkg.Packages, s *System) (map[string]ArtifactMatch, pkg.Packages, solver.PackagesAssertions, pkg.PackageDatabase, error) {
@@ -235,26 +243,7 @@ func (l *LuetInstaller) computeSwap(o Option, syncedRepos Repositories, toRemove
 	return match, packages, assertions, allRepos, err
 }
 
-func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, toInstall pkg.Packages, s *System) error {
-	//forced := l.Options.Force
-	//	nodeps := l.Options.NoDeps
-
-	// We don't want any conflict with the installed to raise during the upgrade.
-	// In this way we both force uninstalls and we avoid to check with conflicts
-	// against the current system state which is pending to deletion
-	// E.g. you can't check for conflicts for an upgrade of a new version of A
-	// if the old A results installed in the system. This is due to the fact that
-	// now the solver enforces the constraints and explictly denies two packages
-	// of the same version installed.
-	//l.Options.Force = true
-
-	o := Option{
-		FullUninstall:      false,
-		Force:              true,
-		CheckConflicts:     false,
-		FullCleanUninstall: false,
-		NoDeps:             true,
-	}
+func (l *LuetInstaller) swap(o Option, syncedRepos Repositories, toRemove pkg.Packages, toInstall pkg.Packages, s *System) error {
 
 	match, packages, assertions, allRepos, err := l.computeSwap(o, syncedRepos, toRemove, toInstall, s)
 	if err != nil {
@@ -286,32 +275,13 @@ func (l *LuetInstaller) swap(syncedRepos Repositories, toRemove pkg.Packages, to
 		return nil
 	}
 
-	// TODO: Replace with installerWorkOpts down here
-
 	ops := l.getOpsWithOptions(toRemove, match, Option{
-		Force:         l.Options.Force,
-		NoDeps:        l.Options.NoDeps,
+		Force:         o.Force,
+		NoDeps:        false,
 		OnlyDeps:      o.OnlyDeps,
 		RunFinalizers: false,
 	}, o, syncedRepos, packages, assertions, allRepos)
 
-	// toUninstall, uninstall, err := l.generateUninstallFn(o, s, toRemove...)
-	// if err != nil && !o.Force {
-	// 	return errors.Wrap(err, "while computing uninstall")
-	// }
-
-	// err = uninstall()
-	// if err != nil && !o.Force {
-	// 	Error("Failed uninstall for ", packsToList(toUninstall))
-	// 	return errors.Wrap(err, "uninstalling "+packsToList(toUninstall))
-	// }
-
-	// o = Option{
-	// 	Force:  l.Options.Force,
-	// 	NoDeps: l.Options.NoDeps,
-	// }
-
-	// return l.install(o, syncedRepos, match, packages, assertions, allRepos, s)
 	err = l.runOps(ops, s)
 	if err != nil {
 		return errors.Wrap(err, "failed running installer options")
@@ -376,7 +346,8 @@ func (l *LuetInstaller) runOps(ops []installerOp, s *System) error {
 	return nil
 }
 
-// TODO: Finish implementation here,
+// TODO: use installerOpWorker in place of all the other workers.
+// This one is general enough to read a list of operations and execute them.
 func (l *LuetInstaller) installerOpWorker(i int, wg *sync.WaitGroup, c <-chan installerOp, s *System) error {
 	defer wg.Done()
 
@@ -494,17 +465,33 @@ func (l *LuetInstaller) checkAndUpgrade(r Repositories, s *System) error {
 		return nil
 	}
 
+	// We don't want any conflict with the installed to raise during the upgrade.
+	// In this way we both force uninstalls and we avoid to check with conflicts
+	// against the current system state which is pending to deletion
+	// E.g. you can't check for conflicts for an upgrade of a new version of A
+	// if the old A results installed in the system. This is due to the fact that
+	// now the solver enforces the constraints and explictly denies two packages
+	// of the same version installed.
+	o := Option{
+		FullUninstall:      false,
+		Force:              true,
+		CheckConflicts:     false,
+		FullCleanUninstall: false,
+		NoDeps:             true,
+		OnlyDeps:           false,
+	}
+
 	if l.Options.Ask {
 		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
 		if Ask() {
 			l.Options.Ask = false // Don't prompt anymore
-			return l.swap(r, uninstall, toInstall, s)
+			return l.swap(o, r, uninstall, toInstall, s)
 		} else {
 			return errors.New("Aborted by user")
 		}
 	}
 
-	return l.swap(r, uninstall, toInstall, s)
+	return l.swap(o, r, uninstall, toInstall, s)
 }
 
 func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
@@ -895,7 +882,7 @@ func checkAndPrunePath(path string) {
 
 	fi, err := os.Lstat(targetPath)
 	if err != nil {
-		Warning("Dir not found (it was before?) ", err.Error())
+		//	Warning("Dir not found (it was before?) ", err.Error())
 		return
 	}
 
