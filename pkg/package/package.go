@@ -645,6 +645,16 @@ func (set Packages) Best(v version.Versioner) Package {
 	return versionsMap[sorted[len(sorted)-1]]
 }
 
+func (set Packages) Find(packageName string) (Package, error) {
+	for _, p := range set {
+		if p.GetPackageName() == packageName {
+			return p, nil
+		}
+	}
+
+	return &DefaultPackage{}, errors.New("package not found")
+}
+
 func (set Packages) Unique() Packages {
 	var result Packages
 	uniq := make(map[string]Package)
