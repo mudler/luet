@@ -889,6 +889,51 @@ func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan Arti
 	return nil
 }
 
+func checkAndPrunePath(path string) {
+	// check if now the target path is empty
+	targetPath := filepath.Dir(path)
+
+	fi, err := os.Lstat(targetPath)
+	if err != nil {
+		Warning("Dir not found (it was before?) ", err.Error())
+		return
+	}
+
+	switch mode := fi.Mode(); {
+	case mode.IsDir():
+		files, err := ioutil.ReadDir(targetPath)
+		if err != nil {
+			Warning("Failed reading folder", targetPath, err.Error())
+		}
+		if len(files) != 0 {
+			Debug("Preserving not-empty folder", targetPath)
+			return
+		}
+	}
+	if err = os.Remove(targetPath); err != nil {
+		Warning("Failed removing file (maybe not present in the system target anymore ?)", targetPath, err.Error())
+	}
+}
+
+// We will try to cleanup every path from the file, if the folders left behind are empty
+func pruneEmptyFilePath(path string) {
+	checkAndPrunePath(path)
+
+	// A path is for e.g. /usr/bin/bar
+	// we want to create an array as "/usr", "/usr/bin", "/usr/bin/bar"
+	paths := strings.Split(path, string(os.PathSeparator))
+	currentPath := filepath.Join(string(os.PathSeparator), paths[0])
+	allPaths := []string{currentPath}
+	for _, p := range paths[1:] {
+		currentPath = filepath.Join(currentPath, p)
+		allPaths = append(allPaths, currentPath)
+	}
+	helpers.ReverseAny(allPaths)
+	for _, p := range allPaths {
+		checkAndPrunePath(p)
+	}
+}
+
 func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 	var cp *config.ConfigProtect
 	annotationDir := ""
@@ -950,6 +995,8 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 		if err = os.Remove(target); err != nil {
 			Warning("Failed removing file (maybe not present in the system target anymore ?)", target, err.Error())
 		}
+
+		pruneEmptyFilePath(target)
 	}
 
 	for _, f := range notPresent {
@@ -963,6 +1010,8 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 		if err = os.Remove(target); err != nil {
 			Debug("Failed removing file (not present in the system target)", target, err.Error())
 		}
+
+		pruneEmptyFilePath(target)
 	}
 
 	err = s.Database.RemovePackageFiles(p)
