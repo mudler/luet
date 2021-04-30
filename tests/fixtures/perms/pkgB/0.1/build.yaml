@@ -1,0 +1,7 @@
+image: "alpine"
+
+steps:
+- mkdir -p /foo/baz
+- touch /foo/baz/.keep
+- chown 100:100 /foo/baz
+- chown 101:101 /foo/baz/.keep

@@ -167,9 +167,27 @@ func Read(file string) (string, error) {
 	return string(dat), nil
 }
 
+func EnsureDirPerm(src, dst string) {
+	if info, err := os.Lstat(filepath.Dir(src)); err == nil {
+		if _, err := os.Lstat(filepath.Dir(dst)); os.IsNotExist(err) {
+			err := os.MkdirAll(filepath.Dir(dst), info.Mode().Perm())
+			if err != nil {
+				fmt.Println("warning: failed creating", filepath.Dir(dst), err.Error())
+			}
+			if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+				if err := os.Lchown(filepath.Dir(dst), int(stat.Uid), int(stat.Gid)); err != nil {
+					fmt.Println("warning: failed chowning", filepath.Dir(dst), err.Error())
+				}
+			}
+		}
+	} else {
+		EnsureDir(dst)
+	}
+}
+
 func EnsureDir(fileName string) error {
 	dirName := filepath.Dir(fileName)
-	if _, serr := os.Stat(dirName); serr != nil {
+	if _, serr := os.Stat(dirName); os.IsNotExist(serr) {
 		merr := os.MkdirAll(dirName, os.ModePerm) // FIXME: It should preserve permissions from src to dst instead
 		if merr != nil {
 			return merr
@@ -193,7 +211,7 @@ func CopyFile(src, dst string) (err error) {
 	fm := fi.Mode()
 	switch {
 	case fm&os.ModeNamedPipe != 0:
-		EnsureDir(dst)
+		EnsureDirPerm(src, dst)
 		if err := syscall.Mkfifo(dst, uint32(fi.Mode())); err != nil {
 			return errors.Wrap(err, "failed creating pipe")
 		}
@@ -204,6 +222,9 @@ func CopyFile(src, dst string) (err error) {
 		}
 		return nil
 	}
+
+	//filepath.Dir(src)
+	EnsureDirPerm(src, dst)
 
 	err = copy.Copy(src, dst, copy.Options{
 		Sync:      true,

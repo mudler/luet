@@ -1,0 +1,11 @@
+image: "alpine"
+unpack: true
+includes:
+  - /foo
+  - /foo/bar
+  - /foo/bar/.keep
+steps:
+- mkdir -p /foo/bar
+- touch /foo/bar/.keep
+- chown 100:100 /foo/bar
+- chown 101:101 /foo/bar/.keep
