@@ -27,6 +27,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/docker/docker/pkg/system"
 	"github.com/google/renameio"
 	copy "github.com/otiai10/copy"
 	"github.com/pkg/errors"
@@ -196,12 +197,39 @@ func EnsureDir(fileName string) error {
 	return nil
 }
 
-// CopyFile copies the contents of the file named src to the file named
+func CopyFile(src, dst string) (err error) {
+	return copy.Copy(src, dst, copy.Options{
+		Sync:      true,
+		OnSymlink: func(string) copy.SymlinkAction { return copy.Shallow }})
+}
+
+func copyXattr(srcPath, dstPath, attr string) error {
+	data, err := system.Lgetxattr(srcPath, attr)
+	if err != nil {
+		return err
+	}
+	if data != nil {
+		if err := system.Lsetxattr(dstPath, attr, data, 0); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func doCopyXattrs(srcPath, dstPath string) error {
+	if err := copyXattr(srcPath, dstPath, "security.capability"); err != nil {
+		return err
+	}
+
+	return copyXattr(srcPath, dstPath, "trusted.overlay.opaque")
+}
+
+// DeepCopyFile copies the contents of the file named src to the file named
 // by dst. The file will be created if it does not already exist. If the
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file. The file mode will be copied from the source and
 // the copied data is synced/flushed to stable storage.
-func CopyFile(src, dst string) (err error) {
+func DeepCopyFile(src, dst string) (err error) {
 	// Workaround for https://github.com/otiai10/copy/issues/47
 	fi, err := os.Lstat(src)
 	if err != nil {
@@ -237,7 +265,8 @@ func CopyFile(src, dst string) (err error) {
 			fmt.Println("warning: failed chowning", dst, err.Error())
 		}
 	}
-	return err
+
+	return doCopyXattrs(src, dst)
 }
 
 func IsDirectory(path string) (bool, error) {

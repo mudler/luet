@@ -27,7 +27,6 @@ import (
 	"path/filepath"
 	"regexp"
 
-	system "github.com/docker/docker/pkg/system"
 	zstd "github.com/klauspost/compress/zstd"
 	gzip "github.com/klauspost/pgzip"
 
@@ -584,47 +583,16 @@ type CopyJob struct {
 	Artifact string
 }
 
-func copyXattr(srcPath, dstPath, attr string) error {
-	data, err := system.Lgetxattr(srcPath, attr)
-	if err != nil {
-		return err
-	}
-	if data != nil {
-		if err := system.Lsetxattr(dstPath, attr, data, 0); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func doCopyXattrs(srcPath, dstPath string) error {
-	if err := copyXattr(srcPath, dstPath, "security.capability"); err != nil {
-		return err
-	}
-
-	return copyXattr(srcPath, dstPath, "trusted.overlay.opaque")
-}
-
 func worker(i int, wg *sync.WaitGroup, s <-chan CopyJob) {
 	defer wg.Done()
 
 	for job := range s {
-		//Info("#"+strconv.Itoa(i), "copying", job.Src, "to", job.Dst)
-		// if dir, err := helpers.IsDirectory(job.Src); err == nil && dir {
-		// 	err = helpers.CopyDir(job.Src, job.Dst)
-		// 	if err != nil {
-		// 		Warning("Error copying dir", job, err)
-		// 	}
-		// 	continue
-		// }
-
 		_, err := os.Lstat(job.Dst)
 		if err != nil {
 			Debug("Copying ", job.Src)
-			if err := helpers.CopyFile(job.Src, job.Dst); err != nil {
+			if err := helpers.DeepCopyFile(job.Src, job.Dst); err != nil {
 				Warning("Error copying", job, err)
 			}
-			doCopyXattrs(job.Src, job.Dst)
 		}
 	}
 }
