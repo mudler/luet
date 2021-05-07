@@ -16,6 +16,7 @@
 package compilerspec
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 
@@ -85,6 +86,13 @@ func (specs *LuetCompilationspecs) Unique() *LuetCompilationspecs {
 	return &newSpecs
 }
 
+type CopyField struct {
+	Package     *pkg.DefaultPackage `json:"package"`
+	Image       string              `json:"image"`
+	Source      string              `json:"src"`
+	Destination string              `json:"dst"`
+}
+
 type LuetCompilationSpec struct {
 	Steps           []string                  `json:"steps"` // Are run inside a container and the result layer diff is saved
 	Env             []string                  `json:"env"`
@@ -103,6 +111,8 @@ type LuetCompilationSpec struct {
 	Excludes   []string `json:"excludes"`
 
 	BuildOptions *options.Compiler `json:"build_options"`
+
+	Copy []CopyField `json:"copy"`
 }
 
 func NewLuetCompilationSpec(b []byte, p pkg.Package) (*LuetCompilationSpec, error) {
@@ -253,6 +263,12 @@ ENV PACKAGE_CATEGORY=` + cs.Package.GetCategory()
 			// }
 			spec = spec + `
 ADD ` + s + ` /luetbuild/`
+		}
+	}
+
+	for _, c := range cs.Copy {
+		if c.Image != "" {
+			spec = spec + fmt.Sprintf("\nCOPY --from=%s %s %s\n", c.Image, c.Source, c.Destination)
 		}
 	}
 
