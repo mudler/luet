@@ -62,8 +62,6 @@ github.com/cavaliercoder/grab/bps
 github.com/cespare/xxhash/v2
 # github.com/chuckpreslar/emission v0.0.0-20170206194824-a7ddd980baf9
 github.com/chuckpreslar/emission
-# github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0
-github.com/codegangsta/inject
 # github.com/containerd/cgroups v0.0.0-20200217135630-d732e370d46d
 github.com/containerd/cgroups/stats/v1
 # github.com/containerd/containerd v1.4.1-0.20201117152358-0edc412565dc => github.com/containerd/containerd v1.3.1-0.20200227195959-4d242818bf55
@@ -209,7 +207,6 @@ github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
 # github.com/fsouza/go-dockerclient v1.6.4
-## explicit
 github.com/fsouza/go-dockerclient
 # github.com/genuinetools/img v0.5.11
 ## explicit
@@ -478,7 +475,7 @@ github.com/mudler/cobra-extensions
 # github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87
 ## explicit
 github.com/mudler/docker-companion/api
-# github.com/mudler/go-pluggable v0.0.0-20201113184918-d36448fc8f82
+# github.com/mudler/go-pluggable v0.0.0-20210510180427-ba09243a8c65
 ## explicit
 github.com/mudler/go-pluggable
 # github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290

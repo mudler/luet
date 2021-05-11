@@ -188,8 +188,6 @@ github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGX
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
 github.com/codahale/hdrhistogram v0.0.0-20160425231609-f8ad88b59a58/go.mod h1:sE/e/2PUdi/liOCUjSTXgM1o87ZssimdTWN964YiIeI=
 github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE/e/2PUdi/liOCUjSTXgM1o87ZssimdTWN964YiIeI=
-github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0 h1:sDMmm+q/3+BukdIpxwO365v/Rbspp2Nt5XntgQRXq8Q=
-github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0/go.mod h1:4Zcjuz89kmFXt9morQgcfYZAYZ5n8WHjt81YYWIwtTM=
 github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f h1:tSNMc+rJDfmYntojat8lljbt1mgKNpTxUZJsSzJ9Y1s=
 github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f/go.mod h1:OApqhQ4XNSNC13gXIwDjhOQxjWa/NxkwZXJ1EvqT0ko=
 github.com/containerd/cgroups v0.0.0-20200217135630-d732e370d46d h1:UKAt78F1OvM4ceTn1VvXuYuatXohsFU1eSI2IBtTw9g=
@@ -760,8 +758,8 @@ github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d h1:fKh+rvw
 github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d/go.mod h1:puRUWSwyecW2V355tKncwPVPRAjQBduPsFjG0mrV/Nw=
 github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87 h1:mGz7T8KvmHH0gLWPI5tQne8xl2cO3T8wrrb6Aa16Jxo=
 github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87/go.mod h1:1w4zI1LYXDeiUXqedPcrT5eQJnmKR6dbg5iJMgSIP/Y=
-github.com/mudler/go-pluggable v0.0.0-20201113184918-d36448fc8f82 h1:Hkefw2tzoKATVUTFsCtDlUnY180+OE851qGbq45ATxk=
-github.com/mudler/go-pluggable v0.0.0-20201113184918-d36448fc8f82/go.mod h1:4P/ULate+2QxoAQtojaRjyO5VGMhV0KLnSdAS8nuBbo=
+github.com/mudler/go-pluggable v0.0.0-20210510180427-ba09243a8c65 h1:Xmfr2g3QU/Ci1mvLswuOhrzXnJ5OXGqAk/skUD1aOsY=
+github.com/mudler/go-pluggable v0.0.0-20210510180427-ba09243a8c65/go.mod h1:WmKcT8ONmhDQIqQ+HxU+tkGWjzBEyY/KFO8LTGCu4AI=
 github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290 h1:426hFyXMpXeqIeGJn2cGAW9ogvM2Jf+Jv23gtVPvBLM=
 github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290/go.mod h1:uP5BBgFxq2wNWo7n1vnY5SSbgL0WDshVJrOO12tZ/lA=
 github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=

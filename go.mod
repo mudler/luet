@@ -16,7 +16,6 @@ require (
 	github.com/docker/docker v20.10.0-beta1.0.20201110211921-af34b94a78a1+incompatible
 	github.com/docker/go-units v0.4.0
 	github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
-	github.com/fsouza/go-dockerclient v1.6.4
 	github.com/genuinetools/img v0.5.11
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-containerregistry v0.2.1
@@ -37,7 +36,7 @@ require (
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
 	github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87
-	github.com/mudler/go-pluggable v0.0.0-20201113184918-d36448fc8f82
+	github.com/mudler/go-pluggable v0.0.0-20210510180427-ba09243a8c65
 	github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3

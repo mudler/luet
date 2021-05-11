@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/chuckpreslar/emission"
 	"github.com/pkg/errors"
 )
 
@@ -29,14 +30,14 @@ import (
 type Manager struct {
 	Plugins []Plugin
 	Events  []EventType
-	Bus     *Bus
+	Bus     *emission.Emitter
 }
 
 // NewManager returns a manager instance with a new bus and
 func NewManager(events []EventType) *Manager {
 	return &Manager{
 		Events: events,
-		Bus:    NewBus(),
+		Bus:    emission.NewEmitter(),
 	}
 }
 
@@ -47,19 +48,41 @@ func (m *Manager) Register() *Manager {
 }
 
 // Publish is a wrapper around NewEvent and the Manager internal Bus publishing system
+// It accepts optionally a list of functions that are called with the plugin result (only once)
 func (m *Manager) Publish(event EventType, obj interface{}) (*Manager, error) {
 	ev, err := NewEvent(event, obj)
 	if err == nil && ev != nil {
-		m.Bus.Publish(ev)
+		m.Bus.Emit(string(ev.Name), ev)
 	}
 	return m, err
 }
 
+// Response binds a set of listeners to an event type. The listeners are called for each result from
+// every plugin when Publish is called.
+func (m *Manager) Response(event EventType, listener ...func(p *Plugin, r *EventResponse)) *Manager {
+	ev, _ := NewEvent(event, nil)
+	for _, l := range listener {
+		m.Bus.On(string(ev.ResponseEventName("results")), l)
+	}
+	return m
+}
+
+func (m *Manager) propagateEvent(p Plugin) func(e *Event) {
+	return func(e *Event) {
+		resp, err := p.Run(*e)
+		r := &resp
+		if err != nil && !resp.Errored() {
+			resp.Error = err.Error()
+		}
+		m.Bus.Emit(string(e.ResponseEventName("results")), &p, r)
+	}
+}
+
 // Subscribe subscribes the plugin to the events in the given bus
-func (m *Manager) Subscribe(b *Bus) *Manager {
+func (m *Manager) Subscribe(b *emission.Emitter) *Manager {
 	for _, p := range m.Plugins {
 		for _, e := range m.Events {
-			b.Listen(e, b.propagateEvent(p))
+			b.On(string(e), m.propagateEvent(p))
 		}
 	}
 	return m
@@ -72,13 +95,6 @@ func relativeToCwd(p string) (string, error) {
 	}
 
 	return filepath.Join(cwd, p), nil
-}
-
-// ListenAll Binds a callback to all plugins event
-func (m *Manager) ListenAll(event EventType, listener interface{}) {
-	for _, p := range m.Plugins {
-		m.Bus.Listen(EventType(p.Name), listener)
-	}
 }
 
 // Autoload automatically loads plugins binaries prefixed by 'prefix' in the current path
