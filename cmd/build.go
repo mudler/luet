@@ -247,11 +247,12 @@ Build packages specifying multiple definition trees:
 			}
 
 			for _, sp := range toCalculate {
-				packs, err := luetCompiler.ComputeDepTree(sp)
+				ht := compiler.NewHashTree(generalRecipe.GetDatabase())
+				hashTree, err := ht.Query(luetCompiler, sp)
 				if err != nil {
 					errs = append(errs, err)
 				}
-				for _, p := range packs {
+				for _, p := range hashTree.Dependencies {
 					results.Packages = append(results.Packages,
 						PackageResult{
 							Name:       p.Package.GetName(),

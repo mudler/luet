@@ -146,11 +146,6 @@ func (cs *LuetCompiler) CompileParallel(keepPermissions bool, ps *compilerspec.L
 	}
 
 	for _, p := range ps.All() {
-		asserts, err := cs.ComputeDepTree(p)
-		if err != nil {
-			panic(err)
-		}
-		p.SetSourceAssertion(asserts)
 		all <- p
 	}
 
@@ -293,17 +288,6 @@ func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p *co
 
 	artifact.CompileSpec = p
 	return artifact, nil
-}
-
-func (cs *LuetCompiler) genBuilderImageTag(p *compilerspec.LuetCompilationSpec, packageImage string) string {
-	// Use packageImage as salt into the fp being used
-	// so the hash is unique also in cases where
-	// some package deps does have completely different
-	// depgraphs
-	// TODO: We should use the image tag, or pass by the package assertion hash which is unique
-	// and identifies the deptree of the package.
-	return fmt.Sprintf("builder-%s", p.GetPackage().HashFingerprint(helpers.StripRegistryFromImage(packageImage)))
-
 }
 
 func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImage string,
@@ -680,33 +664,7 @@ func (cs *LuetCompiler) FromDatabase(db pkg.PackageDatabase, minimum bool, dst s
 	}
 }
 
-// ComputeMinimumCompilableSet strips specs that are eventually compiled by leafs
-func (cs *LuetCompiler) ComputeMinimumCompilableSet(p ...*compilerspec.LuetCompilationSpec) ([]*compilerspec.LuetCompilationSpec, error) {
-	// Generate a set with all the deps of the provided specs
-	// we will use that set to remove the deps from the list of provided compilation specs
-	allDependencies := solver.PackagesAssertions{} // Get all packages that will be in deps
-	result := []*compilerspec.LuetCompilationSpec{}
-	for _, spec := range p {
-		ass, err := cs.ComputeDepTree(spec)
-		if err != nil {
-			return result, errors.Wrap(err, "computin specs deptree")
-		}
-
-		allDependencies = append(allDependencies, ass.Drop(spec.GetPackage())...)
-	}
-
-	for _, spec := range p {
-		if found := allDependencies.Search(spec.GetPackage().GetFingerPrint()); found == nil {
-			result = append(result, spec)
-		}
-	}
-	return result, nil
-}
-
-// ComputeDepTree computes the dependency tree of a compilation spec and returns solver assertions
-// in order to be able to compile the spec.
 func (cs *LuetCompiler) ComputeDepTree(p *compilerspec.LuetCompilationSpec) (solver.PackagesAssertions, error) {
-
 	s := solver.NewResolver(cs.Options.SolverOptions.Options, pkg.NewInMemoryDatabase(false), cs.Database, pkg.NewInMemoryDatabase(false), cs.Options.SolverOptions.Resolver())
 
 	solution, err := s.Install(pkg.Packages{p.GetPackage()})
@@ -718,31 +676,34 @@ func (cs *LuetCompiler) ComputeDepTree(p *compilerspec.LuetCompilationSpec) (sol
 	if err != nil {
 		return nil, errors.Wrap(err, "While order a solution for "+p.GetPackage().HumanReadableString())
 	}
+	return dependencies, nil
+}
 
-	assertions := solver.PackagesAssertions{}
-	for _, assertion := range dependencies { //highly dependent on the order
-		if assertion.Value {
-			nthsolution := dependencies.Cut(assertion.Package)
-			assertion.Hash = solver.PackageHash{
-				BuildHash:   nthsolution.HashFrom(assertion.Package),
-				PackageHash: nthsolution.AssertionHash(),
-			}
-			assertion.Package.SetTreeDir(p.Package.GetTreeDir())
-			assertions = append(assertions, assertion)
+// ComputeMinimumCompilableSet strips specs that are eventually compiled by leafs
+func (cs *LuetCompiler) ComputeMinimumCompilableSet(p ...*compilerspec.LuetCompilationSpec) ([]*compilerspec.LuetCompilationSpec, error) {
+	// Generate a set with all the deps of the provided specs
+	// we will use that set to remove the deps from the list of provided compilation specs
+	allDependencies := solver.PackagesAssertions{} // Get all packages that will be in deps
+	result := []*compilerspec.LuetCompilationSpec{}
+	for _, spec := range p {
+		sol, err := cs.ComputeDepTree(spec)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed querying hashtree")
+		}
+		allDependencies = append(allDependencies, sol.Drop(spec.GetPackage())...)
+	}
+
+	for _, spec := range p {
+		if found := allDependencies.Search(spec.GetPackage().GetFingerPrint()); found == nil {
+			result = append(result, spec)
 		}
 	}
-	p.SetSourceAssertion(assertions)
-	return assertions, nil
+	return result, nil
 }
 
 // Compile is a non-parallel version of CompileParallel. It builds the compilation specs and generates
 // an artifact
 func (cs *LuetCompiler) Compile(keepPermissions bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
-	asserts, err := cs.ComputeDepTree(p)
-	if err != nil {
-		return nil, err
-	}
-	p.SetSourceAssertion(asserts)
 	return cs.compile(cs.Options.Concurrency, keepPermissions, p)
 }
 
@@ -773,11 +734,6 @@ func (cs *LuetCompiler) inheritSpecBuildOptions(p *compilerspec.LuetCompilationS
 }
 
 func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
-	// TODO: Racy, remove it
-	// Inherit build options from compilation specs metadata
-	// orig := cs.Options.PullImageRepository
-	// defer func() { cs.Options.PullImageRepository = orig }()
-
 	Info(":package: Compiling", p.GetPackage().HumanReadableString(), ".... :coffee:")
 
 	Debug(fmt.Sprintf("%s: has images %t, empty package: %t", p.GetPackage().HumanReadableString(), p.HasImageSource(), p.EmptyPackage()))
@@ -789,36 +745,42 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 			)
 	}
 
-	targetAssertion := p.GetSourceAssertion().Search(p.GetPackage().GetFingerPrint())
+	ht := NewHashTree(cs.Database)
+
+	packageHashTree, err := ht.Query(cs, p)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed querying hashtree")
+	}
+
+	// This is in order to have the metadata in the yaml
+	p.SetSourceAssertion(packageHashTree.Solution)
+	targetAssertion := packageHashTree.Target
 
 	bus.Manager.Publish(bus.EventPackagePreBuild, struct {
-		CompileSpec *compilerspec.LuetCompilationSpec
-		Assert      solver.PackageAssert
+		CompileSpec     *compilerspec.LuetCompilationSpec
+		Assert          solver.PackageAssert
+		PackageHashTree *PackageImageHashTree
 	}{
-		CompileSpec: p,
-		Assert:      *targetAssertion,
+		CompileSpec:     p,
+		Assert:          *targetAssertion,
+		PackageHashTree: packageHashTree,
 	})
 
 	// Update compilespec build options - it will be then serialized into the compilation metadata file
-	//p.SetBuildOptions(cs.Options)
 	p.BuildOptions.PushImageRepository = cs.Options.PushImageRepository
-	//p.BuildOptions.BuildValues = cs.Options.BuildValues
-	//p.BuildOptions.BuildValuesFile = cs.Options.BuildValuesFile
 
 	// - If image is set we just generate a plain dockerfile
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
 	if p.GetImage() != "" {
-		return cs.compileWithImage(p.GetImage(), cs.genBuilderImageTag(p, targetAssertion.Hash.PackageHash), targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, p, true)
+		return cs.compileWithImage(p.GetImage(), packageHashTree.BuilderImageHash, targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, p, true)
 	}
 
 	// - If image is not set, we read a base_image. Then we will build one image from it to kick-off our build based
 	// on how we compute the resolvable tree.
 	// This means to recursively build all the build-images needed to reach that tree part.
 	// - We later on compute an hash used to identify the image, so each similar deptree keeps the same build image.
-
-	dependencies := p.GetSourceAssertion().Drop(p.GetPackage()) // at this point we should have a flattened list of deps to build, including all of them (with all constraints propagated already)
-	departifacts := []*artifact.PackageArtifact{}               // TODO: Return this somehow
-	var lastHash string
+	dependencies := packageHashTree.Dependencies  // at this point we should have a flattened list of deps to build, including all of them (with all constraints propagated already)
+	departifacts := []*artifact.PackageArtifact{} // TODO: Return this somehow
 	depsN := 0
 	currentN := 0
 
@@ -845,8 +807,6 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 			Debug("PullImage repos:", compileSpec.BuildOptions.PullImageRepository)
 
 			compileSpec.SetOutputPath(p.GetOutputPath())
-			Debug(pkgTag, "    :arrow_right_hook: :whale: Builder image from hash", assertion.Hash.BuildHash)
-			Debug(pkgTag, "    :arrow_right_hook: :whale: Package image from hash", assertion.Hash.PackageHash)
 
 			bus.Manager.Publish(bus.EventPackagePreBuild, struct {
 				CompileSpec *compilerspec.LuetCompilationSpec
@@ -856,28 +816,42 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 				Assert:      assertion,
 			})
 
-			lastHash = assertion.Hash.PackageHash
-			// for the source instead, pick an image and a buildertaggedImage from hashes if they exists.
-			// otherways fallback to the pushed repo
-			// Resolve images from the hashtree
-			resolvedBuildImage := cs.resolveExistingImageHash(assertion.Hash.BuildHash, compileSpec)
-			if compileSpec.GetImage() != "" {
-				Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().HumanReadableString()+" from image")
-
-				a, err := cs.compileWithImage(compileSpec.GetImage(), assertion.Hash.BuildHash, assertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, compileSpec, packageDeps)
-				if err != nil {
-					return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().HumanReadableString())
-				}
-				departifacts = append(departifacts, a)
-				Info(pkgTag, ":white_check_mark: Done")
-				continue
+			buildHash, err := packageHashTree.DependencyBuildImage(assertion.Package)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed looking for dependency in hashtree")
 			}
 
-			Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().HumanReadableString()+" from tree")
-			a, err := cs.compileWithImage(resolvedBuildImage, cs.genBuilderImageTag(compileSpec, targetAssertion.Hash.PackageHash), assertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, compileSpec, packageDeps)
+			Debug(pkgTag, "    :arrow_right_hook: :whale: Builder image from hash", assertion.Hash.BuildHash)
+			Debug(pkgTag, "    :arrow_right_hook: :whale: Package image from hash", assertion.Hash.PackageHash)
+
+			var sourceImage string
+
+			if compileSpec.GetImage() != "" {
+				Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().HumanReadableString()+" from image")
+				sourceImage = compileSpec.GetImage()
+			} else {
+				// for the source instead, pick an image and a buildertaggedImage from hashes if they exists.
+				// otherways fallback to the pushed repo
+				// Resolve images from the hashtree
+				sourceImage = cs.resolveExistingImageHash(assertion.Hash.BuildHash, compileSpec)
+				Debug(pkgTag, " :wrench: Compiling "+compileSpec.GetPackage().HumanReadableString()+" from tree")
+			}
+
+			a, err := cs.compileWithImage(
+				sourceImage,
+				buildHash,
+				assertion.Hash.PackageHash,
+				concurrency,
+				keepPermissions,
+				cs.Options.KeepImg,
+				compileSpec,
+				packageDeps,
+			)
 			if err != nil {
 				return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().HumanReadableString())
 			}
+
+			Info(pkgTag, ":white_check_mark: Done")
 
 			bus.Manager.Publish(bus.EventPackagePostBuild, struct {
 				CompileSpec *compilerspec.LuetCompilationSpec
@@ -888,18 +862,14 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 			})
 
 			departifacts = append(departifacts, a)
-			Info(pkgTag, ":white_check_mark: Done")
 		}
-
-	} else if len(dependencies) > 0 {
-		lastHash = dependencies[len(dependencies)-1].Hash.PackageHash
 	}
 
 	if buildTarget {
-		resolvedBuildImage := cs.resolveExistingImageHash(lastHash, p)
+		resolvedSourceImage := cs.resolveExistingImageHash(packageHashTree.SourceHash, p)
 		Info(":rocket: All dependencies are satisfied, building package requested by the user", p.GetPackage().HumanReadableString())
-		Info(":package:", p.GetPackage().HumanReadableString(), " Using image: ", resolvedBuildImage)
-		a, err := cs.compileWithImage(resolvedBuildImage, cs.genBuilderImageTag(p, targetAssertion.Hash.PackageHash), targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, p, true)
+		Info(":package:", p.GetPackage().HumanReadableString(), " Using image: ", resolvedSourceImage)
+		a, err := cs.compileWithImage(resolvedSourceImage, packageHashTree.BuilderImageHash, targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, p, true)
 		if err != nil {
 			return a, err
 		}
