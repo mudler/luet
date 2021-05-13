@@ -97,7 +97,7 @@ To build a package, from a tree definition:
 
 		plugin := viper.GetStringSlice("plugin")
 
-		bus.Manager.Load(plugin...).Register()
+		bus.Manager.Initialize(plugin...)
 		if len(bus.Manager.Plugins) != 0 {
 			Info(":lollipop:Enabled plugins:")
 			for _, p := range bus.Manager.Plugins {

@@ -1,6 +1,8 @@
 package bus
 
 import (
+	. "github.com/mudler/luet/pkg/logger"
+
 	"github.com/mudler/go-pluggable"
 )
 
@@ -47,21 +49,47 @@ var (
 )
 
 // Manager is the bus instance manager, which subscribes plugins to events emitted by Luet
-var Manager *pluggable.Manager = pluggable.NewManager(
-	[]pluggable.EventType{
-		EventPackageInstall,
-		EventPackageUnInstall,
-		EventPackagePreBuild,
-		EventPackagePreBuildArtifact,
-		EventPackagePostBuildArtifact,
-		EventPackagePostBuild,
-		EventRepositoryPreBuild,
-		EventRepositoryPostBuild,
-		EventImagePreBuild,
-		EventImagePrePull,
-		EventImagePrePush,
-		EventImagePostBuild,
-		EventImagePostPull,
-		EventImagePostPush,
-	},
-)
+var Manager *Bus = &Bus{
+	Manager: pluggable.NewManager(
+		[]pluggable.EventType{
+			EventPackageInstall,
+			EventPackageUnInstall,
+			EventPackagePreBuild,
+			EventPackagePreBuildArtifact,
+			EventPackagePostBuildArtifact,
+			EventPackagePostBuild,
+			EventRepositoryPreBuild,
+			EventRepositoryPostBuild,
+			EventImagePreBuild,
+			EventImagePrePull,
+			EventImagePrePush,
+			EventImagePostBuild,
+			EventImagePostPull,
+			EventImagePostPush,
+		},
+	),
+}
+
+type Bus struct {
+	*pluggable.Manager
+}
+
+func (b *Bus) Initialize(plugin ...string) {
+	b.Manager.Load(plugin...).Register()
+
+	for _, e := range b.Manager.Events {
+		b.Manager.Response(e, func(p *pluggable.Plugin, r *pluggable.EventResponse) {
+			if r.Errored() {
+				Fatal("Plugin", p.Name, "at", p.Executable, "Error", r.Error)
+			}
+			Debug(
+				"plugin_event",
+				"received from",
+				p.Name,
+				"at",
+				p.Executable,
+				r,
+			)
+		})
+	}
+}
