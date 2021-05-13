@@ -29,6 +29,7 @@ type EventType string
 type Event struct {
 	Name EventType `json:"name"`
 	Data string    `json:"data"`
+	File string    `json:"file"` // If Data >> 10K write content to file instead
 }
 
 // EventResponse describes the event response structure
@@ -43,6 +44,12 @@ type EventResponse struct {
 func (e Event) JSON() (string, error) {
 	dat, err := json.Marshal(e)
 	return string(dat), err
+}
+
+// Copy returns a copy of Event
+func (e Event) Copy() *Event {
+	copy := &e
+	return copy
 }
 
 func (e Event) ResponseEventName(s string) EventType {
