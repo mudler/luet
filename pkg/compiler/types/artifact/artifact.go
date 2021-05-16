@@ -347,6 +347,21 @@ func hashContent(bv []byte) string {
 	return sha
 }
 
+func hashFileContent(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha1.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+
+	return base64.URLEncoding.EncodeToString(h.Sum(nil)), nil
+}
+
 func tarModifierWrapperFunc(dst, path string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
 	// If the destination path already exists I rename target file name with postfix.
 	var destPath string
@@ -374,10 +389,10 @@ func tarModifierWrapperFunc(dst, path string, header *tar.Header, content io.Rea
 		existingHash := ""
 		f, err := os.Lstat(destPath)
 		if err == nil {
-			dat, err := ioutil.ReadFile(destPath)
 			Debug("File exists already, computing hash for", destPath)
+			hash, err := hashFileContent(destPath)
 			if err == nil {
-				existingHash = hashContent(dat)
+				existingHash = hash
 			}
 		}
 
