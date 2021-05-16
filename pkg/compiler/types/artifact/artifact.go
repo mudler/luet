@@ -390,15 +390,15 @@ func tarModifierWrapperFunc(dst, path string, header *tar.Header, content io.Rea
 		f, err := os.Lstat(destPath)
 		if err == nil {
 			Debug("File exists already, computing hash for", destPath)
-			hash, err := hashFileContent(destPath)
-			if err == nil {
+			hash, herr := hashFileContent(destPath)
+			if herr == nil {
 				existingHash = hash
 			}
 		}
 
 		Debug("Existing file hash: ", existingHash, "Tar file hashsum: ", tarHash)
 		// We want to protect file only if the hash of the files are differing OR the file size are
-		differs := (existingHash != "" && existingHash != tarHash) || header.Size != f.Size()
+		differs := (existingHash != "" && existingHash != tarHash) || (err != nil && f != nil && header.Size != f.Size())
 		// Check if exists
 		if helpers.Exists(destPath) && differs {
 			for i := 1; i < 1000; i++ {
