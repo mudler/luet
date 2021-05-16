@@ -19,6 +19,8 @@ import (
 	"archive/tar"
 	"bufio"
 	"bytes"
+	"crypto/sha1"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -316,7 +318,6 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 	default:
 		return helpers.Tar(src, a.getCompressedName())
 	}
-	return errors.New("Compression type must be supplied")
 }
 
 func (a *PackageArtifact) getCompressedName() string {
@@ -339,6 +340,13 @@ func (a *PackageArtifact) GetUncompressedName() string {
 	return a.Path
 }
 
+func hashContent(bv []byte) string {
+	hasher := sha1.New()
+	hasher.Write(bv)
+	sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+	return sha
+}
+
 func tarModifierWrapperFunc(dst, path string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
 	// If the destination path already exists I rename target file name with postfix.
 	var destPath string
@@ -350,6 +358,7 @@ func tarModifierWrapperFunc(dst, path string, header *tar.Header, content io.Rea
 			return nil, nil, err
 		}
 	}
+	tarHash := hashContent(buffer.Bytes())
 
 	// If file is not present on archive but is defined on mods
 	// I receive the callback. Prevent nil exception.
@@ -362,8 +371,21 @@ func tarModifierWrapperFunc(dst, path string, header *tar.Header, content io.Rea
 			return header, buffer.Bytes(), nil
 		}
 
+		existingHash := ""
+		f, err := os.Lstat(destPath)
+		if err == nil {
+			dat, err := ioutil.ReadFile(destPath)
+			Debug("File exists already, computing hash for", destPath)
+			if err == nil {
+				existingHash = hashContent(dat)
+			}
+		}
+
+		Debug("Existing file hash: ", existingHash, "Tar file hashsum: ", tarHash)
+		// We want to protect file only if the hash of the files are differing OR the file size are
+		differs := (existingHash != "" && existingHash != tarHash) || header.Size != f.Size()
 		// Check if exists
-		if helpers.Exists(destPath) {
+		if helpers.Exists(destPath) && differs {
 			for i := 1; i < 1000; i++ {
 				name := filepath.Join(filepath.Join(filepath.Dir(path),
 					fmt.Sprintf("._cfg%04d_%s", i, filepath.Base(path))))

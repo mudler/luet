@@ -90,8 +90,7 @@ func UntarProtect(src, dst string, sameOwner bool, protectedFiles []string, modi
 	}
 
 	if sameOwner {
-		// PRE: i have root privileged.
-
+		// we do have root permissions, so we can extract keeping the same permissions.
 		replacerArchive := archive.ReplaceFileTarWrapper(in, mods)
 
 		opts := &archive.TarOptions{
