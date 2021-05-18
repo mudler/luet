@@ -89,7 +89,7 @@ func (cs *LuetCompiler) compilerWorker(i int, wg *sync.WaitGroup, cspecs chan *c
 	defer wg.Done()
 
 	for s := range cspecs {
-		ar, err := cs.compile(concurrency, keepPermissions, s)
+		ar, err := cs.compile(concurrency, keepPermissions, nil, s)
 		if err != nil {
 			errors <- err
 		}
@@ -704,7 +704,7 @@ func (cs *LuetCompiler) ComputeMinimumCompilableSet(p ...*compilerspec.LuetCompi
 // Compile is a non-parallel version of CompileParallel. It builds the compilation specs and generates
 // an artifact
 func (cs *LuetCompiler) Compile(keepPermissions bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
-	return cs.compile(cs.Options.Concurrency, keepPermissions, p)
+	return cs.compile(cs.Options.Concurrency, keepPermissions, nil, p)
 }
 
 func genImageList(refs []string, hash string) []string {
@@ -733,8 +733,44 @@ func (cs *LuetCompiler) inheritSpecBuildOptions(p *compilerspec.LuetCompilationS
 	Debug(p.GetPackage().HumanReadableString(), "Build options after inherit", p.BuildOptions)
 }
 
-func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
+func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) error {
+	resolvedCopyFields := []compilerspec.CopyField{}
+	if len(p.Copy) != 0 {
+		Info("Package has multi-stage copy, generating required images")
+	}
+	for _, c := range p.Copy {
+		if c.Package != nil && c.Package.Name != "" && c.Package.Version != "" {
+			Info(" :droplet: generating multi-stage images for", c.Package.HumanReadableString())
+			spec, err := cs.FromPackage(c.Package)
+			if err != nil {
+				return errors.Wrap(err, "while generating images to copy from")
+			}
+			noArtifact := false
+			artifact, err := cs.compile(concurrency, keepPermissions, &noArtifact, spec)
+
+			if err != nil {
+				return errors.Wrap(err, "failed building multi-stage image")
+			}
+
+			resolvedCopyFields = append(resolvedCopyFields, compilerspec.CopyField{
+				Image:       cs.resolveExistingImageHash(artifact.PackageCacheImage, spec),
+				Source:      c.Source,
+				Destination: c.Destination,
+			})
+		} else {
+			resolvedCopyFields = append(resolvedCopyFields, c)
+		}
+	}
+	p.Copy = resolvedCopyFields
+	return nil
+}
+
+func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateArtifact *bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
 	Info(":package: Compiling", p.GetPackage().HumanReadableString(), ".... :coffee:")
+
+	if err := cs.resolveMultiStageImages(concurrency, keepPermissions, p); err != nil {
+		return nil, errors.Wrap(err, "while resolving multi-stage images")
+	}
 
 	Debug(fmt.Sprintf("%s: has images %t, empty package: %t", p.GetPackage().HumanReadableString(), p.HasImageSource(), p.EmptyPackage()))
 	if !p.HasImageSource() && !p.EmptyPackage() {
@@ -772,7 +808,17 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 	// - If image is set we just generate a plain dockerfile
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
 	if p.GetImage() != "" {
-		return cs.compileWithImage(p.GetImage(), packageHashTree.BuilderImageHash, targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, p, true)
+		localGenerateArtifact := true
+		if generateArtifact != nil {
+			localGenerateArtifact = *generateArtifact
+		}
+		a, err := cs.compileWithImage(p.GetImage(), packageHashTree.BuilderImageHash, targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, p, localGenerateArtifact)
+		if err != nil {
+			return nil, errors.Wrap(err, "building direct image")
+		}
+		a.SourceAssertion = p.GetSourceAssertion()
+		a.PackageCacheImage = targetAssertion.Hash.PackageHash
+		return a, nil
 	}
 
 	// - If image is not set, we read a base_image. Then we will build one image from it to kick-off our build based
@@ -785,6 +831,10 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 	currentN := 0
 
 	packageDeps := !cs.Options.PackageTargetOnly
+	if generateArtifact != nil {
+		packageDeps = *generateArtifact
+	}
+
 	buildDeps := !cs.Options.NoDeps
 	buildTarget := !cs.Options.OnlyDeps
 
@@ -851,6 +901,8 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 				return nil, errors.Wrap(err, "Failed compiling "+compileSpec.GetPackage().HumanReadableString())
 			}
 
+			a.PackageCacheImage = assertion.Hash.PackageHash
+
 			Info(pkgTag, ":white_check_mark: Done")
 
 			bus.Manager.Publish(bus.EventPackagePostBuild, struct {
@@ -866,16 +918,20 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, p *compil
 	}
 
 	if buildTarget {
+		localGenerateArtifact := true
+		if generateArtifact != nil {
+			localGenerateArtifact = *generateArtifact
+		}
 		resolvedSourceImage := cs.resolveExistingImageHash(packageHashTree.SourceHash, p)
 		Info(":rocket: All dependencies are satisfied, building package requested by the user", p.GetPackage().HumanReadableString())
 		Info(":package:", p.GetPackage().HumanReadableString(), " Using image: ", resolvedSourceImage)
-		a, err := cs.compileWithImage(resolvedSourceImage, packageHashTree.BuilderImageHash, targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, p, true)
+		a, err := cs.compileWithImage(resolvedSourceImage, packageHashTree.BuilderImageHash, targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, p, localGenerateArtifact)
 		if err != nil {
 			return a, err
 		}
 		a.Dependencies = departifacts
 		a.SourceAssertion = p.GetSourceAssertion()
-
+		a.PackageCacheImage = targetAssertion.Hash.PackageHash
 		bus.Manager.Publish(bus.EventPackagePostBuild, struct {
 			CompileSpec *compilerspec.LuetCompilationSpec
 			Artifact    *artifact.PackageArtifact

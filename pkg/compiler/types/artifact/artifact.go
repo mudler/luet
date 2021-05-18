@@ -55,12 +55,13 @@ import (
 type PackageArtifact struct {
 	Path string `json:"path"`
 
-	Dependencies    []*PackageArtifact                `json:"dependencies"`
-	CompileSpec     *compilerspec.LuetCompilationSpec `json:"compilationspec"`
-	Checksums       Checksums                         `json:"checksums"`
-	SourceAssertion solver.PackagesAssertions         `json:"-"`
-	CompressionType compression.Implementation        `json:"compressiontype"`
-	Files           []string                          `json:"files"`
+	Dependencies      []*PackageArtifact                `json:"dependencies"`
+	CompileSpec       *compilerspec.LuetCompilationSpec `json:"compilationspec"`
+	Checksums         Checksums                         `json:"checksums"`
+	SourceAssertion   solver.PackagesAssertions         `json:"-"`
+	CompressionType   compression.Implementation        `json:"compressiontype"`
+	Files             []string                          `json:"files"`
+	PackageCacheImage string                            `json:"package_cacheimage"`
 }
 
 func (p *PackageArtifact) ShallowCopy() *PackageArtifact {

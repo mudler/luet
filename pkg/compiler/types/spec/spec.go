@@ -89,8 +89,8 @@ func (specs *LuetCompilationspecs) Unique() *LuetCompilationspecs {
 type CopyField struct {
 	Package     *pkg.DefaultPackage `json:"package"`
 	Image       string              `json:"image"`
-	Source      string              `json:"src"`
-	Destination string              `json:"dst"`
+	Source      string              `json:"source"`
+	Destination string              `json:"destination"`
 }
 
 type LuetCompilationSpec struct {
@@ -268,7 +268,8 @@ ADD ` + s + ` /luetbuild/`
 
 	for _, c := range cs.Copy {
 		if c.Image != "" {
-			spec = spec + fmt.Sprintf("\nCOPY --from=%s %s %s\n", c.Image, c.Source, c.Destination)
+			copyLine := fmt.Sprintf("\nCOPY --from=%s %s %s\n", c.Image, c.Source, c.Destination)
+			spec = spec + copyLine
 		}
 	}
 

@@ -1,0 +1,17 @@
+image: "alpine"
+
+copy:
+  - package:
+      name: "a"
+      category: "test"
+      version: ">=0"
+    source: /test3
+    destination: /test3
+  - image: "busybox"
+    source: /bin/busybox
+    destination: /busybox
+
+steps:
+- mkdir /bina
+- cp /test3 /result
+- cp -rf /busybox /bina/busybox
