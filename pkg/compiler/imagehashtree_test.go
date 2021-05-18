@@ -46,11 +46,14 @@ var _ = Describe("ImageHashTree", func() {
 
 			packageHash, err := hashtree.Query(compiler, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(packageHash.Target.Hash.BuildHash).To(Equal("6490e800fe443b99328fc363529aee74bda513930fb27ce6ab814d692bba068e"))
-			Expect(packageHash.Target.Hash.PackageHash).To(Equal("79d7107d13d578b362e6a7bf10ec850efce26316405b8d732ce8f9e004d64281"))
-			Expect(packageHash.BuilderImageHash).To(Equal("builder-79462b60bf899ad79db63f194a3c9c2a"))
+
+			Expect(packageHash.Target.Hash.BuildHash).To(Equal("ec62e3e2cfb4c520c8b2561797c005d248c2659295f3660fa1a66582fc4dc280"))
+			Expect(packageHash.Target.Hash.PackageHash).To(Equal("5fa15a0eb0534eaa78ef1b4e32fe72704effaa5e54399b7cab6d630aa0aeac5c"))
+			Expect(packageHash.BuilderImageHash).To(Equal("builder-96e0c42b5741376ebcf0a47c8ec1c481"))
 		})
 	})
+
+	expectedPackageHash := "bc6d354e8b9480b70c6f17eafa34cef387b8443ad150b7c9528fb7e94b764e90"
 
 	Context("complex package definition", func() {
 		BeforeEach(func() {
@@ -69,25 +72,75 @@ var _ = Describe("ImageHashTree", func() {
 			packageHash, err := hashtree.Query(compiler, spec)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(packageHash.Dependencies[len(packageHash.Dependencies)-1].Hash.PackageHash).To(Equal("c46e653125d71ee3fd696b3941ec1ed6e8a0268f896204c7a222a5aa03eb9982"))
-			Expect(packageHash.SourceHash).To(Equal("c46e653125d71ee3fd696b3941ec1ed6e8a0268f896204c7a222a5aa03eb9982"))
-			Expect(packageHash.BuilderImageHash).To(Equal("builder-37f4d05ba8a39525742ca364f69b4090"))
+			Expect(packageHash.Dependencies[len(packageHash.Dependencies)-1].Hash.PackageHash).To(Equal(expectedPackageHash))
+			Expect(packageHash.SourceHash).To(Equal(expectedPackageHash))
+			Expect(packageHash.BuilderImageHash).To(Equal("builder-9b2bc16985446c41eca8f7922ec98078"))
 
 			//Expect(packageHash.Target.Hash.BuildHash).To(Equal("79d7107d13d578b362e6a7bf10ec850efce26316405b8d732ce8f9e004d64281"))
-			Expect(packageHash.Target.Hash.PackageHash).To(Equal("bb1d9a99c0c309a297c75b436504e664a42121fadbb4e035bda403cd418117aa"))
+			Expect(packageHash.Target.Hash.PackageHash).To(Equal("bb84a30ced857725fcb575e87fe33d4aefe911abfdd5f9063bbaeb9e4b94e9e2"))
 			a := &pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.1"}
 			hash, err := packageHash.DependencyBuildImage(a)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(hash).To(Equal("79d7107d13d578b362e6a7bf10ec850efce26316405b8d732ce8f9e004d64281"))
+
+			Expect(hash).To(Equal("484f14294d96fd3b51cec1f2db37a269b7b903f3516b74b0cb0771b65d85b799"))
 
 			assertionA := packageHash.Dependencies.Search(a.GetFingerPrint())
-			Expect(assertionA.Hash.PackageHash).To(Equal("c46e653125d71ee3fd696b3941ec1ed6e8a0268f896204c7a222a5aa03eb9982"))
+			Expect(assertionA.Hash.PackageHash).To(Equal(expectedPackageHash))
 			b := &pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}
 			assertionB := packageHash.Dependencies.Search(b.GetFingerPrint())
-			Expect(assertionB.Hash.PackageHash).To(Equal("79d7107d13d578b362e6a7bf10ec850efce26316405b8d732ce8f9e004d64281"))
+			Expect(assertionB.Hash.PackageHash).To(Equal("484f14294d96fd3b51cec1f2db37a269b7b903f3516b74b0cb0771b65d85b799"))
 			hashB, err := packageHash.DependencyBuildImage(b)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(hashB).To(Equal("6490e800fe443b99328fc363529aee74bda513930fb27ce6ab814d692bba068e"))
+			Expect(hashB).To(Equal("828c983e755353190540565a29e71c9eb4c48d6303e1fd2c523235b7c2339c73"))
+		})
+	})
+
+	Context("complex package definition, with small change in build.yaml", func() {
+		BeforeEach(func() {
+			generalRecipe = tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			//Definition of A here is slightly changed in the steps build.yaml file (1 character only)
+			err := generalRecipe.Load("../../tests/fixtures/upgrade_old_repo_revision_content_changed")
+			Expect(err).ToNot(HaveOccurred())
+			compiler = NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(2))
+			hashtree = NewHashTree(generalRecipe.GetDatabase())
+
+		})
+		It("Calculates the hash correctly", func() {
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "c", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			packageHash, err := hashtree.Query(compiler, spec)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(packageHash.Dependencies[len(packageHash.Dependencies)-1].Hash.PackageHash).ToNot(Equal(expectedPackageHash))
+			sourceHash := "ed1bd90e696904982a1f51998646a335067329e1a262994b5ae15c579106ac81"
+			Expect(packageHash.Dependencies[len(packageHash.Dependencies)-1].Hash.PackageHash).To(Equal(sourceHash))
+			Expect(packageHash.SourceHash).To(Equal(sourceHash))
+			Expect(packageHash.SourceHash).ToNot(Equal(expectedPackageHash))
+
+			Expect(packageHash.BuilderImageHash).To(Equal("builder-f4b0e366e0a42774428fbdc9aa325648"))
+
+			//Expect(packageHash.Target.Hash.BuildHash).To(Equal("79d7107d13d578b362e6a7bf10ec850efce26316405b8d732ce8f9e004d64281"))
+			Expect(packageHash.Target.Hash.PackageHash).To(Equal("2618f12851a596f6801e2665e07147da98a0a151f44500a54ca8b76b869e378d"))
+			a := &pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.1"}
+			hash, err := packageHash.DependencyBuildImage(a)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(hash).To(Equal("484f14294d96fd3b51cec1f2db37a269b7b903f3516b74b0cb0771b65d85b799"))
+
+			assertionA := packageHash.Dependencies.Search(a.GetFingerPrint())
+
+			Expect(assertionA.Hash.PackageHash).To(Equal("ed1bd90e696904982a1f51998646a335067329e1a262994b5ae15c579106ac81"))
+			Expect(assertionA.Hash.PackageHash).ToNot(Equal(expectedPackageHash))
+
+			b := &pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"}
+			assertionB := packageHash.Dependencies.Search(b.GetFingerPrint())
+
+			Expect(assertionB.Hash.PackageHash).To(Equal("484f14294d96fd3b51cec1f2db37a269b7b903f3516b74b0cb0771b65d85b799"))
+			hashB, err := packageHash.DependencyBuildImage(b)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(hashB).To(Equal("828c983e755353190540565a29e71c9eb4c48d6303e1fd2c523235b7c2339c73"))
 		})
 	})
 

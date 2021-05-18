@@ -382,6 +382,9 @@ var _ = Describe("Decoder", func() {
 
 			Expect(solution.HashFrom(X)).ToNot(Equal(solution2.HashFrom(F)))
 			Expect(solution3.HashFrom(D)).To(Equal(solution.HashFrom(X)))
+			Expect(solution3.SaltedHashFrom(D, map[string]string{D.GetFingerPrint(): "foo"})).ToNot(Equal(solution3.HashFrom(D)))
+
+			Expect(solution4.SaltedHashFrom(Y, map[string]string{X.GetFingerPrint(): "foo"})).ToNot(Equal(solution4.HashFrom(Y)))
 
 			Expect(empty.AssertionHash()).ToNot(Equal(solution3.HashFrom(D)))
 			Expect(empty.AssertionHash()).ToNot(Equal(solution2.HashFrom(F)))

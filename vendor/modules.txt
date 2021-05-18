@@ -376,6 +376,9 @@ github.com/mitchellh/colorstring
 github.com/mitchellh/copystructure
 # github.com/mitchellh/hashstructure v1.0.0
 github.com/mitchellh/hashstructure
+# github.com/mitchellh/hashstructure/v2 v2.0.1
+## explicit
+github.com/mitchellh/hashstructure/v2
 # github.com/mitchellh/mapstructure v1.1.2
 github.com/mitchellh/mapstructure
 # github.com/mitchellh/reflectwalk v1.0.0

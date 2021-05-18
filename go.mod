@@ -32,6 +32,7 @@ require (
 	github.com/kyokomi/emoji v2.1.0+incompatible
 	github.com/logrusorgru/aurora v0.0.0-20190417123914-21d75270181e
 	github.com/marcsauter/single v0.0.0-20181104081128-f8bf46f26ec0
+	github.com/mitchellh/hashstructure/v2 v2.0.1
 	github.com/moby/buildkit v0.7.2
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d

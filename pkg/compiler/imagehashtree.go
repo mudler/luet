@@ -109,13 +109,29 @@ func (ht *ImageHashTree) resolve(cs *LuetCompiler, p *compilerspec.LuetCompilati
 		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().HumanReadableString())
 	}
 
+	// Get hash from buildpsecs
+	salts := map[string]string{}
+	for _, assertion := range dependencies { //highly dependent on the order
+		if assertion.Value {
+			spec, err := cs.FromPackage(assertion.Package)
+			if err != nil {
+				return nil, errors.Wrap(err, "while computing hash buildspecs")
+			}
+			hash, err := spec.Hash()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed computing hash")
+			}
+			salts[assertion.Package.GetFingerPrint()] = hash
+		}
+	}
+
 	assertions := solver.PackagesAssertions{}
 	for _, assertion := range dependencies { //highly dependent on the order
 		if assertion.Value {
 			nthsolution := dependencies.Cut(assertion.Package)
 			assertion.Hash = solver.PackageHash{
-				BuildHash:   nthsolution.HashFrom(assertion.Package),
-				PackageHash: nthsolution.AssertionHash(),
+				BuildHash:   nthsolution.SaltedHashFrom(assertion.Package, salts),
+				PackageHash: nthsolution.SaltedAssertionHash(salts),
 			}
 			assertion.Package.SetTreeDir(p.Package.GetTreeDir())
 			assertions = append(assertions, assertion)

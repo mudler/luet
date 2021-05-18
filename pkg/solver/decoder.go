@@ -260,24 +260,42 @@ func (a PackagesAssertions) TrueLen() int {
 // and checks it's not the only one. if it's unique it marks it specially - so the hash
 // which is generated is unique for the selected package
 func (assertions PackagesAssertions) HashFrom(p pkg.Package) string {
+	return assertions.SaltedHashFrom(p, map[string]string{})
+}
 
+func (assertions PackagesAssertions) AssertionHash() string {
+	return assertions.SaltedAssertionHash(map[string]string{})
+}
+
+func (assertions PackagesAssertions) SaltedHashFrom(p pkg.Package, salts map[string]string) string {
 	var assertionhash string
 
 	// When we don't have any solution to hash for, we need to generate an UUID by ourselves
 	latestsolution := assertions.Drop(p)
 	if latestsolution.TrueLen() == 0 {
-		assertionhash = assertions.Mark(p).AssertionHash()
+		// Preserve the hash if supplied of marked packages
+		marked := p.Mark()
+		if markedHash, exists := salts[p.GetFingerPrint()]; exists {
+			salts[marked.GetFingerPrint()] = markedHash
+		}
+		assertionhash = assertions.Mark(p).SaltedAssertionHash(salts)
 	} else {
-		assertionhash = latestsolution.AssertionHash()
+		assertionhash = latestsolution.SaltedAssertionHash(salts)
 	}
 	return assertionhash
 }
 
-func (assertions PackagesAssertions) AssertionHash() string {
+func (assertions PackagesAssertions) SaltedAssertionHash(salts map[string]string) string {
 	var fingerprint string
 	for _, assertion := range assertions { // Note: Always order them first!
 		if assertion.Value { // Tke into account only dependencies installed (get fingerprint of subgraph)
-			fingerprint += assertion.ToString() + "\n"
+			salt, exists := salts[assertion.Package.GetFingerPrint()]
+			if exists {
+				fingerprint += assertion.ToString() + salt + "\n"
+
+			} else {
+				fingerprint += assertion.ToString() + "\n"
+			}
 		}
 	}
 	hash := sha256.Sum256([]byte(fingerprint))
@@ -316,8 +334,7 @@ func (assertions PackagesAssertions) Mark(p pkg.Package) PackagesAssertions {
 
 	for _, a := range assertions {
 		if a.Package.Matches(p) {
-			marked := a.Package.Clone()
-			marked.SetName("@@" + marked.GetName())
+			marked := a.Package.Mark()
 			a = PackageAssert{Package: marked.(*pkg.DefaultPackage), Value: a.Value, Hash: a.Hash}
 		}
 		ass = append(ass, a)

@@ -118,6 +118,8 @@ type Package interface {
 	SetTreeDir(s string)
 	GetTreeDir() string
 
+	Mark() Package
+
 	JSON() ([]byte, error)
 }
 
@@ -490,6 +492,12 @@ func (p *DefaultPackage) Matches(m Package) bool {
 		return true
 	}
 	return false
+}
+
+func (p *DefaultPackage) Mark() Package {
+	marked := p.Clone()
+	marked.SetName("@@" + marked.GetName())
+	return marked
 }
 
 func (p *DefaultPackage) Expand(definitiondb PackageDatabase) (Packages, error) {

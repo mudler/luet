@@ -51,9 +51,9 @@ testBuild() {
     assertTrue 'create package' "[ -e '$tmpdir/testbuild/c-test-1.0.package.tar.zst' ]"
     assertTrue 'create package Z' "[ -e '$tmpdir/testbuild/z-test-1.0+2.package.tar.zst' ]"
     assertTrue 'create package interpolated' "[ -e '$tmpdir/testbuild/interpolated-test-1.0+2.package.tar.zst' ]"
-    assertContains 'Does use the upstream cache without specifying it test/c' "$build_output" "Images available for test/c-1.0 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:d620e573c81eab36a9dc5cc314e80fd7b6e04aeff26127de4225bf24fe1f8e71"
-    assertContains 'Does use the upstream cache without specifying it test/z' "$build_output" "Images available for test/z-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:b0f34b0d2d271f0f2619324476b2857b3b39ca895bddc2474a741f3c8c1acbbc"
-    assertContains 'Does use the upstream cache without specifying it test/interpolated' "$build_output" "Images available for test/interpolated-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:c1f11f48113cd71d8795a06c7b49e1558bd7211d2aa88f5d79a3334f0393c64d"
+    assertContains 'Does use the upstream cache without specifying it test/c' "$build_output" "Images available for test/c-1.0 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:7dd6062f45e78c1fe36d0f48fc21bc8c8219edfc9759f117527677a15ae42717"
+    assertContains 'Does use the upstream cache without specifying it test/z' "$build_output" "Images available for test/z-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:2338dc4dc4b3d9657eb26597ad79569fe60f5529dd05676df266ad982ba2b1ba"
+    assertContains 'Does use the upstream cache without specifying it test/interpolated' "$build_output" "Images available for test/interpolated-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:2edc4b6f8fc08a0fc958132dfcf2813e1ab220c2bbf60b988f1039082d61ff3e"
 }
 
 testRepo() {

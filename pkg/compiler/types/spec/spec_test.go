@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
+	options "github.com/mudler/luet/pkg/compiler/types/options"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 
 	. "github.com/mudler/luet/pkg/compiler"
@@ -71,6 +72,62 @@ var _ = Describe("Spec", func() {
 					Expect(spec.IsVirtual()).To(BeFalse())
 				})
 			})
+		})
+	})
+
+	Context("Image hashing", func() {
+		It("is stable", func() {
+			spec1 := &compilerspec.LuetCompilationSpec{
+				Image:        "foo",
+				BuildOptions: &options.Compiler{BuildValues: []map[string]interface{}{{"foo": "bar", "baz": true}}},
+
+				Package: &pkg.DefaultPackage{
+					Name:     "foo",
+					Category: "Bar",
+					Labels: map[string]string{
+						"foo": "bar",
+						"baz": "foo",
+					},
+				},
+			}
+			spec2 := &compilerspec.LuetCompilationSpec{
+				Image:        "foo",
+				BuildOptions: &options.Compiler{BuildValues: []map[string]interface{}{{"foo": "bar", "baz": true}}},
+				Package: &pkg.DefaultPackage{
+					Name:     "foo",
+					Category: "Bar",
+					Labels: map[string]string{
+						"foo": "bar",
+						"baz": "foo",
+					},
+				},
+			}
+			spec3 := &compilerspec.LuetCompilationSpec{
+				Image: "foo",
+				Steps: []string{"foo"},
+				Package: &pkg.DefaultPackage{
+					Name:     "foo",
+					Category: "Bar",
+					Labels: map[string]string{
+						"foo": "bar",
+						"baz": "foo",
+					},
+				},
+			}
+			hash, err := spec1.Hash()
+			Expect(err).ToNot(HaveOccurred())
+
+			hash2, err := spec2.Hash()
+			Expect(err).ToNot(HaveOccurred())
+
+			hash3, err := spec3.Hash()
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(hash).To(Equal(hash2))
+			hashagain, err := spec2.Hash()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(hash).ToNot(Equal(hash3))
+			Expect(hash).To(Equal(hashagain))
 		})
 	})
 

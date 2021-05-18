@@ -45,7 +45,7 @@ EOF
     mkdir $tmpdir/testbuild
     mkdir $tmpdir/empty
 
-    # With --rebuild, the package gets ignored
+    # Without --rebuild, the package gets ignored
     build_output=$(luet build --pull --tree "$tmpdir/empty" \
     --config $tmpdir/luet.yaml --values $tmpdir/default.yaml --concurrency 1 \
     --from-repositories --destination $tmpdir/testbuild --compression zstd test/c@1.0 test/z test/interpolated)
@@ -56,7 +56,8 @@ EOF
     assertTrue 'create package' "[ -e '$tmpdir/testbuild/c-test-1.0.package.tar.zst' ]"
     assertTrue 'create package Z' "[ -e '$tmpdir/testbuild/z-test-1.0+2.package.tar.zst' ]"
     assertTrue 'create package interpolated' "[ -e '$tmpdir/testbuild/interpolated-test-1.0+2.package.tar.zst' ]"
-    assertContains 'Does use the upstream cache without specifying it' "$build_output" "Images available for test/interpolated-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:c1f11f48113cd71d8795a06c7b49e1558bd7211d2aa88f5d79a3334f0393c64d"
+    assertNotContains 'Does NOT use the upstream cache without specifying it' "$build_output" "Images available for test/interpolated-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:2edc4b6f8fc08a0fc958132dfcf2813e1ab220c2bbf60b988f1039082d61ff3e"
+    assertContains 'Does generate a new hash as values changed build.yaml' "$build_output" "Building image luet/cache:a249d16764168baf32b592dc05c33e499fa3685edda72dfb188a51191709de5a done"
 }
 
 testRepo() {
@@ -113,7 +114,7 @@ testInstall() {
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/c' ]"
     assertTrue 'package Z installed' "[ -e '$tmpdir/testrootfs/z' ]"
     ls -liah $tmpdir/testrootfs/
-    assertTrue 'package interpolated installed' "[ -e '$tmpdir/testrootfs/interpolated-baz-bar' ]"
+    assertTrue 'package interpolated installed' "[ -e '$tmpdir/testrootfs/interpolated-baz-an' ]"
 }
 
 testReInstall() {
