@@ -40,13 +40,13 @@ var _ = Describe("Checksum", func() {
 			Expect(len(definitionsum)).To(Equal(0))
 			Expect(len(definitionsum2)).To(Equal(0))
 
-			err = buildsum.Generate(NewPackageArtifact("../../tests/fixtures/layers/alpine/build.yaml"))
+			err = buildsum.Generate(NewPackageArtifact("../../../../tests/fixtures/layers/alpine/build.yaml"))
 			Expect(err).ToNot(HaveOccurred())
 
-			err = definitionsum.Generate(NewPackageArtifact("../../tests/fixtures/layers/alpine/definition.yaml"))
+			err = definitionsum.Generate(NewPackageArtifact("../../../../tests/fixtures/layers/alpine/definition.yaml"))
 			Expect(err).ToNot(HaveOccurred())
 
-			err = definitionsum2.Generate(NewPackageArtifact("../../tests/fixtures/layers/alpine/definition.yaml"))
+			err = definitionsum2.Generate(NewPackageArtifact("../../../../tests/fixtures/layers/alpine/definition.yaml"))
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(len(buildsum)).To(Equal(1))

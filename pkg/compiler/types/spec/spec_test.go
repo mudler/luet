@@ -78,7 +78,7 @@ var _ = Describe("Spec", func() {
 		It("Loads it correctly", func() {
 			generalRecipe := tree.NewGeneralRecipe(pkg.NewInMemoryDatabase(false))
 
-			err := generalRecipe.Load("../../tests/fixtures/buildtree")
+			err := generalRecipe.Load("../../../../tests/fixtures/buildtree")
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
@@ -130,7 +130,7 @@ RUN echo bar > /test2`))
 	It("Renders retrieve and env fields", func() {
 		generalRecipe := tree.NewGeneralRecipe(pkg.NewInMemoryDatabase(false))
 
-		err := generalRecipe.Load("../../tests/fixtures/retrieve")
+		err := generalRecipe.Load("../../../../tests/fixtures/retrieve")
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
