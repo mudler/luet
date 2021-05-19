@@ -96,9 +96,14 @@ func NewTreeImageCommand() *cobra.Command {
 			if err != nil {
 				Fatal("Error: " + err.Error())
 			}
-			asserts, err := luetCompiler.ComputeDepTree(spec)
 
-			for _, assertion := range asserts { //highly dependent on the order
+			ht := compiler.NewHashTree(reciper.GetDatabase())
+			hashtree, err := ht.Query(luetCompiler, spec)
+			if err != nil {
+				Fatal("Error: " + err.Error())
+			}
+
+			for _, assertion := range hashtree.Solution { //highly dependent on the order
 
 				//buildImageHash := imageRepository + ":" + assertion.Hash.BuildHash
 				currentPackageImageHash := imageRepository + ":" + assertion.Hash.PackageHash
