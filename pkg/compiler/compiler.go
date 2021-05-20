@@ -603,12 +603,24 @@ func (cs *LuetCompiler) compileWithImage(image, builderHash string, packageTagHa
 		Debug("Checking if an image is already available")
 		// FIXUP here. If packageimage hash exists and pull is true, generate package
 		resolved := cs.resolveExistingImageHash(packageTagHash, p)
+		Debug("Resolved: " + resolved)
+		Debug("Expected remote: " + resolved)
+		Debug("Package image: " + packageImage)
+		Debug("Resolved builder image: " + builderResolved)
 
-		//
-		if resolved != packageImage && remoteBuildertaggedImage != builderResolved { // an image is there already
-			Debug("Images available for", p.Package.HumanReadableString(), "generating artifact from remote images:", resolved)
+		// a remote image is there already
+		remoteImageAvailable := resolved != packageImage && remoteBuildertaggedImage != builderResolved
+		// or a local one is available
+		localImageAvailable := cs.Backend.ImageExists(remoteBuildertaggedImage) && cs.Backend.ImageExists(packageImage)
+
+		switch {
+		case remoteImageAvailable:
+			Debug("Images available remotely for", p.Package.HumanReadableString(), "generating artifact from remote images:", resolved)
 			return cs.genArtifact(p, backend.Options{ImageName: builderResolved}, backend.Options{ImageName: resolved}, concurrency, keepPermissions)
-		} else {
+		case localImageAvailable:
+			Debug("Images locally available for", p.Package.HumanReadableString(), "generating artifact from image:", resolved)
+			return cs.genArtifact(p, backend.Options{ImageName: remoteBuildertaggedImage}, backend.Options{ImageName: packageImage}, concurrency, keepPermissions)
+		default:
 			Debug("Images not available for", p.Package.HumanReadableString())
 		}
 	}
