@@ -56,7 +56,7 @@ EOF
     assertTrue 'create package' "[ -e '$tmpdir/testbuild/c-test-1.0.package.tar.zst' ]"
     assertTrue 'create package Z' "[ -e '$tmpdir/testbuild/z-test-1.0+2.package.tar.zst' ]"
     assertTrue 'create package interpolated' "[ -e '$tmpdir/testbuild/interpolated-test-1.0+2.package.tar.zst' ]"
-    assertNotContains 'Does NOT use the upstream cache without specifying it' "$build_output" "Images available for test/interpolated-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:2edc4b6f8fc08a0fc958132dfcf2813e1ab220c2bbf60b988f1039082d61ff3e"
+    assertNotContains 'Does NOT use the upstream cache without specifying it' "$build_output" "Images available remotely for test/interpolated-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:2edc4b6f8fc08a0fc958132dfcf2813e1ab220c2bbf60b988f1039082d61ff3e"
     assertContains 'Does generate a new hash as values changed build.yaml' "$build_output" "Building image luet/cache:a249d16764168baf32b592dc05c33e499fa3685edda72dfb188a51191709de5a done"
 }
 
