@@ -1,0 +1,10 @@
+join:
+- category: "test"
+  name: "f"
+  version: ">=0"
+# this is actually a virtual, no files shipped in c
+- category: "test"
+  name: "c"
+  version: ">=0"
+steps:
+- mv /newnewc /x

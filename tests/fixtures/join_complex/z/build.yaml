@@ -1,0 +1,6 @@
+requires:
+- category: "test"
+  name: "c"
+  version: ">=0"
+steps:
+- mv /newnewc /z

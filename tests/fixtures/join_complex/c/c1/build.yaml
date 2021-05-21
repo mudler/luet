@@ -1,0 +1,7 @@
+join:
+  - name: "a"
+    category: "test"
+    version: ">=0"
+  - name: "b"
+    category: "test"
+    version: ">=0"

@@ -987,6 +987,14 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateA
 				Assert:      assertion,
 			})
 
+			if err := cs.resolveJoinImages(concurrency, keepPermissions, compileSpec); err != nil {
+				return nil, errors.Wrap(err, "while resolving join images")
+			}
+
+			if err := cs.resolveMultiStageImages(concurrency, keepPermissions, compileSpec); err != nil {
+				return nil, errors.Wrap(err, "while resolving multi-stage images")
+			}
+
 			buildHash, err := packageHashTree.DependencyBuildImage(assertion.Package)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed looking for dependency in hashtree")
