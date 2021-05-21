@@ -1,0 +1,7 @@
+image: "alpine"
+prelude:
+  - echo foo > /test
+  - echo bar > /test2
+steps:
+  - echo artifact3 > /test3
+  - echo artifact4 > /test4

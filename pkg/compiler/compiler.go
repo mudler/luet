@@ -16,7 +16,9 @@
 package compiler
 
 import (
+	"crypto/md5"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -506,7 +508,7 @@ func oneOfImagesAvailable(images []string, b CompilerBackend) (bool, string) {
 	return false, ""
 }
 
-func (cs *LuetCompiler) resolveExistingImageHash(imageHash string, p *compilerspec.LuetCompilationSpec) string {
+func (cs *LuetCompiler) findImageHash(imageHash string, p *compilerspec.LuetCompilationSpec) string {
 	var resolvedImage string
 	Debug("Resolving image hash for", p.Package.HumanReadableString(), "hash", imageHash, "Pull repositories", p.BuildOptions.PullImageRepository)
 	toChecklist := append([]string{fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, imageHash)},
@@ -519,6 +521,11 @@ func (cs *LuetCompiler) resolveExistingImageHash(imageHash string, p *compilersp
 			resolvedImage = which
 		}
 	}
+	return resolvedImage
+}
+
+func (cs *LuetCompiler) resolveExistingImageHash(imageHash string, p *compilerspec.LuetCompilationSpec) string {
+	resolvedImage := cs.findImageHash(imageHash, p)
 
 	if resolvedImage == "" {
 		resolvedImage = fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, imageHash)
@@ -745,6 +752,102 @@ func (cs *LuetCompiler) inheritSpecBuildOptions(p *compilerspec.LuetCompilationS
 	Debug(p.GetPackage().HumanReadableString(), "Build options after inherit", p.BuildOptions)
 }
 
+func (cs *LuetCompiler) getSpecHash(pkgs pkg.DefaultPackages, salt string) (string, error) {
+	ht := NewHashTree(cs.Database)
+	overallFp := ""
+
+	for _, p := range pkgs {
+		compileSpec, err := cs.FromPackage(p)
+		if err != nil {
+			return "", errors.Wrap(err, "Error while generating compilespec for "+p.GetName())
+		}
+		packageHashTree, err := ht.Query(cs, compileSpec)
+		if err != nil {
+			return "nil", errors.Wrap(err, "failed querying hashtree")
+		}
+		overallFp = overallFp + packageHashTree.Target.Hash.PackageHash + p.GetFingerPrint()
+	}
+
+	h := md5.New()
+	io.WriteString(h, fmt.Sprintf("%s-%s", overallFp, salt))
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) error {
+	if len(p.Join) != 0 {
+		Info("Generating a joint parent image from final packages")
+	} else {
+		return nil
+	}
+
+	// First compute a hash and check if image is available. if it is, then directly consume that
+	overallFp, err := cs.getSpecHash(p.Join, "join")
+	if err != nil {
+		return errors.Wrap(err, "could not generate image hash")
+	}
+	image := cs.findImageHash(overallFp, p)
+	if image != "" {
+		Info("Image already found", image)
+		p.SetImage(image)
+		return nil
+	}
+	Info("Generating image with hash ", image)
+
+	// otherwise, generate it and push it aside
+	joinDir, err := ioutil.TempDir(p.GetOutputPath(), "join")
+	if err != nil {
+		return errors.Wrap(err, "Could not create tempdir")
+	}
+	defer os.RemoveAll(joinDir) // clean up
+
+	for _, c := range p.Join {
+		if c != nil && c.Name != "" && c.Version != "" {
+			Info(" :droplet: generating", c.HumanReadableString())
+			spec, err := cs.FromPackage(c)
+			if err != nil {
+				return errors.Wrap(err, "while generating images to join from")
+			}
+			wantsArtifact := true
+			artifact, err := cs.compile(concurrency, keepPermissions, &wantsArtifact, spec)
+			if err != nil {
+				return errors.Wrap(err, "failed building join image")
+			}
+
+			err = artifact.Unpack(joinDir, keepPermissions)
+			if err != nil {
+				return errors.Wrap(err, "failed building join image")
+			}
+		}
+	}
+
+	artifactDir, err := ioutil.TempDir(p.GetOutputPath(), "artifact")
+	if err != nil {
+		return errors.Wrap(err, "Could not create tempdir")
+	}
+	defer os.RemoveAll(joinDir) // clean up
+
+	// After unpack, create a new artifact and a new final image from it.
+	// no need to compress, as we are going to toss it away.
+	a := artifact.NewPackageArtifact(filepath.Join(artifactDir, p.GetPackage().GetFingerPrint()+".join.tar"))
+	if err := a.Compress(joinDir, concurrency); err != nil {
+		return errors.Wrap(err, "Error met while creating package archive")
+	}
+
+	joinImageName := fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, overallFp)
+	opts, err := a.GenerateFinalImage(joinImageName, cs.Backend, keepPermissions)
+	if err != nil {
+		return errors.Wrap(err, "Could not create tempdir")
+	}
+	if cs.Options.Push {
+		if err = cs.Backend.Push(opts); err != nil {
+			return errors.Wrapf(err, "Could not push image: %s %s", image, opts.DockerFileName)
+		}
+	}
+	Info("Using image ", joinImageName)
+	p.SetImage(joinImageName)
+	return nil
+}
+
 func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) error {
 	resolvedCopyFields := []compilerspec.CopyField{}
 	if len(p.Copy) != 0 {
@@ -779,6 +882,12 @@ func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions
 
 func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateArtifact *bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
 	Info(":package: Compiling", p.GetPackage().HumanReadableString(), ".... :coffee:")
+
+	//Before multistage : join - same as multistage, but keep artifacts, join them, create a new one and generate a final image.
+	// When the image is there, use it as a source here, in place of GetImage().
+	if err := cs.resolveJoinImages(concurrency, keepPermissions, p); err != nil {
+		return nil, errors.Wrap(err, "while resolving join images")
+	}
 
 	if err := cs.resolveMultiStageImages(concurrency, keepPermissions, p); err != nil {
 		return nil, errors.Wrap(err, "while resolving multi-stage images")

@@ -25,11 +25,22 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ImageHashTree is holding the Database
+// and the options to resolve PackageImageHashTrees
+// for a given specfile
+// It is responsible of returning a concrete result
+// which identifies a Package in a HashTree
 type ImageHashTree struct {
 	Database      pkg.PackageDatabase
 	SolverOptions config.LuetSolverOptions
 }
 
+// PackageImageHashTree represent the Package into a given image hash tree
+// The hash tree is constructed by a set of images representing
+// the package during its build stage. A Hash is assigned to each image
+// from the package fingerprint, plus the SAT solver assertion result (which is hashed as well)
+// and the specfile signatures. This guarantees that each image of the build stage
+// is unique and can be identified later on.
 type PackageImageHashTree struct {
 	Target                       *solver.PackageAssert
 	Dependencies                 solver.PackagesAssertions
@@ -53,11 +64,19 @@ func (ht *PackageImageHashTree) DependencyBuildImage(p pkg.Package) (string, err
 	return found, nil
 }
 
-// TODO: ___ When computing the hash per package (and evaluating the sat solver solution tree part)
-// we should use the hash of each package  + its fingerprint  instead as a salt.
-// That's because the hash will be salted with its `build.yaml`.
-// In this way, we trigger recompilations if some dep of a target changes
-// a build.yaml, without touching the version
+func (ht *PackageImageHashTree) String() string {
+	return fmt.Sprintf(
+		"Target buildhash: %s\nTarget packagehash: %s\nBuilder Imagehash: %s\nSource Imagehash: %s\n",
+		ht.Target.Hash.BuildHash,
+		ht.Target.Hash.PackageHash,
+		ht.BuilderImageHash,
+		ht.SourceHash,
+	)
+}
+
+// Query takes a compiler and a compilation spec and returns a PackageImageHashTree tied to it.
+// PackageImageHashTree contains all the informations to resolve the spec build images in order to
+// reproducibly re-build images from packages
 func (ht *ImageHashTree) Query(cs *LuetCompiler, p *compilerspec.LuetCompilationSpec) (*PackageImageHashTree, error) {
 	assertions, err := ht.resolve(cs, p)
 	if err != nil {

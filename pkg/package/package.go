@@ -133,6 +133,19 @@ type Tree interface {
 
 type Packages []Package
 
+type DefaultPackages []*DefaultPackage
+
+func (d DefaultPackages) Hash(salt string) string {
+
+	overallFp := ""
+	for _, c := range d {
+		overallFp = overallFp + c.HashFingerprint("join")
+	}
+	h := md5.New()
+	io.WriteString(h, fmt.Sprintf("%s-%s", overallFp, salt))
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
 // >> Unmarshallers
 // DefaultPackageFromYaml decodes a package from yaml bytes
 func DefaultPackageFromYaml(yml []byte) (DefaultPackage, error) {

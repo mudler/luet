@@ -114,6 +114,41 @@ type LuetCompilationSpec struct {
 	BuildOptions *options.Compiler `json:"build_options"`
 
 	Copy []CopyField `json:"copy"`
+
+	Join pkg.DefaultPackages `json:"join"`
+}
+
+// Signature is a portion of the spec that yields a signature for the hash
+type Signature struct {
+	Image      string
+	Steps      []string
+	PackageDir string
+	Prelude    []string
+	Seed       string
+	Env        []string
+	Retrieve   []string
+	Unpack     bool
+	Includes   []string
+	Excludes   []string
+	Copy       []CopyField
+	Join       pkg.DefaultPackages
+}
+
+func (cs *LuetCompilationSpec) signature() Signature {
+	return Signature{
+		Image:      cs.Image,
+		Steps:      cs.Steps,
+		PackageDir: cs.PackageDir,
+		Prelude:    cs.Prelude,
+		Seed:       cs.Seed,
+		Env:        cs.Env,
+		Retrieve:   cs.Retrieve,
+		Unpack:     cs.Unpack,
+		Includes:   cs.Includes,
+		Excludes:   cs.Excludes,
+		Copy:       cs.Copy,
+		Join:       cs.Join,
+	}
 }
 
 func NewLuetCompilationSpec(b []byte, p pkg.Package) (*LuetCompilationSpec, error) {
@@ -224,38 +259,7 @@ func (cs *LuetCompilationSpec) UnpackedPackage() bool {
 // a compilation spec has an image source when it depends on other packages or have a source image
 // explictly supplied
 func (cs *LuetCompilationSpec) HasImageSource() bool {
-	return (cs.Package != nil && len(cs.GetPackage().GetRequires()) != 0) || cs.GetImage() != ""
-}
-
-// Signature is a portion of the spec that yields a signature for the hash
-type Signature struct {
-	Image      string
-	Steps      []string
-	PackageDir string
-	Prelude    []string
-	Seed       string
-	Env        []string
-	Retrieve   []string
-	Unpack     bool
-	Includes   []string
-	Excludes   []string
-	Copy       []CopyField
-}
-
-func (cs *LuetCompilationSpec) signature() Signature {
-	return Signature{
-		Image:      cs.Image,
-		Steps:      cs.Steps,
-		PackageDir: cs.PackageDir,
-		Prelude:    cs.Prelude,
-		Seed:       cs.Seed,
-		Env:        cs.Env,
-		Retrieve:   cs.Retrieve,
-		Unpack:     cs.Unpack,
-		Includes:   cs.Includes,
-		Excludes:   cs.Excludes,
-		Copy:       cs.Copy,
-	}
+	return (cs.Package != nil && len(cs.GetPackage().GetRequires()) != 0) || cs.GetImage() != "" || len(cs.Join) != 0
 }
 
 func (cs *LuetCompilationSpec) Hash() (string, error) {

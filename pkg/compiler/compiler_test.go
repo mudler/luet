@@ -75,6 +75,68 @@ var _ = Describe("Compiler", func() {
 		})
 	})
 
+	Context("Copy and Join", func() {
+		It("Compiles it correctly with Copy", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err := generalRecipe.Load("../../tests/fixtures/copy")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(2))
+
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "c", Category: "test", Version: "1.2"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			spec.SetOutputPath(tmpdir)
+
+			artifact, err := compiler.Compile(false, spec)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
+
+			Expect(helpers.Exists(spec.Rel("result"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("bina/busybox"))).To(BeTrue())
+		})
+
+		It("Compiles it correctly with Join", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err := generalRecipe.Load("../../tests/fixtures/join")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(2))
+
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "c", Category: "test", Version: "1.2"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			spec.SetOutputPath(tmpdir)
+
+			artifact, err := compiler.Compile(false, spec)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
+			Expect(helpers.Exists(spec.Rel("newc"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("test4"))).To(BeTrue())
+			Expect(helpers.Exists(spec.Rel("test3"))).To(BeTrue())
+		})
+	})
+
 	Context("Simple package build definition", func() {
 		It("Compiles it in parallel", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
