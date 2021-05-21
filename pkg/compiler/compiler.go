@@ -793,10 +793,15 @@ func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool,
 	}
 	Info("Generating image with hash ", image)
 
+	// Make sure there is an output path
+	if err := os.MkdirAll(p.GetOutputPath(), os.ModePerm); err != nil {
+		return errors.Wrap(err, "while creating output path")
+	}
+
 	// otherwise, generate it and push it aside
 	joinDir, err := ioutil.TempDir(p.GetOutputPath(), "join")
 	if err != nil {
-		return errors.Wrap(err, "Could not create tempdir")
+		return errors.Wrap(err, "could not create tempdir for joining images")
 	}
 	defer os.RemoveAll(joinDir) // clean up
 
@@ -822,7 +827,7 @@ func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool,
 
 	artifactDir, err := ioutil.TempDir(p.GetOutputPath(), "artifact")
 	if err != nil {
-		return errors.Wrap(err, "Could not create tempdir")
+		return errors.Wrap(err, "could not create tempdir for final artifact")
 	}
 	defer os.RemoveAll(joinDir) // clean up
 
@@ -830,13 +835,13 @@ func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool,
 	// no need to compress, as we are going to toss it away.
 	a := artifact.NewPackageArtifact(filepath.Join(artifactDir, p.GetPackage().GetFingerPrint()+".join.tar"))
 	if err := a.Compress(joinDir, concurrency); err != nil {
-		return errors.Wrap(err, "Error met while creating package archive")
+		return errors.Wrap(err, "error met while creating package archive")
 	}
 
 	joinImageName := fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, overallFp)
 	opts, err := a.GenerateFinalImage(joinImageName, cs.Backend, keepPermissions)
 	if err != nil {
-		return errors.Wrap(err, "Could not create tempdir")
+		return errors.Wrap(err, "could not create final image")
 	}
 	if cs.Options.Push {
 		if err = cs.Backend.Push(opts); err != nil {
