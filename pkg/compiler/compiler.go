@@ -791,7 +791,7 @@ func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool,
 		p.SetImage(image)
 		return nil
 	}
-	Info("Generating image with hash ", image)
+	Info("Generating image with hash ", overallFp)
 
 	// Make sure there is an output path
 	if err := os.MkdirAll(p.GetOutputPath(), os.ModePerm); err != nil {
