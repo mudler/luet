@@ -813,6 +813,8 @@ func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool,
 				return errors.Wrap(err, "while generating images to join from")
 			}
 			wantsArtifact := true
+			spec.SetOutputPath(p.GetOutputPath())
+
 			artifact, err := cs.compile(concurrency, keepPermissions, &wantsArtifact, spec)
 			if err != nil {
 				return errors.Wrap(err, "failed building join image")
@@ -866,6 +868,7 @@ func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions
 				return errors.Wrap(err, "while generating images to copy from")
 			}
 			noArtifact := false
+			spec.SetOutputPath(p.GetOutputPath())
 			artifact, err := cs.compile(concurrency, keepPermissions, &noArtifact, spec)
 
 			if err != nil {
