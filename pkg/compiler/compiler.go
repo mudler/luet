@@ -885,9 +885,9 @@ func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions
 	// TODO: we should run this only if we are going to build the image
 	for _, c := range p.Copy {
 		current++
-		copyTag2 := fmt.Sprintf("%s %d/%d ⤑ :hammer: build %s", copyTag, current, len(p.Join)-1, c.Package.HumanReadableString())
-
 		if c.Package != nil && c.Package.Name != "" && c.Package.Version != "" {
+			copyTag2 := fmt.Sprintf("%s %d/%d ⤑ :hammer: build %s", copyTag, current, len(p.Copy), c.Package.HumanReadableString())
+
 			Info(copyTag2, "generating multi-stage images for", c.Package.HumanReadableString())
 			spec, err := cs.FromPackage(c.Package)
 			if err != nil {
@@ -898,7 +898,6 @@ func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions
 			genArtifact := !cs.Options.PackageTargetOnly
 			spec.SetOutputPath(p.GetOutputPath())
 			artifact, err := cs.compile(concurrency, keepPermissions, &genArtifact, spec)
-
 			if err != nil {
 				return errors.Wrap(err, "failed building multi-stage image")
 			}
