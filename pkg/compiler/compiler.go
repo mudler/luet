@@ -857,28 +857,38 @@ func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool,
 	}
 
 	joinImageName := fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, overallFp)
+	Info(joinTag, ":droplet: generating image from artifact", joinImageName)
 	opts, err := a.GenerateFinalImage(joinImageName, cs.Backend, keepPermissions)
 	if err != nil {
 		return errors.Wrap(err, "could not create final image")
 	}
 	if cs.Options.Push {
+		Info(joinTag, ":droplet: pushing image from artifact", joinImageName)
 		if err = cs.Backend.Push(opts); err != nil {
 			return errors.Wrapf(err, "Could not push image: %s %s", image, opts.DockerFileName)
 		}
 	}
-	Info("Using image ", joinImageName)
+	Info(joinTag, ":droplet: Consuming image", joinImageName)
 	p.SetImage(joinImageName)
 	return nil
 }
 
 func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) error {
 	resolvedCopyFields := []compilerspec.CopyField{}
+	copyTag := ">:droplet: copy<"
+
 	if len(p.Copy) != 0 {
-		Info("Package has multi-stage copy, generating required images")
+		Info(copyTag, "Package has multi-stage copy, generating required images")
 	}
+
+	current := 0
+	// TODO: we should run this only if we are going to build the image
 	for _, c := range p.Copy {
+		current++
+		copyTag2 := fmt.Sprintf("%s %d/%d ⤑ :hammer: build %s", copyTag, current, len(p.Join)-1, c.Package.HumanReadableString())
+
 		if c.Package != nil && c.Package.Name != "" && c.Package.Version != "" {
-			Info(" :droplet: generating multi-stage images for", c.Package.HumanReadableString())
+			Info(copyTag2, "generating multi-stage images for", c.Package.HumanReadableString())
 			spec, err := cs.FromPackage(c.Package)
 			if err != nil {
 				return errors.Wrap(err, "while generating images to copy from")
@@ -887,7 +897,7 @@ func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions
 			// If we specify --only-target package, we don't want any artifact, otherwise we do
 			genArtifact := !cs.Options.PackageTargetOnly
 			spec.SetOutputPath(p.GetOutputPath())
-			artifact, err := cs.compile(concurrency, keepPermissions, &noArtifact, spec)
+			artifact, err := cs.compile(concurrency, keepPermissions, &genArtifact, spec)
 
 			if err != nil {
 				return errors.Wrap(err, "failed building multi-stage image")
@@ -898,6 +908,7 @@ func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions
 				Source:      c.Source,
 				Destination: c.Destination,
 			})
+			Info(copyTag2, ":white_check_mark: Done")
 		} else {
 			resolvedCopyFields = append(resolvedCopyFields, c)
 		}
@@ -959,11 +970,13 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateA
 		if generateArtifact != nil {
 			localGenerateArtifact = *generateArtifact
 		}
+
 		a, err := cs.compileWithImage(p.GetImage(), packageHashTree.BuilderImageHash, targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, p, localGenerateArtifact)
 		if err != nil {
 			return nil, errors.Wrap(err, "building direct image")
 		}
 		a.SourceAssertion = p.GetSourceAssertion()
+
 		a.PackageCacheImage = targetAssertion.Hash.PackageHash
 		return a, nil
 	}
