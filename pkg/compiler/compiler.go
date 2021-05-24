@@ -818,7 +818,7 @@ func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool,
 	for _, c := range p.Join {
 		current++
 		if c != nil && c.Name != "" && c.Version != "" {
-			joinTag2 := fmt.Sprintf("%s %d/%d ⤑ :hammer: build %s", joinTag, current, len(p.Join)-1, c.HumanReadableString())
+			joinTag2 := fmt.Sprintf("%s %d/%d ⤑ :hammer: build %s", joinTag, current, len(p.Join), c.HumanReadableString())
 
 			Info(joinTag2, "compilation starts")
 			spec, err := cs.FromPackage(c)
