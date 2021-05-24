@@ -774,8 +774,10 @@ func (cs *LuetCompiler) getSpecHash(pkgs pkg.DefaultPackages, salt string) (stri
 }
 
 func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) error {
+
+	joinTag := ">:loop: join<"
 	if len(p.Join) != 0 {
-		Info("Generating a joint parent image from final packages")
+		Info(joinTag, "Generating a joint parent image from final packages")
 	} else {
 		return nil
 	}
@@ -785,13 +787,16 @@ func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool,
 	if err != nil {
 		return errors.Wrap(err, "could not generate image hash")
 	}
+
+	Info(joinTag, "Searching existing image with hash ", overallFp)
+
 	image := cs.findImageHash(overallFp, p)
 	if image != "" {
 		Info("Image already found", image)
 		p.SetImage(image)
 		return nil
 	}
-	Info("Generating image with hash ", overallFp)
+	Info(joinTag, "Image not found. Generating image join with hash ", overallFp)
 
 	// Make sure there is an output path
 	if err := os.MkdirAll(p.GetOutputPath(), os.ModePerm); err != nil {
@@ -805,9 +810,17 @@ func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool,
 	}
 	defer os.RemoveAll(joinDir) // clean up
 
+	for _, p := range p.Join { //highly dependent on the order
+		Info(joinTag, ":arrow_right_hook:", p.HumanReadableString(), ":leaves:")
+	}
+
+	current := 0
 	for _, c := range p.Join {
+		current++
 		if c != nil && c.Name != "" && c.Version != "" {
-			Info(" :droplet: generating", c.HumanReadableString())
+			joinTag2 := fmt.Sprintf("%s %d/%d ⤑ :hammer: build %s", joinTag, current, len(p.Join)-1, c.HumanReadableString())
+
+			Info(joinTag2, "compilation starts")
 			spec, err := cs.FromPackage(c)
 			if err != nil {
 				return errors.Wrap(err, "while generating images to join from")
@@ -824,6 +837,7 @@ func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool,
 			if err != nil {
 				return errors.Wrap(err, "failed building join image")
 			}
+			Info(joinTag2, ":white_check_mark: Done")
 		}
 	}
 
@@ -832,6 +846,8 @@ func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool,
 		return errors.Wrap(err, "could not create tempdir for final artifact")
 	}
 	defer os.RemoveAll(joinDir) // clean up
+
+	Info(joinTag, ":droplet: generating artifact for source image of", p.GetPackage().HumanReadableString())
 
 	// After unpack, create a new artifact and a new final image from it.
 	// no need to compress, as we are going to toss it away.
@@ -867,7 +883,9 @@ func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions
 			if err != nil {
 				return errors.Wrap(err, "while generating images to copy from")
 			}
-			noArtifact := false
+
+			// If we specify --only-target package, we don't want any artifact, otherwise we do
+			genArtifact := !cs.Options.PackageTargetOnly
 			spec.SetOutputPath(p.GetOutputPath())
 			artifact, err := cs.compile(concurrency, keepPermissions, &noArtifact, spec)
 
