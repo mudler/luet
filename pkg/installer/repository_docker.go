@@ -61,7 +61,7 @@ func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDataba
 			return nil
 		}
 
-		if err := l.pushImageFromArtifact(artifact.NewPackageArtifact(currentpath), l.b); err != nil {
+		if err := l.pushImageFromArtifact(artifact.NewPackageArtifact(currentpath), l.b, true); err != nil {
 			return errors.Wrap(err, "while pushing metadata file associated to the artifact")
 		}
 
@@ -159,7 +159,7 @@ func (d *dockerRepositoryGenerator) pushRepoMetadata(repospec string, r *LuetSys
 	return nil
 }
 
-func (d *dockerRepositoryGenerator) pushImageFromArtifact(a *artifact.PackageArtifact, b compiler.CompilerBackend) error {
+func (d *dockerRepositoryGenerator) pushImageFromArtifact(a *artifact.PackageArtifact, b compiler.CompilerBackend, checkIfExists bool) error {
 	// we generate a new archive containing the required compressed file.
 	// TODO: Bundle all the extra files in 1 docker image only, instead of an image for each file
 	treeArchive, err := artifact.CreateArtifactForFile(a.Path)
@@ -167,8 +167,12 @@ func (d *dockerRepositoryGenerator) pushImageFromArtifact(a *artifact.PackageArt
 		return errors.Wrap(err, "failed generating checksums for tree")
 	}
 	imageTree := fmt.Sprintf("%s:%s", d.imagePrefix, helpers.StripInvalidStringsFromImage(a.GetFileName()))
-
-	return d.pushFileFromArtifact(treeArchive, imageTree)
+	if checkIfExists && d.imagePush && d.b.ImageAvailable(imageTree) && !d.force {
+		Info("Image", imageTree, "already present, skipping. use --force-push to override")
+		return nil
+	} else {
+		return d.pushFileFromArtifact(treeArchive, imageTree)
+	}
 }
 
 // Generate creates a Docker luet repository
@@ -225,7 +229,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 
 	// we generate a new archive containing the required compressed file.
 	// TODO: Bundle all the extra files in 1 docker image only, instead of an image for each file
-	if err := d.pushImageFromArtifact(a, d.b); err != nil {
+	if err := d.pushImageFromArtifact(a, d.b, false); err != nil {
 		return errors.Wrap(err, "error met while pushing runtime tree")
 	}
 
@@ -235,7 +239,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 	}
 	// we generate a new archive containing the required compressed file.
 	// TODO: Bundle all the extra files in 1 docker image only, instead of an image for each file
-	if err := d.pushImageFromArtifact(a, d.b); err != nil {
+	if err := d.pushImageFromArtifact(a, d.b, false); err != nil {
 		return errors.Wrap(err, "error met while pushing compiler tree")
 	}
 
@@ -251,7 +255,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 		return errors.Wrap(err, "failed adding Metadata file to repository")
 	}
 
-	if err := d.pushImageFromArtifact(a, d.b); err != nil {
+	if err := d.pushImageFromArtifact(a, d.b, false); err != nil {
 		return errors.Wrap(err, "error met while pushing docker image from artifact")
 	}
 
