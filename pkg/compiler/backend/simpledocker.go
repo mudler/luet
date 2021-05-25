@@ -181,6 +181,12 @@ func (b *SimpleDocker) ExtractRootfs(opts Options, keepPerms bool) error {
 	name := opts.ImageName
 	dst := opts.Destination
 
+	if !b.ImageExists(name) {
+		if err := b.DownloadImage(opts); err != nil {
+			return errors.Wrap(err, "failed pulling image "+name+" during extraction")
+		}
+	}
+
 	tempexport, err := ioutil.TempDir(dst, "tmprootfs")
 	if err != nil {
 		return errors.Wrap(err, "Error met while creating tempdir for rootfs")
