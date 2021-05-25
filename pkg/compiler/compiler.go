@@ -91,7 +91,7 @@ func (cs *LuetCompiler) compilerWorker(i int, wg *sync.WaitGroup, cspecs chan *c
 	defer wg.Done()
 
 	for s := range cspecs {
-		ar, err := cs.compile(concurrency, keepPermissions, nil, s)
+		ar, err := cs.compile(concurrency, keepPermissions, nil, nil, s)
 		if err != nil {
 			errors <- err
 		}
@@ -723,7 +723,7 @@ func (cs *LuetCompiler) ComputeMinimumCompilableSet(p ...*compilerspec.LuetCompi
 // Compile is a non-parallel version of CompileParallel. It builds the compilation specs and generates
 // an artifact
 func (cs *LuetCompiler) Compile(keepPermissions bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
-	return cs.compile(cs.Options.Concurrency, keepPermissions, nil, p)
+	return cs.compile(cs.Options.Concurrency, keepPermissions, nil, nil, p)
 }
 
 func genImageList(refs []string, hash string) []string {
@@ -826,9 +826,11 @@ func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool,
 				return errors.Wrap(err, "while generating images to join from")
 			}
 			wantsArtifact := true
+			genDepsArtifact := !cs.Options.PackageTargetOnly
+
 			spec.SetOutputPath(p.GetOutputPath())
 
-			artifact, err := cs.compile(concurrency, keepPermissions, &wantsArtifact, spec)
+			artifact, err := cs.compile(concurrency, keepPermissions, &wantsArtifact, &genDepsArtifact, spec)
 			if err != nil {
 				return errors.Wrap(err, "failed building join image")
 			}
@@ -897,7 +899,7 @@ func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions
 			// If we specify --only-target package, we don't want any artifact, otherwise we do
 			genArtifact := !cs.Options.PackageTargetOnly
 			spec.SetOutputPath(p.GetOutputPath())
-			artifact, err := cs.compile(concurrency, keepPermissions, &genArtifact, spec)
+			artifact, err := cs.compile(concurrency, keepPermissions, &genArtifact, &genArtifact, spec)
 			if err != nil {
 				return errors.Wrap(err, "failed building multi-stage image")
 			}
@@ -916,7 +918,7 @@ func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions
 	return nil
 }
 
-func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateArtifact *bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
+func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateFinalArtifact *bool, generateDependenciesFinalArtifact *bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
 	Info(":package: Compiling", p.GetPackage().HumanReadableString(), ".... :coffee:")
 
 	//Before multistage : join - same as multistage, but keep artifacts, join them, create a new one and generate a final image.
@@ -966,8 +968,8 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateA
 	// Treat last case (easier) first. The image is provided and we just compute a plain dockerfile with the images listed as above
 	if p.GetImage() != "" {
 		localGenerateArtifact := true
-		if generateArtifact != nil {
-			localGenerateArtifact = *generateArtifact
+		if generateFinalArtifact != nil {
+			localGenerateArtifact = *generateFinalArtifact
 		}
 
 		a, err := cs.compileWithImage(p.GetImage(), packageHashTree.BuilderImageHash, targetAssertion.Hash.PackageHash, concurrency, keepPermissions, cs.Options.KeepImg, p, localGenerateArtifact)
@@ -990,8 +992,8 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateA
 	currentN := 0
 
 	packageDeps := !cs.Options.PackageTargetOnly
-	if generateArtifact != nil {
-		packageDeps = *generateArtifact
+	if generateDependenciesFinalArtifact != nil {
+		packageDeps = *generateDependenciesFinalArtifact
 	}
 
 	buildDeps := !cs.Options.NoDeps
@@ -1086,8 +1088,8 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateA
 
 	if buildTarget {
 		localGenerateArtifact := true
-		if generateArtifact != nil {
-			localGenerateArtifact = *generateArtifact
+		if generateFinalArtifact != nil {
+			localGenerateArtifact = *generateFinalArtifact
 		}
 		resolvedSourceImage := cs.resolveExistingImageHash(packageHashTree.SourceHash, p)
 		Info(":rocket: All dependencies are satisfied, building package requested by the user", p.GetPackage().HumanReadableString())
