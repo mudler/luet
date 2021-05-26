@@ -1,18 +1,23 @@
+
+<p align="center">
+  <img width=150 height=150 src="https://user-images.githubusercontent.com/2420543/119691600-0293d700-be4b-11eb-827f-49ff1174a07a.png">
+</p>
+
 # luet - Container-based Package manager
 
 [![Docker Repository on Quay](https://quay.io/repository/luet/base/status "Docker Repository on Quay")](https://quay.io/repository/luet/base)
-[![Go Report Card](https://goreportcard.com/badge/github.com/mudler/luet)](https://goreportcard.com/report/github.com/mudler/luet)
-[![Build Status](https://travis-ci.org/mudler/luet.svg?branch=master)](https://travis-ci.org/mudler/luet)
+[![Build and release on push](https://github.com/mudler/luet/actions/workflows/release.yml/badge.svg)](https://github.com/mudler/luet/actions/workflows/release.yml)
 [![GoDoc](https://godoc.org/github.com/mudler/luet?status.svg)](https://godoc.org/github.com/mudler/luet)
 [![codecov](https://codecov.io/gh/mudler/luet/branch/master/graph/badge.svg)](https://codecov.io/gh/mudler/luet)
-
-[![asciicast](https://asciinema.org/a/388348.svg)](https://asciinema.org/a/388348)
 
 Luet is a multi-platform Package Manager based off from containers - it uses Docker (and others) to build packages. It has zero dependencies and it is well suitable for "from scratch" environments. It can also version entire rootfs and enables delivery of OTA-alike updates, making it a perfect fit for the Edge computing era and IoT embedded devices.
 
 It offers a simple [specfile format](https://luet-lab.github.io/docs/docs/concepts/packages/specfile/) in YAML notation to define both [packages](https://luet-lab.github.io/docs/docs/concepts/packages/) and [rootfs](https://luet-lab.github.io/docs/docs/concepts/packages/#package-layers). As it is based on containers, it can be also used to build stages for Linux From Scratch installations and it can build and track updates for those systems.
 
 It is written entirely in Golang and where used as package manager, it can run in from scratch environment, with zero dependencies.
+
+[![asciicast](https://asciinema.org/a/388348.svg)](https://asciinema.org/a/388348)
+
 
 ## In a glance
 
