@@ -17,6 +17,7 @@ package installer
 
 import (
 	"fmt"
+	"github.com/mudler/luet/pkg/helpers/docker"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -166,7 +167,7 @@ func (d *dockerRepositoryGenerator) pushImageFromArtifact(a *artifact.PackageArt
 	if err != nil {
 		return errors.Wrap(err, "failed generating checksums for tree")
 	}
-	imageTree := fmt.Sprintf("%s:%s", d.imagePrefix, helpers.StripInvalidStringsFromImage(a.GetFileName()))
+	imageTree := fmt.Sprintf("%s:%s", d.imagePrefix, docker.StripInvalidStringsFromImage(a.GetFileName()))
 	if checkIfExists && d.imagePush && d.b.ImageAvailable(imageTree) && !d.force {
 		Info("Image", imageTree, "already present, skipping. use --force-push to override")
 		return nil

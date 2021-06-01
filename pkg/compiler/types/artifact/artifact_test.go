@@ -16,6 +16,7 @@
 package artifact_test
 
 import (
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -71,7 +72,7 @@ var _ = Describe("Artifact", func() {
 
 			err = lspec.WriteBuildImageDefinition(filepath.Join(tmpdir, "Dockerfile"))
 			Expect(err).ToNot(HaveOccurred())
-			dockerfile, err := helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
+			dockerfile, err := fileHelper.Read(filepath.Join(tmpdir, "Dockerfile"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dockerfile).To(Equal(`
 FROM alpine
@@ -89,12 +90,12 @@ ENV PACKAGE_CATEGORY=app-admin`))
 			}
 			Expect(b.BuildImage(opts)).ToNot(HaveOccurred())
 			Expect(b.ExportImage(opts)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(filepath.Join(tmpdir2, "output1.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "output1.tar"))).To(BeTrue())
 			Expect(b.BuildImage(opts)).ToNot(HaveOccurred())
 
 			err = lspec.WriteStepImageDefinition(lspec.Image, filepath.Join(tmpdir, "LuetDockerfile"))
 			Expect(err).ToNot(HaveOccurred())
-			dockerfile, err = helpers.Read(filepath.Join(tmpdir, "LuetDockerfile"))
+			dockerfile, err = fileHelper.Read(filepath.Join(tmpdir, "LuetDockerfile"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dockerfile).To(Equal(`
 FROM luet/base
@@ -113,7 +114,7 @@ RUN echo bar > /test2`))
 			}
 			Expect(b.BuildImage(opts2)).ToNot(HaveOccurred())
 			Expect(b.ExportImage(opts2)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
 			diffs, err := compiler.GenerateChanges(b, opts, opts2)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -140,15 +141,15 @@ RUN echo bar > /test2`))
 
 			a, err := ExtractArtifactFromDelta(rootfs, filepath.Join(tmpdir, "package.tar"), diffs, 2, false, []string{}, []string{}, compression.None)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(filepath.Join(tmpdir, "package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir, "package.tar"))).To(BeTrue())
 			err = helpers.Untar(a.Path, unpacked, false)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(filepath.Join(unpacked, "test"))).To(BeTrue())
-			Expect(helpers.Exists(filepath.Join(unpacked, "test2"))).To(BeTrue())
-			content1, err := helpers.Read(filepath.Join(unpacked, "test"))
+			Expect(fileHelper.Exists(filepath.Join(unpacked, "test"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(unpacked, "test2"))).To(BeTrue())
+			content1, err := fileHelper.Read(filepath.Join(unpacked, "test"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(content1).To(Equal("foo\n"))
-			content2, err := helpers.Read(filepath.Join(unpacked, "test2"))
+			content2, err := fileHelper.Read(filepath.Join(unpacked, "test2"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(content2).To(Equal("bar\n"))
 
@@ -156,7 +157,7 @@ RUN echo bar > /test2`))
 			Expect(err).ToNot(HaveOccurred())
 			err = a.Verify()
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.CopyFile(filepath.Join(tmpdir, "output2.tar"), filepath.Join(tmpdir, "package.tar"))).ToNot(HaveOccurred())
+			Expect(fileHelper.CopyFile(filepath.Join(tmpdir, "output2.tar"), filepath.Join(tmpdir, "package.tar"))).ToNot(HaveOccurred())
 
 			err = a.Verify()
 			Expect(err).To(HaveOccurred())
@@ -244,7 +245,7 @@ RUN echo bar > /test2`))
 			err = b.ExtractRootfs(backend.Options{ImageName: resultingImage, Destination: result}, false)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(helpers.DirectoryIsEmpty(result)).To(BeFalse())
+			Expect(fileHelper.DirectoryIsEmpty(result)).To(BeFalse())
 			content, err := ioutil.ReadFile(filepath.Join(result, ".virtual"))
 			Expect(err).ToNot(HaveOccurred())
 

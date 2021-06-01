@@ -18,14 +18,13 @@ package box
 import (
 	b64 "encoding/base64"
 	"fmt"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"os"
 	"os/exec"
 	"strings"
 	"syscall"
 
 	"github.com/pkg/errors"
-
-	helpers "github.com/mudler/luet/pkg/helpers"
 )
 
 type Box interface {
@@ -107,7 +106,7 @@ func (b *DefaultBox) Exec() error {
 
 func (b *DefaultBox) Run() error {
 
-	if !helpers.Exists(b.Root) {
+	if !fileHelper.Exists(b.Root) {
 		return errors.New(b.Root + " does not exist")
 	}
 

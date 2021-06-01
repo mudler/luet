@@ -20,6 +20,7 @@ import (
 	//	. "github.com/mudler/luet/pkg/installer"
 
 	"fmt"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -83,34 +84,34 @@ var _ = Describe("Repository", func() {
 
 			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+			Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 
-			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
 
-			content1, err := helpers.Read(spec.Rel("test5"))
+			content1, err := fileHelper.Read(spec.Rel("test5"))
 			Expect(err).ToNot(HaveOccurred())
-			content2, err := helpers.Read(spec.Rel("test6"))
+			content2, err := fileHelper.Read(spec.Rel("test6"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(content1).To(Equal("artifact5\n"))
 			Expect(content2).To(Equal("artifact6\n"))
 
-			Expect(helpers.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
 
 			repo, err := stubRepo(tmpdir, "../../tests/fixtures/buildable")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
-			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
 			err = repo.Write(tmpdir, false, true)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).To(BeTrue())
 		})
 
 		It("Generate repository metadata of files ONLY referenced in a tree", func() {
@@ -156,41 +157,41 @@ var _ = Describe("Repository", func() {
 
 			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+			Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 
 			artifact2, err := compiler2.Compile(false, spec2)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact2.Path)).To(BeTrue())
+			Expect(fileHelper.Exists(artifact2.Path)).To(BeTrue())
 			Expect(helpers.Untar(artifact2.Path, tmpdir, false)).ToNot(HaveOccurred())
 
-			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
 
-			content1, err := helpers.Read(spec.Rel("test5"))
+			content1, err := fileHelper.Read(spec.Rel("test5"))
 			Expect(err).ToNot(HaveOccurred())
-			content2, err := helpers.Read(spec.Rel("test6"))
+			content2, err := fileHelper.Read(spec.Rel("test6"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(content1).To(Equal("artifact5\n"))
 			Expect(content2).To(Equal("artifact6\n"))
 
-			Expect(helpers.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
-			Expect(helpers.Exists(spec2.Rel("alpine-seed-1.0.package.tar"))).To(BeTrue())
-			Expect(helpers.Exists(spec2.Rel("alpine-seed-1.0.metadata.yaml"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec2.Rel("alpine-seed-1.0.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec2.Rel("alpine-seed-1.0.metadata.yaml"))).To(BeTrue())
 
 			repo, err := stubRepo(tmpdir, "../../tests/fixtures/buildable")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
-			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
 			err = repo.Write(tmpdir, false, true)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).To(BeTrue())
 
 			// We check now that the artifact not referenced in the tree
 			// (spec2) is not indexed in the repository
@@ -267,18 +268,18 @@ urls:
 
 			a, err := localcompiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(a.Path)).To(BeTrue())
+			Expect(fileHelper.Exists(a.Path)).To(BeTrue())
 			Expect(helpers.Untar(a.Path, tmpdir, false)).ToNot(HaveOccurred())
 
-			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
 
 			repo, err := dockerStubRepo(tmpdir, "../../tests/fixtures/buildable", repoImage, true, true)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
-			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
 			err = repo.Write(repoImage, false, true)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -295,7 +296,7 @@ urls:
 
 			f, err := c.DownloadFile("repository.yaml")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Read(f)).To(ContainSubstring("name: test"))
+			Expect(fileHelper.Read(f)).To(ContainSubstring("name: test"))
 
 			a, err = c.DownloadArtifact(&artifact.PackageArtifact{
 				Path: "test.tar",
@@ -310,7 +311,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(a.Unpack(extracted, false)).ToNot(HaveOccurred())
-			Expect(helpers.Read(filepath.Join(extracted, "test6"))).To(Equal("artifact6\n"))
+			Expect(fileHelper.Read(filepath.Join(extracted, "test6"))).To(Equal("artifact6\n"))
 		})
 
 		It("generates images of virtual packages", func() {
@@ -341,15 +342,15 @@ urls:
 
 			a, err := localcompiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(a.Path)).To(BeTrue())
+			Expect(fileHelper.Exists(a.Path)).To(BeTrue())
 			Expect(helpers.Untar(a.Path, tmpdir, false)).ToNot(HaveOccurred())
 
 			repo, err := dockerStubRepo(tmpdir, "../../tests/fixtures/virtuals", repoImage, true, true)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
-			Expect(helpers.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
 			err = repo.Write(repoImage, false, true)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -366,7 +367,7 @@ urls:
 
 			f, err := c.DownloadFile("repository.yaml")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Read(f)).To(ContainSubstring("name: test"))
+			Expect(fileHelper.Read(f)).To(ContainSubstring("name: test"))
 
 			a, err = c.DownloadArtifact(&artifact.PackageArtifact{
 				Path: "test.tar",
@@ -382,7 +383,7 @@ urls:
 
 			Expect(a.Unpack(extracted, false)).ToNot(HaveOccurred())
 
-			Expect(helpers.DirectoryIsEmpty(extracted)).To(BeFalse())
+			Expect(fileHelper.DirectoryIsEmpty(extracted)).To(BeFalse())
 			content, err := ioutil.ReadFile(filepath.Join(extracted, ".virtual"))
 			Expect(err).ToNot(HaveOccurred())
 

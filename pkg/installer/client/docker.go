@@ -18,6 +18,9 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mudler/luet/pkg/helpers/docker"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
+	"github.com/mudler/luet/pkg/helpers/imgworker"
 	"os"
 	"path"
 	"path/filepath"
@@ -28,8 +31,6 @@ import (
 
 	"github.com/mudler/luet/pkg/compiler/types/artifact"
 	"github.com/mudler/luet/pkg/config"
-	"github.com/mudler/luet/pkg/helpers"
-	"github.com/mudler/luet/pkg/helpers/imgworker"
 	. "github.com/mudler/luet/pkg/logger"
 )
 
@@ -64,7 +65,7 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 	artifactName := path.Base(a.Path)
 	cacheFile := filepath.Join(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), artifactName)
 	Debug("Cache file", cacheFile)
-	if err := helpers.EnsureDir(cacheFile); err != nil {
+	if err := fileHelper.EnsureDir(cacheFile); err != nil {
 		return nil, errors.Wrapf(err, "could not create cache folder %s for %s", config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), cacheFile)
 	}
 	ok := false
@@ -77,7 +78,7 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 	// is done in such cases (see repository.go)
 
 	// Check if file is already in cache
-	if helpers.Exists(cacheFile) {
+	if fileHelper.Exists(cacheFile) {
 		Debug("Cache hit for artifact", artifactName)
 		resultingArtifact = a
 		resultingArtifact.Path = cacheFile
@@ -102,7 +103,7 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 			}
 
 			// imageName := fmt.Sprintf("%s/%s", uri, artifact.GetCompileSpec().GetPackage().GetPackageImageName())
-			info, err := helpers.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
+			info, err := docker.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
 			if err != nil {
 				Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
 				continue
@@ -161,10 +162,10 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 			continue
 		}
 
-		imageName := fmt.Sprintf("%s:%s", uri, helpers.StripInvalidStringsFromImage(name))
+		imageName := fmt.Sprintf("%s:%s", uri, docker.StripInvalidStringsFromImage(name))
 		Info("Downloading", imageName)
 
-		info, err = helpers.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
+		info, err = docker.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
 		if err != nil {
 			Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
 			continue
@@ -174,7 +175,7 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 		Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.ContentSize))))
 
 		Debug("\nCopying file ", filepath.Join(temp, name), "to", file.Name())
-		err = helpers.CopyFile(filepath.Join(temp, name), file.Name())
+		err = fileHelper.CopyFile(filepath.Join(temp, name), file.Name())
 		if err != nil {
 			continue
 		}

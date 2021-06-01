@@ -1,9 +1,8 @@
 package bus
 
 import (
-	. "github.com/mudler/luet/pkg/logger"
-
 	"github.com/mudler/go-pluggable"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -46,6 +45,7 @@ var (
 	EventRepositoryPreBuild pluggable.EventType = "repository.pre.build"
 	// EventRepositoryPostBuild is the event fired after a repository was built
 	EventRepositoryPostBuild pluggable.EventType = "repository.post.build"
+
 )
 
 // Manager is the bus instance manager, which subscribes plugins to events emitted by Luet
@@ -80,9 +80,9 @@ func (b *Bus) Initialize(plugin ...string) {
 	for _, e := range b.Manager.Events {
 		b.Manager.Response(e, func(p *pluggable.Plugin, r *pluggable.EventResponse) {
 			if r.Errored() {
-				Fatal("Plugin", p.Name, "at", p.Executable, "Error", r.Error)
+				logrus.Fatal("Plugin", p.Name, "at", p.Executable, "Error", r.Error)
 			}
-			Debug(
+			logrus.Debug(
 				"plugin_event",
 				"received from",
 				p.Name,

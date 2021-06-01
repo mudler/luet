@@ -17,6 +17,7 @@ package installer
 
 import (
 	"fmt"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"io/ioutil"
 	"os"
 	"path"
@@ -32,7 +33,6 @@ import (
 
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
-	"github.com/mudler/luet/pkg/helpers"
 	"github.com/mudler/luet/pkg/installer/client"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -723,7 +723,7 @@ func (r *LuetSystemRepository) SyncBuildMetadata(path string) error {
 		if err != nil {
 			return errors.Wrapf(err, "while downloading metadata for %s", ai.HumanReadableString())
 		}
-		if err := helpers.Move(file, filepath.Join(path, ai.GetMetadataFilePath())); err != nil {
+		if err := fileHelper.Move(file, filepath.Join(path, ai.GetMetadataFilePath())); err != nil {
 			return err
 		}
 	}
@@ -810,7 +810,7 @@ func (r *LuetSystemRepository) Sync(force bool) (*LuetSystemRepository, error) {
 
 		if r.Cached {
 			// Copy updated repository.yaml file to repo dir now that the tree is synced.
-			err = helpers.CopyFile(file, filepath.Join(repobasedir, REPOSITORY_SPECFILE))
+			err = fileHelper.CopyFile(file, filepath.Join(repobasedir, REPOSITORY_SPECFILE))
 			if err != nil {
 				return nil, errors.Wrap(err, "Error on update "+REPOSITORY_SPECFILE)
 			}

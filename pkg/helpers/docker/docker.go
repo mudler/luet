@@ -13,11 +13,12 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package helpers
+package docker
 
 import (
 	"context"
 	"encoding/hex"
+	"github.com/mudler/luet/pkg/helpers/imgworker"
 	"os"
 	"strings"
 
@@ -25,7 +26,6 @@ import (
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/registry"
-	"github.com/mudler/luet/pkg/helpers/imgworker"
 	"github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
 	"github.com/theupdateframework/notary/tuf/data"

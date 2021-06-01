@@ -22,11 +22,11 @@ package tree
 
 import (
 	"fmt"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	helpers "github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
 	spectooling "github.com/mudler/luet/pkg/spectooling"
 	"github.com/pkg/errors"
@@ -77,7 +77,7 @@ func (r *Recipe) Load(path string) error {
 	// if err != nil {
 	// 	return err
 	// }
-	if !helpers.Exists(path) {
+	if !fileHelper.Exists(path) {
 		return errors.New(fmt.Sprintf(
 			"Path %s doesn't exit.", path,
 		))

@@ -13,10 +13,10 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package helpers_test
+package docker_test
 
 import (
-	. "github.com/mudler/luet/pkg/helpers"
+	"github.com/mudler/luet/pkg/helpers/docker"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -24,7 +24,7 @@ import (
 var _ = Describe("StripInvalidStringsFromImage", func() {
 	Context("Image names", func() {
 		It("strips invalid chars", func() {
-			Expect(StripInvalidStringsFromImage("foo+bar")).To(Equal("foo-bar"))
+			Expect(docker.StripInvalidStringsFromImage("foo+bar")).To(Equal("foo-bar"))
 		})
 	})
 })

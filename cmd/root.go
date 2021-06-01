@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -252,7 +253,7 @@ func initConfig() {
 		}
 		homeDir := helpers.GetHomeDir()
 
-		if helpers.Exists(filepath.Join(pwdDir, ".luet.yaml")) || (homeDir != "" && helpers.Exists(filepath.Join(homeDir, ".luet.yaml"))) {
+		if fileHelper.Exists(filepath.Join(pwdDir, ".luet.yaml")) || (homeDir != "" && fileHelper.Exists(filepath.Join(homeDir, ".luet.yaml"))) {
 			viper.AddConfigPath(".")
 			if homeDir != "" {
 				viper.AddConfigPath(homeDir)

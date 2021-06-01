@@ -20,13 +20,14 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"github.com/mudler/luet/pkg/helpers/docker"
+	"github.com/mudler/luet/pkg/helpers/match"
 	"io"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/mudler/luet/pkg/helpers"
 	version "github.com/mudler/luet/pkg/versioner"
 
 	gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
@@ -324,7 +325,7 @@ func (p *DefaultPackage) GetPackageName() string {
 }
 
 func (p *DefaultPackage) ImageID() string {
-	return helpers.StripInvalidStringsFromImage(p.GetFingerPrint())
+	return docker.StripInvalidStringsFromImage(p.GetFingerPrint())
 }
 
 // GetBuildTimestamp returns the package build timestamp
@@ -359,19 +360,19 @@ func (p *DefaultPackage) IsHidden() bool {
 }
 
 func (p *DefaultPackage) HasLabel(label string) bool {
-	return helpers.MapHasKey(&p.Labels, label)
+	return match.MapHasKey(&p.Labels, label)
 }
 
 func (p *DefaultPackage) MatchLabel(r *regexp.Regexp) bool {
-	return helpers.MapMatchRegex(&p.Labels, r)
+	return match.MapMatchRegex(&p.Labels, r)
 }
 
 func (p *DefaultPackage) HasAnnotation(label string) bool {
-	return helpers.MapHasKey(&p.Annotations, label)
+	return match.MapHasKey(&p.Annotations, label)
 }
 
 func (p *DefaultPackage) MatchAnnotation(r *regexp.Regexp) bool {
-	return helpers.MapMatchRegex(&p.Annotations, r)
+	return match.MapMatchRegex(&p.Annotations, r)
 }
 
 // AddUse adds a use to a package

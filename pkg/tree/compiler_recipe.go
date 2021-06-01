@@ -21,6 +21,7 @@
 package tree
 
 import (
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -61,7 +62,7 @@ type CompilerRecipe struct {
 // and the build context required for reproducible builds
 func (r *CompilerRecipe) Save(path string) error {
 	for _, p := range r.SourcePath {
-		if err := helpers.CopyDir(p, filepath.Join(path, filepath.Base(p))); err != nil {
+		if err := fileHelper.CopyDir(p, filepath.Join(path, filepath.Base(p))); err != nil {
 			return errors.Wrap(err, "while copying source tree")
 		}
 	}
@@ -102,7 +103,7 @@ func (r *CompilerRecipe) Load(path string) error {
 
 			// Instead of rdeps, have a different tree for build deps.
 			compileDefPath := pack.Rel(CompilerDefinitionFile)
-			if helpers.Exists(compileDefPath) {
+			if fileHelper.Exists(compileDefPath) {
 
 				dat, err := helpers.RenderFiles(compileDefPath, currentpath)
 				if err != nil {
@@ -149,7 +150,7 @@ func (r *CompilerRecipe) Load(path string) error {
 
 				// Instead of rdeps, have a different tree for build deps.
 				compileDefPath := pack.Rel(CompilerDefinitionFile)
-				if helpers.Exists(compileDefPath) {
+				if fileHelper.Exists(compileDefPath) {
 
 					raw := packsRaw.Find(pack.GetName(), pack.GetCategory(), pack.GetVersion())
 					buildyaml, err := ioutil.ReadFile(compileDefPath)
