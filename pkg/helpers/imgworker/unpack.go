@@ -5,6 +5,7 @@ package imgworker
 import (
 	"errors"
 	"fmt"
+	"github.com/mudler/luet/pkg/bus"
 	"os"
 
 	"github.com/containerd/containerd/content"
@@ -17,6 +18,12 @@ import (
 
 // TODO: this requires root permissions to mount/unmount layers, althrought it shouldn't be required.
 // See how backends are unpacking images without asking for root permissions.
+
+// UnpackEventData is the data structure to pass for the bus events
+type UnpackEventData struct {
+	Image string
+	Dest  string
+}
 
 // Unpack exports an image to a rootfs destination directory.
 func (c *Client) Unpack(image, dest string) error {
@@ -59,6 +66,8 @@ func (c *Client) Unpack(image, dest string) error {
 		return fmt.Errorf("getting image manifest failed: %v", err)
 	}
 
+	_,_ = bus.Manager.Publish(bus.EventImagePreUnPack, UnpackEventData{Image: image, Dest: dest})
+
 	for _, desc := range manifest.Layers {
 		logrus.Debugf("Unpacking layer %s", desc.Digest.String())
 
@@ -77,6 +86,8 @@ func (c *Client) Unpack(image, dest string) error {
 			return fmt.Errorf("extracting tar for %s to directory %s failed: %v", desc.Digest.String(), dest, err)
 		}
 	}
+
+	_, _ = bus.Manager.Publish(bus.EventImagePostUnPack, UnpackEventData{Image: image, Dest: dest})
 
 	return nil
 }
