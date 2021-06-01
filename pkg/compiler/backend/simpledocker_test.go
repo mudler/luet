@@ -21,12 +21,12 @@ import (
 	"github.com/mudler/luet/pkg/compiler/backend"
 	. "github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/compiler/types/artifact"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	helpers "github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/tree"
 	. "github.com/onsi/ginkgo"
@@ -60,7 +60,7 @@ var _ = Describe("Docker backend", func() {
 
 			err = lspec.WriteBuildImageDefinition(filepath.Join(tmpdir, "Dockerfile"))
 			Expect(err).ToNot(HaveOccurred())
-			dockerfile, err := helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
+			dockerfile, err := fileHelper.Read(filepath.Join(tmpdir, "Dockerfile"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dockerfile).To(Equal(`
 FROM alpine
@@ -79,11 +79,11 @@ ENV PACKAGE_CATEGORY=app-admin`))
 
 			Expect(b.BuildImage(opts)).ToNot(HaveOccurred())
 			Expect(b.ExportImage(opts)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(filepath.Join(tmpdir2, "output1.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "output1.tar"))).To(BeTrue())
 
 			err = lspec.WriteStepImageDefinition(lspec.Image, filepath.Join(tmpdir, "LuetDockerfile"))
 			Expect(err).ToNot(HaveOccurred())
-			dockerfile, err = helpers.Read(filepath.Join(tmpdir, "LuetDockerfile"))
+			dockerfile, err = fileHelper.Read(filepath.Join(tmpdir, "LuetDockerfile"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dockerfile).To(Equal(`
 FROM luet/base
@@ -103,7 +103,7 @@ RUN echo bar > /test2`))
 
 			Expect(b.BuildImage(opts2)).ToNot(HaveOccurred())
 			Expect(b.ExportImage(opts2)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
 
 			artifacts := []artifact.ArtifactNode{{
 				Name: "/luetbuild/LuetDockerfile",
@@ -132,7 +132,7 @@ RUN echo bar > /test2`))
 			}
 
 			Expect(b.ImageDefinitionToTar(opts2)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(filepath.Join(tmpdir, "output3.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir, "output3.tar"))).To(BeTrue())
 			Expect(b.ImageExists(opts2.ImageName)).To(BeFalse())
 		})
 

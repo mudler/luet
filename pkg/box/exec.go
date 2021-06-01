@@ -23,9 +23,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pkg/errors"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
-	helpers "github.com/mudler/luet/pkg/helpers"
+	"github.com/pkg/errors"
 )
 
 type Box interface {
@@ -107,7 +107,7 @@ func (b *DefaultBox) Exec() error {
 
 func (b *DefaultBox) Run() error {
 
-	if !helpers.Exists(b.Root) {
+	if !fileHelper.Exists(b.Root) {
 		return errors.New(b.Root + " does not exist")
 	}
 

@@ -23,7 +23,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/go-units"
 	"github.com/mudler/luet/pkg/config"
-	"github.com/mudler/luet/pkg/helpers"
+	"github.com/mudler/luet/pkg/helpers/docker"
 	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/spf13/cobra"
@@ -77,7 +77,7 @@ func NewUnpackCommand() *cobra.Command {
 				RegistryToken: registryToken,
 			}
 
-			info, err := helpers.DownloadAndExtractDockerImage(temp, image, destination, auth, verify)
+			info, err := docker.DownloadAndExtractDockerImage(temp, image, destination, auth, verify)
 			if err != nil {
 				Error(err.Error())
 				os.Exit(1)

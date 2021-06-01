@@ -3,6 +3,8 @@ package helpers
 import (
 	"io/ioutil"
 
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
+
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -75,7 +77,7 @@ func RenderFiles(toTemplate, valuesFile string, defaultFile ...string) (string, 
 		return "", errors.Wrap(err, "reading file "+toTemplate)
 	}
 
-	if !Exists(valuesFile) {
+	if !fileHelper.Exists(valuesFile) {
 		return "", errors.Wrap(err, "file not existing "+valuesFile)
 	}
 	val, err := ioutil.ReadFile(valuesFile)

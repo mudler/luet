@@ -25,12 +25,11 @@ import (
 	"time"
 
 	"github.com/mudler/luet/pkg/compiler/types/artifact"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/logger"
 
-	"github.com/mudler/luet/pkg/config"
-	"github.com/mudler/luet/pkg/helpers"
-
 	"github.com/cavaliercoder/grab"
+	"github.com/mudler/luet/pkg/config"
 
 	"github.com/schollz/progressbar/v3"
 )
@@ -77,7 +76,7 @@ func (c *HttpClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.Pa
 	ok := false
 
 	// Check if file is already in cache
-	if helpers.Exists(cacheFile) {
+	if fileHelper.Exists(cacheFile) {
 		Debug("Use artifact", artifactName, "from cache.")
 	} else {
 
@@ -156,7 +155,7 @@ func (c *HttpClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.Pa
 				fmt.Sprintf("%.2f", (float64(resp.BytesPerSecond())/1024)/1024), "MiB/s )")
 
 			Debug("\nCopying file ", filepath.Join(temp, artifactName), "to", cacheFile)
-			err = helpers.CopyFile(filepath.Join(temp, artifactName), cacheFile)
+			err = fileHelper.CopyFile(filepath.Join(temp, artifactName), cacheFile)
 
 			bar.Finish()
 			ok = true
@@ -218,7 +217,7 @@ func (c *HttpClient) DownloadFile(name string) (string, error) {
 			fmt.Sprintf("%.2f", (float64(resp.BytesComplete())/1000)/1000), "MB (",
 			fmt.Sprintf("%.2f", (float64(resp.BytesPerSecond())/1024)/1024), "MiB/s )")
 
-		err = helpers.CopyFile(filepath.Join(temp, name), file.Name())
+		err = fileHelper.CopyFile(filepath.Join(temp, name), file.Name())
 		if err != nil {
 			continue
 		}

@@ -24,16 +24,16 @@ import (
 	"strings"
 	"time"
 
-	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
-
+	"github.com/mudler/luet/pkg/bus"
+	compiler "github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
+	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
+	"github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/pkg/helpers"
+	"github.com/mudler/luet/pkg/helpers/docker"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
-	"github.com/mudler/luet/pkg/bus"
-	compiler "github.com/mudler/luet/pkg/compiler"
-	"github.com/mudler/luet/pkg/config"
-	"github.com/mudler/luet/pkg/helpers"
 	"github.com/pkg/errors"
 )
 
@@ -166,7 +166,7 @@ func (d *dockerRepositoryGenerator) pushImageFromArtifact(a *artifact.PackageArt
 	if err != nil {
 		return errors.Wrap(err, "failed generating checksums for tree")
 	}
-	imageTree := fmt.Sprintf("%s:%s", d.imagePrefix, helpers.StripInvalidStringsFromImage(a.GetFileName()))
+	imageTree := fmt.Sprintf("%s:%s", d.imagePrefix, docker.StripInvalidStringsFromImage(a.GetFileName()))
 	if checkIfExists && d.imagePush && d.b.ImageAvailable(imageTree) && !d.force {
 		Info("Image", imageTree, "already present, skipping. use --force-push to override")
 		return nil
