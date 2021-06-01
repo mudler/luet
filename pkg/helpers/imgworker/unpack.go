@@ -5,6 +5,7 @@ package imgworker
 import (
 	"errors"
 	"fmt"
+	"github.com/mudler/luet/pkg/bus"
 	"os"
 
 	"github.com/containerd/containerd/content"
@@ -20,6 +21,7 @@ import (
 
 // Unpack exports an image to a rootfs destination directory.
 func (c *Client) Unpack(image, dest string) error {
+	_,_ = bus.Manager.Publish(bus.EventImagePreUnPack, c)
 
 	ctx := c.ctx
 	if len(dest) < 1 {
@@ -77,6 +79,8 @@ func (c *Client) Unpack(image, dest string) error {
 			return fmt.Errorf("extracting tar for %s to directory %s failed: %v", desc.Digest.String(), dest, err)
 		}
 	}
+
+	_, _ = bus.Manager.Publish(bus.EventImagePostUnPack, c)
 
 	return nil
 }

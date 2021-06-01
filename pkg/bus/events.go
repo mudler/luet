@@ -46,6 +46,12 @@ var (
 	// EventRepositoryPostBuild is the event fired after a repository was built
 	EventRepositoryPostBuild pluggable.EventType = "repository.post.build"
 
+	// Image unpack
+
+	// EventImagePreUnPack is the event fired before unpacking an image to a local dir
+	EventImagePreUnPack pluggable.EventType = "image.pre.unpack"
+	// EventImagePostUnPack is the event fired after unpacking an image to a local dir
+	EventImagePostUnPack pluggable.EventType = "image.post.unpack"
 )
 
 // Manager is the bus instance manager, which subscribes plugins to events emitted by Luet
@@ -66,6 +72,8 @@ var Manager *Bus = &Bus{
 			EventImagePostBuild,
 			EventImagePostPull,
 			EventImagePostPush,
+			EventImagePreUnPack,
+			EventImagePostUnPack,
 		},
 	),
 }
