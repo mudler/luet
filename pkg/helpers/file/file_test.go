@@ -13,14 +13,15 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package helpers_test
+package file_test
 
 import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	. "github.com/mudler/luet/pkg/helpers"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -28,8 +29,8 @@ import (
 var _ = Describe("Helpers", func() {
 	Context("Exists", func() {
 		It("Detect existing and not-existing files", func() {
-			Expect(Exists("../../tests/fixtures/buildtree/app-admin/enman/1.4.0/build.yaml")).To(BeTrue())
-			Expect(Exists("../../tests/fixtures/buildtree/app-admin/enman/1.4.0/build.yaml.not.exists")).To(BeFalse())
+			Expect(fileHelper.Exists("../../tests/fixtures/buildtree/app-admin/enman/1.4.0/build.yaml")).To(BeTrue())
+			Expect(fileHelper.Exists("../../tests/fixtures/buildtree/app-admin/enman/1.4.0/build.yaml.not.exists")).To(BeFalse())
 		})
 	})
 
@@ -38,15 +39,15 @@ var _ = Describe("Helpers", func() {
 			testDir, err := ioutil.TempDir(os.TempDir(), "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(testDir)
-			Expect(DirectoryIsEmpty(testDir)).To(BeTrue())
+			Expect(fileHelper.DirectoryIsEmpty(testDir)).To(BeTrue())
 		})
 		It("Detects directory with files", func() {
 			testDir, err := ioutil.TempDir(os.TempDir(), "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(testDir)
-			err = Touch(filepath.Join(testDir, "foo"))
+			err = fileHelper.Touch(filepath.Join(testDir, "foo"))
 			Expect(err).ToNot(HaveOccurred())
-			Expect(DirectoryIsEmpty(testDir)).To(BeFalse())
+			Expect(fileHelper.DirectoryIsEmpty(testDir)).To(BeFalse())
 		})
 	})
 
@@ -72,7 +73,7 @@ var _ = Describe("Helpers", func() {
 			err = ioutil.WriteFile(filepath.Join(testDir, "baz2", "foo"), []byte("test\n"), 0644)
 			Expect(err).ToNot(HaveOccurred())
 
-			ordered, notExisting := OrderFiles(testDir, []string{"bar", "baz", "bar/foo", "baz2", "foo", "baz2/foo", "notexisting"})
+			ordered, notExisting := fileHelper.OrderFiles(testDir, []string{"bar", "baz", "bar/foo", "baz2", "foo", "baz2/foo", "notexisting"})
 
 			Expect(ordered).To(Equal([]string{"baz", "bar/foo", "foo", "baz2/foo", "bar", "baz2"}))
 			Expect(notExisting).To(Equal([]string{"notexisting"}))
@@ -96,7 +97,7 @@ var _ = Describe("Helpers", func() {
 			err = os.MkdirAll(filepath.Join(testDir, "foo", "baz", "fa"), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())
 
-			ordered, _ := OrderFiles(testDir, []string{"foo", "foo/bar", "bar", "foo/baz/fa", "foo/baz"})
+			ordered, _ := fileHelper.OrderFiles(testDir, []string{"foo", "foo/bar", "bar", "foo/baz/fa", "foo/baz"})
 			Expect(ordered).To(Equal([]string{"foo/baz/fa", "foo/bar", "foo/baz", "foo", "bar"}))
 		})
 	})

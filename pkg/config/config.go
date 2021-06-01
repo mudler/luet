@@ -27,7 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
 	solver "github.com/mudler/luet/pkg/solver"
 
@@ -406,8 +405,13 @@ system:
 }
 
 func (c *LuetSystemConfig) InitTmpDir() error {
-	if !helpers.Exists(c.TmpDirBase) {
-		return os.MkdirAll(c.TmpDirBase, os.ModePerm)
+	if _, err := os.Stat(c.TmpDirBase); err != nil {
+		if os.IsNotExist(err) {
+			err = os.MkdirAll(c.TmpDirBase, os.ModePerm)
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/mudler/luet/pkg/compiler/types/options"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	helpers "github.com/mudler/luet/pkg/helpers"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/tree"
 	. "github.com/onsi/ginkgo"
@@ -59,15 +60,15 @@ var _ = Describe("Compiler", func() {
 
 			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+			Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 
-			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
 
-			content1, err := helpers.Read(spec.Rel("test5"))
+			content1, err := fileHelper.Read(spec.Rel("test5"))
 			Expect(err).ToNot(HaveOccurred())
-			content2, err := helpers.Read(spec.Rel("test6"))
+			content2, err := fileHelper.Read(spec.Rel("test6"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(content1).To(Equal("artifact5\n"))
 			Expect(content2).To(Equal("artifact6\n"))
@@ -99,11 +100,11 @@ var _ = Describe("Compiler", func() {
 
 			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+			Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 
-			Expect(helpers.Exists(spec.Rel("result"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("bina/busybox"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("result"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("bina/busybox"))).To(BeTrue())
 		})
 
 		It("Compiles it correctly with Join", func() {
@@ -129,11 +130,11 @@ var _ = Describe("Compiler", func() {
 
 			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+			Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(spec.Rel("newc"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test4"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test3"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("newc"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test4"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test3"))).To(BeTrue())
 		})
 	})
 
@@ -164,7 +165,7 @@ var _ = Describe("Compiler", func() {
 			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2))
 			Expect(errs).To(BeNil())
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 
@@ -227,23 +228,23 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(3))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 
-			Expect(helpers.Exists(spec.Rel("test3"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test4"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test3"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test4"))).To(BeTrue())
 
-			content1, err := helpers.Read(spec.Rel("c"))
+			content1, err := fileHelper.Read(spec.Rel("c"))
 			Expect(err).ToNot(HaveOccurred())
-			content2, err := helpers.Read(spec.Rel("cd"))
+			content2, err := fileHelper.Read(spec.Rel("cd"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(content1).To(Equal("c\n"))
 			Expect(content2).To(Equal("c\n"))
 
-			content1, err = helpers.Read(spec.Rel("d"))
+			content1, err = fileHelper.Read(spec.Rel("d"))
 			Expect(err).ToNot(HaveOccurred())
-			content2, err = helpers.Read(spec.Rel("dd"))
+			content2, err = fileHelper.Read(spec.Rel("dd"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(content1).To(Equal("s\n"))
 			Expect(content2).To(Equal("dd\n"))
@@ -277,17 +278,17 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts2)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 
 			for _, artifact := range artifacts2 {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 
-			Expect(helpers.Exists(spec.Rel("etc/hosts"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test1"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("etc/hosts"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test1"))).To(BeTrue())
 		})
 
 		It("Compiles and includes ony wanted files", func() {
@@ -316,12 +317,12 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
-			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("marvin"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test6"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("marvin"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test6"))).ToNot(BeTrue())
 		})
 
 		It("Compiles and excludes files", func() {
@@ -350,13 +351,13 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
-			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("marvin"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("marvot"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("marvin"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("marvot"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
 		})
 
 		It("Compiles includes and excludes files", func() {
@@ -385,13 +386,13 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
-			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("marvin"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("marvot"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test6"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("marvin"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("marvot"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test6"))).ToNot(BeTrue())
 		})
 
 		It("Compiles and excludes ony wanted files also from unpacked packages", func() {
@@ -419,12 +420,12 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
-			Expect(helpers.Exists(spec.Rel("marvin"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("marvin"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
 		})
 
 		It("Compiles includes and excludes ony wanted files also from unpacked packages", func() {
@@ -452,12 +453,12 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
-			Expect(helpers.Exists(spec.Rel("marvin"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("marvin"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
 		})
 
 		It("Compiles and includes ony wanted files also from unpacked packages", func() {
@@ -485,16 +486,16 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
-			Expect(helpers.Exists(spec.Rel("var/lib/udhcpd"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("marvin"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test5"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test6"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test2"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec.Rel("lib/firmware"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("var/lib/udhcpd"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("marvin"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test5"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test6"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test2"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("lib/firmware"))).ToNot(BeTrue())
 		})
 
 		It("Compiles a more complex tree", func() {
@@ -523,18 +524,18 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Untar(spec.Rel("extra-layer-0.1.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
 
-			Expect(helpers.Exists(spec.Rel("extra-layer"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("extra-layer"))).To(BeTrue())
 
-			Expect(helpers.Exists(spec.Rel("usr/bin/pkgs-checker"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("base-layer-0.1.package.tar"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("base-layer-0.1.metadata.yaml"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("extra-layer-0.1.metadata.yaml"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("extra-layer-0.1.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("usr/bin/pkgs-checker"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("base-layer-0.1.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("base-layer-0.1.metadata.yaml"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("extra-layer-0.1.metadata.yaml"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("extra-layer-0.1.package.tar"))).To(BeTrue())
 		})
 
 		It("Compiles with provides support", func() {
@@ -564,19 +565,19 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Untar(spec.Rel("c-test-1.0.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
 
-			Expect(helpers.Exists(spec.Rel("d"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("dd"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("c"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("cd"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("d"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("dd"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("c"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("cd"))).To(BeTrue())
 
-			Expect(helpers.Exists(spec.Rel("d-test-1.0.metadata.yaml"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("d-test-1.0.metadata.yaml"))).To(BeTrue())
 
-			Expect(helpers.Exists(spec.Rel("c-test-1.0.metadata.yaml"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("c-test-1.0.metadata.yaml"))).To(BeTrue())
 		})
 
 		It("Compiles with provides and selectors support", func() {
@@ -607,19 +608,19 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Untar(spec.Rel("c-test-1.0.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
 
-			Expect(helpers.Exists(spec.Rel("d"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("dd"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("c"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("cd"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("d"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("dd"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("c"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("cd"))).To(BeTrue())
 
-			Expect(helpers.Exists(spec.Rel("d-test-1.0.metadata.yaml"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("d-test-1.0.metadata.yaml"))).To(BeTrue())
 
-			Expect(helpers.Exists(spec.Rel("c-test-1.0.metadata.yaml"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("c-test-1.0.metadata.yaml"))).To(BeTrue())
 		})
 		It("Compiles revdeps", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
@@ -647,16 +648,16 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(2))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Untar(spec.Rel("extra-layer-0.1.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
 
-			Expect(helpers.Exists(spec.Rel("extra-layer"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("extra-layer"))).To(BeTrue())
 
-			Expect(helpers.Exists(spec.Rel("usr/bin/pkgs-checker"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("base-layer-0.1.package.tar"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("extra-layer-0.1.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("usr/bin/pkgs-checker"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("base-layer-0.1.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("extra-layer-0.1.package.tar"))).To(BeTrue())
 		})
 
 		It("Compiles complex dependencies trees with best matches", func() {
@@ -685,17 +686,17 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].Dependencies)).To(Equal(6))
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 			Expect(helpers.Untar(spec.Rel("vhba-sys-fs-5.4.2-20190410.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(spec.Rel("sabayon-build-portage-layer-0.20191126.package.tar"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("build-layer-0.1.package.tar"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("build-sabayon-overlay-layer-0.20191212.package.tar"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("build-sabayon-overlays-layer-0.1.package.tar"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("linux-sabayon-sys-kernel-5.4.2.package.tar"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("sabayon-sources-sys-kernel-5.4.2.package.tar"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("vhba"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("sabayon-build-portage-layer-0.20191126.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("build-layer-0.1.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("build-sabayon-overlay-layer-0.20191212.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("build-sabayon-overlays-layer-0.1.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("linux-sabayon-sys-kernel-5.4.2.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("sabayon-sources-sys-kernel-5.4.2.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("vhba"))).To(BeTrue())
 		})
 
 		It("Compiles revdeps with seeds", func() {
@@ -720,31 +721,31 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(4))
 
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 			}
 
 			// A deps on B, so A artifacts are here:
-			Expect(helpers.Exists(spec.Rel("test3"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test4"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test3"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test4"))).To(BeTrue())
 
 			// B
-			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("artifact42"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("artifact42"))).To(BeTrue())
 
 			// C depends on B, so B is here
-			content1, err := helpers.Read(spec.Rel("c"))
+			content1, err := fileHelper.Read(spec.Rel("c"))
 			Expect(err).ToNot(HaveOccurred())
-			content2, err := helpers.Read(spec.Rel("cd"))
+			content2, err := fileHelper.Read(spec.Rel("cd"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(content1).To(Equal("c\n"))
 			Expect(content2).To(Equal("c\n"))
 
 			// D is here as it requires C, and C was recompiled
-			content1, err = helpers.Read(spec.Rel("d"))
+			content1, err = fileHelper.Read(spec.Rel("d"))
 			Expect(err).ToNot(HaveOccurred())
-			content2, err = helpers.Read(spec.Rel("dd"))
+			content2, err = fileHelper.Read(spec.Rel("dd"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(content1).To(Equal("s\n"))
 			Expect(content2).To(Equal("dd\n"))
@@ -777,19 +778,19 @@ var _ = Describe("Compiler", func() {
 			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			for _, artifact := range artifacts {
-				Expect(helpers.Exists(artifact.Path)).To(BeTrue())
+				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
 
 				for _, d := range artifact.Dependencies {
-					Expect(helpers.Exists(d.Path)).To(BeTrue())
+					Expect(fileHelper.Exists(d.Path)).To(BeTrue())
 					Expect(helpers.Untar(d.Path, tmpdir, false)).ToNot(HaveOccurred())
 				}
 			}
 
-			Expect(helpers.Exists(spec.Rel("test3"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test4"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test5"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test6"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test3"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test4"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
 
 		})
 	})
@@ -821,8 +822,8 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
 			Expect(helpers.Untar(spec.Rel("runtime-layer-0.1.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(spec.Rel("bin/busybox"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("var"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("bin/busybox"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("var"))).ToNot(BeTrue())
 		})
 	})
 
@@ -869,13 +870,13 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts[0].Dependencies)).To(Equal(0))
 
 			Expect(helpers.Untar(spec.Rel("dironly-test-1.0.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(spec.Rel("test1"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("test2"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test1"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test2"))).To(BeTrue())
 
 			Expect(helpers.Untar(spec2.Rel("dironly_filter-test-1.0.package.tar"), tmpdir2, false)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(spec2.Rel("test5"))).To(BeTrue())
-			Expect(helpers.Exists(spec2.Rel("test6"))).ToNot(BeTrue())
-			Expect(helpers.Exists(spec2.Rel("artifact42"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec2.Rel("test5"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec2.Rel("test6"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec2.Rel("artifact42"))).ToNot(BeTrue())
 		})
 	})
 
@@ -905,12 +906,12 @@ var _ = Describe("Compiler", func() {
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
-			Expect(helpers.Exists(spec.Rel("runtime-layer-0.1.package.tar.gz"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("runtime-layer-0.1.package.tar"))).To(BeFalse())
+			Expect(fileHelper.Exists(spec.Rel("runtime-layer-0.1.package.tar.gz"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("runtime-layer-0.1.package.tar"))).To(BeFalse())
 			Expect(artifacts[0].Unpack(tmpdir, false)).ToNot(HaveOccurred())
 			//	Expect(helpers.Untar(spec.Rel("runtime-layer-0.1.package.tar"), tmpdir, false)).ToNot(HaveOccurred())
-			Expect(helpers.Exists(spec.Rel("bin/busybox"))).To(BeTrue())
-			Expect(helpers.Exists(spec.Rel("var"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("bin/busybox"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("var"))).ToNot(BeTrue())
 		})
 	})
 
@@ -961,7 +962,7 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
 			Expect(artifacts[0].Files).To(ContainElement("bin/busybox"))
 
-			Expect(helpers.Exists(spec.Rel("runtime-layer-0.1.metadata.yaml"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("runtime-layer-0.1.metadata.yaml"))).To(BeTrue())
 
 			art, err := LoadArtifactFromYaml(spec)
 			Expect(err).ToNot(HaveOccurred())

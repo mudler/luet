@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	config "github.com/mudler/luet/pkg/config"
-	"github.com/mudler/luet/pkg/helpers"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -38,7 +38,7 @@ var _ = Describe("Config", func() {
 			tmpDir, err := config.LuetCfg.GetSystem().TempDir("test1")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(strings.HasPrefix(tmpDir, filepath.Join(os.TempDir(), "tmpluet"))).To(BeTrue())
-			Expect(helpers.Exists(tmpDir)).To(BeTrue())
+			Expect(fileHelper.Exists(tmpDir)).To(BeTrue())
 
 			defer os.RemoveAll(tmpDir)
 		})
@@ -49,7 +49,7 @@ var _ = Describe("Config", func() {
 			tmpFile, err := config.LuetCfg.GetSystem().TempFile("testfile1")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(strings.HasPrefix(tmpFile.Name(), filepath.Join(os.TempDir(), "tmpluet"))).To(BeTrue())
-			Expect(helpers.Exists(tmpFile.Name())).To(BeTrue())
+			Expect(fileHelper.Exists(tmpFile.Name())).To(BeTrue())
 
 			defer os.Remove(tmpFile.Name())
 		})

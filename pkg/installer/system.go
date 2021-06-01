@@ -3,6 +3,7 @@ package installer
 import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/mudler/luet/pkg/helpers"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/tree"
@@ -23,7 +24,7 @@ func (s *System) ExecuteFinalizers(packs []pkg.Package) error {
 	var errs error
 	executedFinalizer := map[string]bool{}
 	for _, p := range packs {
-		if helpers.Exists(p.Rel(tree.FinalizerFile)) {
+		if fileHelper.Exists(p.Rel(tree.FinalizerFile)) {
 			out, err := helpers.RenderFiles(p.Rel(tree.FinalizerFile), p.Rel(tree.DefinitionFile))
 			if err != nil {
 				Warning("Failed rendering finalizer for ", p.HumanReadableString(), err.Error())

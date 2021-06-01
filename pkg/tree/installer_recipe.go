@@ -26,8 +26,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mudler/luet/pkg/helpers"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	pkg "github.com/mudler/luet/pkg/package"
+
 	"github.com/pkg/errors"
 )
 
@@ -61,8 +62,8 @@ func (r *InstallerRecipe) Save(path string) error {
 		}
 		// Instead of rdeps, have a different tree for build deps.
 		finalizerPath := p.Rel(FinalizerFile)
-		if helpers.Exists(finalizerPath) { // copy finalizer file from the source tree
-			helpers.CopyFile(finalizerPath, filepath.Join(dir, FinalizerFile))
+		if fileHelper.Exists(finalizerPath) { // copy finalizer file from the source tree
+			fileHelper.CopyFile(finalizerPath, filepath.Join(dir, FinalizerFile))
 		}
 
 	}
@@ -71,7 +72,7 @@ func (r *InstallerRecipe) Save(path string) error {
 
 func (r *InstallerRecipe) Load(path string) error {
 
-	if !helpers.Exists(path) {
+	if !fileHelper.Exists(path) {
 		return errors.New(fmt.Sprintf(
 			"Path %s doesn't exit.", path,
 		))

@@ -22,7 +22,7 @@ import (
 
 	. "github.com/mudler/luet/pkg/config"
 	config "github.com/mudler/luet/pkg/config"
-	"github.com/mudler/luet/pkg/helpers"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/spf13/cobra"
@@ -47,7 +47,7 @@ var cleanupCmd = &cobra.Command{
 		LuetCfg.System.DatabasePath = dbpath
 		LuetCfg.System.Rootfs = rootfs
 		// Check if cache dir exists
-		if helpers.Exists(LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()) {
+		if fileHelper.Exists(LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()) {
 
 			files, err := ioutil.ReadDir(LuetCfg.GetSystem().GetSystemPkgsCacheDirPath())
 			if err != nil {

@@ -22,9 +22,9 @@ import (
 
 	options "github.com/mudler/luet/pkg/compiler/types/options"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	. "github.com/mudler/luet/pkg/compiler"
-	helpers "github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/tree"
 	. "github.com/onsi/ginkgo"
@@ -154,7 +154,7 @@ var _ = Describe("Spec", func() {
 			lspec.Env = []string{"test=1"}
 			err = lspec.WriteBuildImageDefinition(filepath.Join(tmpdir, "Dockerfile"))
 			Expect(err).ToNot(HaveOccurred())
-			dockerfile, err := helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
+			dockerfile, err := fileHelper.Read(filepath.Join(tmpdir, "Dockerfile"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dockerfile).To(Equal(`
 FROM alpine
@@ -167,7 +167,7 @@ ENV test=1`))
 
 			err = lspec.WriteStepImageDefinition(lspec.Image, filepath.Join(tmpdir, "Dockerfile"))
 			Expect(err).ToNot(HaveOccurred())
-			dockerfile, err = helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
+			dockerfile, err = fileHelper.Read(filepath.Join(tmpdir, "Dockerfile"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dockerfile).To(Equal(`
 FROM luet/base
@@ -205,7 +205,7 @@ RUN echo bar > /test2`))
 
 		err = lspec.WriteBuildImageDefinition(filepath.Join(tmpdir, "Dockerfile"))
 		Expect(err).ToNot(HaveOccurred())
-		dockerfile, err := helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
+		dockerfile, err := fileHelper.Read(filepath.Join(tmpdir, "Dockerfile"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(dockerfile).To(Equal(`
 FROM alpine
@@ -222,7 +222,7 @@ ENV test=1`))
 
 		err = lspec.WriteBuildImageDefinition(filepath.Join(tmpdir, "Dockerfile"))
 		Expect(err).ToNot(HaveOccurred())
-		dockerfile, err = helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
+		dockerfile, err = fileHelper.Read(filepath.Join(tmpdir, "Dockerfile"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(dockerfile).To(Equal(`
 FROM alpine
@@ -237,7 +237,7 @@ ENV test=1`))
 
 		err = lspec.WriteStepImageDefinition(lspec.Image, filepath.Join(tmpdir, "Dockerfile"))
 		Expect(err).ToNot(HaveOccurred())
-		dockerfile, err = helpers.Read(filepath.Join(tmpdir, "Dockerfile"))
+		dockerfile, err = fileHelper.Read(filepath.Join(tmpdir, "Dockerfile"))
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(dockerfile).To(Equal(`

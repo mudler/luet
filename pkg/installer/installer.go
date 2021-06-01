@@ -24,16 +24,16 @@ import (
 	"strings"
 	"sync"
 
-	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
-
-	. "github.com/logrusorgru/aurora"
 	"github.com/mudler/luet/pkg/bus"
+	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
 	"github.com/mudler/luet/pkg/config"
-	"github.com/mudler/luet/pkg/helpers"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
+	"github.com/mudler/luet/pkg/helpers/match"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 
+	. "github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 )
 
@@ -597,7 +597,7 @@ func (l *LuetInstaller) Reclaim(s *System) error {
 				"from", repo.GetName(), "is installed")
 		FILES:
 			for _, f := range artefact.Files {
-				if helpers.Exists(filepath.Join(s.Target, f)) {
+				if fileHelper.Exists(filepath.Join(s.Target, f)) {
 					p, err := repo.GetTree().GetDatabase().FindPackage(artefact.CompileSpec.GetPackage())
 					if err != nil {
 						return err
@@ -915,7 +915,7 @@ func pruneEmptyFilePath(path string) {
 		currentPath = filepath.Join(currentPath, p)
 		allPaths = append(allPaths, currentPath)
 	}
-	helpers.ReverseAny(allPaths)
+	match.ReverseAny(allPaths)
 	for _, p := range allPaths {
 		checkAndPrunePath(p)
 	}
@@ -943,7 +943,7 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 		cp.Map(files)
 	}
 
-	toRemove, notPresent := helpers.OrderFiles(s.Target, files)
+	toRemove, notPresent := fileHelper.OrderFiles(s.Target, files)
 
 	// Remove from target
 	for _, f := range toRemove {

@@ -22,8 +22,8 @@ import (
 
 	"github.com/mudler/luet/pkg/compiler/types/artifact"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
-	helpers "github.com/mudler/luet/pkg/helpers"
 	pkg "github.com/mudler/luet/pkg/package"
 
 	. "github.com/mudler/luet/pkg/installer/client"
@@ -32,7 +32,7 @@ import (
 )
 
 // This test expect that the repository defined in UNIT_TEST_DOCKER_IMAGE is in zstd format.
-// the repository is built by the 01_simple_docker.sh integration test file.
+// the repository is built by the 01_simple_docker.sh integration test fileHelper.
 // This test also require root. At the moment, unpacking docker images with 'img' requires root permission to
 // mount/unmount layers.
 var _ = Describe("Docker client", func() {
@@ -51,7 +51,7 @@ var _ = Describe("Docker client", func() {
 		It("Downloads single files", func() {
 			f, err := c.DownloadFile("repository.yaml")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Read(f)).To(ContainSubstring("Test Repo"))
+			Expect(fileHelper.Read(f)).To(ContainSubstring("Test Repo"))
 			os.RemoveAll(f)
 		})
 
@@ -71,8 +71,8 @@ var _ = Describe("Docker client", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 			Expect(f.Unpack(tmpdir, false)).ToNot(HaveOccurred())
-			Expect(helpers.Read(filepath.Join(tmpdir, "c"))).To(Equal("c\n"))
-			Expect(helpers.Read(filepath.Join(tmpdir, "cd"))).To(Equal("c\n"))
+			Expect(fileHelper.Read(filepath.Join(tmpdir, "c"))).To(Equal("c\n"))
+			Expect(fileHelper.Read(filepath.Join(tmpdir, "cd"))).To(Equal("c\n"))
 			os.RemoveAll(f.Path)
 		})
 	})

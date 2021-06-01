@@ -42,6 +42,7 @@ import (
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	. "github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
@@ -168,7 +169,7 @@ func CreateArtifactForFile(s string, opts ...func(*PackageArtifact)) (*PackageAr
 	}
 	defer os.RemoveAll(archive) // clean up
 	dst := filepath.Join(archive, fileName)
-	if err := helpers.CopyFile(s, dst); err != nil {
+	if err := fileHelper.CopyFile(s, dst); err != nil {
 		return nil, errors.Wrapf(err, "error while copying %s to %s", s, dst)
 	}
 
@@ -209,7 +210,7 @@ func (a *PackageArtifact) GenerateFinalImage(imageName string, b ImageBuilder, k
 		return builderOpts, errors.Wrap(err, "error met while uncompressing artifact "+a.Path)
 	}
 
-	empty, err := helpers.DirectoryIsEmpty(uncompressedFiles)
+	empty, err := fileHelper.DirectoryIsEmpty(uncompressedFiles)
 	if err != nil {
 		return builderOpts, errors.Wrap(err, "error met while checking if directory is empty "+uncompressedFiles)
 	}
@@ -218,7 +219,7 @@ func (a *PackageArtifact) GenerateFinalImage(imageName string, b ImageBuilder, k
 	// We can't generate FROM scratch empty images. Docker will refuse to export them
 	// workaround: Inject a .virtual empty file
 	if empty {
-		helpers.Touch(filepath.Join(uncompressedFiles, ".virtual"))
+		fileHelper.Touch(filepath.Join(uncompressedFiles, ".virtual"))
 	}
 
 	data := a.genDockerfile()
@@ -401,12 +402,12 @@ func tarModifierWrapperFunc(dst, path string, header *tar.Header, content io.Rea
 		// We want to protect file only if the hash of the files are differing OR the file size are
 		differs := (existingHash != "" && existingHash != tarHash) || (err != nil && f != nil && header.Size != f.Size())
 		// Check if exists
-		if helpers.Exists(destPath) && differs {
+		if fileHelper.Exists(destPath) && differs {
 			for i := 1; i < 1000; i++ {
 				name := filepath.Join(filepath.Join(filepath.Dir(path),
 					fmt.Sprintf("._cfg%04d_%s", i, filepath.Base(path))))
 
-				if helpers.Exists(name) {
+				if fileHelper.Exists(name) {
 					continue
 				}
 				Info(fmt.Sprintf("Found protected file %s. Creating %s.", destPath,
@@ -628,7 +629,7 @@ func worker(i int, wg *sync.WaitGroup, s <-chan CopyJob) {
 		_, err := os.Lstat(job.Dst)
 		if err != nil {
 			Debug("Copying ", job.Src)
-			if err := helpers.DeepCopyFile(job.Src, job.Dst); err != nil {
+			if err := fileHelper.DeepCopyFile(job.Src, job.Dst); err != nil {
 				Warning("Error copying", job, err)
 			}
 		}

@@ -22,9 +22,8 @@ import (
 
 	"github.com/mudler/luet/pkg/compiler/types/artifact"
 	"github.com/mudler/luet/pkg/config"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/logger"
-
-	"github.com/mudler/luet/pkg/helpers"
 )
 
 type LocalClient struct {
@@ -50,7 +49,7 @@ func (c *LocalClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.P
 	}
 
 	// Check if file is already in cache
-	if helpers.Exists(cacheFile) {
+	if fileHelper.Exists(cacheFile) {
 		Debug("Use artifact", artifactName, "from cache.")
 	} else {
 		ok := false
@@ -61,7 +60,7 @@ func (c *LocalClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.P
 			Info("Downloading artifact", artifactName, "from", uri)
 
 			//defer os.Remove(file.Name())
-			err = helpers.CopyFile(filepath.Join(uri, artifactName), cacheFile)
+			err = fileHelper.CopyFile(filepath.Join(uri, artifactName), cacheFile)
 			if err != nil {
 				continue
 			}
@@ -104,7 +103,7 @@ func (c *LocalClient) DownloadFile(name string) (string, error) {
 		}
 		//defer os.Remove(file.Name())
 
-		err = helpers.CopyFile(filepath.Join(uri, name), file.Name())
+		err = fileHelper.CopyFile(filepath.Join(uri, name), file.Name())
 		if err != nil {
 			continue
 		}

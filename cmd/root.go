@@ -25,6 +25,7 @@ import (
 
 	"github.com/marcsauter/single"
 	bus "github.com/mudler/luet/pkg/bus"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	extensions "github.com/mudler/cobra-extensions"
 	config "github.com/mudler/luet/pkg/config"
@@ -252,7 +253,7 @@ func initConfig() {
 		}
 		homeDir := helpers.GetHomeDir()
 
-		if helpers.Exists(filepath.Join(pwdDir, ".luet.yaml")) || (homeDir != "" && helpers.Exists(filepath.Join(homeDir, ".luet.yaml"))) {
+		if fileHelper.Exists(filepath.Join(pwdDir, ".luet.yaml")) || (homeDir != "" && fileHelper.Exists(filepath.Join(homeDir, ".luet.yaml"))) {
 			viper.AddConfigPath(".")
 			if homeDir != "" {
 				viper.AddConfigPath(homeDir)

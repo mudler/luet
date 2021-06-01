@@ -36,6 +36,7 @@ import (
 	"github.com/mudler/luet/pkg/compiler/types/options"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	"github.com/mudler/luet/pkg/helpers"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
@@ -319,7 +320,7 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	defer os.RemoveAll(buildDir) // clean up
 
 	// First we copy the source definitions into the output - we create a copy which the builds will need (we need to cache this phase somehow)
-	err = helpers.CopyDir(p.GetPackage().GetPath(), buildDir)
+	err = fileHelper.CopyDir(p.GetPackage().GetPath(), buildDir)
 	if err != nil {
 		return builderOpts, runnerOpts, errors.Wrap(err, "Could not copy package sources")
 	}
@@ -1173,7 +1174,7 @@ func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack pkg.
 				if err != nil {
 					return nil, errors.Wrap(err, "while marshalling values file")
 				}
-				f := filepath.Join(valuesdir, helpers.RandStringRunes(20))
+				f := filepath.Join(valuesdir, fileHelper.RandStringRunes(20))
 				if err := ioutil.WriteFile(f, out, os.ModePerm); err != nil {
 					return nil, errors.Wrap(err, "while writing temporary values file")
 				}

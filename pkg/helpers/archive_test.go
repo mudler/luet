@@ -25,6 +25,8 @@ import (
 	"os"
 	"path/filepath"
 
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
+
 	"github.com/docker/docker/pkg/archive"
 	. "github.com/mudler/luet/pkg/helpers"
 	. "github.com/onsi/ginkgo"
@@ -128,7 +130,7 @@ var _ = Describe("Helpers Archive", func() {
 			err = archive.Untar(replacerArchive, targetDir, opts)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(Exists(filepath.Join(targetDir, "._cfg0001_file-0"))).Should(Equal(true))
+			Expect(fileHelper.Exists(filepath.Join(targetDir, "._cfg0001_file-0"))).Should(Equal(true))
 		})
 	})
 })

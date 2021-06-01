@@ -21,8 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/mudler/luet/pkg/compiler/types/artifact"
-	helpers "github.com/mudler/luet/pkg/helpers"
-
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/installer/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -42,7 +41,7 @@ var _ = Describe("Local client", func() {
 			c := NewLocalClient(RepoData{Urls: []string{tmpdir}})
 			path, err := c.DownloadFile("test.txt")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Read(path)).To(Equal("test"))
+			Expect(fileHelper.Read(path)).To(Equal("test"))
 			os.RemoveAll(path)
 		})
 
@@ -58,7 +57,7 @@ var _ = Describe("Local client", func() {
 			c := NewLocalClient(RepoData{Urls: []string{tmpdir}})
 			path, err := c.DownloadArtifact(&artifact.PackageArtifact{Path: "test.txt"})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(helpers.Read(path.Path)).To(Equal("test"))
+			Expect(fileHelper.Read(path.Path)).To(Equal("test"))
 			os.RemoveAll(path.Path)
 		})
 

@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	bus "github.com/mudler/luet/pkg/bus"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	capi "github.com/mudler/docker-companion/api"
 
@@ -237,7 +238,7 @@ func (b *SimpleDocker) ExtractRootfs(opts Options, keepPerms bool) error {
 		return errors.Wrap(err, "Error met while unpacking rootfs")
 	}
 
-	manifest, err := helpers.Read(filepath.Join(rootfs, "manifest.json"))
+	manifest, err := fileHelper.Read(filepath.Join(rootfs, "manifest.json"))
 	if err != nil {
 		return errors.Wrap(err, "Error met while reading image manifest")
 	}
