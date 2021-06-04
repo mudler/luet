@@ -31,6 +31,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/mudler/luet/pkg/bus"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
@@ -142,6 +143,12 @@ type Image struct {
 	ContentSize int64
 }
 
+// UnpackEventData is the data structure to pass for the bus events
+type UnpackEventData struct {
+	Image string
+	Dest  string
+}
+
 // DownloadAndExtractDockerImage is a re-adaption
 func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthConfig, verify bool) (*Image, error) {
 	if verify {
@@ -185,10 +192,15 @@ func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthCon
 	if err := os.MkdirAll(dest, 0700); err != nil {
 		return nil, err
 	}
+
+	bus.Manager.Publish(bus.EventImagePreUnPack, UnpackEventData{Image: image, Dest: dest})
+
 	c, err := archive.Apply(context.TODO(), dest, reader)
 	if err != nil {
 		return nil, err
 	}
+
+	bus.Manager.Publish(bus.EventImagePostUnPack, UnpackEventData{Image: image, Dest: dest})
 
 	return &Image{
 
