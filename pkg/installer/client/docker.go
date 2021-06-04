@@ -30,7 +30,6 @@ import (
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers/docker"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-	"github.com/mudler/luet/pkg/helpers/imgworker"
 	. "github.com/mudler/luet/pkg/logger"
 )
 
@@ -141,7 +140,7 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 	var file *os.File = nil
 	var err error
 	var temp, contentstore string
-	var info *imgworker.ListedImage
+	var info *docker.Image
 	// Files should be in URI/repository:<file>
 	ok := false
 

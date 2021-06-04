@@ -20,9 +20,9 @@ import (
 	"encoding/hex"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/containerd/containerd/archive"
-	"github.com/containerd/containerd/images"
 	"github.com/docker/cli/cli/trust"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
@@ -31,7 +31,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/mudler/luet/pkg/helpers/imgworker"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
@@ -118,9 +117,33 @@ func (s staticAuth) Authorization() (*authn.AuthConfig, error) {
 	}, nil
 }
 
+type Image struct {
+	// Name of the image.
+	//
+	// To be pulled, it must be a reference compatible with resolvers.
+	//
+	// This field is required.
+	Name string
+
+	// Labels provide runtime decoration for the image record.
+	//
+	// There is no default behavior for how these labels are propagated. They
+	// only decorate the static metadata object.
+	//
+	// This field is optional.
+	Labels map[string]string
+
+	// Target describes the root content for this image. Typically, this is
+	// a manifest, index or manifest list.
+	Target specs.Descriptor
+
+	CreatedAt, UpdatedAt time.Time
+
+	ContentSize int64
+}
 
 // DownloadAndExtractDockerImage is a re-adaption
-func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthConfig, verify bool) (*imgworker.ListedImage, error) {
+func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthConfig, verify bool) (*Image, error) {
 	if verify {
 		img, err := verifyImage(image, auth)
 		if err != nil {
@@ -167,16 +190,16 @@ func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthCon
 		return nil, err
 	}
 
-	return &imgworker.ListedImage{
-		Image:       images.Image{
-			Name:      image,
-			Labels:    m.Annotations,
-			Target:    specs.Descriptor{
-				MediaType:   string(mt),
-				Digest:     digest.Digest(d.String()),
-				Size:        c,
-			},
+	return &Image{
+
+		Name:   image,
+		Labels: m.Annotations,
+		Target: specs.Descriptor{
+			MediaType: string(mt),
+			Digest:    digest.Digest(d.String()),
+			Size:      c,
 		},
+
 		ContentSize: c,
 	}, nil
 }
