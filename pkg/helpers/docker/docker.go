@@ -21,13 +21,19 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mudler/luet/pkg/helpers/imgworker"
-
+	"github.com/containerd/containerd/archive"
+	"github.com/containerd/containerd/images"
 	"github.com/docker/cli/cli/trust"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/registry"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/mudler/luet/pkg/helpers/imgworker"
 	"github.com/opencontainers/go-digest"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"github.com/theupdateframework/notary/tuf/data"
 )
@@ -95,10 +101,26 @@ func trustedResolveDigest(ctx context.Context, ref reference.NamedTagged, authCo
 	return reference.WithDigest(ref, dgst)
 }
 
-// DownloadAndExtractDockerImage is a re-adaption
-// from genuinetools/img https://github.com/genuinetools/img/blob/54d0ca981c1260546d43961a538550eef55c87cf/pull.go
-func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthConfig, verify bool) (*imgworker.ListedImage, error) {
+type staticAuth struct {
+	auth *types.AuthConfig
+}
 
+func (s staticAuth) Authorization() (*authn.AuthConfig, error) {
+	if s.auth == nil {
+		return nil, nil
+	}
+	return &authn.AuthConfig{
+		Username:      s.auth.Username,
+		Password:      s.auth.Password,
+		Auth:          s.auth.Auth,
+		IdentityToken: s.auth.IdentityToken,
+		RegistryToken: s.auth.RegistryToken,
+	}, nil
+}
+
+
+// DownloadAndExtractDockerImage is a re-adaption
+func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthConfig, verify bool) (*imgworker.ListedImage, error) {
 	if verify {
 		img, err := verifyImage(image, auth)
 		if err != nil {
@@ -107,22 +129,56 @@ func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthCon
 		image = img
 	}
 
-	defer os.RemoveAll(temp)
-	c, err := imgworker.New(temp, auth)
+	ref, err := name.ParseReference(image)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed creating client")
-	}
-	defer c.Close()
-
-	listedImage, err := c.Pull(image)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed listing images")
-
+		return nil, err
 	}
 
+	img, err := remote.Image(ref, remote.WithAuth(staticAuth{auth}))
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := img.Manifest()
+	if err != nil {
+		return nil, err
+	}
+
+	mt, err := img.MediaType()
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := img.Digest()
+	if err != nil {
+		return nil, err
+	}
+
+	reader := mutate.Extract(img)
+	defer reader.Close()
+
+	os.RemoveAll(temp)
 	os.RemoveAll(dest)
-	err = c.Unpack(image, dest)
-	return listedImage, err
+	if err := os.MkdirAll(dest, 0700); err != nil {
+		return nil, err
+	}
+	c, err := archive.Apply(context.TODO(), dest, reader)
+	if err != nil {
+		return nil, err
+	}
+
+	return &imgworker.ListedImage{
+		Image:       images.Image{
+			Name:      image,
+			Labels:    m.Annotations,
+			Target:    specs.Descriptor{
+				MediaType:   string(mt),
+				Digest:     digest.Digest(d.String()),
+				Size:        c,
+			},
+		},
+		ContentSize: c,
+	}, nil
 }
 
 func StripInvalidStringsFromImage(s string) string {
