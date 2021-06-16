@@ -18,18 +18,18 @@ package docker
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/containerd/containerd/archive"
 	"github.com/docker/cli/cli/trust"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/registry"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/mudler/luet/pkg/bus"
 	"github.com/opencontainers/go-digest"
@@ -184,35 +184,49 @@ func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthCon
 		return nil, err
 	}
 
-	reader := mutate.Extract(img)
-	defer reader.Close()
-
-	os.RemoveAll(temp)
-	os.RemoveAll(dest)
-	if err := os.MkdirAll(dest, 0700); err != nil {
-		return nil, err
-	}
+	defer os.RemoveAll(temp)
 
 	bus.Manager.Publish(bus.EventImagePreUnPack, UnpackEventData{Image: image, Dest: dest})
-
-	c, err := archive.Apply(context.TODO(), dest, reader)
+	layers, err := img.Layers()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading layers from '%s' image failed: %v", image, err)
+	}
+
+	var size int64
+	for _, l := range layers {
+		s, err := l.Size()
+		if err != nil {
+			return nil, fmt.Errorf("reading layer size from '%s' image failed: %v", image, err)
+		}
+		size += s
+
+		layerReader, err := l.Uncompressed()
+		if err != nil {
+			return nil, fmt.Errorf("reading uncompressed layer from '%s' image failed: %v", image, err)
+		}
+		defer layerReader.Close()
+
+		// Unpack the tarfile to the rootfs path.
+		// FROM: https://godoc.org/github.com/moby/moby/pkg/archive#TarOptions
+		if err := archive.Untar(layerReader, dest, &archive.TarOptions{
+			NoLchown:        false,
+			ExcludePatterns: []string{"dev/"}, // prevent 'operation not permitted'
+		}); err != nil {
+			return nil, fmt.Errorf("extracting '%s' image to directory %s failed: %v", image, dest, err)
+		}
 	}
 
 	bus.Manager.Publish(bus.EventImagePostUnPack, UnpackEventData{Image: image, Dest: dest})
 
 	return &Image{
-
 		Name:   image,
 		Labels: m.Annotations,
 		Target: specs.Descriptor{
 			MediaType: string(mt),
 			Digest:    digest.Digest(d.String()),
-			Size:      c,
+			Size:      size,
 		},
-
-		ContentSize: c,
+		ContentSize: size,
 	}, nil
 }
 
