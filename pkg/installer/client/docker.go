@@ -140,7 +140,6 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 	var file *os.File = nil
 	var err error
 	var temp, contentstore string
-	var info *docker.Image
 	// Files should be in URI/repository:<file>
 	ok := false
 
@@ -164,7 +163,7 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 		imageName := fmt.Sprintf("%s:%s", uri, docker.StripInvalidStringsFromImage(name))
 		Info("Downloading", imageName)
 
-		info, err = docker.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
+		info, err := docker.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
 		if err != nil {
 			Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
 			continue

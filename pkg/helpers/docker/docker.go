@@ -21,8 +21,11 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
+	"github.com/containerd/containerd/images"
+	"github.com/mudler/luet/pkg/helpers/imgworker"
+
+	continerdarchive "github.com/containerd/containerd/archive"
 	"github.com/docker/cli/cli/trust"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
@@ -30,6 +33,8 @@ import (
 	"github.com/docker/docker/registry"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/mudler/luet/pkg/bus"
 	"github.com/opencontainers/go-digest"
@@ -118,45 +123,85 @@ func (s staticAuth) Authorization() (*authn.AuthConfig, error) {
 	}, nil
 }
 
-type Image struct {
-	// Name of the image.
-	//
-	// To be pulled, it must be a reference compatible with resolvers.
-	//
-	// This field is required.
-	Name string
-
-	// Labels provide runtime decoration for the image record.
-	//
-	// There is no default behavior for how these labels are propagated. They
-	// only decorate the static metadata object.
-	//
-	// This field is optional.
-	Labels map[string]string
-
-	// Target describes the root content for this image. Typically, this is
-	// a manifest, index or manifest list.
-	Target specs.Descriptor
-
-	CreatedAt, UpdatedAt time.Time
-
-	ContentSize int64
-}
-
 // UnpackEventData is the data structure to pass for the bus events
 type UnpackEventData struct {
 	Image string
 	Dest  string
 }
 
-// DownloadAndExtractDockerImage is a re-adaption
-func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthConfig, verify bool) (*Image, error) {
+// privilegedExtractImage uses the imgworker (which requires privileges) to extract a container image
+func privilegedExtractImage(temp, image, dest string, auth *types.AuthConfig, verify bool) (*imgworker.ListedImage, error) {
+	defer os.RemoveAll(temp)
+	c, err := imgworker.New(temp, auth)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed creating client")
+	}
+	defer c.Close()
+
+	listedImage, err := c.Pull(image)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed listing images")
+	}
+
+	os.RemoveAll(dest)
+
+	bus.Manager.Publish(bus.EventImagePreUnPack, UnpackEventData{Image: image, Dest: dest})
+
+	err = c.Unpack(image, dest)
+
+	bus.Manager.Publish(bus.EventImagePostUnPack, UnpackEventData{Image: image, Dest: dest})
+
+	return listedImage, err
+}
+
+// UnarchiveLayers extract layers with archive.Untar from docker instead of containerd
+func UnarchiveLayers(temp string, img v1.Image, image, dest string, auth *types.AuthConfig, verify bool) (int64, error) {
+	layers, err := img.Layers()
+	if err != nil {
+		return 0, fmt.Errorf("reading layers from '%s' image failed: %v", image, err)
+	}
+	bus.Manager.Publish(bus.EventImagePreUnPack, UnpackEventData{Image: image, Dest: dest})
+
+	var size int64
+	for _, l := range layers {
+		s, err := l.Size()
+		if err != nil {
+			return 0, fmt.Errorf("reading layer size from '%s' image failed: %v", image, err)
+		}
+		size += s
+
+		layerReader, err := l.Uncompressed()
+		if err != nil {
+			return 0, fmt.Errorf("reading uncompressed layer from '%s' image failed: %v", image, err)
+		}
+		defer layerReader.Close()
+
+		// Unpack the tarfile to the rootfs path.
+		// FROM: https://godoc.org/github.com/moby/moby/pkg/archive#TarOptions
+		if err := archive.Untar(layerReader, dest, &archive.TarOptions{
+			NoLchown:        false,
+			ExcludePatterns: []string{"dev/"}, // prevent 'operation not permitted'
+		}); err != nil {
+			return 0, fmt.Errorf("extracting '%s' image to directory %s failed: %v", image, dest, err)
+		}
+	}
+	bus.Manager.Publish(bus.EventImagePostUnPack, UnpackEventData{Image: image, Dest: dest})
+
+	return size, nil
+}
+
+// DownloadAndExtractDockerImage extracts a container image natively. It supports privileged/unprivileged mode
+func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthConfig, verify bool) (*imgworker.ListedImage, error) {
 	if verify {
 		img, err := verifyImage(image, auth)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed verifying image")
 		}
 		image = img
+	}
+
+	if os.Getenv("LUET_PRIVILEGED_EXTRACT") == "true" {
+		return privilegedExtractImage(temp, image, dest, auth, verify)
 	}
 
 	ref, err := name.ParseReference(image)
@@ -184,49 +229,30 @@ func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthCon
 		return nil, err
 	}
 
+	reader := mutate.Extract(img)
+	defer reader.Close()
 	defer os.RemoveAll(temp)
 
 	bus.Manager.Publish(bus.EventImagePreUnPack, UnpackEventData{Image: image, Dest: dest})
-	layers, err := img.Layers()
+
+	c, err := continerdarchive.Apply(context.TODO(), dest, reader)
 	if err != nil {
-		return nil, fmt.Errorf("reading layers from '%s' image failed: %v", image, err)
-	}
-
-	var size int64
-	for _, l := range layers {
-		s, err := l.Size()
-		if err != nil {
-			return nil, fmt.Errorf("reading layer size from '%s' image failed: %v", image, err)
-		}
-		size += s
-
-		layerReader, err := l.Uncompressed()
-		if err != nil {
-			return nil, fmt.Errorf("reading uncompressed layer from '%s' image failed: %v", image, err)
-		}
-		defer layerReader.Close()
-
-		// Unpack the tarfile to the rootfs path.
-		// FROM: https://godoc.org/github.com/moby/moby/pkg/archive#TarOptions
-		if err := archive.Untar(layerReader, dest, &archive.TarOptions{
-			NoLchown:        false,
-			ExcludePatterns: []string{"dev/"}, // prevent 'operation not permitted'
-		}); err != nil {
-			return nil, fmt.Errorf("extracting '%s' image to directory %s failed: %v", image, dest, err)
-		}
+		return nil, err
 	}
 
 	bus.Manager.Publish(bus.EventImagePostUnPack, UnpackEventData{Image: image, Dest: dest})
 
-	return &Image{
-		Name:   image,
-		Labels: m.Annotations,
-		Target: specs.Descriptor{
-			MediaType: string(mt),
-			Digest:    digest.Digest(d.String()),
-			Size:      size,
+	return &imgworker.ListedImage{
+		Image: images.Image{
+			Name:   image,
+			Labels: m.Annotations,
+			Target: specs.Descriptor{
+				MediaType: string(mt),
+				Digest:    digest.Digest(d.String()),
+				Size:      c,
+			},
 		},
-		ContentSize: size,
+		ContentSize: c,
 	}, nil
 }
 

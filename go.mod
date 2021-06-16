@@ -9,23 +9,21 @@ require (
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 	github.com/briandowns/spinner v1.12.1-0.20201220203425-e201aaea0a31
 	github.com/cavaliercoder/grab v1.0.1-0.20201108051000-98a5bfe305ec
-	github.com/containerd/cgroups v0.0.0-20200217135630-d732e370d46d // indirect
 	github.com/containerd/containerd v1.4.1-0.20201117152358-0edc412565dc
-	github.com/containerd/ttrpc v0.0.0-20200121165050-0be804eadb15 // indirect
-	github.com/containerd/typeurl v0.0.0-20200205145503-b45ef1f1f737 // indirect
 	github.com/crillab/gophersat v1.3.2-0.20201023142334-3fc2ac466765
-	github.com/docker/cli v0.0.0-20200227165822-2298e6a3fe24
+	github.com/docker/cli v20.10.0-beta1.0.20201029214301-1d20b15adc38+incompatible
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v20.10.0-beta1.0.20201110211921-af34b94a78a1+incompatible
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/go-units v0.4.0
 	github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
+	github.com/genuinetools/img v0.5.11
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-containerregistry v0.2.1
 	github.com/google/renameio v1.0.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-version v1.2.1
-	github.com/imdario/mergo v0.3.8
+	github.com/imdario/mergo v0.3.9
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/jedib0t/go-pretty/v6 v6.0.5
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
@@ -36,6 +34,7 @@ require (
 	github.com/logrusorgru/aurora v0.0.0-20190417123914-21d75270181e
 	github.com/marcsauter/single v0.0.0-20181104081128-f8bf46f26ec0
 	github.com/mitchellh/hashstructure/v2 v2.0.1
+	github.com/moby/buildkit v0.7.2
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
 	github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87
@@ -45,7 +44,6 @@ require (
 	github.com/onsi/gomega v1.10.3
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.0.1
-	github.com/opencontainers/runc v1.0.0-rc9.0.20200221051241-688cf6d43cc4 // indirect
 	github.com/otiai10/copy v1.2.1-0.20200916181228-26f84a0b1578
 	github.com/philopon/go-toposort v0.0.0-20170620085441-9be86dbd762f
 	github.com/pkg/errors v0.9.1
@@ -58,6 +56,7 @@ require (
 	go.uber.org/atomic v1.5.1 // indirect
 	go.uber.org/multierr v1.4.0
 	go.uber.org/zap v1.13.0
+	google.golang.org/grpc v1.29.1
 	gopkg.in/yaml.v2 v2.3.0
 	gotest.tools/v3 v3.0.2 // indirect
 	helm.sh/helm/v3 v3.3.4
@@ -67,3 +66,9 @@ require (
 replace github.com/docker/docker => github.com/Luet-lab/moby v17.12.0-ce-rc1.0.20200605210607-749178b8f80d+incompatible
 
 replace github.com/containerd/containerd => github.com/containerd/containerd v1.3.1-0.20200227195959-4d242818bf55
+
+replace github.com/hashicorp/go-immutable-radix => github.com/tonistiigi/go-immutable-radix v0.0.0-20170803185627-826af9ccf0fe
+
+replace github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
+
+replace github.com/opencontainers/runc => github.com/opencontainers/runc v1.0.0-rc9.0.20200221051241-688cf6d43cc4
