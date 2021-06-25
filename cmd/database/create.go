@@ -74,6 +74,12 @@ For reference, inspect a "metadata.yaml" file generated while running "luet buil
 
 				files := art.Files
 
+				// Check if the package is already present
+				if p, err := systemDB.FindPackage(art.CompileSpec.GetPackage()); err == nil && p.GetName() != "" {
+					Fatal("Package", art.CompileSpec.GetPackage().HumanReadableString(),
+						" already present.")
+				}
+
 				if _, err := systemDB.CreatePackage(art.CompileSpec.GetPackage()); err != nil {
 					Fatal("Failed to create ", a, ": ", err.Error())
 				}
