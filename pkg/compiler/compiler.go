@@ -195,11 +195,14 @@ func (cs *LuetCompiler) stripFromRootfs(includes []string, rootfs string, includ
 		for _, i := range includeRegexp {
 			if i.MatchString(abspath) {
 				match = true
+				break
 			}
 		}
 
 		if include && !match || !include && match {
 			toRemove = append(toRemove, currentpath)
+		} else {
+			Debug(":sun: Matched file", currentpath)
 		}
 
 		return nil
