@@ -201,6 +201,7 @@ func (cs *LuetCompiler) stripFromRootfs(includes []string, rootfs string, includ
 
 		if include && !match || !include && match {
 			toRemove = append(toRemove, currentpath)
+			Debug(":scissors: Removing file", currentpath)
 		} else {
 			Debug(":sun: Matched file", currentpath)
 		}
