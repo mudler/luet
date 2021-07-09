@@ -51,9 +51,9 @@ testBuild() {
     assertTrue 'create package' "[ -e '$tmpdir/testbuild/c-test-1.0.package.tar.zst' ]"
     assertTrue 'create package Z' "[ -e '$tmpdir/testbuild/z-test-1.0+2.package.tar.zst' ]"
     assertTrue 'create package interpolated' "[ -e '$tmpdir/testbuild/interpolated-test-1.0+2.package.tar.zst' ]"
-    assertContains 'Does use the upstream cache without specifying it test/c' "$build_output" "Images available remotely for test/c-1.0 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:ac34beb3fc2752bab54549db095dd6994d7531b88e1ff7f902d01ae80fdd030d"
-    assertContains 'Does use the upstream cache without specifying it test/z' "$build_output" "Images available remotely for test/z-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:d8b8881d50ae83646728bb28ad678fc14e4e003e4b0d0a66f8e6167c6116e024"
-    assertContains 'Does use the upstream cache without specifying it test/interpolated' "$build_output" "Images available remotely for test/interpolated-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:2aaccd929ebe5683f95c70c6ec8d68f240ceea8633f3350b94904ad73da5fd47"
+    assertContains 'Does use the upstream cache without specifying it test/c' "$build_output" "Images available remotely for test/c-1.0 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:7a46e5c8893b574d9f984eaade75b0e68cc891bb6d01860ba91a62f9e4de2b62"
+    assertContains 'Does use the upstream cache without specifying it test/z' "$build_output" "Images available remotely for test/z-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:4277934ece4de17856b87294301cdfcdf3c6f956e682ff64697be67178b8a4b1"
+    assertContains 'Does use the upstream cache without specifying it test/interpolated' "$build_output" "Images available remotely for test/interpolated-1.0+2 generating artifact from remote images: quay.io/mocaccinoos/integration-test-cache:132c097844b4e809efa8ae234452893b0214a1c860371e21564d89655ab10a56"
 }
 
 testRepo() {
