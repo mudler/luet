@@ -774,22 +774,31 @@ func (cs *LuetCompiler) getSpecHash(pkgs pkg.DefaultPackages, salt string) (stri
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
-func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) error {
+func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) error {
 
-	joinTag := ">:loop: join<"
-	if len(p.Join) != 0 {
-		Info(joinTag, "Generating a joint parent image from final packages")
+	joinTag := ">:loop: final images<"
+	var fromPackages pkg.DefaultPackages
+
+	if len(p.Join) > 0 {
+		fromPackages = p.Join
+		Warning(joinTag, `
+	Attention! the 'join' keyword is going to be deprecated in Luet >=0.18.x. 
+	Use 'requires_final_images: true' instead in the build.yaml file`)
+	} else if p.RequiresFinalImages {
+		Info(joinTag, "Generating a parent image from final packages")
+		fromPackages = p.Package.GetRequires()
 	} else {
+		// No source image to resolve
 		return nil
 	}
 
 	// First compute a hash and check if image is available. if it is, then directly consume that
-	overallFp, err := cs.getSpecHash(p.Join, "join")
+	overallFp, err := cs.getSpecHash(fromPackages, "join")
 	if err != nil {
 		return errors.Wrap(err, "could not generate image hash")
 	}
 
-	Info(joinTag, "Searching existing image with hash ", overallFp)
+	Info(joinTag, "Searching existing image with hash", overallFp)
 
 	image := cs.findImageHash(overallFp, p)
 	if image != "" {
@@ -811,12 +820,12 @@ func (cs *LuetCompiler) resolveJoinImages(concurrency int, keepPermissions bool,
 	}
 	defer os.RemoveAll(joinDir) // clean up
 
-	for _, p := range p.Join { //highly dependent on the order
+	for _, p := range fromPackages {
 		Info(joinTag, ":arrow_right_hook:", p.HumanReadableString(), ":leaves:")
 	}
 
 	current := 0
-	for _, c := range p.Join {
+	for _, c := range fromPackages {
 		current++
 		if c != nil && c.Name != "" && c.Version != "" {
 			joinTag2 := fmt.Sprintf("%s %d/%d ⤑ :hammer: build %s", joinTag, current, len(p.Join), c.HumanReadableString())
@@ -924,7 +933,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 
 	//Before multistage : join - same as multistage, but keep artifacts, join them, create a new one and generate a final image.
 	// When the image is there, use it as a source here, in place of GetImage().
-	if err := cs.resolveJoinImages(concurrency, keepPermissions, p); err != nil {
+	if err := cs.resolveFinalImages(concurrency, keepPermissions, p); err != nil {
 		return nil, errors.Wrap(err, "while resolving join images")
 	}
 
@@ -1028,7 +1037,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 				Assert:      assertion,
 			})
 
-			if err := cs.resolveJoinImages(concurrency, keepPermissions, compileSpec); err != nil {
+			if err := cs.resolveFinalImages(concurrency, keepPermissions, compileSpec); err != nil {
 				return nil, errors.Wrap(err, "while resolving join images")
 			}
 

@@ -115,39 +115,42 @@ type LuetCompilationSpec struct {
 
 	Copy []CopyField `json:"copy"`
 
-	Join pkg.DefaultPackages `json:"join"`
+	Join                pkg.DefaultPackages `json:"join"`
+	RequiresFinalImages bool                `json:"requires_final_images" yaml:"requires_final_images"`
 }
 
 // Signature is a portion of the spec that yields a signature for the hash
 type Signature struct {
-	Image      string
-	Steps      []string
-	PackageDir string
-	Prelude    []string
-	Seed       string
-	Env        []string
-	Retrieve   []string
-	Unpack     bool
-	Includes   []string
-	Excludes   []string
-	Copy       []CopyField
-	Join       pkg.DefaultPackages
+	Image               string
+	Steps               []string
+	PackageDir          string
+	Prelude             []string
+	Seed                string
+	Env                 []string
+	Retrieve            []string
+	Unpack              bool
+	Includes            []string
+	Excludes            []string
+	Copy                []CopyField
+	Join                pkg.DefaultPackages
+	RequiresFinalImages bool
 }
 
 func (cs *LuetCompilationSpec) signature() Signature {
 	return Signature{
-		Image:      cs.Image,
-		Steps:      cs.Steps,
-		PackageDir: cs.PackageDir,
-		Prelude:    cs.Prelude,
-		Seed:       cs.Seed,
-		Env:        cs.Env,
-		Retrieve:   cs.Retrieve,
-		Unpack:     cs.Unpack,
-		Includes:   cs.Includes,
-		Excludes:   cs.Excludes,
-		Copy:       cs.Copy,
-		Join:       cs.Join,
+		Image:               cs.Image,
+		Steps:               cs.Steps,
+		PackageDir:          cs.PackageDir,
+		Prelude:             cs.Prelude,
+		Seed:                cs.Seed,
+		Env:                 cs.Env,
+		Retrieve:            cs.Retrieve,
+		Unpack:              cs.Unpack,
+		Includes:            cs.Includes,
+		Excludes:            cs.Excludes,
+		Copy:                cs.Copy,
+		Join:                cs.Join,
+		RequiresFinalImages: cs.RequiresFinalImages,
 	}
 }
 
