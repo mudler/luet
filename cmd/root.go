@@ -43,6 +43,12 @@ var LockedCommands = []string{"install", "uninstall", "upgrade"}
 const (
 	LuetCLIVersion = "0.16.7"
 	LuetEnvPrefix  = "LUET"
+	license        = `
+	Luet Copyright (C) 2019-2021 Ettore Di Giacinto
+	This program comes with ABSOLUTELY NO WARRANTY.
+	This is free software, and you are welcome to redistribute it
+	under certain conditions.
+	`
 )
 
 // Build time and commit information.
@@ -52,6 +58,10 @@ var (
 	BuildTime   string
 	BuildCommit string
 )
+
+func version() string {
+	return fmt.Sprintf("%s-g%s %s", LuetCLIVersion, BuildCommit, BuildTime)
+}
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -80,8 +90,14 @@ To build a package, from a tree definition:
 	$ luet build --tree tree/path package
 	
 `,
-	Version: fmt.Sprintf("%s-g%s %s", LuetCLIVersion, BuildCommit, BuildTime),
+	Version: version(),
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if len(os.Args) > 1 {
+			if os.Args[1] != "search" {
+				Info("Luet version", version())
+				Info(license)
+			}
+		}
 		err := LoadConfig(config.LuetCfg)
 		if err != nil {
 			Fatal("failed to load configuration:", err.Error())
