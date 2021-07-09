@@ -242,7 +242,7 @@ func (cs *LuetCompilationSpec) SetSeedImage(s string) {
 }
 
 func (cs *LuetCompilationSpec) EmptyPackage() bool {
-	return len(cs.BuildSteps()) == 0 && len(cs.GetPreBuildSteps()) == 0 && !cs.UnpackedPackage()
+	return len(cs.BuildSteps()) == 0 && !cs.UnpackedPackage()
 }
 
 func (cs *LuetCompilationSpec) UnpackedPackage() bool {
