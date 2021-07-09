@@ -56,6 +56,7 @@ require (
 	go.uber.org/atomic v1.5.1 // indirect
 	go.uber.org/multierr v1.4.0
 	go.uber.org/zap v1.13.0
+	golang.org/x/mod v0.4.2
 	google.golang.org/grpc v1.29.1
 	gopkg.in/yaml.v2 v2.3.0
 	gotest.tools/v3 v3.0.2 // indirect

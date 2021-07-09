@@ -26,6 +26,7 @@ import (
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 	"github.com/otiai10/copy"
+	dirhash "golang.org/x/mod/sumdb/dirhash"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -269,7 +270,11 @@ func (cs *LuetCompilationSpec) Hash() (string, error) {
 	// build a signature, we want to be part of the hash only the fields that are relevant for build purposes
 	signature := cs.signature()
 	h, err := hashstructure.Hash(signature, hashstructure.FormatV2, nil)
-	return fmt.Sprint(h), err
+	sum, err := dirhash.HashDir(cs.Package.Path, "", dirhash.DefaultHash)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprint(h, sum), err
 }
 
 func (cs *LuetCompilationSpec) CopyRetrieves(dest string) error {
