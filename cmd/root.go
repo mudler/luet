@@ -63,6 +63,43 @@ func version() string {
 	return fmt.Sprintf("%s-g%s %s", LuetCLIVersion, BuildCommit, BuildTime)
 }
 
+var noBannerCommands = []string{"search", "exec", "tree", "database", "box"}
+
+func displayVersionBanner() {
+	display := true
+	if len(os.Args) > 1 {
+		for _, c := range noBannerCommands {
+			if os.Args[1] == c {
+				display = false
+			}
+		}
+	}
+	if display {
+		Info("Luet version", version())
+		Info(license)
+	}
+}
+
+func handleLock() {
+	if os.Getenv("LUET_NOLOCK") != "true" {
+		if len(os.Args) > 1 {
+			for _, lockedCmd := range LockedCommands {
+				if os.Args[1] == lockedCmd {
+					s := single.New("luet")
+					if err := s.CheckLock(); err != nil && err == single.ErrAlreadyRunning {
+						Fatal("another instance of the app is already running, exiting")
+					} else if err != nil {
+						// Another error occurred, might be worth handling it as well
+						Fatal("failed to acquire exclusive app lock:", err.Error())
+					}
+					defer s.TryUnlock()
+					break
+				}
+			}
+		}
+	}
+}
+
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "luet",
@@ -92,12 +129,7 @@ To build a package, from a tree definition:
 `,
 	Version: version(),
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		if len(os.Args) > 1 {
-			if os.Args[1] != "search" {
-				Info("Luet version", version())
-				Info(license)
-			}
-		}
+
 		err := LoadConfig(config.LuetCfg)
 		if err != nil {
 			Fatal("failed to load configuration:", err.Error())
@@ -171,23 +203,8 @@ func LoadConfig(c *config.LuetConfig) error {
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 
-	if os.Getenv("LUET_NOLOCK") != "true" {
-		if len(os.Args) > 1 {
-			for _, lockedCmd := range LockedCommands {
-				if os.Args[1] == lockedCmd {
-					s := single.New("luet")
-					if err := s.CheckLock(); err != nil && err == single.ErrAlreadyRunning {
-						Fatal("another instance of the app is already running, exiting")
-					} else if err != nil {
-						// Another error occurred, might be worth handling it as well
-						Fatal("failed to acquire exclusive app lock:", err.Error())
-					}
-					defer s.TryUnlock()
-					break
-				}
-			}
-		}
-	}
+	handleLock()
+	displayVersionBanner()
 
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
