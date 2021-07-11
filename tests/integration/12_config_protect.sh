@@ -92,7 +92,7 @@ testUnInstall() {
     assertTrue 'package uninstalled' "[ ! -e '$tmpdir/testrootfs/c' ]"
     # TODO: we need remove it or not??
     assertTrue 'config protect created' "[ -e '$tmpdir/testrootfs/etc/a/._cfg0001_conf' ]"
-    assertTrue 'config protect maintains the protected files' "[ -e '$tmpdir/testrootfs/etc/a/conf' ]"
+    assertTrue 'config protect maintains the protected files' "[ ! -e '$tmpdir/testrootfs/etc/a/conf' ]"
 }
 
 

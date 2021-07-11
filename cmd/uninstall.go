@@ -67,10 +67,12 @@ var uninstallCmd = &cobra.Command{
 		dbpath := LuetCfg.Viper.GetString("system.database_path")
 		rootfs := LuetCfg.Viper.GetString("system.rootfs")
 		engine := LuetCfg.Viper.GetString("system.database_engine")
+		keepProtected, _ := cmd.Flags().GetBool("keep-protected-files")
 
 		LuetCfg.System.DatabaseEngine = engine
 		LuetCfg.System.DatabasePath = dbpath
 		LuetCfg.System.Rootfs = rootfs
+		LuetCfg.ConfigProtectSkip = !keepProtected
 
 		LuetCfg.GetSolverOptions().Type = stype
 		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -123,6 +125,7 @@ func init() {
 	uninstallCmd.Flags().Bool("full-clean", false, "(experimental) Uninstall packages and all the other deps/revdeps of it.")
 	uninstallCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
 	uninstallCmd.Flags().BoolP("yes", "y", false, "Don't ask questions")
+	uninstallCmd.Flags().BoolP("keep-protected-files", "k", false, "Keep package protected files around")
 
 	RootCmd.AddCommand(uninstallCmd)
 }

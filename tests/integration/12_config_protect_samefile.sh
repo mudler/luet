@@ -87,7 +87,7 @@ testInstall() {
 
 
 testUnInstall() {
-    luet uninstall -y --full --config $tmpdir/luet.yaml test/a
+    luet uninstall -y --full --keep-protected-files --config $tmpdir/luet.yaml test/a
     installst=$?
     assertEquals 'uninstall test successfully' "$installst" "0"
     assertTrue 'package uninstalled' "[ ! -e '$tmpdir/testrootfs/c' ]"
