@@ -1,0 +1,20 @@
+builds:
+  -
+    binary: release/luet-{{ .Tag }}-{{ .Os }}-{{ .Arch }}
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -X "github.com/mudler/luet/cmd.BuildTime={{ time "2006-01-02 15:04:05 MST" }}"
+      - -X "github.com/mudler/luet/cmd.BuildCommit={{ .FullCommit }}"
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm
+      - arm64
+      - 386
+    goarm:
+      - 6
+      - 7
+archives:
+  - format: binary # this removes the tar of the archives, leaving the binaries alone
