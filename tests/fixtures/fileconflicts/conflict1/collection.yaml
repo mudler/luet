@@ -1,0 +1,7 @@
+packages:
+- category: "test1"
+  name: "conflict"
+  version: "1.0"
+- category: "test2"
+  name: "conflict"
+  version: "1.0"
