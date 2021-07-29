@@ -27,6 +27,7 @@ import (
 	"github.com/mudler/luet/pkg/bus"
 	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
 	"github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/mudler/luet/pkg/helpers/match"
 	. "github.com/mudler/luet/pkg/logger"
@@ -755,10 +756,59 @@ func (l *LuetInstaller) getFinalizers(allRepos pkg.PackageDatabase, solution sol
 	return toFinalize, nil
 }
 
+func (l *LuetInstaller) checkFileconflicts(toInstall map[string]ArtifactMatch, s *System) error {
+	Info("Checking for file conflicts..")
+	filesToInstall := []string{}
+	for _, m := range toInstall {
+		a, err := l.downloadPackage(m)
+		if err != nil && !l.Options.Force {
+			return errors.Wrap(err, "Failed downloading package")
+		}
+		files, err := a.FileList()
+		if err != nil && !l.Options.Force {
+			return errors.Wrapf(err, "Could not get filelist for %s", a.CompileSpec.Package.HumanReadableString())
+		}
+
+		for _, f := range files {
+			if helpers.Contains(filesToInstall, f) {
+				return fmt.Errorf(
+					"file conflict between packages to be installed",
+				)
+			}
+
+			exists, p, err := s.ExistsPackageFile(f)
+			if err != nil {
+				return errors.Wrap(err, "failed checking into system db")
+			}
+			if exists {
+				return fmt.Errorf(
+					"file conflict between '%s' and '%s' ( file: %s )",
+					p.HumanReadableString(),
+					m.Package.HumanReadableString(),
+					f,
+				)
+			}
+		}
+		filesToInstall = append(filesToInstall, files...)
+	}
+
+	return nil
+}
+
 func (l *LuetInstaller) install(o Option, syncedRepos Repositories, toInstall map[string]ArtifactMatch, p pkg.Packages, solution solver.PackagesAssertions, allRepos pkg.PackageDatabase, s *System) error {
-	// Install packages into rootfs in parallel.
+
+	// Download packages in parallel first
 	if err := l.download(syncedRepos, toInstall); err != nil {
 		return errors.Wrap(err, "Downloading packages")
+	}
+
+	// Check file conflicts
+	if err := l.checkFileconflicts(toInstall, s); err != nil {
+		if !l.Options.Force {
+			return errors.Wrap(err, "file conflict found")
+		} else {
+			Warning("file conflict found", err.Error())
+		}
 	}
 
 	if l.Options.DownloadOnly {

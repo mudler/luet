@@ -52,3 +52,18 @@ func (s *System) ExecuteFinalizers(packs []pkg.Package) error {
 	}
 	return errs
 }
+
+func (s *System) ExistsPackageFile(file string) (bool, pkg.Package, error) {
+	for _, p := range s.Database.World() {
+		files, err := s.Database.GetPackageFiles(p)
+		if err != nil {
+			return false, nil, err
+		}
+		for _, f := range files {
+			if f == file {
+				return true, p, nil
+			}
+		}
+	}
+	return false, nil, nil
+}
