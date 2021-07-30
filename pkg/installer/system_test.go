@@ -60,7 +60,7 @@ var _ = Describe("System", func() {
 			r, p, err = s.ExistsPackageFile("f")
 			Expect(r).To(BeTrue())
 			Expect(err).ToNot(HaveOccurred())
-			Expect(p).To(Equal(a))
+			Expect(p).To(Equal(b))
 			r, p, err = s.ExistsPackageFile("barz")
 			Expect(r).To(BeTrue())
 			Expect(err).ToNot(HaveOccurred())

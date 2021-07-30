@@ -1,6 +1,8 @@
 package installer
 
 import (
+	"sync"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
@@ -10,8 +12,10 @@ import (
 )
 
 type System struct {
-	Database pkg.PackageDatabase
-	Target   string
+	Database  pkg.PackageDatabase
+	Target    string
+	fileIndex map[string]pkg.Package
+	sync.Mutex
 }
 
 func (s *System) World() (pkg.Packages, error) {
@@ -53,17 +57,37 @@ func (s *System) ExecuteFinalizers(packs []pkg.Package) error {
 	return errs
 }
 
-func (s *System) ExistsPackageFile(file string) (bool, pkg.Package, error) {
-	for _, p := range s.Database.World() {
-		files, err := s.Database.GetPackageFiles(p)
-		if err != nil {
-			return false, nil, err
-		}
-		for _, f := range files {
-			if f == file {
-				return true, p, nil
+func (s *System) buildFileIndex() {
+	s.Lock()
+	defer s.Unlock()
+	// Check if cache is empty or if it got modified
+	if s.fileIndex == nil { //|| len(s.Database.GetPackages()) != len(s.fileIndex) {
+		s.fileIndex = make(map[string]pkg.Package)
+		for _, p := range s.Database.World() {
+			files, _ := s.Database.GetPackageFiles(p)
+			for _, f := range files {
+				s.fileIndex[f] = p
 			}
 		}
 	}
+}
+
+func (s *System) Clean() {
+	s.Lock()
+	defer s.Unlock()
+	s.fileIndex = nil
+}
+
+func (s *System) ExistsPackageFile(file string) (bool, pkg.Package, error) {
+	Debug("Checking if file ", file, "belongs to any package")
+	s.buildFileIndex()
+	s.Lock()
+	defer s.Unlock()
+	if p, exists := s.fileIndex[file]; exists {
+		Debug(file, "belongs already to", p.HumanReadableString())
+
+		return exists, p, nil
+	}
+	Debug(file, "doesn't belong to any package")
 	return false, nil, nil
 }

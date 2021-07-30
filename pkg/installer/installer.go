@@ -758,6 +758,8 @@ func (l *LuetInstaller) getFinalizers(allRepos pkg.PackageDatabase, solution sol
 
 func (l *LuetInstaller) checkFileconflicts(toInstall map[string]ArtifactMatch, s *System) error {
 	Info("Checking for file conflicts..")
+	defer s.Clean() // Release memory
+
 	filesToInstall := []string{}
 	for _, m := range toInstall {
 		a, err := l.downloadPackage(m)
