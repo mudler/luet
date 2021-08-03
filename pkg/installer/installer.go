@@ -272,6 +272,15 @@ func (l *LuetInstaller) swap(o Option, syncedRepos Repositories, toRemove pkg.Pa
 	if err := l.download(syncedRepos, match); err != nil {
 		return errors.Wrap(err, "Pre-downloading packages")
 	}
+
+	if err := l.checkFileconflicts(match, false, s); err != nil {
+		if !l.Options.Force {
+			return errors.Wrap(err, "file conflict found")
+		} else {
+			Warning("file conflict found", err.Error())
+		}
+	}
+
 	if l.Options.DownloadOnly {
 		return nil
 	}
@@ -756,7 +765,7 @@ func (l *LuetInstaller) getFinalizers(allRepos pkg.PackageDatabase, solution sol
 	return toFinalize, nil
 }
 
-func (l *LuetInstaller) checkFileconflicts(toInstall map[string]ArtifactMatch, s *System) error {
+func (l *LuetInstaller) checkFileconflicts(toInstall map[string]ArtifactMatch, checkSystem bool, s *System) error {
 	Info("Checking for file conflicts..")
 	defer s.Clean() // Release memory
 
@@ -777,18 +786,19 @@ func (l *LuetInstaller) checkFileconflicts(toInstall map[string]ArtifactMatch, s
 					"file conflict between packages to be installed",
 				)
 			}
-
-			exists, p, err := s.ExistsPackageFile(f)
-			if err != nil {
-				return errors.Wrap(err, "failed checking into system db")
-			}
-			if exists {
-				return fmt.Errorf(
-					"file conflict between '%s' and '%s' ( file: %s )",
-					p.HumanReadableString(),
-					m.Package.HumanReadableString(),
-					f,
-				)
+			if checkSystem {
+				exists, p, err := s.ExistsPackageFile(f)
+				if err != nil {
+					return errors.Wrap(err, "failed checking into system db")
+				}
+				if exists {
+					return fmt.Errorf(
+						"file conflict between '%s' and '%s' ( file: %s )",
+						p.HumanReadableString(),
+						m.Package.HumanReadableString(),
+						f,
+					)
+				}
 			}
 		}
 		filesToInstall = append(filesToInstall, files...)
@@ -805,7 +815,7 @@ func (l *LuetInstaller) install(o Option, syncedRepos Repositories, toInstall ma
 	}
 
 	// Check file conflicts
-	if err := l.checkFileconflicts(toInstall, s); err != nil {
+	if err := l.checkFileconflicts(toInstall, true, s); err != nil {
 		if !l.Options.Force {
 			return errors.Wrap(err, "file conflict found")
 		} else {

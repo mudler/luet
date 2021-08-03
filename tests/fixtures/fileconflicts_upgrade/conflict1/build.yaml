@@ -1,0 +1,6 @@
+image: "alpine"
+prelude:
+  - mkdir /foo
+steps:
+  - echo conflict > /foo/test1
+package_dir: /foo
