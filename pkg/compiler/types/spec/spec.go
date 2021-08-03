@@ -290,9 +290,12 @@ func (cs *LuetCompilationSpec) Hash() (string, error) {
 	// build a signature, we want to be part of the hash only the fields that are relevant for build purposes
 	signature := cs.signature()
 	h, err := hashstructure.Hash(signature, hashstructure.FormatV2, nil)
-	sum, err := dirhash.HashDir(cs.Package.Path, "", dirhash.DefaultHash)
 	if err != nil {
 		return "", err
+	}
+	sum, err := dirhash.HashDir(cs.Package.Path, "", dirhash.DefaultHash)
+	if err != nil {
+		return fmt.Sprint(h), err
 	}
 	return fmt.Sprint(h, sum), err
 }
