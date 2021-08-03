@@ -107,6 +107,19 @@ type LuetSystemConfig struct {
 	TmpDirBase     string `yaml:"tmpdir_base" mapstructure:"tmpdir_base"`
 }
 
+func (s *LuetSystemConfig) SetRootFS(path string) error {
+	pathToSet := path
+	if !filepath.IsAbs(path) {
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			return err
+		}
+		pathToSet = abs
+	}
+	s.Rootfs = pathToSet
+	return nil
+}
+
 func (sc *LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
 	dbpath := filepath.Join(sc.Rootfs, sc.DatabasePath)
 	dbpath = filepath.Join(dbpath, "repos/"+name)

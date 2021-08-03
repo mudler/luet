@@ -45,7 +45,7 @@ var cleanupCmd = &cobra.Command{
 
 		LuetCfg.System.DatabaseEngine = engine
 		LuetCfg.System.DatabasePath = dbpath
-		LuetCfg.System.Rootfs = rootfs
+		LuetCfg.System.SetRootFS(rootfs)
 		// Check if cache dir exists
 		if fileHelper.Exists(LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()) {
 

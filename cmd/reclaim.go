@@ -45,7 +45,7 @@ It scans the target file system, and if finds a match with a package available i
 
 		LuetCfg.System.DatabaseEngine = engine
 		LuetCfg.System.DatabasePath = dbpath
-		LuetCfg.System.Rootfs = rootfs
+		LuetCfg.System.SetRootFS(rootfs)
 
 		// This shouldn't be necessary, but we need to unmarshal the repositories to a concrete struct, thus we need to port them back to the Repositories type
 		repos := installer.Repositories{}

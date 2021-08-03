@@ -51,7 +51,7 @@ To return also files:
 
 			LuetCfg.System.DatabaseEngine = engine
 			LuetCfg.System.DatabasePath = dbpath
-			LuetCfg.System.Rootfs = rootfs
+			LuetCfg.System.SetRootFS(rootfs)
 
 			systemDB := LuetCfg.GetSystemDB()
 

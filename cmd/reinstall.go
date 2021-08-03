@@ -66,7 +66,7 @@ var reinstallCmd = &cobra.Command{
 
 		LuetCfg.System.DatabaseEngine = engine
 		LuetCfg.System.DatabasePath = dbpath
-		LuetCfg.System.Rootfs = rootfs
+		LuetCfg.System.SetRootFS(rootfs)
 
 		for _, a := range args {
 			pack, err := helpers.ParsePackageStr(a)

@@ -340,7 +340,7 @@ Search can also return results in the terminal in different ways: as terminal ou
 
 		LuetCfg.System.DatabaseEngine = engine
 		LuetCfg.System.DatabasePath = dbpath
-		LuetCfg.System.Rootfs = rootfs
+		LuetCfg.System.SetRootFS(rootfs)
 		out, _ := cmd.Flags().GetString("output")
 		if out != "terminal" {
 			LuetCfg.GetLogging().SetLogLevel("error")

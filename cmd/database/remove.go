@@ -48,7 +48,7 @@ This commands takes multiple packages as arguments and prunes their entries from
 
 			LuetCfg.System.DatabaseEngine = engine
 			LuetCfg.System.DatabasePath = dbpath
-			LuetCfg.System.Rootfs = rootfs
+			LuetCfg.System.SetRootFS(rootfs)
 
 			systemDB := LuetCfg.GetSystemDB()
 

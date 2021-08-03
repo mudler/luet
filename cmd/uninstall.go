@@ -71,7 +71,7 @@ var uninstallCmd = &cobra.Command{
 
 		LuetCfg.System.DatabaseEngine = engine
 		LuetCfg.System.DatabasePath = dbpath
-		LuetCfg.System.Rootfs = rootfs
+		LuetCfg.System.SetRootFS(rootfs)
 		LuetCfg.ConfigProtectSkip = !keepProtected
 
 		LuetCfg.GetSolverOptions().Type = stype

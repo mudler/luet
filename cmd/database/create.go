@@ -58,7 +58,7 @@ For reference, inspect a "metadata.yaml" file generated while running "luet buil
 
 			LuetCfg.System.DatabaseEngine = engine
 			LuetCfg.System.DatabasePath = dbpath
-			LuetCfg.System.Rootfs = rootfs
+			LuetCfg.System.SetRootFS(rootfs)
 
 			systemDB := LuetCfg.GetSystemDB()
 

@@ -453,6 +453,9 @@ func (a *PackageArtifact) GetProtectFiles() []string {
 
 // Unpack Untar and decompress (TODO) to the given path
 func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
+	if !strings.HasPrefix(dst, "/") {
+		return errors.New("destination must be an absolute path")
+	}
 
 	// Create
 	protectedFiles := a.GetProtectFiles()
