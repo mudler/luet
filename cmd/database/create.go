@@ -18,6 +18,7 @@ package cmd_database
 import (
 	"io/ioutil"
 
+	"github.com/mudler/luet/cmd/util"
 	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
 
 	. "github.com/mudler/luet/pkg/logger"
@@ -45,21 +46,11 @@ The yaml must contain the package definition, and the file list at least.
 For reference, inspect a "metadata.yaml" file generated while running "luet build"`,
 		Args: cobra.OnlyValidArgs,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
-			LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
-			LuetCfg.Viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
-
+			util.BindSystemFlags(cmd)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 
-			dbpath := LuetCfg.Viper.GetString("system.database_path")
-			rootfs := LuetCfg.Viper.GetString("system.rootfs")
-			engine := LuetCfg.Viper.GetString("system.database_engine")
-
-			LuetCfg.System.DatabaseEngine = engine
-			LuetCfg.System.DatabasePath = dbpath
-			LuetCfg.System.SetRootFS(rootfs)
-
+			util.SetSystemConfig()
 			systemDB := LuetCfg.GetSystemDB()
 
 			for _, a := range args {

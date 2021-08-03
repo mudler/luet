@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
+	"github.com/mudler/luet/cmd/util"
 	"gopkg.in/yaml.v2"
 
 	. "github.com/mudler/luet/pkg/config"
@@ -38,20 +39,11 @@ To return also files:
 		$ luet database get --files system/foo`,
 		Args: cobra.OnlyValidArgs,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
-			LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
-			LuetCfg.Viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
-
+			util.BindSystemFlags(cmd)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			showFiles, _ := cmd.Flags().GetBool("files")
-			dbpath := LuetCfg.Viper.GetString("system.database_path")
-			rootfs := LuetCfg.Viper.GetString("system.rootfs")
-			engine := LuetCfg.Viper.GetString("system.database_engine")
-
-			LuetCfg.System.DatabaseEngine = engine
-			LuetCfg.System.DatabasePath = dbpath
-			LuetCfg.System.SetRootFS(rootfs)
+			util.SetSystemConfig()
 
 			systemDB := LuetCfg.GetSystemDB()
 

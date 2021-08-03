@@ -16,6 +16,7 @@ package cmd
 
 import (
 	helpers "github.com/mudler/luet/cmd/helpers"
+	"github.com/mudler/luet/cmd/util"
 	. "github.com/mudler/luet/pkg/config"
 	installer "github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/logger"
@@ -31,16 +32,11 @@ var uninstallCmd = &cobra.Command{
 	Long:    `Uninstall packages`,
 	Aliases: []string{"rm", "un"},
 	PreRun: func(cmd *cobra.Command, args []string) {
-		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
-		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
-		LuetCfg.Viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
-		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
-		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
-		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
+		util.BindSystemFlags(cmd)
+		util.BindSolverFlags(cmd)
 		LuetCfg.Viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
 		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
 		LuetCfg.Viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
-		LuetCfg.Viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		toRemove := []pkg.Package{}
@@ -53,10 +49,6 @@ var uninstallCmd = &cobra.Command{
 			toRemove = append(toRemove, pack)
 		}
 
-		stype := LuetCfg.Viper.GetString("solver.type")
-		discount := LuetCfg.Viper.GetFloat64("solver.discount")
-		rate := LuetCfg.Viper.GetFloat64("solver.rate")
-		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
 		force := LuetCfg.Viper.GetBool("force")
 		nodeps, _ := cmd.Flags().GetBool("nodeps")
 		full, _ := cmd.Flags().GetBool("full")
@@ -64,20 +56,12 @@ var uninstallCmd = &cobra.Command{
 		fullClean, _ := cmd.Flags().GetBool("full-clean")
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		yes := LuetCfg.Viper.GetBool("yes")
-		dbpath := LuetCfg.Viper.GetString("system.database_path")
-		rootfs := LuetCfg.Viper.GetString("system.rootfs")
-		engine := LuetCfg.Viper.GetString("system.database_engine")
 		keepProtected, _ := cmd.Flags().GetBool("keep-protected-files")
 
-		LuetCfg.System.DatabaseEngine = engine
-		LuetCfg.System.DatabasePath = dbpath
-		LuetCfg.System.SetRootFS(rootfs)
-		LuetCfg.ConfigProtectSkip = !keepProtected
+		util.SetSystemConfig()
+		util.SetSolverConfig()
 
-		LuetCfg.GetSolverOptions().Type = stype
-		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
-		LuetCfg.GetSolverOptions().Discount = float32(discount)
-		LuetCfg.GetSolverOptions().MaxAttempts = attempts
+		LuetCfg.ConfigProtectSkip = !keepProtected
 		if concurrent {
 			LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple
 		} else {

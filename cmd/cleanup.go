@@ -20,8 +20,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/cmd/util"
 	. "github.com/mudler/luet/pkg/config"
-	config "github.com/mudler/luet/pkg/config"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/logger"
 
@@ -33,19 +33,11 @@ var cleanupCmd = &cobra.Command{
 	Short: "Clean packages cache.",
 	Long:  `remove downloaded packages tarballs and clean cache directory`,
 	PreRun: func(cmd *cobra.Command, args []string) {
-		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
-		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
-		LuetCfg.Viper.BindPFlag("installed", cmd.Flags().Lookup("installed"))
+		util.BindSystemFlags(cmd)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var cleaned int = 0
-		dbpath := LuetCfg.Viper.GetString("system.database_path")
-		rootfs := config.LuetCfg.Viper.GetString("system.rootfs")
-		engine := config.LuetCfg.Viper.GetString("system.database_engine")
-
-		LuetCfg.System.DatabaseEngine = engine
-		LuetCfg.System.DatabasePath = dbpath
-		LuetCfg.System.SetRootFS(rootfs)
+		util.SetSystemConfig()
 		// Check if cache dir exists
 		if fileHelper.Exists(LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()) {
 

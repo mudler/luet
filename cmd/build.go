@@ -21,6 +21,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	helpers "github.com/mudler/luet/cmd/helpers"
+	"github.com/mudler/luet/cmd/util"
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/types/artifact"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
@@ -83,10 +84,8 @@ Build packages specifying multiple definition trees:
 		viper.BindPFlag("wait", cmd.Flags().Lookup("wait"))
 		viper.BindPFlag("keep-images", cmd.Flags().Lookup("keep-images"))
 
-		LuetCfg.Viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
-		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
-		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
-		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
+		util.BindSolverFlags(cmd)
+
 		LuetCfg.Viper.BindPFlag("general.show_build_output", cmd.Flags().Lookup("live-output"))
 		LuetCfg.Viper.BindPFlag("backend-args", cmd.Flags().Lookup("backend-args"))
 
@@ -148,20 +147,10 @@ Build packages specifying multiple definition trees:
 
 		Info("Building in", dst)
 
-		stype := LuetCfg.Viper.GetString("solver.type")
-		discount := LuetCfg.Viper.GetFloat64("solver.discount")
-		rate := LuetCfg.Viper.GetFloat64("solver.rate")
-		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
+		opts := util.SetSolverConfig()
 		pullRepo, _ := cmd.Flags().GetStringArray("pull-repository")
 
 		LuetCfg.GetGeneral().ShowBuildOutput = LuetCfg.Viper.GetBool("general.show_build_output")
-
-		opts := &LuetSolverOptions{
-			Type:        stype,
-			LearnRate:   float32(rate),
-			Discount:    float32(discount),
-			MaxAttempts: attempts,
-		}
 
 		Debug("Solver", opts.CompactString())
 

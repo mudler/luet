@@ -19,6 +19,7 @@ import (
 	"github.com/mudler/luet/pkg/solver"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
+	"github.com/mudler/luet/cmd/util"
 	. "github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -34,13 +35,8 @@ var reinstallCmd = &cobra.Command{
 	$ luet reinstall -y system/busybox shells/bash system/coreutils ...
 `,
 	PreRun: func(cmd *cobra.Command, args []string) {
-		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
-		LuetCfg.Viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
-		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
-		LuetCfg.Viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
-		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
-		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
-		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
+		util.BindSystemFlags(cmd)
+		util.BindSolverFlags(cmd)
 		LuetCfg.Viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
 		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
 		LuetCfg.Viper.BindPFlag("for", cmd.Flags().Lookup("for"))
@@ -51,22 +47,14 @@ var reinstallCmd = &cobra.Command{
 		var toUninstall pkg.Packages
 		var toAdd pkg.Packages
 
-		stype := LuetCfg.Viper.GetString("solver.type")
-		discount := LuetCfg.Viper.GetFloat64("solver.discount")
-		rate := LuetCfg.Viper.GetFloat64("solver.rate")
-		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
 		force := LuetCfg.Viper.GetBool("force")
 		onlydeps := LuetCfg.Viper.GetBool("onlydeps")
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		yes := LuetCfg.Viper.GetBool("yes")
-		dbpath := LuetCfg.Viper.GetString("system.database_path")
-		rootfs := LuetCfg.Viper.GetString("system.rootfs")
-		engine := LuetCfg.Viper.GetString("system.database_engine")
+
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
 
-		LuetCfg.System.DatabaseEngine = engine
-		LuetCfg.System.DatabasePath = dbpath
-		LuetCfg.System.SetRootFS(rootfs)
+		util.SetSystemConfig()
 
 		for _, a := range args {
 			pack, err := helpers.ParsePackageStr(a)
@@ -87,10 +75,7 @@ var reinstallCmd = &cobra.Command{
 			repos = append(repos, r)
 		}
 
-		LuetCfg.GetSolverOptions().Type = stype
-		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
-		LuetCfg.GetSolverOptions().Discount = float32(discount)
-		LuetCfg.GetSolverOptions().MaxAttempts = attempts
+		util.SetSolverConfig()
 
 		if concurrent {
 			LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple

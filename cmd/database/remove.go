@@ -19,6 +19,7 @@ import (
 	. "github.com/mudler/luet/pkg/logger"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
+	"github.com/mudler/luet/cmd/util"
 	. "github.com/mudler/luet/pkg/config"
 
 	"github.com/spf13/cobra"
@@ -36,19 +37,10 @@ This commands takes multiple packages as arguments and prunes their entries from
 `,
 		Args: cobra.OnlyValidArgs,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
-			LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
-			LuetCfg.Viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
-
+			util.BindSystemFlags(cmd)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			dbpath := LuetCfg.Viper.GetString("system.database_path")
-			rootfs := LuetCfg.Viper.GetString("system.rootfs")
-			engine := LuetCfg.Viper.GetString("system.database_engine")
-
-			LuetCfg.System.DatabaseEngine = engine
-			LuetCfg.System.DatabasePath = dbpath
-			LuetCfg.System.SetRootFS(rootfs)
+			util.SetSystemConfig()
 
 			systemDB := LuetCfg.GetSystemDB()
 

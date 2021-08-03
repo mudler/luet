@@ -21,6 +21,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/v6/list"
+	"github.com/mudler/luet/cmd/util"
 	. "github.com/mudler/luet/pkg/config"
 	installer "github.com/mudler/luet/pkg/installer"
 	. "github.com/mudler/luet/pkg/logger"
@@ -306,14 +307,9 @@ Search can also return results in the terminal in different ways: as terminal ou
 `,
 	Aliases: []string{"s"},
 	PreRun: func(cmd *cobra.Command, args []string) {
-		LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
-		LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
+		util.BindSystemFlags(cmd)
+		util.BindSolverFlags(cmd)
 		LuetCfg.Viper.BindPFlag("installed", cmd.Flags().Lookup("installed"))
-		LuetCfg.Viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
-		LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
-		LuetCfg.Viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
-		LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
-		LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var results Results
@@ -325,31 +321,19 @@ Search can also return results in the terminal in different ways: as terminal ou
 		hidden, _ := cmd.Flags().GetBool("hidden")
 
 		installed := LuetCfg.Viper.GetBool("installed")
-		stype := LuetCfg.Viper.GetString("solver.type")
-		discount := LuetCfg.Viper.GetFloat64("solver.discount")
-		rate := LuetCfg.Viper.GetFloat64("solver.rate")
-		attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
 		searchWithLabel, _ := cmd.Flags().GetBool("by-label")
 		searchWithLabelMatch, _ := cmd.Flags().GetBool("by-label-regex")
 		revdeps, _ := cmd.Flags().GetBool("revdeps")
 		tableMode, _ := cmd.Flags().GetBool("table")
 		files, _ := cmd.Flags().GetBool("files")
-		dbpath := LuetCfg.Viper.GetString("system.database_path")
-		rootfs := LuetCfg.Viper.GetString("system.rootfs")
-		engine := LuetCfg.Viper.GetString("system.database_engine")
 
-		LuetCfg.System.DatabaseEngine = engine
-		LuetCfg.System.DatabasePath = dbpath
-		LuetCfg.System.SetRootFS(rootfs)
+		util.SetSystemConfig()
+		util.SetSolverConfig()
+
 		out, _ := cmd.Flags().GetString("output")
 		if out != "terminal" {
 			LuetCfg.GetLogging().SetLogLevel("error")
 		}
-
-		LuetCfg.GetSolverOptions().Type = stype
-		LuetCfg.GetSolverOptions().LearnRate = float32(rate)
-		LuetCfg.GetSolverOptions().Discount = float32(discount)
-		LuetCfg.GetSolverOptions().MaxAttempts = attempts
 
 		l := list.NewWriter()
 		t := table.NewWriter()
