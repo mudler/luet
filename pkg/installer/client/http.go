@@ -18,10 +18,12 @@ package client
 import (
 	"fmt"
 	"math"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/mudler/luet/pkg/compiler/types/artifact"
@@ -40,6 +42,27 @@ type HttpClient struct {
 
 func NewHttpClient(r RepoData) *HttpClient {
 	return &HttpClient{RepoData: r}
+}
+
+func NewGrabClient() *grab.Client {
+	httpTimeout := 30
+	timeout := os.Getenv("HTTP_TIMEOUT")
+	if timeout != "" {
+		timeoutI, err := strconv.Atoi(timeout)
+		if err == nil {
+			httpTimeout = timeoutI
+		}
+	}
+
+	return &grab.Client{
+		UserAgent: "grab",
+		HTTPClient: &http.Client{
+			Timeout: time.Duration(httpTimeout) * time.Second,
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+			},
+		},
+	}
 }
 
 func (c *HttpClient) PrepareReq(dst, url string) (*grab.Request, error) {
@@ -86,7 +109,7 @@ func (c *HttpClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.Pa
 		}
 		defer os.RemoveAll(temp)
 
-		client := grab.NewClient()
+		client := NewGrabClient()
 
 		for _, uri := range c.RepoData.Urls {
 			Debug("Downloading artifact", artifactName, "from", uri)
@@ -186,7 +209,7 @@ func (c *HttpClient) DownloadFile(name string) (string, error) {
 		return "", err
 	}
 
-	client := grab.NewClient()
+	client := NewGrabClient()
 
 	for _, uri := range c.RepoData.Urls {
 
