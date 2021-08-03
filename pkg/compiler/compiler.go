@@ -1256,6 +1256,11 @@ func (cs *LuetCompiler) FromPackage(p pkg.Package) (*compilerspec.LuetCompilatio
 
 	cs.inheritSpecBuildOptions(newSpec)
 
+	// Update the package in the compiler database to catch updates from NewLuetCompilationSpec
+	if err := cs.Database.UpdatePackage(newSpec.Package); err != nil {
+		return nil, errors.Wrap(err, "failed updating new package entry in compiler database")
+	}
+
 	return newSpec, err
 }
 

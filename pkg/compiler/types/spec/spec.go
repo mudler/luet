@@ -23,11 +23,11 @@ import (
 	"github.com/mitchellh/hashstructure/v2"
 	options "github.com/mudler/luet/pkg/compiler/types/options"
 
+	"github.com/ghodss/yaml"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 	"github.com/otiai10/copy"
 	dirhash "golang.org/x/mod/sumdb/dirhash"
-	yaml "gopkg.in/yaml.v2"
 )
 
 type LuetCompilationspecs []LuetCompilationSpec
@@ -157,11 +157,31 @@ func (cs *LuetCompilationSpec) signature() Signature {
 
 func NewLuetCompilationSpec(b []byte, p pkg.Package) (*LuetCompilationSpec, error) {
 	var spec LuetCompilationSpec
+	var packageDefinition pkg.DefaultPackage
 	err := yaml.Unmarshal(b, &spec)
 	if err != nil {
 		return &spec, err
 	}
-	spec.Package = p.(*pkg.DefaultPackage)
+	err = yaml.Unmarshal(b, &packageDefinition)
+	if err != nil {
+		return &spec, err
+	}
+
+	// Update requires/conflict/provides
+	// When we have been passed a bytes slice, parse it as a package
+	// and updates requires/conflicts/provides.
+	// This is required in order to allow manipulation of such fields with templating
+	copy := *p.(*pkg.DefaultPackage)
+	spec.Package = &copy
+	if len(packageDefinition.GetRequires()) != 0 {
+		spec.Package.Requires(packageDefinition.GetRequires())
+	}
+	if len(packageDefinition.GetConflicts()) != 0 {
+		spec.Package.Conflicts(packageDefinition.GetConflicts())
+	}
+	if len(packageDefinition.GetProvides()) != 0 {
+		spec.Package.SetProvides(packageDefinition.GetProvides())
+	}
 	return &spec, nil
 }
 func (cs *LuetCompilationSpec) GetSourceAssertion() solver.PackagesAssertions {
