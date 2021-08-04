@@ -43,6 +43,9 @@ type Compiler struct {
 	BackendArgs []string
 
 	BackendType string
+
+	// TemplatesFolder. should default to tree/templates
+	TemplatesFolder []string
 }
 
 func NewDefaultCompiler() *Compiler {
@@ -83,6 +86,13 @@ func WithOptions(opt *Compiler) func(cfg *Compiler) error {
 func WithBackendType(r string) func(cfg *Compiler) error {
 	return func(cfg *Compiler) error {
 		cfg.BackendType = r
+		return nil
+	}
+}
+
+func WithTemplateFolder(r []string) func(cfg *Compiler) error {
+	return func(cfg *Compiler) error {
+		cfg.TemplatesFolder = r
 		return nil
 	}
 }

@@ -42,6 +42,7 @@ import (
 	"github.com/mudler/luet/pkg/solver"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	"helm.sh/helm/v3/pkg/chart"
 )
 
 const BuildFile = "build.yaml"
@@ -750,6 +751,7 @@ func (cs *LuetCompiler) inheritSpecBuildOptions(p *compilerspec.LuetCompilationS
 		p.BuildOptions.PullImageRepository = append(p.BuildOptions.PullImageRepository, cs.Options.PullImageRepository...)
 		Debug("Inheriting pull repository from PullImageRepository buildoptions", p.BuildOptions.PullImageRepository)
 	}
+
 	Debug(p.GetPackage().HumanReadableString(), "Build options after inherit", p.BuildOptions)
 }
 
@@ -1128,6 +1130,14 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 type templatedata map[string]interface{}
 
 func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack pkg.Package, dst templatedata) ([]byte, error) {
+	// Grab shared templates first
+	var chartFiles []*chart.File
+	if len(cs.Options.TemplatesFolder) != 0 {
+		c, err := helpers.ChartFiles(cs.Options.TemplatesFolder)
+		if err == nil {
+			chartFiles = c
+		}
+	}
 
 	var dataresult []byte
 	val := pack.Rel(DefinitionFile)
@@ -1165,7 +1175,7 @@ func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack pkg.
 			return nil, errors.Wrap(err, "merging values maps")
 		}
 
-		dat, err := helpers.RenderHelm(string(dataBuild), td, dst)
+		dat, err := helpers.RenderHelm(append(chartFiles, helpers.ChartFileB(dataBuild)...), td, dst)
 		if err != nil {
 			return nil, errors.Wrap(err, "rendering file "+pack.Rel(BuildFile))
 		}
@@ -1190,7 +1200,13 @@ func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack pkg.
 				bv = append([]string{f}, bv...)
 			}
 		}
-		out, err := helpers.RenderFiles(pack.Rel(BuildFile), val, bv...)
+
+		raw, err := ioutil.ReadFile(pack.Rel(BuildFile))
+		if err != nil {
+			return nil, err
+		}
+
+		out, err := helpers.RenderFiles(append(chartFiles, helpers.ChartFileB(raw)...), val, bv...)
 		if err != nil {
 			return nil, errors.Wrap(err, "rendering file "+pack.Rel(BuildFile))
 		}

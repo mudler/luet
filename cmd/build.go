@@ -160,6 +160,17 @@ Build packages specifying multiple definition trees:
 			opts.Options = solver.Options{Type: solver.SingleCoreSimple, Concurrency: concurrency}
 		}
 
+		templateFolders := []string{}
+		if !fromRepo {
+			for _, t := range treePaths {
+				templateFolders = append(templateFolders, filepath.Join(t, "templates"))
+			}
+		} else {
+			for _, s := range installer.SystemRepositories(LuetCfg) {
+				templateFolders = append(templateFolders, filepath.Join(s.TreePath, "templates"))
+			}
+		}
+
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(),
 			options.NoDeps(nodeps),
 			options.WithBackendType(backendType),
@@ -168,6 +179,7 @@ Build packages specifying multiple definition trees:
 			options.WithPullRepositories(pullRepo),
 			options.WithPushRepository(imageRepository),
 			options.Rebuild(rebuild),
+			options.WithTemplateFolder(templateFolders),
 			options.WithSolverOptions(*opts),
 			options.Wait(wait),
 			options.OnlyTarget(onlyTarget),

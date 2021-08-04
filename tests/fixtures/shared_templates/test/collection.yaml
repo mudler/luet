@@ -1,0 +1,7 @@
+packages:
+- category: "test"
+  name: "foo"
+  version: "1.0"
+- category: "test"
+  name: "bar"
+  version: "1.0"

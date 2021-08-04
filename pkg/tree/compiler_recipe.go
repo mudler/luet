@@ -76,6 +76,10 @@ func (r *CompilerRecipe) Load(path string) error {
 	//if err != nil {
 	//	return err
 	//}
+	c, err := helpers.ChartFiles([]string{filepath.Join(path, "templates")})
+	if err != nil {
+		return err
+	}
 
 	//r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
 	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
@@ -104,8 +108,7 @@ func (r *CompilerRecipe) Load(path string) error {
 			// Instead of rdeps, have a different tree for build deps.
 			compileDefPath := pack.Rel(CompilerDefinitionFile)
 			if fileHelper.Exists(compileDefPath) {
-
-				dat, err := helpers.RenderFiles(compileDefPath, currentpath)
+				dat, err := helpers.RenderFiles(append(c, helpers.ChartFile(compileDefPath)...), currentpath)
 				if err != nil {
 					return errors.Wrap(err,
 						"Error templating file "+CompilerDefinitionFile+" from "+
@@ -157,7 +160,7 @@ func (r *CompilerRecipe) Load(path string) error {
 					if err != nil {
 						return errors.Wrap(err, "Error reading file "+currentpath)
 					}
-					dat, err := helpers.RenderHelm(string(buildyaml), raw, map[string]interface{}{})
+					dat, err := helpers.RenderHelm(append(c, helpers.ChartFileB(buildyaml)...), raw, map[string]interface{}{})
 					if err != nil {
 						return errors.Wrap(err,
 							"Error templating file "+CompilerDefinitionFile+" from "+
@@ -183,7 +186,7 @@ func (r *CompilerRecipe) Load(path string) error {
 		return nil
 	}
 
-	err := filepath.Walk(path, ff)
+	err = filepath.Walk(path, ff)
 	if err != nil {
 		return err
 	}

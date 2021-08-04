@@ -2,6 +2,8 @@ package helpers
 
 import (
 	"io/ioutil"
+	"path/filepath"
+	"strings"
 
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
@@ -13,17 +15,86 @@ import (
 	"helm.sh/helm/v3/pkg/engine"
 )
 
+// ChartFileB is an helper that takes a slice of bytes and construct a chart.File slice from it
+func ChartFileB(s []byte) []*chart.File {
+	return []*chart.File{
+		{Name: "templates", Data: s},
+	}
+}
+
+// ChartFileS is an helper that takes a string and construct a chart.File slice from it
+func ChartFileS(s string) []*chart.File {
+	return []*chart.File{
+		{Name: "templates", Data: []byte(s)},
+	}
+}
+
+// ChartFile reads all the given files and returns a slice of []*chart.File
+// containing the raw content and the file name for each file
+func ChartFile(s ...string) []*chart.File {
+	files := []*chart.File{}
+	for _, c := range s {
+		raw, err := ioutil.ReadFile(c)
+		if err != nil {
+			return files
+		}
+		files = append(files, &chart.File{Name: c, Data: raw})
+	}
+
+	return files
+}
+
+// ChartFiles reads a list of paths and reads all yaml file inside. It returns a
+// slice of pointers of chart.File(s) with the raw content of the yaml
+func ChartFiles(path []string) ([]*chart.File, error) {
+	var chartFiles []*chart.File
+	for _, t := range path {
+		rel, err := fileHelper.Rel2Abs(t)
+		if err != nil {
+			return nil, err
+		}
+
+		if !fileHelper.Exists(rel) {
+			continue
+		}
+		files, err := fileHelper.ListDir(rel)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, f := range files {
+			if strings.ToLower(filepath.Ext(f)) == ".yaml" {
+				raw, err := ioutil.ReadFile(f)
+				if err != nil {
+					return nil, err
+				}
+				chartFiles = append(chartFiles, &chart.File{Name: f, Data: raw})
+			}
+		}
+	}
+	return chartFiles, nil
+}
+
 // RenderHelm renders the template string with helm
-func RenderHelm(template string, values, d map[string]interface{}) (string, error) {
+func RenderHelm(files []*chart.File, values, d map[string]interface{}) (string, error) {
+
+	// We slurp all the files into one here. This is not elegant, but still works.
+	// As a reminder, the files passed here have on the head the templates in the 'templates/' folder
+	// of each luet tree, and it have at the bottom the package buildpsec to be templated.
+	// TODO: Replace by correctly populating the files so that the helm render engine templates it
+	// correctly
+	toTemplate := ""
+	for _, f := range files {
+		toTemplate += string(f.Data)
+	}
+
 	c := &chart.Chart{
 		Metadata: &chart.Metadata{
 			Name:    "",
 			Version: "",
 		},
-		Templates: []*chart.File{
-			{Name: "templates", Data: []byte(template)},
-		},
-		Values: map[string]interface{}{"Values": values},
+		Templates: ChartFileS(toTemplate),
+		Values:    map[string]interface{}{"Values": values},
 	}
 
 	v, err := chartutil.CoalesceValues(c, map[string]interface{}{"Values": d})
@@ -71,23 +142,18 @@ func reverse(s []string) []string {
 	return s
 }
 
-func RenderFiles(toTemplate, valuesFile string, defaultFile ...string) (string, error) {
-	raw, err := ioutil.ReadFile(toTemplate)
-	if err != nil {
-		return "", errors.Wrap(err, "reading file "+toTemplate)
-	}
-
+func RenderFiles(files []*chart.File, valuesFile string, defaultFile ...string) (string, error) {
 	if !fileHelper.Exists(valuesFile) {
-		return "", errors.Wrap(err, "file not existing "+valuesFile)
+		return "", errors.New("file does not exist: " + valuesFile)
 	}
 	val, err := ioutil.ReadFile(valuesFile)
 	if err != nil {
-		return "", errors.Wrap(err, "reading file "+valuesFile)
+		return "", errors.Wrap(err, "reading file: "+valuesFile)
 	}
 
 	var values templatedata
 	if err = yaml.Unmarshal(val, &values); err != nil {
-		return "", errors.Wrap(err, "unmarshalling file "+toTemplate)
+		return "", errors.Wrap(err, "unmarshalling values")
 	}
 
 	dst, err := UnMarshalValues(defaultFile)
@@ -95,5 +161,5 @@ func RenderFiles(toTemplate, valuesFile string, defaultFile ...string) (string, 
 		return "", errors.Wrap(err, "unmarshalling values")
 	}
 
-	return RenderHelm(string(raw), values, dst)
+	return RenderHelm(files, values, dst)
 }

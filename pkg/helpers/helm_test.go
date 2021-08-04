@@ -30,21 +30,21 @@ func writeFile(path string, content string) {
 	Expect(err).ToNot(HaveOccurred())
 }
 
-var _ = Describe("Helpers", func() {
+var _ = Describe("Helm", func() {
 	Context("RenderHelm", func() {
 		It("Renders templates", func() {
-			out, err := RenderHelm("{{.Values.Test}}{{.Values.Bar}}", map[string]interface{}{"Test": "foo"}, map[string]interface{}{"Bar": "bar"})
+			out, err := RenderHelm(ChartFileS("{{.Values.Test}}{{.Values.Bar}}"), map[string]interface{}{"Test": "foo"}, map[string]interface{}{"Bar": "bar"})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(out).To(Equal("foobar"))
 		})
 		It("Renders templates with overrides", func() {
-			out, err := RenderHelm("{{.Values.Test}}{{.Values.Bar}}", map[string]interface{}{"Test": "foo", "Bar": "baz"}, map[string]interface{}{"Bar": "bar"})
+			out, err := RenderHelm(ChartFileS("{{.Values.Test}}{{.Values.Bar}}"), map[string]interface{}{"Test": "foo", "Bar": "baz"}, map[string]interface{}{"Bar": "bar"})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(out).To(Equal("foobar"))
 		})
 
 		It("Renders templates", func() {
-			out, err := RenderHelm("{{.Values.Test}}{{.Values.Bar}}", map[string]interface{}{"Test": "foo", "Bar": "bar"}, map[string]interface{}{})
+			out, err := RenderHelm(ChartFileS("{{.Values.Test}}{{.Values.Bar}}"), map[string]interface{}{"Test": "foo", "Bar": "bar"}, map[string]interface{}{})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(out).To(Equal("foobar"))
 		})
@@ -68,7 +68,7 @@ foo: "baz"
 
 			Expect(err).ToNot(HaveOccurred())
 
-			res, err := RenderFiles(toTemplate, values, d)
+			res, err := RenderFiles(ChartFile(toTemplate), values, d)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(res).To(Equal("baz"))
 
@@ -93,7 +93,7 @@ faa: "baz"
 
 			Expect(err).ToNot(HaveOccurred())
 
-			res, err := RenderFiles(toTemplate, values, d)
+			res, err := RenderFiles(ChartFile(toTemplate), values, d)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(res).To(Equal("bar"))
 
@@ -114,7 +114,7 @@ foo: "bar"
 
 			Expect(err).ToNot(HaveOccurred())
 
-			res, err := RenderFiles(toTemplate, values)
+			res, err := RenderFiles(ChartFile(toTemplate), values)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(res).To(Equal("bar"))
 		})
@@ -145,11 +145,11 @@ bar: "nei"
 
 			Expect(err).ToNot(HaveOccurred())
 
-			res, err := RenderFiles(toTemplate, values, d2, d)
+			res, err := RenderFiles(ChartFile(toTemplate), values, d2, d)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(res).To(Equal("bazneif"))
 
-			res, err = RenderFiles(toTemplate, values, d, d2)
+			res, err = RenderFiles(ChartFile(toTemplate), values, d, d2)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(res).To(Equal("doneif"))
 		})
@@ -173,7 +173,7 @@ faa: "baz"
 
 			Expect(err).ToNot(HaveOccurred())
 
-			res, err := RenderFiles(toTemplate, values, d)
+			res, err := RenderFiles(ChartFile(toTemplate), values, d)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(res).To(Equal(""))
 

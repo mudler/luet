@@ -27,6 +27,8 @@ import (
 	"strings"
 	"time"
 
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
+
 	pkg "github.com/mudler/luet/pkg/package"
 	solver "github.com/mudler/luet/pkg/solver"
 
@@ -108,15 +110,12 @@ type LuetSystemConfig struct {
 }
 
 func (s *LuetSystemConfig) SetRootFS(path string) error {
-	pathToSet := path
-	if !filepath.IsAbs(path) {
-		abs, err := filepath.Abs(path)
-		if err != nil {
-			return err
-		}
-		pathToSet = abs
+	p, err := fileHelper.Rel2Abs(path)
+	if err != nil {
+		return err
 	}
-	s.Rootfs = pathToSet
+
+	s.Rootfs = p
 	return nil
 }
 

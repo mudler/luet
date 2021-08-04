@@ -287,3 +287,15 @@ func CopyDir(src string, dst string) (err error) {
 		Sync:      true,
 		OnSymlink: func(string) copy.SymlinkAction { return copy.Shallow }})
 }
+
+func Rel2Abs(s string) (string, error) {
+	pathToSet := s
+	if !filepath.IsAbs(s) {
+		abs, err := filepath.Abs(s)
+		if err != nil {
+			return "", err
+		}
+		pathToSet = abs
+	}
+	return pathToSet, nil
+}
