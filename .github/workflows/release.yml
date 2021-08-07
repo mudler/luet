@@ -68,6 +68,28 @@ jobs:
                     env "UNIT_TEST_DOCKER_IMAGE=${{ secrets.DOCKER_TESTING_IMAGE }}" \
                     env "UNIT_TEST_DOCKER_IMAGE_REPOSITORY=${{ secrets.DOCKER_TESTING_UNIT_TEST_IMAGE }}" \
                     make test-coverage
+  tests-benchmark:
+    strategy:
+      matrix:
+        go-version: [1.14.x]
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: setup-docker
+      uses: docker-practice/actions-setup-docker@0.0.1
+    - name: Install deps
+      run: |
+            sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
+            sudo curl -fSL "https://github.com/genuinetools/img/releases/download/v0.5.11/img-linux-amd64" -o "/usr/bin/img"
+            sudo chmod a+x "/usr/bin/img"
+    - name: Tests
+      run: sudo -E env "PATH=$PATH" make test-benchmark
 
   release:
     name: Test and Release

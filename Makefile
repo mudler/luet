@@ -37,6 +37,10 @@ coverage:
 test-coverage:
 	scripts/ginkgo.coverage.sh --codecov
 
+.PHONY: test-benchmark
+test-benchmark:
+	BENCHMARK_TESTS=true go test ./pkg/solver
+
 .PHONY: help
 help:
 	# make all => deps test lint build
