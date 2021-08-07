@@ -10,7 +10,7 @@ require (
 	github.com/briandowns/spinner v1.12.1-0.20201220203425-e201aaea0a31
 	github.com/cavaliercoder/grab v1.0.1-0.20201108051000-98a5bfe305ec
 	github.com/containerd/containerd v1.4.1-0.20201117152358-0edc412565dc
-	github.com/crillab/gophersat v1.3.2-0.20201023142334-3fc2ac466765
+	github.com/crillab/gophersat v1.3.2-0.20210701121804-72b19f5b6b38
 	github.com/docker/cli v20.10.0-beta1.0.20201029214301-1d20b15adc38+incompatible
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v20.10.0-beta1.0.20201110211921-af34b94a78a1+incompatible

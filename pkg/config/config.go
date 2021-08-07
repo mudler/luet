@@ -93,7 +93,7 @@ func (opts LuetSolverOptions) Resolver() solver.PackageResolver {
 		return solver.SimpleQLearningSolver()
 	}
 
-	return &solver.DummyPackageResolver{}
+	return &solver.Explainer{}
 }
 
 func (opts *LuetSolverOptions) CompactString() string {

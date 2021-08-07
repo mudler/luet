@@ -758,7 +758,6 @@ func (cs *LuetCompiler) inheritSpecBuildOptions(p *compilerspec.LuetCompilationS
 func (cs *LuetCompiler) getSpecHash(pkgs pkg.DefaultPackages, salt string) (string, error) {
 	ht := NewHashTree(cs.Database)
 	overallFp := ""
-
 	for _, p := range pkgs {
 		compileSpec, err := cs.FromPackage(p)
 		if err != nil {

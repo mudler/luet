@@ -38,7 +38,7 @@ var _ = Describe("Resolver", func() {
 	})
 
 	Context("Conflict set", func() {
-		Context("DummyPackageResolver", func() {
+		Context("Explainer", func() {
 			It("is unsolvable - as we something we ask to install conflict with system stuff", func() {
 				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{C})
@@ -152,7 +152,7 @@ var _ = Describe("Resolver", func() {
 			})
 		})
 
-		Context("DummyPackageResolver", func() {
+		Context("Explainer", func() {
 			It("cannot find a solution", func() {
 				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{C})
@@ -171,6 +171,11 @@ var _ = Describe("Resolver", func() {
 
 				solution, err := s.Install([]pkg.Package{A, D})
 				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal(`could not satisfy the constraints: 
+A-- and 
+C-- and 
+!(A--) or B-- and 
+!(B--) or !(C--)`))
 
 				Expect(len(solution)).To(Equal(0))
 			})

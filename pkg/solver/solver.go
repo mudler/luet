@@ -71,7 +71,7 @@ type Options struct {
 // NewSolver accepts as argument two lists of packages, the first is the initial set,
 // the second represent all the known packages.
 func NewSolver(t Options, installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, solverdb pkg.PackageDatabase) PackageSolver {
-	return NewResolver(t, installed, definitiondb, solverdb, &DummyPackageResolver{})
+	return NewResolver(t, installed, definitiondb, solverdb, &Explainer{})
 }
 
 // NewResolver accepts as argument two lists of packages, the first is the initial set,
