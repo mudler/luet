@@ -115,9 +115,10 @@ github.com/containerd/ttrpc
 github.com/containerd/typeurl
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
 github.com/cpuguy83/go-md2man/v2/md2man
-# github.com/crillab/gophersat v1.3.2-0.20201023142334-3fc2ac466765
+# github.com/crillab/gophersat v1.3.2-0.20210701121804-72b19f5b6b38
 ## explicit
 github.com/crillab/gophersat/bf
+github.com/crillab/gophersat/explain
 github.com/crillab/gophersat/solver
 # github.com/cyphar/filepath-securejoin v0.2.2
 github.com/cyphar/filepath-securejoin
