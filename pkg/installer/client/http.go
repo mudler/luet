@@ -45,7 +45,7 @@ func NewHttpClient(r RepoData) *HttpClient {
 }
 
 func NewGrabClient() *grab.Client {
-	httpTimeout := 30
+	httpTimeout := 120
 	timeout := os.Getenv("HTTP_TIMEOUT")
 	if timeout != "" {
 		timeoutI, err := strconv.Atoi(timeout)
