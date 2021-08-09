@@ -17,7 +17,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -26,6 +25,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
@@ -417,6 +418,14 @@ system:
 }
 
 func (c *LuetSystemConfig) InitTmpDir() error {
+	if !filepath.IsAbs(c.TmpDirBase) {
+		abs, err := fileHelper.Rel2Abs(c.TmpDirBase)
+		if err != nil {
+			return errors.Wrap(err, "while converting relative path to absolute path")
+		}
+		c.TmpDirBase = abs
+	}
+
 	if _, err := os.Stat(c.TmpDirBase); err != nil {
 		if os.IsNotExist(err) {
 			err = os.MkdirAll(c.TmpDirBase, os.ModePerm)

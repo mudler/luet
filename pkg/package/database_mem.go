@@ -143,6 +143,7 @@ func (db *InMemoryDatabase) getRevdeps(p Package, visited map[string]interface{}
 	if err != nil {
 		return res, err
 	}
+
 	for _, pp := range packs {
 		//	db.Lock()
 		list := db.RevDepsDatabase[pp.GetFingerPrint()]
