@@ -136,6 +136,18 @@ type Packages []Package
 
 type DefaultPackages []*DefaultPackage
 
+type PackageMap map[string]Package
+
+func (pm PackageMap) String() string {
+	rr := []string{}
+	for _, r := range pm {
+
+		rr = append(rr, r.HumanReadableString())
+
+	}
+	return fmt.Sprint(rr)
+}
+
 func (d DefaultPackages) Hash(salt string) string {
 
 	overallFp := ""

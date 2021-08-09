@@ -195,6 +195,16 @@ func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {
 	return ID, nil
 }
 
+func (db *InMemoryDatabase) updateRevDep(k, v string, b Package) {
+	db.Lock()
+	defer db.Unlock()
+	_, ok := db.RevDepsDatabase[k]
+	if !ok {
+		db.RevDepsDatabase[k] = make(map[string]Package)
+	}
+	db.RevDepsDatabase[k][v] = b.Clone()
+}
+
 func (db *InMemoryDatabase) populateCaches(p Package) {
 	pd, _ := p.(*DefaultPackage)
 
@@ -226,54 +236,33 @@ func (db *InMemoryDatabase) populateCaches(p Package) {
 	}
 	db.CacheNoVersion[p.GetPackageName()][p.GetVersion()] = nil
 
+	db.Unlock()
+
 	// Updating Revdeps
 	// Given that when we populate the cache we don't have the full db at hand
 	// We cycle over reverse dependency of a package to update their entry if they are matching
 	// the version selector
+	db.Lock()
 	toUpdate, ok := db.RevDepsDatabase[pd.GetPackageName()]
+	db.Unlock()
 	if ok {
 		for _, pp := range toUpdate {
 			for _, re := range pp.GetRequires() {
 				if match, _ := pd.VersionMatchSelector(re.GetVersion(), nil); match {
-					_, ok = db.RevDepsDatabase[pd.GetFingerPrint()]
-					if !ok {
-						db.RevDepsDatabase[pd.GetFingerPrint()] = make(map[string]Package)
-					}
-					db.RevDepsDatabase[pd.GetFingerPrint()][pp.GetFingerPrint()] = pp
+					db.updateRevDep(pd.GetFingerPrint(), pp.GetFingerPrint(), pp)
 				}
 			}
 		}
 	}
-	db.Unlock()
 
 	for _, re := range pd.GetRequires() {
 		packages, _ := db.FindPackages(re)
-		db.Lock()
-
 		for _, pa := range packages {
-			_, ok := db.RevDepsDatabase[pa.GetFingerPrint()]
-			if !ok {
-				db.RevDepsDatabase[pa.GetFingerPrint()] = make(map[string]Package)
-			}
-			db.RevDepsDatabase[pa.GetFingerPrint()][pd.GetFingerPrint()] = pd
-			_, ok = db.RevDepsDatabase[pa.GetPackageName()]
-			if !ok {
-				db.RevDepsDatabase[pa.GetPackageName()] = make(map[string]Package)
-			}
-			db.RevDepsDatabase[pa.GetPackageName()][pd.GetPackageName()] = pd
+			db.updateRevDep(pa.GetFingerPrint(), pd.GetFingerPrint(), pd)
+			db.updateRevDep(pa.GetPackageName(), pd.GetPackageName(), pd)
 		}
-		_, ok := db.RevDepsDatabase[re.GetFingerPrint()]
-		if !ok {
-			db.RevDepsDatabase[re.GetFingerPrint()] = make(map[string]Package)
-		}
-		db.RevDepsDatabase[re.GetFingerPrint()][pd.GetFingerPrint()] = pd
-		_, ok = db.RevDepsDatabase[re.GetPackageName()]
-		if !ok {
-			db.RevDepsDatabase[re.GetPackageName()] = make(map[string]Package)
-		}
-		db.RevDepsDatabase[re.GetPackageName()][pd.GetPackageName()] = pd
-
-		db.Unlock()
+		db.updateRevDep(re.GetFingerPrint(), pd.GetFingerPrint(), pd)
+		db.updateRevDep(re.GetPackageName(), pd.GetPackageName(), pd)
 	}
 }
 
