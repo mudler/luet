@@ -75,7 +75,7 @@ Build packages specifying multiple definition trees:
 		viper.BindPFlag("compression", cmd.Flags().Lookup("compression"))
 		viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
 		viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
-		viper.BindPFlag("values", cmd.Flags().Lookup("values"))
+		util.BindValuesFlags(cmd)
 		viper.BindPFlag("backend-args", cmd.Flags().Lookup("backend-args"))
 
 		viper.BindPFlag("image-repository", cmd.Flags().Lookup("image-repository"))
@@ -101,7 +101,7 @@ Build packages specifying multiple definition trees:
 		all := viper.GetBool("all")
 		compressionType := viper.GetString("compression")
 		imageRepository := viper.GetString("image-repository")
-		values := viper.GetStringSlice("values")
+		values := util.ValuesFlags()
 		wait := viper.GetBool("wait")
 		push := viper.GetBool("push")
 		pull := viper.GetBool("pull")

@@ -17,6 +17,7 @@ package util
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/config"
@@ -33,6 +34,14 @@ func BindSolverFlags(cmd *cobra.Command) {
 	LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
 	LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
 	LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
+}
+
+func BindValuesFlags(cmd *cobra.Command) {
+	viper.BindPFlag("values", cmd.Flags().Lookup("values"))
+}
+
+func ValuesFlags() []string {
+	return viper.GetStringSlice("values")
 }
 
 func SetSystemConfig() {

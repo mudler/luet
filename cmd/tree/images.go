@@ -23,6 +23,7 @@ import (
 	//. "github.com/mudler/luet/pkg/config"
 	"github.com/ghodss/yaml"
 	helpers "github.com/mudler/luet/cmd/helpers"
+	"github.com/mudler/luet/cmd/util"
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/compiler/types/options"
@@ -50,6 +51,7 @@ func NewTreeImageCommand() *cobra.Command {
 			if len(args) != 1 {
 				Fatal("Expects one package as parameter")
 			}
+			util.BindValuesFlags(cmd)
 			viper.BindPFlag("image-repository", cmd.Flags().Lookup("image-repository"))
 
 		},
@@ -59,6 +61,7 @@ func NewTreeImageCommand() *cobra.Command {
 			treePath, _ := cmd.Flags().GetStringArray("tree")
 			imageRepository := viper.GetString("image-repository")
 			pullRepo, _ := cmd.Flags().GetStringArray("pull-repository")
+			values := util.ValuesFlags()
 
 			out, _ := cmd.Flags().GetString("output")
 			if out != "terminal" {
@@ -80,6 +83,7 @@ func NewTreeImageCommand() *cobra.Command {
 			luetCompiler := compiler.NewLuetCompiler(
 				compilerBackend,
 				reciper.GetDatabase(),
+				options.WithBuildValues(values),
 				options.WithPushRepository(imageRepository),
 				options.WithPullRepositories(pullRepo),
 				options.WithSolverOptions(opts),
