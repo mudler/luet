@@ -252,17 +252,19 @@ func (db *InMemoryDatabase) populateCaches(p Package) {
 			}
 		}
 	}
+	db.Unlock()
 
 	for _, re := range pd.GetRequires() {
 		packages, _ := db.FindPackages(re)
+		db.Lock()
 		for _, pa := range packages {
 			db.updateRevDep(pa.GetFingerPrint(), pd.GetFingerPrint(), pd)
 			db.updateRevDep(pa.GetPackageName(), pd.GetPackageName(), pd)
 		}
 		db.updateRevDep(re.GetFingerPrint(), pd.GetFingerPrint(), pd)
 		db.updateRevDep(re.GetPackageName(), pd.GetPackageName(), pd)
+		db.Unlock()
 	}
-	db.Unlock()
 }
 
 func (db *InMemoryDatabase) getProvide(p Package) (Package, error) {
