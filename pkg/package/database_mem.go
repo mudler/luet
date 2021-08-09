@@ -197,8 +197,6 @@ func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {
 }
 
 func (db *InMemoryDatabase) updateRevDep(k, v string, b Package) {
-	db.Lock()
-	defer db.Unlock()
 	_, ok := db.RevDepsDatabase[k]
 	if !ok {
 		db.RevDepsDatabase[k] = make(map[string]Package)
@@ -245,7 +243,6 @@ func (db *InMemoryDatabase) populateCaches(p Package) {
 	// the version selector
 	db.Lock()
 	toUpdate, ok := db.RevDepsDatabase[pd.GetPackageName()]
-	db.Unlock()
 	if ok {
 		for _, pp := range toUpdate {
 			for _, re := range pp.GetRequires() {
@@ -265,6 +262,7 @@ func (db *InMemoryDatabase) populateCaches(p Package) {
 		db.updateRevDep(re.GetFingerPrint(), pd.GetFingerPrint(), pd)
 		db.updateRevDep(re.GetPackageName(), pd.GetPackageName(), pd)
 	}
+	db.Unlock()
 }
 
 func (db *InMemoryDatabase) getProvide(p Package) (Package, error) {
