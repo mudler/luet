@@ -6,10 +6,6 @@ override LDFLAGS += -X "github.com/mudler/luet/cmd.BuildCommit=$(shell git rev-p
 NAME ?= luet
 PACKAGE_NAME ?= $(NAME)
 PACKAGE_CONFLICT ?= $(PACKAGE_NAME)-beta
-REVISION := $(shell git rev-parse --short HEAD || echo dev)
-VERSION := $(shell git describe --tags || echo $(REVISION))
-VERSION := $(shell echo $(VERSION) | sed -e 's/^v//g')
-BUILD_PLATFORMS ?= -osarch="linux/amd64" -osarch="linux/386" -osarch="linux/arm"
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 .PHONY: all
@@ -89,10 +85,11 @@ test-docker:
 				bash -c "make test"
 
 multiarch-build:
-	CGO_ENABLED=0 gox $(BUILD_PLATFORMS) -ldflags '$(LDFLAGS)' -output="release/$(NAME)-$(VERSION)-{{.OS}}-{{.Arch}}"
+	GO111MODULE=on go get -u github.com/goreleaser/goreleaser
+	goreleaser release --auto-snapshot --skip-publish --rm-dist
 
 multiarch-build-small:
-	@$(MAKE) LDFLAGS+="-s -w" multiarch-build
-	for file in $(ROOT_DIR)/release/* ; do \
+	@$(MAKE) multiarch-build
+	for file in $(ROOT_DIR)/release/**/* ; do \
 		upx --brute -1 $${file} ; \
 	done

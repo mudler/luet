@@ -1,0 +1,43 @@
+before:
+  hooks:
+    - go mod tidy
+dist: release
+source:
+  enabled: true
+  name_template: '{{ .ProjectName }}-{{ .Tag }}-source'
+checksum:
+  name_template: '{{ .ProjectName }}-{{ .Tag }}-checksums.txt'
+builds:
+  -
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X "github.com/mudler/luet/cmd.BuildTime={{ time "2006-01-02 15:04:05 MST" }}"
+      - -X "github.com/mudler/luet/cmd.BuildCommit={{ .FullCommit }}"
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm
+      - arm64
+      - 386
+    goarm:
+      - 6
+      - 7
+archives:
+  - format: binary # this removes the tar of the archives, leaving the binaries alone
+    name_template: luet-{{ .Tag }}-{{ .Os }}-{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^Merge pull request'
+release:
+  header: |
+    Luet is a multi-platform Package Manager based off from containers - it uses Docker (and others) to build packages.
+
+    It has zero dependencies and it is well suitable for "from scratch" environments.
+    It can also version entire rootfs and enables delivery of OTA-alike updates, making it a perfect fit for the Edge computing era and IoT embedded device
