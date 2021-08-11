@@ -2,3 +2,4 @@
 luet
 tests/integration/shunit2
 tests/integration/bin
+release/

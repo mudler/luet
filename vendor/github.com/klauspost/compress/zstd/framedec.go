@@ -16,16 +16,11 @@ import (
 )
 
 type frameDec struct {
-	o         decoderOptions
-	crc       hash.Hash64
-	frameDone sync.WaitGroup
-	offset    int64
+	o      decoderOptions
+	crc    hash.Hash64
+	offset int64
 
-	WindowSize       uint64
-	DictionaryID     uint32
-	FrameContentSize uint64
-	HasCheckSum      bool
-	SingleSegment    bool
+	WindowSize uint64
 
 	// maxWindowSize is the maximum windows size to support.
 	// should never be bigger than max-int.
@@ -42,15 +37,22 @@ type frameDec struct {
 	// Byte buffer that can be reused for small input blocks.
 	bBuf byteBuf
 
+	FrameContentSize uint64
+	frameDone        sync.WaitGroup
+
+	DictionaryID  *uint32
+	HasCheckSum   bool
+	SingleSegment bool
+
 	// asyncRunning indicates whether the async routine processes input on 'decoding'.
-	asyncRunning   bool
 	asyncRunningMu sync.Mutex
+	asyncRunning   bool
 }
 
 const (
 	// The minimum Window_Size is 1 KB.
 	MinWindowSize = 1 << 10
-	MaxWindowSize = 1 << 30
+	MaxWindowSize = 1 << 29
 )
 
 var (
@@ -119,7 +121,7 @@ func (d *frameDec) reset(br byteBuffer) error {
 	d.SingleSegment = fhd&(1<<5) != 0
 
 	if fhd&(1<<3) != 0 {
-		return errors.New("Reserved bit set on frame header")
+		return errors.New("reserved bit set on frame header")
 	}
 
 	// Read Window_Descriptor
@@ -140,7 +142,7 @@ func (d *frameDec) reset(br byteBuffer) error {
 
 	// Read Dictionary_ID
 	// https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md#dictionary_id
-	d.DictionaryID = 0
+	d.DictionaryID = nil
 	if size := fhd & 3; size != 0 {
 		if size == 3 {
 			size = 4
@@ -152,19 +154,22 @@ func (d *frameDec) reset(br byteBuffer) error {
 			}
 			return io.ErrUnexpectedEOF
 		}
+		var id uint32
 		switch size {
 		case 1:
-			d.DictionaryID = uint32(b[0])
+			id = uint32(b[0])
 		case 2:
-			d.DictionaryID = uint32(b[0]) | (uint32(b[1]) << 8)
+			id = uint32(b[0]) | (uint32(b[1]) << 8)
 		case 4:
-			d.DictionaryID = uint32(b[0]) | (uint32(b[1]) << 8) | (uint32(b[2]) << 16) | (uint32(b[3]) << 24)
+			id = uint32(b[0]) | (uint32(b[1]) << 8) | (uint32(b[2]) << 16) | (uint32(b[3]) << 24)
 		}
 		if debug {
-			println("Dict size", size, "ID:", d.DictionaryID)
+			println("Dict size", size, "ID:", id)
 		}
-		if d.DictionaryID != 0 {
-			return ErrUnknownDictionary
+		if id > 0 {
+			// ID 0 means "sorry, no dictionary anyway".
+			// https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md#dictionary-format
+			d.DictionaryID = &id
 		}
 	}
 
@@ -194,14 +199,14 @@ func (d *frameDec) reset(br byteBuffer) error {
 			// When FCS_Field_Size is 2, the offset of 256 is added.
 			d.FrameContentSize = uint64(b[0]) | (uint64(b[1]) << 8) + 256
 		case 4:
-			d.FrameContentSize = uint64(b[0]) | (uint64(b[1]) << 8) | (uint64(b[2]) << 16) | (uint64(b[3] << 24))
+			d.FrameContentSize = uint64(b[0]) | (uint64(b[1]) << 8) | (uint64(b[2]) << 16) | (uint64(b[3]) << 24)
 		case 8:
 			d1 := uint32(b[0]) | (uint32(b[1]) << 8) | (uint32(b[2]) << 16) | (uint32(b[3]) << 24)
 			d2 := uint32(b[4]) | (uint32(b[5]) << 8) | (uint32(b[6]) << 16) | (uint32(b[7]) << 24)
 			d.FrameContentSize = uint64(d1) | (uint64(d2) << 32)
 		}
 		if debug {
-			println("field size bits:", v, "fcsSize:", fcsSize, "FrameContentSize:", d.FrameContentSize, hex.EncodeToString(b[:fcsSize]))
+			println("field size bits:", v, "fcsSize:", fcsSize, "FrameContentSize:", d.FrameContentSize, hex.EncodeToString(b[:fcsSize]), "singleseg:", d.SingleSegment, "window:", d.WindowSize)
 		}
 	}
 	// Move this to shared.
@@ -231,7 +236,11 @@ func (d *frameDec) reset(br byteBuffer) error {
 		return ErrWindowSizeTooSmall
 	}
 	d.history.windowSize = int(d.WindowSize)
-	d.history.maxSize = d.history.windowSize + maxBlockSize
+	if d.o.lowMem && d.history.windowSize < maxBlockSize {
+		d.history.maxSize = d.history.windowSize * 2
+	} else {
+		d.history.maxSize = d.history.windowSize + maxBlockSize
+	}
 	// history contains input - maybe we do something
 	d.rawInput = br
 	return nil
@@ -310,14 +319,16 @@ func (d *frameDec) checkCRC() error {
 		}
 		return ErrCRCMismatch
 	}
-	println("CRC ok")
+	if debug {
+		println("CRC ok", tmp[:])
+	}
 	return nil
 }
 
 func (d *frameDec) initAsync() {
 	if !d.o.lowMem && !d.SingleSegment {
-		// set max extra size history to 20MB.
-		d.history.maxSize = d.history.windowSize + maxBlockSize*10
+		// set max extra size history to 10MB.
+		d.history.maxSize = d.history.windowSize + maxBlockSize*5
 	}
 	// re-alloc if more than one extra block size.
 	if d.o.lowMem && cap(d.history.b) > d.history.maxSize+maxBlockSize {
@@ -343,8 +354,6 @@ func (d *frameDec) initAsync() {
 // When the frame has finished decoding the *bufio.Reader
 // containing the remaining input will be sent on frameDec.frameDone.
 func (d *frameDec) startDecoder(output chan decodeOutput) {
-	// TODO: Init to dictionary
-	d.history.reset()
 	written := int64(0)
 
 	defer func() {
@@ -412,6 +421,7 @@ func (d *frameDec) startDecoder(output chan decodeOutput) {
 		}
 		written += int64(len(r.b))
 		if d.SingleSegment && uint64(written) > d.FrameContentSize {
+			println("runDecoder: single segment and", uint64(written), ">", d.FrameContentSize)
 			r.err = ErrFrameSizeExceeded
 			output <- r
 			return
@@ -436,8 +446,6 @@ func (d *frameDec) startDecoder(output chan decodeOutput) {
 
 // runDecoder will create a sync decoder that will decode a block of data.
 func (d *frameDec) runDecoder(dst []byte, dec *blockDec) ([]byte, error) {
-	// TODO: Init to dictionary
-	d.history.reset()
 	saved := d.history.b
 
 	// We use the history for output to avoid copying it.
@@ -462,6 +470,7 @@ func (d *frameDec) runDecoder(dst []byte, dec *blockDec) ([]byte, error) {
 			break
 		}
 		if d.SingleSegment && uint64(len(d.history.b)) > d.o.maxDecodedSize {
+			println("runDecoder: single segment and", uint64(len(d.history.b)), ">", d.o.maxDecodedSize)
 			err = ErrFrameSizeExceeded
 			break
 		}
@@ -474,9 +483,10 @@ func (d *frameDec) runDecoder(dst []byte, dec *blockDec) ([]byte, error) {
 			if err == nil {
 				if n != len(dst)-crcStart {
 					err = io.ErrShortWrite
+				} else {
+					err = d.checkCRC()
 				}
 			}
-			err = d.checkCRC()
 		}
 	}
 	d.history.b = saved
