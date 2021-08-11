@@ -286,10 +286,11 @@ func (l *LuetInstaller) swap(o Option, syncedRepos Repositories, toRemove pkg.Pa
 	}
 
 	ops := l.getOpsWithOptions(toRemove, match, Option{
-		Force:         o.Force,
-		NoDeps:        false,
-		OnlyDeps:      o.OnlyDeps,
-		RunFinalizers: false,
+		Force:              o.Force,
+		NoDeps:             false,
+		OnlyDeps:           o.OnlyDeps,
+		RunFinalizers:      false,
+		CheckFileConflicts: false,
 	}, o, syncedRepos, packages, assertions, allRepos)
 
 	err = l.runOps(ops, s)
@@ -313,6 +314,8 @@ type Option struct {
 	FullCleanUninstall bool
 	OnlyDeps           bool
 	RunFinalizers      bool
+
+	CheckFileConflicts bool
 }
 
 type operation struct {
@@ -518,10 +521,11 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 	}
 
 	o := Option{
-		NoDeps:        l.Options.NoDeps,
-		Force:         l.Options.Force,
-		OnlyDeps:      l.Options.OnlyDeps,
-		RunFinalizers: true,
+		NoDeps:             l.Options.NoDeps,
+		Force:              l.Options.Force,
+		OnlyDeps:           l.Options.OnlyDeps,
+		CheckFileConflicts: true,
+		RunFinalizers:      true,
 	}
 	match, packages, assertions, allRepos, err := l.computeInstall(o, syncedRepos, cp, s)
 	if err != nil {
@@ -814,12 +818,14 @@ func (l *LuetInstaller) install(o Option, syncedRepos Repositories, toInstall ma
 		return errors.Wrap(err, "Downloading packages")
 	}
 
-	// Check file conflicts
-	if err := l.checkFileconflicts(toInstall, true, s); err != nil {
-		if !l.Options.Force {
-			return errors.Wrap(err, "file conflict found")
-		} else {
-			Warning("file conflict found", err.Error())
+	if o.CheckFileConflicts {
+		// Check file conflicts
+		if err := l.checkFileconflicts(toInstall, true, s); err != nil {
+			if !l.Options.Force {
+				return errors.Wrap(err, "file conflict found")
+			} else {
+				Warning("file conflict found", err.Error())
+			}
 		}
 	}
 
