@@ -72,6 +72,7 @@ To force install a package:
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		yes := LuetCfg.Viper.GetBool("yes")
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
+		finalizerEnvs, _ := cmd.Flags().GetStringArray("finalizer-env")
 
 		util.SetSystemConfig()
 		util.SetSolverConfig()
@@ -88,6 +89,12 @@ To force install a package:
 		// Load config protect configs
 		installer.LoadConfigProtectConfs(LuetCfg)
 
+		// Load finalizer runtime environments
+		err := util.SetCliFinalizerEnvs(finalizerEnvs)
+		if err != nil {
+			Fatal(err.Error())
+		}
+
 		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
 			Concurrency:                 LuetCfg.GetGeneral().Concurrency,
 			SolverOptions:               *LuetCfg.GetSolverOptions(),
@@ -101,7 +108,7 @@ To force install a package:
 		inst.Repositories(repos)
 
 		system := &installer.System{Database: LuetCfg.GetSystemDB(), Target: LuetCfg.GetSystem().Rootfs}
-		err := inst.Install(toInstall, system)
+		err = inst.Install(toInstall, system)
 		if err != nil {
 			Fatal("Error: " + err.Error())
 		}
@@ -123,6 +130,8 @@ func init() {
 	installCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
 	installCmd.Flags().BoolP("yes", "y", false, "Don't ask questions")
 	installCmd.Flags().Bool("download-only", false, "Download only")
+	installCmd.Flags().StringArray("finalizer-env", []string{},
+		"Set finalizer environment in the format key=value.")
 
 	RootCmd.AddCommand(installCmd)
 }

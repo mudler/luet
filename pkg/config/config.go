@@ -221,6 +221,11 @@ func (r *LuetRepository) String() string {
 		r.Name, r.Priority, r.Type, r.Enable, r.Cached)
 }
 
+type LuetKV struct {
+	Key   string `json:"key" yaml:"key" mapstructure:"key"`
+	Value string `json:"value" yaml:"value" mapstructure:"value"`
+}
+
 type LuetConfig struct {
 	Viper *v.Viper
 
@@ -235,6 +240,8 @@ type LuetConfig struct {
 	ConfigFromHost       bool             `mapstructure:"config_from_host"`
 	CacheRepositories    []LuetRepository `mapstructure:"repetitors"`
 	SystemRepositories   []LuetRepository `mapstructure:"repositories"`
+
+	FinalizerEnvs []LuetKV `json:"finalizer_envs,omitempty" yaml:"finalizer_envs,omitempty" mapstructure:"finalizer_envs,omitempty"`
 
 	ConfigProtectConfFiles []ConfigProtectConfFile
 }
@@ -284,6 +291,7 @@ func GenDefault(viper *v.Viper) {
 	viper.SetDefault("config_from_host", true)
 	viper.SetDefault("cache_repositories", []string{})
 	viper.SetDefault("system_repositories", []string{})
+	viper.SetDefault("finalizer_envs", make(map[string]string, 0))
 
 	viper.SetDefault("solver.type", "")
 	viper.SetDefault("solver.rate", 0.7)
@@ -303,6 +311,58 @@ func (c *LuetConfig) GetSystemDB() pkg.PackageDatabase {
 
 func (c *LuetConfig) AddSystemRepository(r LuetRepository) {
 	c.SystemRepositories = append(c.SystemRepositories, r)
+}
+
+func (c *LuetConfig) GetFinalizerEnvsMap() map[string]string {
+	ans := make(map[string]string, 0)
+
+	for _, kv := range c.FinalizerEnvs {
+		ans[kv.Key] = kv.Value
+	}
+	return ans
+}
+
+func (c *LuetConfig) SetFinalizerEnv(k, v string) {
+	keyPresent := false
+	envs := []LuetKV{}
+
+	for _, kv := range c.FinalizerEnvs {
+		if kv.Key == k {
+			keyPresent = true
+			envs = append(envs, LuetKV{Key: kv.Key, Value: v})
+		} else {
+			envs = append(envs, kv)
+		}
+	}
+	if !keyPresent {
+		envs = append(envs, LuetKV{Key: k, Value: v})
+	}
+
+	c.FinalizerEnvs = envs
+}
+
+func (c *LuetConfig) GetFinalizerEnvs() []string {
+	ans := []string{}
+	for _, kv := range c.FinalizerEnvs {
+		ans = append(ans, fmt.Sprintf("%s=%s", kv.Key, kv.Value))
+	}
+	return ans
+}
+
+func (c *LuetConfig) GetFinalizerEnv(k string) (string, error) {
+	keyNotPresent := true
+	ans := ""
+	for _, kv := range c.FinalizerEnvs {
+		if kv.Key == k {
+			keyNotPresent = false
+			ans = kv.Value
+		}
+	}
+
+	if keyNotPresent {
+		return "", errors.New("Finalizer key " + k + " not found")
+	}
+	return ans, nil
 }
 
 func (c *LuetConfig) GetLogging() *LuetLoggingConfig {
