@@ -16,6 +16,9 @@
 package util
 
 import (
+	"errors"
+	"strings"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -71,4 +74,20 @@ func SetSolverConfig() (c *config.LuetSolverOptions) {
 		Discount:    float32(discount),
 		MaxAttempts: attempts,
 	}
+}
+
+func SetCliFinalizerEnvs(finalizerEnvs []string) error {
+	if len(finalizerEnvs) > 0 {
+		for _, v := range finalizerEnvs {
+			idx := strings.Index(v, "=")
+			if idx < 0 {
+				return errors.New("Found invalid runtime finalizer environment: " + v)
+			}
+
+			LuetCfg.SetFinalizerEnv(v[0:idx], v[idx+1:])
+		}
+
+	}
+
+	return nil
 }

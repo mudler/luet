@@ -99,6 +99,14 @@
 # If set to false rootfs path is used as prefix.
 # config_from_host: true
 #
+#
+# ------------------------------------------------
+# Finalizer Environment Variables
+# -----------------------------------------------
+# finalizer_envs:
+#  - key: "BUILD_ISO"
+#    value: "1"
+#
 # System repositories
 # ---------------------------------------------
 # In alternative to define repositories files

@@ -21,6 +21,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	box "github.com/mudler/luet/pkg/box"
+	. "github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/pkg/errors"
@@ -51,13 +52,14 @@ func (f *LuetFinalizer) RunInstall(s *System) error {
 		Info(":shell: Executing finalizer on ", s.Target, cmd, toRun)
 		if s.Target == string(os.PathSeparator) {
 			cmd := exec.Command(cmd, toRun...)
+			cmd.Env = LuetCfg.GetFinalizerEnvs()
 			stdoutStderr, err := cmd.CombinedOutput()
 			if err != nil {
 				return errors.Wrap(err, "Failed running command: "+string(stdoutStderr))
 			}
 			Info(string(stdoutStderr))
 		} else {
-			b := box.NewBox(cmd, toRun, []string{}, []string{}, s.Target, false, true, true)
+			b := box.NewBox(cmd, toRun, []string{}, LuetCfg.GetFinalizerEnvs(), s.Target, false, true, true)
 			err := b.Run()
 			if err != nil {
 				return errors.Wrap(err, "Failed running command ")
