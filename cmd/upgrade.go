@@ -58,7 +58,7 @@ var upgradeCmd = &cobra.Command{
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
 
 		util.SetSystemConfig()
-		util.SetSolverConfig()
+		opts := util.SetSolverConfig()
 
 		if concurrent {
 			LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple
@@ -66,7 +66,7 @@ var upgradeCmd = &cobra.Command{
 			LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
 		}
 
-		Debug("Solver", LuetCfg.GetSolverOptions().String())
+		Debug("Solver", opts.CompactString())
 
 		// Load config protect configs
 		installer.LoadConfigProtectConfs(LuetCfg)

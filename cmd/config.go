@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	config "github.com/mudler/luet/pkg/config"
-	installer "github.com/mudler/luet/pkg/installer"
+	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/spf13/cobra"
 )
@@ -30,46 +30,12 @@ var configCmd = &cobra.Command{
 	Long:    `Show luet configuration`,
 	Aliases: []string{"c"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(config.LuetCfg.GetLogging())
-		fmt.Println(config.LuetCfg.GetGeneral())
-		fmt.Println(config.LuetCfg.GetSystem())
-		if len(config.LuetCfg.CacheRepositories) > 0 {
-			fmt.Println("repetitors:")
-			for _, r := range config.LuetCfg.CacheRepositories {
-				fmt.Println("  - ", r.String())
-			}
-		}
-		if len(config.LuetCfg.SystemRepositories) > 0 {
-			fmt.Println("repositories:")
-			for _, r := range config.LuetCfg.SystemRepositories {
-				fmt.Println("  - ", r.String())
-			}
+		data, err := config.LuetCfg.YAML()
+		if err != nil {
+			Fatal(err.Error())
 		}
 
-		if len(config.LuetCfg.RepositoriesConfDir) > 0 {
-			fmt.Println("repos_confdir:")
-			for _, dir := range config.LuetCfg.RepositoriesConfDir {
-				fmt.Println("  - ", dir)
-			}
-		}
-
-		if len(config.LuetCfg.ConfigProtectConfDir) > 0 {
-
-			// Load config protect configs
-			installer.LoadConfigProtectConfs(config.LuetCfg)
-
-			fmt.Println("config_protect_confdir:")
-			for _, dir := range config.LuetCfg.ConfigProtectConfDir {
-				fmt.Println("  - ", dir)
-			}
-
-			if len(config.LuetCfg.GetConfigProtectConfFiles()) > 0 {
-				fmt.Println("protect_conf_files:")
-				for _, file := range config.LuetCfg.GetConfigProtectConfFiles() {
-					fmt.Println("  - ", file.String())
-				}
-			}
-		}
+		fmt.Println(string(data))
 	},
 }
 
