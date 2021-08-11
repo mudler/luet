@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/containerd/containerd/images"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/mudler/luet/pkg/helpers/imgworker"
 
 	continerdarchive "github.com/containerd/containerd/archive"
@@ -202,6 +203,12 @@ func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthCon
 
 	if os.Getenv("LUET_PRIVILEGED_EXTRACT") == "true" {
 		return privilegedExtractImage(temp, image, dest, auth, verify)
+	}
+
+	if !fileHelper.Exists(dest) {
+		if err := os.MkdirAll(dest, os.ModePerm); err != nil {
+			return nil, errors.Wrapf(err, "cannot create destination directory")
+		}
 	}
 
 	ref, err := name.ParseReference(image)
