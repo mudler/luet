@@ -167,78 +167,79 @@ func NewTreePkglistCommand() *cobra.Command {
 					}
 				}
 
-				if addPkg {
-					if revdeps {
-						packs, _ := reciper.GetDatabase().GetRevdeps(p)
-						for _, revdep := range packs {
+				if !addPkg {
+					continue
+				}
+
+				if revdeps {
+					packs, _ := reciper.GetDatabase().GetRevdeps(p)
+					for i := range packs {
+						revdep := packs[i]
+						if full {
+							pkgstr = pkgDetail(revdep)
+						} else if verbose {
+							pkgstr = revdep.HumanReadableString()
+						} else {
+							pkgstr = fmt.Sprintf("%s/%s", revdep.GetCategory(), revdep.GetName())
+						}
+						plist = append(plist, pkgstr)
+						results.Packages = append(results.Packages, TreePackageResult{
+							Name:     revdep.GetName(),
+							Version:  revdep.GetVersion(),
+							Category: revdep.GetCategory(),
+							Path:     revdep.GetPath(),
+						})
+					}
+				} else if deps {
+
+					solution, err := depSolver.Install(pkg.Packages{p})
+					if err != nil {
+						Fatal(err.Error())
+					}
+					ass := solution.SearchByName(p.GetPackageName())
+					solution, err = solution.Order(reciper.GetDatabase(), ass.Package.GetFingerPrint())
+					if err != nil {
+						Fatal(err.Error())
+					}
+
+					for _, pa := range solution {
+
+						if pa.Value {
+							// Exclude itself
+							if pa.Package.GetName() == p.GetName() && pa.Package.GetCategory() == p.GetCategory() {
+								continue
+							}
+
 							if full {
-								pkgstr = pkgDetail(revdep)
+								pkgstr = pkgDetail(pa.Package)
 							} else if verbose {
-								pkgstr = revdep.HumanReadableString()
+								pkgstr = pa.Package.HumanReadableString()
 							} else {
-								pkgstr = fmt.Sprintf("%s/%s", revdep.GetCategory(), revdep.GetName())
+								pkgstr = fmt.Sprintf("%s/%s", pa.Package.GetCategory(), pa.Package.GetName())
 							}
 							plist = append(plist, pkgstr)
 							results.Packages = append(results.Packages, TreePackageResult{
-								Name:     revdep.GetName(),
-								Version:  revdep.GetVersion(),
-								Category: revdep.GetCategory(),
-								Path:     revdep.GetPath(),
+								Name:     pa.Package.GetName(),
+								Version:  pa.Package.GetVersion(),
+								Category: pa.Package.GetCategory(),
+								Path:     pa.Package.GetPath(),
 							})
 						}
-					} else if deps {
-
-						Spinner(32)
-						solution, err := depSolver.Install(pkg.Packages{p})
-						if err != nil {
-							Fatal(err.Error())
-						}
-						ass := solution.SearchByName(p.GetPackageName())
-						solution, err = solution.Order(reciper.GetDatabase(), ass.Package.GetFingerPrint())
-						if err != nil {
-							Fatal(err.Error())
-						}
-						SpinnerStop()
-
-						for _, pa := range solution {
-
-							if pa.Value {
-								// Exclude itself
-								if pa.Package.GetName() == p.GetName() && pa.Package.GetCategory() == p.GetCategory() {
-									continue
-								}
-
-								if full {
-									pkgstr = pkgDetail(pa.Package)
-								} else if verbose {
-									pkgstr = pa.Package.HumanReadableString()
-								} else {
-									pkgstr = fmt.Sprintf("%s/%s", pa.Package.GetCategory(), pa.Package.GetName())
-								}
-								plist = append(plist, pkgstr)
-								results.Packages = append(results.Packages, TreePackageResult{
-									Name:     pa.Package.GetName(),
-									Version:  pa.Package.GetVersion(),
-									Category: pa.Package.GetCategory(),
-									Path:     pa.Package.GetPath(),
-								})
-							}
-
-						}
-
-					} else {
-
-						plist = append(plist, pkgstr)
-						results.Packages = append(results.Packages, TreePackageResult{
-							Name:     p.GetName(),
-							Version:  p.GetVersion(),
-							Category: p.GetCategory(),
-							Path:     p.GetPath(),
-						})
 
 					}
 
+				} else {
+
+					plist = append(plist, pkgstr)
+					results.Packages = append(results.Packages, TreePackageResult{
+						Name:     p.GetName(),
+						Version:  p.GetVersion(),
+						Category: p.GetCategory(),
+						Path:     p.GetPath(),
+					})
+
 				}
+
 			}
 
 			y, err := yaml.Marshal(results)

@@ -36,7 +36,6 @@ import (
 	tree "github.com/mudler/luet/pkg/tree"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var buildCmd = &cobra.Command{
@@ -66,23 +65,23 @@ Build packages specifying multiple definition trees:
 
 	$ luet build --tree overlay/path --tree overlay/path2 utils/yq ...
 `, PreRun: func(cmd *cobra.Command, args []string) {
-		viper.BindPFlag("tree", cmd.Flags().Lookup("tree"))
-		viper.BindPFlag("destination", cmd.Flags().Lookup("destination"))
-		viper.BindPFlag("backend", cmd.Flags().Lookup("backend"))
-		viper.BindPFlag("privileged", cmd.Flags().Lookup("privileged"))
-		viper.BindPFlag("revdeps", cmd.Flags().Lookup("revdeps"))
-		viper.BindPFlag("all", cmd.Flags().Lookup("all"))
-		viper.BindPFlag("compression", cmd.Flags().Lookup("compression"))
-		viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
-		viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
+		LuetCfg.Viper.BindPFlag("tree", cmd.Flags().Lookup("tree"))
+		LuetCfg.Viper.BindPFlag("destination", cmd.Flags().Lookup("destination"))
+		LuetCfg.Viper.BindPFlag("backend", cmd.Flags().Lookup("backend"))
+		LuetCfg.Viper.BindPFlag("privileged", cmd.Flags().Lookup("privileged"))
+		LuetCfg.Viper.BindPFlag("revdeps", cmd.Flags().Lookup("revdeps"))
+		LuetCfg.Viper.BindPFlag("all", cmd.Flags().Lookup("all"))
+		LuetCfg.Viper.BindPFlag("compression", cmd.Flags().Lookup("compression"))
+		LuetCfg.Viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
+		LuetCfg.Viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
 		util.BindValuesFlags(cmd)
-		viper.BindPFlag("backend-args", cmd.Flags().Lookup("backend-args"))
+		LuetCfg.Viper.BindPFlag("backend-args", cmd.Flags().Lookup("backend-args"))
 
-		viper.BindPFlag("image-repository", cmd.Flags().Lookup("image-repository"))
-		viper.BindPFlag("push", cmd.Flags().Lookup("push"))
-		viper.BindPFlag("pull", cmd.Flags().Lookup("pull"))
-		viper.BindPFlag("wait", cmd.Flags().Lookup("wait"))
-		viper.BindPFlag("keep-images", cmd.Flags().Lookup("keep-images"))
+		LuetCfg.Viper.BindPFlag("image-repository", cmd.Flags().Lookup("image-repository"))
+		LuetCfg.Viper.BindPFlag("push", cmd.Flags().Lookup("push"))
+		LuetCfg.Viper.BindPFlag("pull", cmd.Flags().Lookup("pull"))
+		LuetCfg.Viper.BindPFlag("wait", cmd.Flags().Lookup("wait"))
+		LuetCfg.Viper.BindPFlag("keep-images", cmd.Flags().Lookup("keep-images"))
 
 		util.BindSolverFlags(cmd)
 
@@ -92,29 +91,29 @@ Build packages specifying multiple definition trees:
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
-		treePaths := viper.GetStringSlice("tree")
-		dst := viper.GetString("destination")
+		treePaths := LuetCfg.Viper.GetStringSlice("tree")
+		dst := LuetCfg.Viper.GetString("destination")
 		concurrency := LuetCfg.GetGeneral().Concurrency
-		backendType := viper.GetString("backend")
-		privileged := viper.GetBool("privileged")
-		revdeps := viper.GetBool("revdeps")
-		all := viper.GetBool("all")
-		compressionType := viper.GetString("compression")
-		imageRepository := viper.GetString("image-repository")
+		backendType := LuetCfg.Viper.GetString("backend")
+		privileged := LuetCfg.Viper.GetBool("privileged")
+		revdeps := LuetCfg.Viper.GetBool("revdeps")
+		all := LuetCfg.Viper.GetBool("all")
+		compressionType := LuetCfg.Viper.GetString("compression")
+		imageRepository := LuetCfg.Viper.GetString("image-repository")
 		values := util.ValuesFlags()
-		wait := viper.GetBool("wait")
-		push := viper.GetBool("push")
-		pull := viper.GetBool("pull")
-		keepImages := viper.GetBool("keep-images")
-		nodeps := viper.GetBool("nodeps")
-		onlydeps := viper.GetBool("onlydeps")
+		wait := LuetCfg.Viper.GetBool("wait")
+		push := LuetCfg.Viper.GetBool("push")
+		pull := LuetCfg.Viper.GetBool("pull")
+		keepImages := LuetCfg.Viper.GetBool("keep-images")
+		nodeps := LuetCfg.Viper.GetBool("nodeps")
+		onlydeps := LuetCfg.Viper.GetBool("onlydeps")
 		onlyTarget, _ := cmd.Flags().GetBool("only-target-package")
 		full, _ := cmd.Flags().GetBool("full")
 		rebuild, _ := cmd.Flags().GetBool("rebuild")
 
 		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		var results Results
-		backendArgs := viper.GetStringSlice("backend-args")
+		backendArgs := LuetCfg.Viper.GetStringSlice("backend-args")
 
 		out, _ := cmd.Flags().GetString("output")
 		if out != "terminal" {
@@ -160,17 +159,6 @@ Build packages specifying multiple definition trees:
 			opts.Options = solver.Options{Type: solver.SingleCoreSimple, Concurrency: concurrency}
 		}
 
-		templateFolders := []string{}
-		if !fromRepo {
-			for _, t := range treePaths {
-				templateFolders = append(templateFolders, filepath.Join(t, "templates"))
-			}
-		} else {
-			for _, s := range installer.SystemRepositories(LuetCfg) {
-				templateFolders = append(templateFolders, filepath.Join(s.TreePath, "templates"))
-			}
-		}
-
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(),
 			options.NoDeps(nodeps),
 			options.WithBackendType(backendType),
@@ -179,7 +167,7 @@ Build packages specifying multiple definition trees:
 			options.WithPullRepositories(pullRepo),
 			options.WithPushRepository(imageRepository),
 			options.Rebuild(rebuild),
-			options.WithTemplateFolder(templateFolders),
+			options.WithTemplateFolder(util.TemplateFolders(fromRepo, treePaths)),
 			options.WithSolverOptions(*opts),
 			options.Wait(wait),
 			options.OnlyTarget(onlyTarget),

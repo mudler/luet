@@ -86,6 +86,7 @@ func NewTreeImageCommand() *cobra.Command {
 				options.WithBuildValues(values),
 				options.WithPushRepository(imageRepository),
 				options.WithPullRepositories(pullRepo),
+				options.WithTemplateFolder(util.TemplateFolders(false, treePath)),
 				options.WithSolverOptions(opts),
 			)
 

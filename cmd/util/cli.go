@@ -17,13 +17,14 @@ package util
 
 import (
 	"errors"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/pkg/installer"
 )
 
 func BindSystemFlags(cmd *cobra.Command) {
@@ -40,11 +41,11 @@ func BindSolverFlags(cmd *cobra.Command) {
 }
 
 func BindValuesFlags(cmd *cobra.Command) {
-	viper.BindPFlag("values", cmd.Flags().Lookup("values"))
+	LuetCfg.Viper.BindPFlag("values", cmd.Flags().Lookup("values"))
 }
 
 func ValuesFlags() []string {
-	return viper.GetStringSlice("values")
+	return LuetCfg.Viper.GetStringSlice("values")
 }
 
 func SetSystemConfig() {
@@ -90,4 +91,19 @@ func SetCliFinalizerEnvs(finalizerEnvs []string) error {
 	}
 
 	return nil
+}
+
+// TemplateFolders returns the default folders which holds shared template between packages in a given tree path
+func TemplateFolders(fromRepo bool, treePaths []string) []string {
+	templateFolders := []string{}
+	if !fromRepo {
+		for _, t := range treePaths {
+			templateFolders = append(templateFolders, filepath.Join(t, "templates"))
+		}
+	} else {
+		for _, s := range installer.SystemRepositories(LuetCfg) {
+			templateFolders = append(templateFolders, filepath.Join(s.TreePath, "templates"))
+		}
+	}
+	return templateFolders
 }
