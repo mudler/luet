@@ -1,0 +1,6 @@
+install:
+- env
+- echo "$@"
+- echo "$0" > /tmp/foo
+- if [ -z "$BUILD_ISO" ] ; then echo "test" > /tmp/foo2 ; fi
+- if [ -z "$CLI_ENV" ] ; then echo "test" > /tmp/foo3 ; fi
