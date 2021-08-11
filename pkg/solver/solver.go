@@ -64,8 +64,8 @@ type Solver struct {
 }
 
 type Options struct {
-	Type        SolverType
-	Concurrency int
+	Type        SolverType `yaml:"type,omitempty"`
+	Concurrency int        `yaml:"concurrency,omitempty"`
 }
 
 // NewSolver accepts as argument two lists of packages, the first is the initial set,

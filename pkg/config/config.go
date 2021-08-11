@@ -26,14 +26,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-
 	pkg "github.com/mudler/luet/pkg/package"
 	solver "github.com/mudler/luet/pkg/solver"
 
+	"github.com/pkg/errors"
 	v "github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 )
 
 var LuetCfg = NewLuetConfig(v.GetViper())
@@ -57,22 +56,22 @@ type LuetLoggingConfig struct {
 }
 
 type LuetGeneralConfig struct {
-	SameOwner       bool `mapstructure:"same_owner"`
-	Concurrency     int  `mapstructure:"concurrency"`
-	Debug           bool `mapstructure:"debug"`
-	ShowBuildOutput bool `mapstructure:"show_build_output"`
-	SpinnerMs       int  `mapstructure:"spinner_ms"`
-	SpinnerCharset  int  `mapstructure:"spinner_charset"`
-	FatalWarns      bool `mapstructure:"fatal_warnings"`
+	SameOwner       bool `yaml:"same_owner,omitempty" mapstructure:"same_owner"`
+	Concurrency     int  `yaml:"concurrency,omitempty" mapstructure:"concurrency"`
+	Debug           bool `yaml:"debug,omitempty" mapstructure:"debug"`
+	ShowBuildOutput bool `yaml:"show_build_output,omitempty" mapstructure:"show_build_output"`
+	SpinnerMs       int  `yaml:"spinner_ms,omitempty" mapstructure:"spinner_ms"`
+	SpinnerCharset  int  `yaml:"spinner_charset,omitempty" mapstructure:"spinner_charset"`
+	FatalWarns      bool `yaml:"fatal_warnings,omitempty" mapstructure:"fatal_warnings"`
 }
 
 type LuetSolverOptions struct {
-	solver.Options
-	Type           string            `mapstructure:"type"`
-	LearnRate      float32           `mapstructure:"rate"`
-	Discount       float32           `mapstructure:"discount"`
-	MaxAttempts    int               `mapstructure:"max_attempts"`
-	Implementation solver.SolverType `mapstructure:"implementation"`
+	solver.Options `yaml:"options,omitempty"`
+	Type           string            `yaml:"type,omitempty" mapstructure:"type"`
+	LearnRate      float32           `yaml:"rate,omitempty" mapstructure:"rate"`
+	Discount       float32           `yaml:"discount,omitempty" mapstructure:"discount"`
+	MaxAttempts    int               `yaml:"max_attempts,omitempty" mapstructure:"max_attempts"`
+	Implementation solver.SolverType `yaml:"implementation,omitempty" mapstructure:"implementation"`
 }
 
 func (opts LuetSolverOptions) ResolverIsSet() bool {
@@ -179,9 +178,9 @@ type LuetRepository struct {
 	// Serialized options not used in repository configuration
 
 	// Incremented value that identify revision of the repository in a user-friendly way.
-	Revision int `json:"revision,omitempty" yaml:"-,omitempty" mapstructure:"-,omitempty"`
+	Revision int `json:"revision,omitempty" yaml:"-" mapstructure:"-"`
 	// Epoch time in seconds
-	LastUpdate string `json:"last_update,omitempty" yaml:"-,omitempty" mapstructure:"-,omitempty"`
+	LastUpdate string `json:"last_update,omitempty" yaml:"-" mapstructure:"-"`
 }
 
 func NewLuetRepository(name, t, descr string, urls []string, priority int, enable, cached bool) *LuetRepository {
@@ -227,23 +226,23 @@ type LuetKV struct {
 }
 
 type LuetConfig struct {
-	Viper *v.Viper
+	Viper *v.Viper `yaml:"-"`
 
-	Logging LuetLoggingConfig `mapstructure:"logging"`
-	General LuetGeneralConfig `mapstructure:"general"`
-	System  LuetSystemConfig  `mapstructure:"system"`
-	Solver  LuetSolverOptions `mapstructure:"solver"`
+	Logging LuetLoggingConfig `yaml:"logging,omitempty" mapstructure:"logging"`
+	General LuetGeneralConfig `yaml:"general,omitempty" mapstructure:"general"`
+	System  LuetSystemConfig  `yaml:"system" mapstructure:"system"`
+	Solver  LuetSolverOptions `yaml:"solver,omitempty" mapstructure:"solver"`
 
-	RepositoriesConfDir  []string         `mapstructure:"repos_confdir"`
-	ConfigProtectConfDir []string         `mapstructure:"config_protect_confdir"`
-	ConfigProtectSkip    bool             `mapstructure:"config_protect_skip"`
-	ConfigFromHost       bool             `mapstructure:"config_from_host"`
-	CacheRepositories    []LuetRepository `mapstructure:"repetitors"`
-	SystemRepositories   []LuetRepository `mapstructure:"repositories"`
+	RepositoriesConfDir  []string         `yaml:"repos_confdir,omitempty" mapstructure:"repos_confdir"`
+	ConfigProtectConfDir []string         `yaml:"config_protect_confdir,omitempty" mapstructure:"config_protect_confdir"`
+	ConfigProtectSkip    bool             `yaml:"config_protect_skip,omitempty" mapstructure:"config_protect_skip"`
+	ConfigFromHost       bool             `yaml:"config_from_host,omitempty" mapstructure:"config_from_host"`
+	CacheRepositories    []LuetRepository `yaml:"repetitors,omitempty" mapstructure:"repetitors"`
+	SystemRepositories   []LuetRepository `yaml:"repositories,omitempty" mapstructure:"repositories"`
 
 	FinalizerEnvs []LuetKV `json:"finalizer_envs,omitempty" yaml:"finalizer_envs,omitempty" mapstructure:"finalizer_envs,omitempty"`
 
-	ConfigProtectConfFiles []ConfigProtectConfFile
+	ConfigProtectConfFiles []ConfigProtectConfFile `yaml:"-" mapstructure:"-"`
 }
 
 func NewLuetConfig(viper *v.Viper) *LuetConfig {
@@ -381,6 +380,10 @@ func (c *LuetConfig) GetSolverOptions() *LuetSolverOptions {
 	return &c.Solver
 }
 
+func (c *LuetConfig) YAML() ([]byte, error) {
+	return yaml.Marshal(c)
+}
+
 func (c *LuetConfig) GetConfigProtectConfFiles() []ConfigProtectConfFile {
 	return c.ConfigProtectConfFiles
 }
@@ -409,34 +412,6 @@ func (c *LuetConfig) GetSystemRepository(name string) (*LuetRepository, error) {
 	return ans, nil
 }
 
-func (c *LuetSolverOptions) String() string {
-	ans := fmt.Sprintf(`
-solver:
-  type: %s
-  rate: %f
-  discount: %f
-  max_attempts: %d`, c.Type, c.LearnRate, c.Discount,
-		c.MaxAttempts)
-
-	return ans
-}
-
-func (c *LuetGeneralConfig) String() string {
-	ans := fmt.Sprintf(`
-general:
-  concurrency: %d
-  same_owner: %t
-  debug: %t
-  fatal_warnings: %t
-  show_build_output: %t
-  spinner_ms: %d
-  spinner_charset: %d`, c.Concurrency, c.SameOwner, c.Debug,
-		c.FatalWarns, c.ShowBuildOutput,
-		c.SpinnerMs, c.SpinnerCharset)
-
-	return ans
-}
-
 func (c *LuetGeneralConfig) GetSpinnerMs() time.Duration {
 	duration, err := time.ParseDuration(fmt.Sprintf("%dms", c.SpinnerMs))
 	if err != nil {
@@ -447,34 +422,6 @@ func (c *LuetGeneralConfig) GetSpinnerMs() time.Duration {
 
 func (c *LuetLoggingConfig) SetLogLevel(s string) {
 	c.Level = s
-}
-
-func (c *LuetLoggingConfig) String() string {
-	ans := fmt.Sprintf(`
-logging:
-  enable_logfile: %t
-  path: %s
-  json_format: %t
-  color: %t
-  enable_emoji: %t
-  level: %s`, c.EnableLogFile, c.Path, c.JsonFormat,
-		c.Color, c.EnableEmoji, c.Level)
-
-	return ans
-}
-
-func (c *LuetSystemConfig) String() string {
-	ans := fmt.Sprintf(`
-system:
-  database_engine: %s
-  database_path: %s
-  pkgs_cache_path: %s
-  tmpdir_base: %s
-  rootfs: %s`,
-		c.DatabaseEngine, c.DatabasePath, c.PkgsCachePath,
-		c.TmpDirBase, c.Rootfs)
-
-	return ans
 }
 
 func (c *LuetSystemConfig) InitTmpDir() error {
