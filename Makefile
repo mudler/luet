@@ -85,7 +85,7 @@ test-docker:
 				bash -c "make test"
 
 multiarch-build:
-	goreleaser release --auto-snapshot --skip-publish --rm-dist
+	goreleaser build --snapshot --rm-dist
 
 multiarch-build-small:
 	@$(MAKE) multiarch-build
