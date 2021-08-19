@@ -46,6 +46,10 @@ jobs:
             sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
             sudo curl -fSL "https://github.com/genuinetools/img/releases/download/v0.5.11/img-linux-amd64" -o "/usr/bin/img"
             sudo chmod a+x "/usr/bin/img"
+    - name: Install GoReleaser
+      uses: goreleaser/goreleaser-action@v2
+      with:
+        install-only: true
     - name: Build
       run: sudo -E env "PATH=$PATH" make multiarch-build-small
     - name: Tests
