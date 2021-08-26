@@ -1133,7 +1133,7 @@ func (l *LuetInstaller) computeUninstall(o Option, s *System, packs ...pkg.Packa
 func (l *LuetInstaller) generateUninstallFn(o Option, s *System, packs ...pkg.Package) (pkg.Packages, func() error, error) {
 	for _, p := range packs {
 		if packs, _ := s.Database.FindPackages(p); len(packs) == 0 {
-			return nil, nil, errors.New("Package not found in the system")
+			return nil, nil, errors.New(fmt.Sprintf("Package %s not found in the system", p.HumanReadableString()))
 		}
 	}
 
