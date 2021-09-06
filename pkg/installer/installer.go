@@ -551,6 +551,11 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 				if m.Package.GetName() == p.GetName() {
 					found = true
 				}
+				for _, pack := range m.Package.GetProvides() {
+					if pack.GetName() == p.GetName() {
+						found = true
+					}
+				}
 			}
 
 			if !found {
