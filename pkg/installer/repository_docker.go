@@ -44,7 +44,6 @@ type dockerRepositoryGenerator struct {
 }
 
 func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
-
 	Info("Generating docker images for packages in", l.imagePrefix)
 	var art []*artifact.PackageArtifact
 	var ff = func(currentpath string, info os.FileInfo, err error) error {

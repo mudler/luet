@@ -38,14 +38,15 @@ import (
 
 func stubRepo(tmpdir, tree string) (*LuetSystemRepository, error) {
 	return GenerateRepository(
-		"test",
-		"description",
-		"disk",
-		[]string{tmpdir},
-		1,
-		tmpdir,
-		[]string{tree},
-		pkg.NewInMemoryDatabase(false), nil, "", false, false, false, nil)
+		WithName("test"),
+		WithDescription("description"),
+		WithType("disk"),
+		WithUrls(tmpdir),
+		WithPriority(1),
+		WithSource(tmpdir),
+		WithTree(tree),
+		WithDatabase(pkg.NewInMemoryDatabase(false)),
+	)
 }
 
 var _ = Describe("Installer", func() {
@@ -337,13 +338,15 @@ urls:
 			Expect(fileHelper.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
 
 			repo, err := GenerateRepository(
-				"test",
-				"description",
-				"disk",
-				[]string{tmpdir}, 1,
-				tmpdir,
-				[]string{"../../tests/fixtures/buildable"},
-				pkg.NewInMemoryDatabase(false), nil, "", false, false, false, nil)
+				WithName("test"),
+				WithDescription("description"),
+				WithType("disk"),
+				WithUrls(tmpdir),
+				WithPriority(1),
+				WithSource(tmpdir),
+				WithTree("../../tests/fixtures/buildable"),
+				WithDatabase(pkg.NewInMemoryDatabase(false)),
+			)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
@@ -462,14 +465,15 @@ urls:
 			Expect(fileHelper.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
 
 			repo, err := GenerateRepository(
-				"test",
-				"description",
-				"disk",
-				[]string{tmpdir},
-				1,
-				tmpdir,
-				[]string{"../../tests/fixtures/buildable"},
-				pkg.NewInMemoryDatabase(false), nil, "", false, false, false, nil)
+				WithName("test"),
+				WithDescription("description"),
+				WithType("disk"),
+				WithUrls(tmpdir),
+				WithPriority(1),
+				WithSource(tmpdir),
+				WithTree("../../tests/fixtures/buildable"),
+				WithDatabase(pkg.NewInMemoryDatabase(false)),
+			)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())

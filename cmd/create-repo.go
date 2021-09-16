@@ -69,7 +69,7 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		viper.BindPFlag("meta-filename", cmd.Flags().Lookup("meta-filename"))
 		viper.BindPFlag("reset-revision", cmd.Flags().Lookup("reset-revision"))
 		viper.BindPFlag("repo", cmd.Flags().Lookup("repo"))
-
+		viper.BindPFlag("from-metadata", cmd.Flags().Lookup("from-metadata"))
 		viper.BindPFlag("force-push", cmd.Flags().Lookup("force-push"))
 		viper.BindPFlag("push-images", cmd.Flags().Lookup("push-images"))
 
@@ -80,7 +80,7 @@ Create a repository from the metadata description defined in the luet.yaml confi
 
 		treePaths := viper.GetStringSlice("tree")
 		dst := viper.GetString("output")
-		packages := viper.GetString("packages")
+
 		name := viper.GetString("name")
 		descr := viper.GetString("descr")
 		urls := viper.GetStringSlice("urls")
@@ -101,6 +101,18 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		force := viper.GetBool("force-push")
 		imagePush := viper.GetBool("push-images")
 
+		opts := []installer.RepositoryOption{
+			installer.WithSource(viper.GetString("packages")),
+			installer.WithPushImages(imagePush),
+			installer.WithForce(force),
+			installer.FromRepository(fromRepo),
+			installer.WithConfig(LuetCfg),
+			installer.WithImagePrefix(dst),
+			installer.WithDatabase(pkg.NewInMemoryDatabase(false)),
+			installer.WithCompilerBackend(compilerBackend),
+			installer.FromMetadata(viper.GetBool("from-metadata")),
+		}
+
 		if source_repo != "" {
 			// Search for system repository
 			lrepo, err := LuetCfg.GetSystemRepository(source_repo)
@@ -114,26 +126,27 @@ Create a repository from the metadata description defined in the luet.yaml confi
 				t = lrepo.Type
 			}
 
-			repo, err = installer.GenerateRepository(lrepo.Name,
-				lrepo.Description, t,
-				lrepo.Urls,
-				lrepo.Priority,
-				packages,
-				treePaths,
-				pkg.NewInMemoryDatabase(false),
-				compilerBackend,
-				dst,
-				imagePush,
-				force,
-				fromRepo,
-				LuetCfg)
-			helpers.CheckErr(err)
+			opts = append(opts,
+				installer.WithName(lrepo.Name),
+				installer.WithDescription(lrepo.Description),
+				installer.WithType(t),
+				installer.WithUrls(lrepo.Urls...),
+				installer.WithPriority(lrepo.Priority),
+				installer.WithTree(treePaths...),
+			)
 
 		} else {
-			repo, err = installer.GenerateRepository(name, descr, t, urls, 1, packages,
-				treePaths, pkg.NewInMemoryDatabase(false), compilerBackend, dst, imagePush, force, fromRepo, LuetCfg)
-			helpers.CheckErr(err)
+			opts = append(opts,
+				installer.WithName(name),
+				installer.WithDescription(descr),
+				installer.WithType(t),
+				installer.WithUrls(urls...),
+				installer.WithTree(treePaths...),
+			)
 		}
+
+		repo, err = installer.GenerateRepository(opts...)
+		helpers.CheckErr(err)
 
 		if treetype != "" {
 			treeFile.SetCompressionType(compression.Implementation(treetype))
@@ -177,6 +190,7 @@ func init() {
 
 	createrepoCmd.Flags().Bool("force-push", false, "Force overwrite of docker images if already present online")
 	createrepoCmd.Flags().Bool("push-images", false, "Enable/Disable docker image push for docker repositories")
+	createrepoCmd.Flags().Bool("from-metadata", false, "Consider metadata files from the packages folder while indexing the new tree")
 
 	createrepoCmd.Flags().String("tree-compression", "gzip", "Compression alg: none, gzip, zstd")
 	createrepoCmd.Flags().String("tree-filename", installer.TREE_TARBALL, "Repository tree filename")

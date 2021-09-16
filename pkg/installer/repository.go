@@ -253,11 +253,9 @@ func (f *LuetRepositoryFile) GetChecksums() artifact.Checksums {
 // GenerateRepository generates a new repository from the given argument.
 // If the repository is of the docker type, it will also push the package images.
 // In case the repository is local, it will build the package Index
-func GenerateRepository(name, descr, t string, urls []string,
-	priority int, src string, treesDir []string, db pkg.PackageDatabase,
-	b compiler.CompilerBackend, imagePrefix string, pushImages, force, fromRepo bool, c *config.LuetConfig) (*LuetSystemRepository, error) {
-
-	// 1: First filter the runtime db to only the metadata we actually have
+func GenerateRepository(p ...RepositoryOption) (*LuetSystemRepository, error) {
+	c := RepositoryConfig{}
+	c.Apply(p...)
 
 	btr := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 	runtimeTree := pkg.NewInMemoryDatabase(false)
@@ -265,7 +263,7 @@ func GenerateRepository(name, descr, t string, urls []string,
 	tempTree := pkg.NewInMemoryDatabase(false)
 	temptr := tree.NewInstallerRecipe(tempTree)
 
-	for _, treeDir := range treesDir {
+	for _, treeDir := range c.Tree {
 		if err := temptr.Load(treeDir); err != nil {
 			return nil, err
 		}
@@ -280,8 +278,8 @@ func GenerateRepository(name, descr, t string, urls []string,
 	repodb := pkg.NewInMemoryDatabase(false)
 	generalRecipe := tree.NewCompilerRecipe(repodb)
 
-	if fromRepo {
-		if err := LoadBuildTree(generalRecipe, repodb, c); err != nil {
+	if c.FromRepository {
+		if err := LoadBuildTree(generalRecipe, repodb, c.config); err != nil {
 			Warning("errors while loading trees from repositories", err.Error())
 		}
 
@@ -293,7 +291,7 @@ func GenerateRepository(name, descr, t string, urls []string,
 
 	// Pick only atoms in db which have a real metadata for runtime db (tr)
 	for _, p := range tempTree.World() {
-		if _, err := os.Stat(filepath.Join(src, p.GetMetadataFilePath())); err == nil {
+		if _, err := os.Stat(filepath.Join(c.Src, p.GetMetadataFilePath())); err == nil {
 			runtimeTree.CreatePackage(p)
 		}
 	}
@@ -319,28 +317,30 @@ func GenerateRepository(name, descr, t string, urls []string,
 			return nil
 		}
 		if _, err := runtimeTree.FindPackage(art.CompileSpec.Package); err != nil && art.CompileSpec.Package.Name != "" {
-			Debug("Added", art.CompileSpec.Package.HumanReadableString(), "from metadata files")
+			Debug("Adding", art.CompileSpec.Package.HumanReadableString(), "from metadata file", currentpath)
 			runtimeTree.CreatePackage(art.CompileSpec.Package)
 		}
 
 		return nil
 	}
 
-	// Best effort
-	filepath.Walk(src, ff)
+	if c.FromMetadata {
+		// Best effort
+		filepath.Walk(c.Src, ff)
+	}
 
 	repo := &LuetSystemRepository{
-		LuetRepository:  config.NewLuetRepository(name, t, descr, urls, priority, true, false),
+		LuetRepository:  config.NewLuetRepository(c.Name, c.Type, c.Description, c.Urls, c.Priority, true, false),
 		Tree:            tree.NewInstallerRecipe(runtimeTree),
 		BuildTree:       btr,
 		RepositoryFiles: map[string]LuetRepositoryFile{},
-		PushImages:      pushImages,
-		ForcePush:       force,
-		Backend:         b,
-		imagePrefix:     imagePrefix,
+		PushImages:      c.PushImages,
+		ForcePush:       c.Force,
+		Backend:         c.CompilerBackend,
+		imagePrefix:     c.ImagePrefix,
 	}
 
-	if err := repo.initialize(src); err != nil {
+	if err := repo.initialize(c.Src); err != nil {
 		return nil, errors.Wrap(err, "while building repository artifact index")
 	}
 

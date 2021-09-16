@@ -41,14 +41,18 @@ import (
 
 func dockerStubRepo(tmpdir, tree, image string, push, force bool) (*LuetSystemRepository, error) {
 	return GenerateRepository(
-		"test",
-		"description",
-		"docker",
-		[]string{image},
-		1,
-		tmpdir,
-		[]string{tree},
-		pkg.NewInMemoryDatabase(false), backend.NewSimpleDockerBackend(), image, push, force, false, nil)
+		WithName("test"),
+		WithDescription("description"),
+		WithType("docker"),
+		WithUrls(image),
+		WithPriority(1),
+		WithSource(tmpdir),
+		WithTree(tree),
+		WithDatabase(pkg.NewInMemoryDatabase(false)),
+		WithCompilerBackend(backend.NewSimpleDockerBackend()),
+		WithImagePrefix(image),
+		WithPushImages(push),
+		WithForce(force))
 }
 
 var _ = Describe("Repository", func() {
@@ -209,6 +213,114 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			_, err = repos.GetTree().GetDatabase().FindPackage(spec2.GetPackage())
 			Expect(err).To(HaveOccurred()) // should throw error
+		})
+
+		It("Generate repository metadata of files referenced in a tree and from packages", func() {
+
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err = generalRecipe.Load("../../tests/fixtures/buildable")
+			Expect(err).ToNot(HaveOccurred())
+
+			generalRecipe2 := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err = generalRecipe2.Load("../../tests/fixtures/finalizers")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(1))
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
+
+			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase())
+			spec2, err := compiler2.FromPackage(&pkg.DefaultPackage{Name: "alpine", Category: "seed", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
+
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+			Expect(spec2.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err = ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			Expect(spec.BuildSteps()).To(Equal([]string{"echo artifact5 > /test5", "echo artifact6 > /test6", "chmod +x generate.sh", "./generate.sh"}))
+			Expect(spec.GetPreBuildSteps()).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
+
+			spec.SetOutputPath(tmpdir)
+			spec2.SetOutputPath(tmpdir)
+
+			artifact, err := compiler.Compile(false, spec)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
+			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
+
+			artifact2, err := compiler2.Compile(false, spec2)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(fileHelper.Exists(artifact2.Path)).To(BeTrue())
+			Expect(helpers.Untar(artifact2.Path, tmpdir, false)).ToNot(HaveOccurred())
+
+			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
+
+			content1, err := fileHelper.Read(spec.Rel("test5"))
+			Expect(err).ToNot(HaveOccurred())
+			content2, err := fileHelper.Read(spec.Rel("test6"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(content1).To(Equal("artifact5\n"))
+			Expect(content2).To(Equal("artifact6\n"))
+
+			// will contain both
+			Expect(fileHelper.Exists(spec.Rel("b-test-1.0.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel("b-test-1.0.metadata.yaml"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec2.Rel("alpine-seed-1.0.package.tar"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec2.Rel("alpine-seed-1.0.metadata.yaml"))).To(BeTrue())
+
+			repo, err := GenerateRepository(
+				WithName("test"),
+				WithDescription("description"),
+				WithType("disk"),
+				WithUrls(tmpdir),
+				WithPriority(1),
+				WithSource(tmpdir),
+				FromMetadata(true), // Enabling from metadata makes the package visible
+				WithTree("../../tests/fixtures/buildable"),
+				WithDatabase(pkg.NewInMemoryDatabase(false)),
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(repo.GetName()).To(Equal("test"))
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
+			err = repo.Write(tmpdir, false, true)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).To(BeTrue())
+			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).To(BeTrue())
+
+			// We check now that the artifact not referenced in the tree
+			// (spec2) is not indexed in the repository
+			repository, err := NewLuetSystemRepositoryFromYaml([]byte(`
+name: "test"
+type: "disk"
+urls:
+  - "`+tmpdir+`"
+`), pkg.NewInMemoryDatabase(false))
+			Expect(err).ToNot(HaveOccurred())
+			repos, err := repository.Sync(true)
+			Expect(err).ToNot(HaveOccurred())
+
+			_, err = repos.GetTree().GetDatabase().FindPackage(spec.GetPackage())
+			Expect(err).ToNot(HaveOccurred())
+			_, err = repos.GetTree().GetDatabase().FindPackage(spec2.GetPackage())
+			Expect(err).ToNot(HaveOccurred()) // should NOT throw error
 		})
 	})
 	Context("Matching packages", func() {
