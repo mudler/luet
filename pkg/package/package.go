@@ -124,6 +124,8 @@ type Package interface {
 	JSON() ([]byte, error)
 }
 
+const PackageMetaSuffix = "metadata.yaml"
+
 type Tree interface {
 	GetPackageSet() PackageDatabase
 	Prelude() string // A tree might have a prelude to be able to consume a tree
@@ -246,7 +248,7 @@ func (t *DefaultPackage) JSON() ([]byte, error) {
 
 // GetMetadataFilePath returns the canonical name of an artifact metadata file
 func (d *DefaultPackage) GetMetadataFilePath() string {
-	return d.GetFingerPrint() + ".metadata.yaml"
+	return fmt.Sprintf("%s.%s", d.GetFingerPrint(), PackageMetaSuffix)
 }
 
 // DefaultPackage represent a standard package definition

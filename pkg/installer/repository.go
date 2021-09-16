@@ -24,6 +24,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
@@ -296,6 +297,37 @@ func GenerateRepository(name, descr, t string, urls []string,
 			runtimeTree.CreatePackage(p)
 		}
 	}
+
+	// Load packages from metadata files if not present already.
+	var ff = func(currentpath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+
+		// Only those which are metadata
+		if !strings.HasSuffix(info.Name(), pkg.PackageMetaSuffix) {
+			return nil
+		}
+
+		dat, err := ioutil.ReadFile(currentpath)
+		if err != nil {
+			return nil
+		}
+
+		art, err := artifact.NewPackageArtifactFromYaml(dat)
+		if err != nil {
+			return nil
+		}
+		if _, err := runtimeTree.FindPackage(art.CompileSpec.Package); err != nil && art.CompileSpec.Package.Name != "" {
+			Debug("Added", art.CompileSpec.Package.HumanReadableString(), "from metadata files")
+			runtimeTree.CreatePackage(art.CompileSpec.Package)
+		}
+
+		return nil
+	}
+
+	// Best effort
+	filepath.Walk(src, ff)
 
 	repo := &LuetSystemRepository{
 		LuetRepository:  config.NewLuetRepository(name, t, descr, urls, priority, true, false),
