@@ -2,6 +2,9 @@ on:
   push:
     tags:
       - '*'  # only test and release when a tag is pushed
+concurrency:
+  group: registries-tests
+
 name: Test and Release on tag
 jobs:
   tests-integration:

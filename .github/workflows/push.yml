@@ -1,7 +1,7 @@
 on: push
 concurrency:
-  group: ci-${{ github.head_ref || github.ref }}-${{ github.repository }}
-  cancel-in-progress: true
+  group: registries-tests
+
 name: Build on push
 jobs:
   tests-integration:
