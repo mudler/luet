@@ -318,7 +318,13 @@ func GenerateRepository(p ...RepositoryOption) (*LuetSystemRepository, error) {
 		}
 		if _, err := runtimeTree.FindPackage(art.CompileSpec.Package); err != nil && art.CompileSpec.Package.Name != "" {
 			Debug("Adding", art.CompileSpec.Package.HumanReadableString(), "from metadata file", currentpath)
-			runtimeTree.CreatePackage(art.CompileSpec.Package)
+			// We don't have runtime at this point. So we import the package as is
+			r := []*pkg.DefaultPackage{}
+			p := art.CompileSpec.Package.Clone()
+			p.Requires(r)
+			p.SetProvides(r)
+			p.Conflicts(r)
+			runtimeTree.CreatePackage(p)
 		}
 
 		return nil
