@@ -63,6 +63,7 @@ type PackageArtifact struct {
 	CompressionType   compression.Implementation        `json:"compressiontype"`
 	Files             []string                          `json:"files"`
 	PackageCacheImage string                            `json:"package_cacheimage"`
+	Runtime           *pkg.DefaultPackage               `json:"runtime,omitempty"`
 }
 
 func (p *PackageArtifact) ShallowCopy() *PackageArtifact {
@@ -108,12 +109,16 @@ func (a *PackageArtifact) WriteYaml(dst string) error {
 		return errors.Wrap(err, "Failed generating checksums for artifact")
 	}
 
-	//p := a.CompileSpec.GetPackage().GetPath()
+	// Update runtime package information
+	if a.CompileSpec != nil && a.CompileSpec.Package != nil {
+		runtime, err := a.CompileSpec.Package.GetRuntimePackage()
+		if err != nil {
+			return errors.Wrapf(err, "getting runtime package for '%s'", a.CompileSpec.Package.HumanReadableString())
+		}
 
-	//a.CompileSpec.GetPackage().SetPath("")
-	//	for _, ass := range a.CompileSpec.GetSourceAssertion() {
-	//		ass.Package.SetPath("")
-	//	}
+		a.Runtime = runtime
+	}
+
 	data, err := yaml.Marshal(a)
 	if err != nil {
 		return errors.Wrap(err, "While marshalling for PackageArtifact YAML")

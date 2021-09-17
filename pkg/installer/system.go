@@ -29,7 +29,7 @@ func (s *System) ExecuteFinalizers(packs []pkg.Package) error {
 	executedFinalizer := map[string]bool{}
 	for _, p := range packs {
 		if fileHelper.Exists(p.Rel(tree.FinalizerFile)) {
-			out, err := helpers.RenderFiles(helpers.ChartFile(p.Rel(tree.FinalizerFile)), p.Rel(tree.DefinitionFile))
+			out, err := helpers.RenderFiles(helpers.ChartFile(p.Rel(tree.FinalizerFile)), p.Rel(pkg.PackageDefinitionFile))
 			if err != nil {
 				Warning("Failed rendering finalizer for ", p.HumanReadableString(), err.Error())
 				errs = multierror.Append(errs, err)
