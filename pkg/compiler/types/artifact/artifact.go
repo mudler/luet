@@ -102,7 +102,7 @@ func (a *PackageArtifact) Verify() error {
 	return nil
 }
 
-func (a *PackageArtifact) WriteYaml(dst string) error {
+func (a *PackageArtifact) WriteYAML(dst string) error {
 	// First compute checksum of artifact. When we write the yaml we want to write up-to-date informations.
 	err := a.Hash()
 	if err != nil {
@@ -115,7 +115,7 @@ func (a *PackageArtifact) WriteYaml(dst string) error {
 		if err != nil {
 			return errors.Wrapf(err, "getting runtime package for '%s'", a.CompileSpec.Package.HumanReadableString())
 		}
-
+		Debug(fmt.Sprintf("embedding runtime package (%s) definition to artifact metadata", a.CompileSpec.Package.HumanReadableString()))
 		a.Runtime = runtime
 	}
 

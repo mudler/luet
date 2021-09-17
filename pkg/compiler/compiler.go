@@ -442,7 +442,7 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 		a.CompileSpec = p
 		a.CompileSpec.GetPackage().SetBuildTimestamp(time.Now().String())
 
-		err = a.WriteYaml(p.GetOutputPath())
+		err = a.WriteYAML(p.GetOutputPath())
 		if err != nil {
 			return a, errors.Wrap(err, "Failed while writing metadata file")
 		}
@@ -472,7 +472,7 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 	a.Files = filelist
 	a.CompileSpec.GetPackage().SetBuildTimestamp(time.Now().String())
 
-	err = a.WriteYaml(p.GetOutputPath())
+	err = a.WriteYAML(p.GetOutputPath())
 	if err != nil {
 		return a, errors.Wrap(err, "Failed while writing metadata file")
 	}
