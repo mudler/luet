@@ -53,6 +53,10 @@ const (
 	PkgCondAnyRevision = 7
 	// =<pkg>*
 	PkgCondMatchVersion = 8
+	// !<
+	PkgCondNotLess = 9
+	// !>
+	PkgCondNotGreater = 10
 )
 
 const (
@@ -97,12 +101,16 @@ func (p PackageCond) String() (ans string) {
 		ans = "<="
 	} else if p == PkgCondEqual {
 		ans = "="
-	} else if p == PkgCondNot {
-		ans = "!"
 	} else if p == PkgCondAnyRevision {
 		ans = "~"
 	} else if p == PkgCondMatchVersion {
 		ans = "=*"
+	} else if p == PkgCondNotLess {
+		ans = "!<"
+	} else if p == PkgCondNotGreater {
+		ans = "!>"
+	} else if p == PkgCondNot {
+		ans = "!"
 	}
 
 	return ans
@@ -129,6 +137,10 @@ func (p PackageCond) Int() (ans int) {
 		ans = PkgCondAnyRevision
 	} else if p == PkgCondMatchVersion {
 		ans = PkgCondMatchVersion
+	} else if p == PkgCondNotLess {
+		ans = PkgCondNotLess
+	} else if p == PkgCondNotGreater {
+		ans = PkgCondNotGreater
 	}
 	return
 }
@@ -543,6 +555,12 @@ func ParsePackageStr(pkg string) (*GentooPackage, error) {
 	} else if strings.HasPrefix(pkg, "~") {
 		pkg = pkg[1:]
 		ans.Condition = PkgCondAnyRevision
+	} else if strings.HasPrefix(pkg, "!<") {
+		pkg = pkg[2:]
+		ans.Condition = PkgCondNotLess
+	} else if strings.HasPrefix(pkg, "!>") {
+		pkg = pkg[2:]
+		ans.Condition = PkgCondNotGreater
 	} else if strings.HasPrefix(pkg, "!") {
 		pkg = pkg[1:]
 		ans.Condition = PkgCondNot
@@ -653,37 +671,45 @@ func ParsePackageStr(pkg string) (*GentooPackage, error) {
 		pkgname = words[0]
 	}
 
-	regexPkg = regexp.MustCompile(
-		fmt.Sprintf("%s$", regexVerString),
-	)
+	// TODO: I don't like this but i don't want to die.
+	// Could be handled better maybe with regex lookahead match in the future.
 
-	matches = regexPkg.FindAllString(pkgname, -1)
-
-	// NOTE: Now suffix comples like _alpha_rc1 are not supported.
-
-	if len(matches) > 0 {
-		// Check if there patch
-		if strings.Contains(matches[0], "_p") {
-			ans.Version = matches[0][1:strings.Index(matches[0], "_p")]
-			ans.VersionSuffix = matches[0][strings.Index(matches[0], "_p"):]
-		} else if strings.Contains(matches[0], "_rc") {
-			ans.Version = matches[0][1:strings.Index(matches[0], "_rc")]
-			ans.VersionSuffix = matches[0][strings.Index(matches[0], "_rc"):]
-		} else if strings.Contains(matches[0], "_alpha") {
-			ans.Version = matches[0][1:strings.Index(matches[0], "_alpha")]
-			ans.VersionSuffix = matches[0][strings.Index(matches[0], "_alpha"):]
-		} else if strings.Contains(matches[0], "_beta") {
-			ans.Version = matches[0][1:strings.Index(matches[0], "_beta")]
-			ans.VersionSuffix = matches[0][strings.Index(matches[0], "_beta"):]
-		} else if strings.Contains(matches[0], "-r") {
-			ans.Version = matches[0][1:strings.Index(matches[0], "-r")]
-			ans.VersionSuffix = matches[0][strings.Index(matches[0], "-r"):]
-		} else {
-			ans.Version = matches[0][1:]
-		}
-		ans.Name = pkgname[0 : len(pkgname)-len(ans.Version)-1-len(ans.VersionSuffix)]
-	} else {
+	if strings.HasSuffix(pkgname, "dpi") {
+		// POST: skip versioning match
 		ans.Name = pkgname
+	} else {
+
+		regexPkg = regexp.MustCompile(
+			fmt.Sprintf("%s$", regexVerString),
+		)
+
+		matches = regexPkg.FindAllString(pkgname, -1)
+
+		// NOTE: Now suffix comples like _alpha_rc1 are not supported.
+		if len(matches) > 0 {
+			// Check if there patch
+			if strings.Contains(matches[0], "_p") {
+				ans.Version = matches[0][1:strings.Index(matches[0], "_p")]
+				ans.VersionSuffix = matches[0][strings.Index(matches[0], "_p"):]
+			} else if strings.Contains(matches[0], "_rc") {
+				ans.Version = matches[0][1:strings.Index(matches[0], "_rc")]
+				ans.VersionSuffix = matches[0][strings.Index(matches[0], "_rc"):]
+			} else if strings.Contains(matches[0], "_alpha") {
+				ans.Version = matches[0][1:strings.Index(matches[0], "_alpha")]
+				ans.VersionSuffix = matches[0][strings.Index(matches[0], "_alpha"):]
+			} else if strings.Contains(matches[0], "_beta") {
+				ans.Version = matches[0][1:strings.Index(matches[0], "_beta")]
+				ans.VersionSuffix = matches[0][strings.Index(matches[0], "_beta"):]
+			} else if strings.Contains(matches[0], "-r") {
+				ans.Version = matches[0][1:strings.Index(matches[0], "-r")]
+				ans.VersionSuffix = matches[0][strings.Index(matches[0], "-r"):]
+			} else {
+				ans.Version = matches[0][1:]
+			}
+			ans.Name = pkgname[0 : len(pkgname)-len(ans.Version)-1-len(ans.VersionSuffix)]
+		} else {
+			ans.Name = pkgname
+		}
 	}
 
 	// Set condition if there isn't a prefix but only a version
