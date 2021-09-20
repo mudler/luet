@@ -26,7 +26,6 @@ import (
 
 	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	pkg "github.com/mudler/luet/pkg/package"
-	version "github.com/mudler/luet/pkg/versioner"
 )
 
 func CreateRegexArray(rgx []string) ([]*regexp.Regexp, error) {
@@ -56,63 +55,73 @@ func packageData(p string) (string, string) {
 	}
 	return cat, name
 }
-func ParsePackageStr(p string) (*pkg.DefaultPackage, error) {
 
-	if !(strings.HasPrefix(p, "=") || strings.HasPrefix(p, ">") ||
-		strings.HasPrefix(p, "<")) {
-		ver := ">=0"
-		cat := ""
-		name := ""
+func packageHasGentooSelector(v string) bool {
+	return (strings.HasPrefix(v, "=") || strings.HasPrefix(v, ">") ||
+		strings.HasPrefix(v, "<"))
+}
 
-		if strings.Contains(p, "@") {
-			packageinfo := strings.Split(p, "@")
-			ver = packageinfo[1]
-			cat, name = packageData(packageinfo[0])
-		} else {
-			cat, name = packageData(p)
-		}
+func gentooVersion(gp *_gentoo.GentooPackage) string {
 
-		return &pkg.DefaultPackage{
-			Name:     name,
-			Category: cat,
-			Version:  ver,
-			Uri:      make([]string, 0),
-		}, nil
+	condition := gp.Condition.String()
+	if condition == "=" {
+		condition = ""
 	}
 
-	gp, err := _gentoo.ParsePackageStr(p)
-	if err != nil {
-		return nil, err
-	}
-	if gp.Version == "" {
-		gp.Version = "0"
-		gp.Condition = _gentoo.PkgCondGreaterEqual
-	}
-
-	pkgVersion := ""
+	pkgVersion := fmt.Sprintf("%s%s%s",
+		condition,
+		gp.Version,
+		gp.VersionSuffix,
+	)
 	if gp.VersionBuild != "" {
 		pkgVersion = fmt.Sprintf("%s%s%s+%s",
-			version.PkgSelectorConditionFromInt(gp.Condition.Int()).String(),
+			condition,
 			gp.Version,
 			gp.VersionSuffix,
 			gp.VersionBuild,
 		)
+	}
+	return pkgVersion
+}
+
+func ParsePackageStr(p string) (*pkg.DefaultPackage, error) {
+
+	if packageHasGentooSelector(p) {
+		gp, err := _gentoo.ParsePackageStr(p)
+		if err != nil {
+			return nil, err
+		}
+		if gp.Version == "" {
+			gp.Version = "0"
+			gp.Condition = _gentoo.PkgCondGreaterEqual
+		}
+
+		return &pkg.DefaultPackage{
+			Name:     gp.Name,
+			Category: gp.Category,
+			Version:  gentooVersion(gp),
+			Uri:      make([]string, 0),
+		}, nil
+	}
+
+	ver := ">=0"
+	cat := ""
+	name := ""
+
+	if strings.Contains(p, "@") {
+		packageinfo := strings.Split(p, "@")
+		ver = packageinfo[1]
+		cat, name = packageData(packageinfo[0])
 	} else {
-		pkgVersion = fmt.Sprintf("%s%s%s",
-			version.PkgSelectorConditionFromInt(gp.Condition.Int()).String(),
-			gp.Version,
-			gp.VersionSuffix,
-		)
+		cat, name = packageData(p)
 	}
 
-	pack := &pkg.DefaultPackage{
-		Name:     gp.Name,
-		Category: gp.Category,
-		Version:  pkgVersion,
+	return &pkg.DefaultPackage{
+		Name:     name,
+		Category: cat,
+		Version:  ver,
 		Uri:      make([]string, 0),
-	}
-
-	return pack, nil
+	}, nil
 }
 
 func CheckErr(err error) {
