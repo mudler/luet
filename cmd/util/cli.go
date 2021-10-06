@@ -96,11 +96,10 @@ func SetCliFinalizerEnvs(finalizerEnvs []string) error {
 // TemplateFolders returns the default folders which holds shared template between packages in a given tree path
 func TemplateFolders(fromRepo bool, treePaths []string) []string {
 	templateFolders := []string{}
-	if !fromRepo {
-		for _, t := range treePaths {
-			templateFolders = append(templateFolders, filepath.Join(t, "templates"))
-		}
-	} else {
+	for _, t := range treePaths {
+		templateFolders = append(templateFolders, filepath.Join(t, "templates"))
+	}
+	if fromRepo {
 		for _, s := range installer.SystemRepositories(LuetCfg) {
 			templateFolders = append(templateFolders, filepath.Join(s.TreePath, "templates"))
 		}
