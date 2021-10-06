@@ -33,11 +33,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	DefinitionFile = "definition.yaml"
-	CollectionFile = "collection.yaml"
-)
-
 func NewGeneralRecipe(db pkg.PackageDatabase) Builder { return &Recipe{Database: db} }
 
 // Recipe is the "general" reciper for Trees
@@ -64,7 +59,7 @@ func (r *Recipe) Save(path string) error {
 		dir := filepath.Join(path, p.GetCategory(), p.GetName(), p.GetVersion())
 		os.MkdirAll(dir, os.ModePerm)
 
-		err := WriteDefinitionFile(p, filepath.Join(dir, DefinitionFile))
+		err := WriteDefinitionFile(p, filepath.Join(dir, pkg.PackageDefinitionFile))
 		if err != nil {
 			return err
 		}
@@ -96,7 +91,7 @@ func (r *Recipe) Load(path string) error {
 	// the function that handles each file or dir
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
 
-		if info.Name() != DefinitionFile && info.Name() != CollectionFile {
+		if info.Name() != pkg.PackageDefinitionFile && info.Name() != pkg.PackageCollectionFile {
 			return nil // Skip with no errors
 		}
 
@@ -106,7 +101,7 @@ func (r *Recipe) Load(path string) error {
 		}
 
 		switch info.Name() {
-		case DefinitionFile:
+		case pkg.PackageDefinitionFile:
 			pack, err := pkg.DefaultPackageFromYaml(dat)
 			if err != nil {
 				return errors.Wrap(err, "Error reading yaml "+currentpath)
@@ -118,8 +113,8 @@ func (r *Recipe) Load(path string) error {
 			if err != nil {
 				return errors.Wrap(err, "Error creating package "+pack.GetName())
 			}
-		case CollectionFile:
-			packs, err := pkg.DefaultPackagesFromYaml(dat)
+		case pkg.PackageCollectionFile:
+			packs, err := pkg.DefaultPackagesFromYAML(dat)
 			if err != nil {
 				return errors.Wrap(err, "Error reading yaml "+currentpath)
 			}

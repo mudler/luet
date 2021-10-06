@@ -21,10 +21,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	"github.com/mudler/luet/pkg/helpers/docker"
 	"github.com/mudler/luet/pkg/helpers/match"
@@ -124,7 +127,11 @@ type Package interface {
 	JSON() ([]byte, error)
 }
 
-const PackageMetaSuffix = "metadata.yaml"
+const (
+	PackageMetaSuffix     = "metadata.yaml"
+	PackageCollectionFile = "collection.yaml"
+	PackageDefinitionFile = "definition.yaml"
+)
 
 type Tree interface {
 	GetPackageSet() PackageDatabase
@@ -215,11 +222,14 @@ func GetRawPackages(yml []byte) (rawPackages, error) {
 	return rawPackages.Packages, nil
 
 }
-func DefaultPackagesFromYaml(yml []byte) ([]DefaultPackage, error) {
 
-	var unescaped struct {
-		Packages []DefaultPackage `json:"packages"`
-	}
+type Collection struct {
+	Packages []DefaultPackage `json:"packages"`
+}
+
+func DefaultPackagesFromYAML(yml []byte) ([]DefaultPackage, error) {
+
+	var unescaped Collection
 	source, err := yaml.YAMLToJSON(yml)
 	if err != nil {
 		return []DefaultPackage{}, err
@@ -379,6 +389,10 @@ func (p *DefaultPackage) HasLabel(label string) bool {
 
 func (p *DefaultPackage) MatchLabel(r *regexp.Regexp) bool {
 	return match.MapMatchRegex(&p.Labels, r)
+}
+
+func (p DefaultPackage) IsCollection() bool {
+	return fileHelper.Exists(filepath.Join(p.Path, PackageCollectionFile))
 }
 
 func (p *DefaultPackage) HasAnnotation(label string) bool {
@@ -701,6 +715,39 @@ func (set Packages) Unique() Packages {
 		result = append(result, p)
 	}
 	return result
+}
+
+func (p *DefaultPackage) GetRuntimePackage() (*DefaultPackage, error) {
+	var r *DefaultPackage
+	if p.IsCollection() {
+		collectionFile := filepath.Join(p.Path, PackageCollectionFile)
+		dat, err := ioutil.ReadFile(collectionFile)
+		if err != nil {
+			return r, errors.Wrapf(err, "failed while reading '%s'", collectionFile)
+		}
+		coll, err := DefaultPackagesFromYAML(dat)
+		if err != nil {
+			return r, errors.Wrapf(err, "failed while parsing YAML '%s'", collectionFile)
+		}
+		for _, c := range coll {
+			if c.Matches(p) {
+				r = &c
+				break
+			}
+		}
+	} else {
+		definitionFile := filepath.Join(p.Path, PackageDefinitionFile)
+		dat, err := ioutil.ReadFile(definitionFile)
+		if err != nil {
+			return r, errors.Wrapf(err, "failed while reading '%s'", definitionFile)
+		}
+		d, err := DefaultPackageFromYaml(dat)
+		if err != nil {
+			return r, errors.Wrapf(err, "failed while parsing YAML '%s'", definitionFile)
+		}
+		r = &d
+	}
+	return r, nil
 }
 
 func (pack *DefaultPackage) buildFormula(definitiondb PackageDatabase, db PackageDatabase, visited map[string]interface{}) ([]bf.Formula, error) {

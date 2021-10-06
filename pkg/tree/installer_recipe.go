@@ -56,7 +56,7 @@ func (r *InstallerRecipe) Save(path string) error {
 		if err != nil {
 			return err
 		}
-		err = ioutil.WriteFile(filepath.Join(dir, DefinitionFile), data, 0644)
+		err = ioutil.WriteFile(filepath.Join(dir, pkg.PackageDefinitionFile), data, 0644)
 		if err != nil {
 			return err
 		}
@@ -86,7 +86,7 @@ func (r *InstallerRecipe) Load(path string) error {
 	// the function that handles each file or dir
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
 
-		if info.Name() != DefinitionFile && info.Name() != CollectionFile {
+		if info.Name() != pkg.PackageDefinitionFile && info.Name() != pkg.PackageCollectionFile {
 			return nil // Skip with no errors
 		}
 
@@ -96,7 +96,7 @@ func (r *InstallerRecipe) Load(path string) error {
 		}
 
 		switch info.Name() {
-		case DefinitionFile:
+		case pkg.PackageDefinitionFile:
 			pack, err := pkg.DefaultPackageFromYaml(dat)
 			if err != nil {
 				return errors.Wrap(err, "Error reading yaml "+currentpath)
@@ -109,8 +109,8 @@ func (r *InstallerRecipe) Load(path string) error {
 				return errors.Wrap(err, "Error creating package "+pack.GetName())
 			}
 
-		case CollectionFile:
-			packs, err := pkg.DefaultPackagesFromYaml(dat)
+		case pkg.PackageCollectionFile:
+			packs, err := pkg.DefaultPackagesFromYAML(dat)
 			if err != nil {
 				return errors.Wrap(err, "Error reading yaml "+currentpath)
 			}

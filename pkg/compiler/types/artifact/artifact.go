@@ -63,6 +63,7 @@ type PackageArtifact struct {
 	CompressionType   compression.Implementation        `json:"compressiontype"`
 	Files             []string                          `json:"files"`
 	PackageCacheImage string                            `json:"package_cacheimage"`
+	Runtime           *pkg.DefaultPackage               `json:"runtime,omitempty"`
 }
 
 func (p *PackageArtifact) ShallowCopy() *PackageArtifact {
@@ -101,19 +102,23 @@ func (a *PackageArtifact) Verify() error {
 	return nil
 }
 
-func (a *PackageArtifact) WriteYaml(dst string) error {
+func (a *PackageArtifact) WriteYAML(dst string) error {
 	// First compute checksum of artifact. When we write the yaml we want to write up-to-date informations.
 	err := a.Hash()
 	if err != nil {
 		return errors.Wrap(err, "Failed generating checksums for artifact")
 	}
 
-	//p := a.CompileSpec.GetPackage().GetPath()
+	// Update runtime package information
+	if a.CompileSpec != nil && a.CompileSpec.Package != nil {
+		runtime, err := a.CompileSpec.Package.GetRuntimePackage()
+		if err != nil {
+			return errors.Wrapf(err, "getting runtime package for '%s'", a.CompileSpec.Package.HumanReadableString())
+		}
+		Debug(fmt.Sprintf("embedding runtime package (%s) definition to artifact metadata", a.CompileSpec.Package.HumanReadableString()))
+		a.Runtime = runtime
+	}
 
-	//a.CompileSpec.GetPackage().SetPath("")
-	//	for _, ass := range a.CompileSpec.GetSourceAssertion() {
-	//		ass.Package.SetPath("")
-	//	}
 	data, err := yaml.Marshal(a)
 	if err != nil {
 		return errors.Wrap(err, "While marshalling for PackageArtifact YAML")

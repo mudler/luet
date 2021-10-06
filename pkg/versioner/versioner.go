@@ -1,5 +1,4 @@
-// Copyright © 2019-2020 Ettore Di Giacinto <mudler@gentoo.org>,
-//                  Daniele Rondina <geaaru@sabayonlinux.org>
+// Copyright © 2019-2021 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,14 +17,78 @@ package version
 
 import (
 	"errors"
-	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 
+	"github.com/hashicorp/go-version"
 	semver "github.com/hashicorp/go-version"
 	debversion "github.com/knqyf263/go-deb-version"
 )
+
+const (
+	selectorGreaterThen        = iota
+	selectorLessThen           = iota
+	selectorGreaterOrEqualThen = iota
+	selectorLessOrEqualThen    = iota
+	selectorNotEqual           = iota
+)
+
+type packageSelector struct {
+	Condition int
+	Version   string
+}
+
+var selectors = map[string]int{
+	">=": selectorGreaterOrEqualThen,
+	">":  selectorGreaterThen,
+	"<=": selectorLessOrEqualThen,
+	"<":  selectorLessThen,
+	"!":  selectorNotEqual,
+}
+
+func readPackageSelector(selector string) packageSelector {
+	selectorType := 0
+	v := ""
+
+	k := []string{}
+	for kk, _ := range selectors {
+		k = append(k, kk)
+	}
+
+	sort.Slice(k, func(i, j int) bool {
+		return len(k[i]) > len(k[j])
+	})
+	for _, p := range k {
+		if strings.HasPrefix(selector, p) {
+			selectorType = selectors[p]
+			v = strings.TrimPrefix(selector, p)
+			break
+		}
+	}
+	return packageSelector{
+		Condition: selectorType,
+		Version:   v,
+	}
+}
+
+func semverCheck(vv string, selector string) (bool, error) {
+	c, err := semver.NewConstraint(selector)
+	if err != nil {
+		// Handle constraint not being parsable.
+
+		return false, err
+	}
+
+	v, err := semver.NewVersion(vv)
+	if err != nil {
+		// Handle version not being parsable.
+
+		return false, err
+	}
+
+	// Check if the version meets the constraints.
+	return c.Check(v), nil
+}
 
 // WrappedVersioner uses different means to return unique result that is understendable by Luet
 // It tries different approaches to sort, validate, and sanitize to a common versioning format
@@ -38,55 +101,49 @@ func DefaultVersioner() Versioner {
 
 func (w *WrappedVersioner) Validate(version string) error {
 	if !debversion.Valid(version) {
-		return errors.New("Invalid version")
+		return errors.New("invalid version")
 	}
 	return nil
 }
 
-func (w *WrappedVersioner) ValidateSelector(version string, selector string) bool {
-	vS, err := ParseVersion(selector)
+func (w *WrappedVersioner) ValidateSelector(vv string, selector string) bool {
+	if vv == "" {
+		return true
+	}
+	vv = w.Sanitize(vv)
+	selector = w.Sanitize(selector)
+
+	sel := readPackageSelector(selector)
+
+	selectorV, err := version.NewVersion(sel.Version)
 	if err != nil {
-		return false
+		f, _ := semverCheck(vv, selector)
+		return f
+	}
+	v, err := version.NewVersion(vv)
+	if err != nil {
+		f, _ := semverCheck(vv, selector)
+		return f
 	}
 
-	vSI, err := ParseVersion(version)
-	if err != nil {
-		return false
+	switch sel.Condition {
+	case selectorGreaterOrEqualThen:
+		return v.GreaterThan(selectorV) || v.Equal(selectorV)
+	case selectorLessOrEqualThen:
+		return v.LessThan(selectorV) || v.Equal(selectorV)
+	case selectorLessThen:
+		return v.LessThan(selectorV)
+	case selectorGreaterThen:
+		return v.GreaterThan(selectorV)
+	case selectorNotEqual:
+		return !v.Equal(selectorV)
 	}
-	ok, err := PackageAdmit(vS, vSI)
-	if err != nil {
-		return false
-	}
-	return ok
+
+	return false
 }
 
 func (w *WrappedVersioner) Sanitize(s string) string {
-	return strings.ReplaceAll(s, "_", "-")
-}
-
-func (w *WrappedVersioner) IsSemver(v string) bool {
-
-	// Taken https://github.com/hashicorp/go-version/blob/2b13044f5cdd3833370d41ce57d8bf3cec5e62b8/version.go#L44
-	// semver doesn't have a Validate method, so we should filter before
-	// going to use it blindly (it panics)
-	semverRegexp := regexp.MustCompile("^" + semver.SemverRegexpRaw + "$")
-
-	// See https://github.com/hashicorp/go-version/blob/2b13044f5cdd3833370d41ce57d8bf3cec5e62b8/version.go#L61
-	matches := semverRegexp.FindStringSubmatch(v)
-	if matches == nil {
-		return false
-	}
-	segmentsStr := strings.Split(matches[1], ".")
-	segments := make([]int64, len(segmentsStr))
-	for i, str := range segmentsStr {
-		val, err := strconv.ParseInt(str, 10, 64)
-		if err != nil {
-			return false
-		}
-
-		segments[i] = int64(val)
-	}
-	return (len(segments) != 0)
+	return strings.TrimSpace(strings.ReplaceAll(s, "_", "-"))
 }
 
 func (w *WrappedVersioner) Sort(toSort []string) []string {
@@ -102,35 +159,6 @@ func (w *WrappedVersioner) Sort(toSort []string) []string {
 		versionsRaw = append(versionsRaw, sanitizedVersion)
 	}
 
-	versions := make([]*semver.Version, len(versionsRaw))
-
-	// Check if all of them are semver, otherwise we cannot do a good comparison
-	allSemverCompliant := true
-	for _, raw := range versionsRaw {
-		if !w.IsSemver(raw) {
-			allSemverCompliant = false
-		}
-	}
-
-	if allSemverCompliant {
-		for i, raw := range versionsRaw {
-			if w.IsSemver(raw) { // Make sure we include only semver, or go-version will panic
-				v, _ := semver.NewVersion(raw)
-				versions[i] = v
-			}
-		}
-
-		// Try first semver sorting
-		sort.Sort(semver.Collection(versions))
-		if len(versions) > 0 {
-			for _, v := range versions {
-				result = append(result, versionsMap[v.Original()])
-
-			}
-			return result
-		}
-	}
-	// Try with debian sorting
 	vs := make([]debversion.Version, len(versionsRaw))
 	for i, r := range versionsRaw {
 		v, _ := debversion.NewVersion(r)

@@ -90,12 +90,12 @@ func (r *CompilerRecipe) Load(path string) error {
 			return errors.Wrap(err, "Error on walk path "+currentpath)
 		}
 
-		if info.Name() != DefinitionFile && info.Name() != CollectionFile {
+		if info.Name() != pkg.PackageDefinitionFile && info.Name() != pkg.PackageCollectionFile {
 			return nil // Skip with no errors
 		}
 
 		switch info.Name() {
-		case DefinitionFile:
+		case pkg.PackageDefinitionFile:
 
 			pack, err := ReadDefinitionFile(currentpath)
 			if err != nil {
@@ -130,14 +130,14 @@ func (r *CompilerRecipe) Load(path string) error {
 				return errors.Wrap(err, "Error creating package "+pack.GetName())
 			}
 
-		case CollectionFile:
+		case pkg.PackageCollectionFile:
 
 			dat, err := ioutil.ReadFile(currentpath)
 			if err != nil {
 				return errors.Wrap(err, "Error reading file "+currentpath)
 			}
 
-			packs, err := pkg.DefaultPackagesFromYaml(dat)
+			packs, err := pkg.DefaultPackagesFromYAML(dat)
 			if err != nil {
 				return errors.Wrap(err, "Error reading yaml "+currentpath)
 			}

@@ -80,7 +80,7 @@ Afterwards, you can use the content generated and associate it with a tree and a
 		}
 		a.Files = filelist
 		a.CompileSpec.GetPackage().SetBuildTimestamp(time.Now().String())
-		err = a.WriteYaml(dst)
+		err = a.WriteYAML(dst)
 		if err != nil {
 			Fatal("failed writing metadata yaml file for ", packageName, ": ", err.Error())
 		}
