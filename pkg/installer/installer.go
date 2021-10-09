@@ -50,6 +50,7 @@ type LuetInstallerOptions struct {
 	SolverUpgrade, RemoveUnavailableOnUpgrade, UpgradeNewRevisions bool
 	Ask                                                            bool
 	DownloadOnly                                                   bool
+	Relaxed                                                        bool
 }
 
 type LuetInstaller struct {
@@ -513,7 +514,7 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 		return err
 	}
 
-	if len(s.Database.World()) > 0 {
+	if len(s.Database.World()) > 0 && !l.Options.Relaxed {
 		Info(":thinking: Checking for available upgrades")
 		if err := l.checkAndUpgrade(syncedRepos, s); err != nil {
 			return errors.Wrap(err, "while checking upgrades before install")
@@ -684,7 +685,12 @@ func (l *LuetInstaller) computeInstall(o Option, syncedRepos Repositories, cp pk
 
 	if !o.NoDeps {
 		solv := solver.NewResolver(solver.Options{Type: l.Options.SolverOptions.Implementation, Concurrency: l.Options.Concurrency}, s.Database, allRepos, pkg.NewInMemoryDatabase(false), l.Options.SolverOptions.Resolver())
-		solution, err = solv.Install(p)
+
+		if l.Options.Relaxed {
+			solution, err = solv.RelaxedInstall(p)
+		} else {
+			solution, err = solv.Install(p)
+		}
 		/// TODO: PackageAssertions needs to be a map[fingerprint]pack so lookup is in O(1)
 		if err != nil && !o.Force {
 			return toInstall, p, solution, allRepos, errors.Wrap(err, "Failed solving solution for package")

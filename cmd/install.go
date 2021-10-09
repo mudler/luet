@@ -104,6 +104,7 @@ To force install a package:
 			PreserveSystemEssentialData: true,
 			DownloadOnly:                downloadOnly,
 			Ask:                         !yes,
+			Relaxed:                     relax,
 		})
 		inst.Repositories(repos)
 
@@ -125,6 +126,8 @@ func init() {
 	installCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	installCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	installCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful!)")
+	installCmd.Flags().Bool("relax", false, "Relax installation constraints")
+
 	installCmd.Flags().Bool("onlydeps", false, "Consider **only** package dependencies")
 	installCmd.Flags().Bool("force", false, "Skip errors and keep going (potentially harmful)")
 	installCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")

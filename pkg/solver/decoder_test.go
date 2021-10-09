@@ -415,6 +415,7 @@ var _ = Describe("Decoder", func() {
 
 				orderW, err := solution.Order(dbDefinitions, W.GetFingerPrint())
 				Expect(err).ToNot(HaveOccurred())
+				Expect(len(orderW) > 0).To(BeTrue())
 				Expect(orderW[0].Package.GetName()).To(Equal("X"))
 				Expect(orderW[1].Package.GetName()).To(Equal("Y"))
 				Expect(orderW[2].Package.GetName()).To(Equal("Z"))

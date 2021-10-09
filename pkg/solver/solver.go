@@ -37,6 +37,8 @@ const (
 type PackageSolver interface {
 	SetDefinitionDatabase(pkg.PackageDatabase)
 	Install(p pkg.Packages) (PackagesAssertions, error)
+	RelaxedInstall(p pkg.Packages) (PackagesAssertions, error)
+
 	Uninstall(checkconflicts, full bool, candidate ...pkg.Package) (pkg.Packages, error)
 	ConflictsWithInstalled(p pkg.Package) (bool, error)
 	ConflictsWith(p pkg.Package, ls pkg.Packages) (bool, error)
@@ -51,6 +53,7 @@ type PackageSolver interface {
 	SetResolver(PackageResolver)
 
 	Solve() (PackagesAssertions, error)
+	//	BestInstall(c pkg.Packages) (PackagesAssertions, error)
 }
 
 // Solver is the default solver for luet
@@ -493,34 +496,47 @@ func (s *Solver) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssert
 	return markedForRemoval, assertion, nil
 }
 
-func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error) {
-
-	// First get candidates that needs to be upgraded..
-
-	toUninstall := pkg.Packages{}
-	toInstall := pkg.Packages{}
-
-	// we do this in memory so we take into account of provides, and its faster
-	universe, err := s.DefinitionDatabase.Copy()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed creating db copy")
-	}
-
-	installedcopy := pkg.NewInMemoryDatabase(false)
-
-	for _, p := range s.InstalledDatabase.World() {
-		installedcopy.CreatePackage(p)
-		packages, err := universe.FindPackageVersions(p)
-		if err == nil && len(packages) != 0 {
-			best := packages.Best(nil)
-			if !best.Matches(p) {
-				toUninstall = append(toUninstall, p)
-				toInstall = append(toInstall, best)
-			}
+func inPackage(list []pkg.Package, p pkg.Package) bool {
+	for _, l := range list {
+		if l.AtomMatches(p) {
+			return true
 		}
 	}
+	return false
+}
 
-	s2 := NewSolver(Options{Type: SingleCoreSimple}, installedcopy, s.DefinitionDatabase, pkg.NewInMemoryDatabase(false))
+// Compute upgrade between packages if specified, or all if none is specified
+func (s *Solver) computeUpgrade(pps ...pkg.Package) func(defDB pkg.PackageDatabase, installDB pkg.PackageDatabase) (pkg.Packages, pkg.Packages, pkg.PackageDatabase) {
+	return func(defDB pkg.PackageDatabase, installDB pkg.PackageDatabase) (pkg.Packages, pkg.Packages, pkg.PackageDatabase) {
+		toUninstall := pkg.Packages{}
+		toInstall := pkg.Packages{}
+
+		// we do this in memory so we take into account of provides, and its faster
+		universe, _ := defDB.Copy()
+
+		installedcopy := pkg.NewInMemoryDatabase(false)
+
+		for _, p := range installDB.World() {
+			installedcopy.CreatePackage(p)
+			packages, err := universe.FindPackageVersions(p)
+			if err == nil && len(packages) != 0 {
+				best := packages.Best(nil)
+				if !best.Matches(p) && len(pps) == 0 ||
+					len(pps) != 0 && inPackage(pps, p) {
+					toUninstall = append(toUninstall, p)
+					toInstall = append(toInstall, best)
+				}
+			}
+		}
+		return toUninstall, toInstall, installedcopy
+	}
+}
+
+func (s *Solver) upgrade(fn func(defDB pkg.PackageDatabase, installDB pkg.PackageDatabase) (pkg.Packages, pkg.Packages, pkg.PackageDatabase), defDB pkg.PackageDatabase, installDB pkg.PackageDatabase, checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error) {
+
+	toUninstall, toInstall, installedcopy := fn(defDB, installDB)
+
+	s2 := NewSolver(Options{Type: SingleCoreSimple}, installedcopy, defDB, pkg.NewInMemoryDatabase(false))
 	s2.SetResolver(s.Resolver)
 	if !full {
 		ass := PackagesAssertions{}
@@ -541,15 +557,20 @@ func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAsser
 	}
 
 	if len(toInstall) == 0 {
-		return toUninstall, PackagesAssertions{}, nil
+		ass := PackagesAssertions{}
+		for _, i := range installDB.World() {
+			ass = append(ass, PackageAssert{Package: i.(*pkg.DefaultPackage), Value: true})
+		}
+		return toUninstall, ass, nil
 	}
 
-	assertions, err := s2.Install(toInstall.Unique())
+	assertions, err := s2.RelaxedInstall(toInstall.Unique())
 
 	return toUninstall, assertions, err
-	// To that tree, ask to install the versions that should be upgraded, and try to solve
-	// Return the solution
+}
 
+func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error) {
+	return s.upgrade(s.computeUpgrade(), s.DefinitionDatabase, s.InstalledDatabase, checkconflicts, full)
 }
 
 // Uninstall takes a candidate package and return a list of packages that would be removed
@@ -619,7 +640,7 @@ func (s *Solver) Uninstall(checkconflicts, full bool, packs ...pkg.Package) (pkg
 	s2.SetResolver(s.Resolver)
 
 	// Get the requirements to install the candidate
-	asserts, err := s2.Install(toRemove)
+	asserts, err := s2.RelaxedInstall(toRemove)
 	if err != nil {
 		return nil, err
 	}
@@ -729,7 +750,7 @@ func (s *Solver) Solve() (PackagesAssertions, error) {
 
 // Install given a list of packages, returns package assertions to indicate the packages that must be installed in the system in order
 // to statisfy all the constraints
-func (s *Solver) Install(c pkg.Packages) (PackagesAssertions, error) {
+func (s *Solver) RelaxedInstall(c pkg.Packages) (PackagesAssertions, error) {
 
 	coll, err := s.getList(s.DefinitionDatabase, c)
 	if err != nil {
@@ -749,6 +770,59 @@ func (s *Solver) Install(c pkg.Packages) (PackagesAssertions, error) {
 		}
 		return ass, nil
 	}
+	assertions, err := s.Solve()
+	if err != nil {
+		return nil, err
+	}
 
-	return s.Solve()
+	return assertions, nil
+}
+
+// Install returns the assertions necessary in order to install the packages in
+// a system.
+// It calculates the best result possible, trying to maximize new packages.
+func (s *Solver) Install(c pkg.Packages) (PackagesAssertions, error) {
+	assertions, err := s.RelaxedInstall(c)
+	if err != nil {
+		return nil, err
+	}
+
+	systemAfterInstall := pkg.NewInMemoryDatabase(false)
+
+	toUpgrade := pkg.Packages{}
+
+	for _, p := range c {
+		if p.GetVersion() == ">=0" || p.GetVersion() == ">0" {
+			toUpgrade = append(toUpgrade, p)
+		}
+	}
+	for _, p := range assertions {
+		if p.Value {
+			systemAfterInstall.CreatePackage(p.Package)
+			if !inPackage(c, p.Package) {
+				toUpgrade = append(toUpgrade, p.Package)
+			}
+		}
+	}
+
+	if len(toUpgrade) == 0 {
+		return assertions, nil
+	}
+	// do partial upgrade based on input.
+	// IF there is no version specified in the input, or >=0 is specified,
+	// then compute upgrade for those
+	_, newassertions, err := s.upgrade(s.computeUpgrade(toUpgrade...), s.DefinitionDatabase, systemAfterInstall, false, false)
+	if err != nil {
+		// TODO: Emit warning.
+		// We were not able to compute upgrades (maybe for some pinned packages, or a conflict)
+		// so we return the relaxed result
+		return assertions, nil
+	}
+
+	// Protect if we return no assertion at all
+	if len(newassertions) == 0 && len(assertions) > 0 {
+		return assertions, nil
+	}
+
+	return newassertions, nil
 }

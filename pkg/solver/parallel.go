@@ -550,6 +550,13 @@ func (s *Parallel) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAsse
 // Upgrade compute upgrades of the package against the world definition.
 // It accepts two boolean indicating if it has to check for conflicts or try to attempt a full upgrade
 func (s *Parallel) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error) {
+	return s.upgrade(s.DefinitionDatabase, s.InstalledDatabase, checkconflicts, full)
+
+}
+
+// Upgrade compute upgrades of the package against the world definition.
+// It accepts two boolean indicating if it has to check for conflicts or try to attempt a full upgrade
+func (s *Parallel) upgrade(defDB pkg.PackageDatabase, installDB pkg.PackageDatabase, checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error) {
 
 	// First get candidates that needs to be upgraded..
 
@@ -557,7 +564,7 @@ func (s *Parallel) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAss
 	toInstall := pkg.Packages{}
 
 	// we do this in memory so we take into account of provides
-	universe, err := s.DefinitionDatabase.Copy()
+	universe, err := defDB.Copy()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Could not copy def db")
 	}
@@ -595,7 +602,7 @@ func (s *Parallel) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAss
 		}
 	}()
 
-	for _, p := range s.InstalledDatabase.World() {
+	for _, p := range installDB.World() {
 		all <- p
 	}
 
@@ -604,7 +611,7 @@ func (s *Parallel) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAss
 	close(results)
 	wg2.Wait()
 
-	s2 := &Parallel{Concurrency: s.Concurrency, InstalledDatabase: installedcopy, DefinitionDatabase: s.DefinitionDatabase, ParallelDatabase: pkg.NewInMemoryDatabase(false)}
+	s2 := &Parallel{Concurrency: s.Concurrency, InstalledDatabase: installedcopy, DefinitionDatabase: defDB, ParallelDatabase: pkg.NewInMemoryDatabase(false)}
 	s2.SetResolver(s.Resolver)
 	if !full {
 		ass := PackagesAssertions{}
@@ -855,6 +862,32 @@ func (s *Parallel) Install(c pkg.Packages) (PackagesAssertions, error) {
 		}
 		return ass, nil
 	}
+	assertions, err := s.Solve()
+	if err != nil {
+		return nil, err
+	}
 
-	return s.Solve()
+	return s.upgradeAssertions(assertions)
+}
+
+func (s *Parallel) upgradeAssertions(assertions PackagesAssertions) (PackagesAssertions, error) {
+
+	systemAfterInstall := pkg.NewInMemoryDatabase(false)
+
+	for _, p := range assertions {
+		if p.Value {
+			systemAfterInstall.CreatePackage(p.Package)
+		}
+	}
+
+	_, assertions, err := s.upgrade(s.DefinitionDatabase, systemAfterInstall, false, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// for _, u := range toUninstall {
+	// 	systemAfterInstall.RemovePackage()
+
+	// }
+	return assertions, nil
 }
