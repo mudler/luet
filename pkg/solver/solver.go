@@ -82,7 +82,7 @@ func NewSolver(t Options, installed pkg.PackageDatabase, definitiondb pkg.Packag
 func NewResolver(t Options, installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, solverdb pkg.PackageDatabase, re PackageResolver) PackageSolver {
 	var s PackageSolver
 	switch t.Type {
-	case SingleCoreSimple:
+	default:
 		s = &Solver{InstalledDatabase: installed, DefinitionDatabase: definitiondb, SolverDatabase: solverdb, Resolver: re}
 	}
 
