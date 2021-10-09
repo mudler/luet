@@ -49,7 +49,6 @@ var reinstallCmd = &cobra.Command{
 
 		force := LuetCfg.Viper.GetBool("force")
 		onlydeps := LuetCfg.Viper.GetBool("onlydeps")
-		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		yes := LuetCfg.Viper.GetBool("yes")
 
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
@@ -77,11 +76,7 @@ var reinstallCmd = &cobra.Command{
 
 		util.SetSolverConfig()
 
-		if concurrent {
-			LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple
-		} else {
-			LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
-		}
+		LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
 
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 

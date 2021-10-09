@@ -94,7 +94,7 @@ var _ = Describe("Solver Benchmarks", func() {
 			db = pkg.NewInMemoryDatabase(false)
 			dbInstalled = pkg.NewInMemoryDatabase(false)
 			dbDefinitions = pkg.NewInMemoryDatabase(false)
-			s = NewSolver(Options{Type: ParallelSimple, Concurrency: 10}, dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple, Concurrency: 10}, dbInstalled, dbDefinitions, db)
 			if os.Getenv("BENCHMARK_TESTS") != "true" {
 				Skip("BENCHMARK_TESTS not enabled")
 			}
@@ -148,7 +148,7 @@ var _ = Describe("Solver Benchmarks", func() {
 			db = pkg.NewInMemoryDatabase(false)
 			//	dbInstalled = pkg.NewInMemoryDatabase(false)
 			dbDefinitions = pkg.NewInMemoryDatabase(false)
-			s = NewSolver(Options{Type: ParallelSimple, Concurrency: 100}, dbInstalled, dbDefinitions, db)
+			s = NewSolver(Options{Type: SingleCoreSimple, Concurrency: 100}, dbInstalled, dbDefinitions, db)
 			if os.Getenv("BENCHMARK_TESTS") != "true" {
 				Skip("BENCHMARK_TESTS not enabled")
 			}

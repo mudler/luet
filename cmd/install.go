@@ -69,19 +69,15 @@ To force install a package:
 		force := LuetCfg.Viper.GetBool("force")
 		nodeps := LuetCfg.Viper.GetBool("nodeps")
 		onlydeps := LuetCfg.Viper.GetBool("onlydeps")
-		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		yes := LuetCfg.Viper.GetBool("yes")
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
 		finalizerEnvs, _ := cmd.Flags().GetStringArray("finalizer-env")
+		relax, _ := cmd.Flags().GetBool("relax")
 
 		util.SetSystemConfig()
 		util.SetSolverConfig()
 
-		if concurrent {
-			LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple
-		} else {
-			LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
-		}
+		LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
 
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 		repos := installer.SystemRepositories(LuetCfg)

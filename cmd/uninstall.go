@@ -54,7 +54,6 @@ var uninstallCmd = &cobra.Command{
 		full, _ := cmd.Flags().GetBool("full")
 		checkconflicts, _ := cmd.Flags().GetBool("conflictscheck")
 		fullClean, _ := cmd.Flags().GetBool("full-clean")
-		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		yes := LuetCfg.Viper.GetBool("yes")
 		keepProtected, _ := cmd.Flags().GetBool("keep-protected-files")
 
@@ -62,11 +61,9 @@ var uninstallCmd = &cobra.Command{
 		util.SetSolverConfig()
 
 		LuetCfg.ConfigProtectSkip = !keepProtected
-		if concurrent {
-			LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple
-		} else {
-			LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
-		}
+
+		LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
+
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 
 		// Load config protect configs

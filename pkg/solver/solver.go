@@ -30,7 +30,6 @@ type SolverType int
 
 const (
 	SingleCoreSimple = 0
-	ParallelSimple   = iota
 )
 
 // PackageSolver is an interface to a generic package solving algorithm
@@ -85,8 +84,6 @@ func NewResolver(t Options, installed pkg.PackageDatabase, definitiondb pkg.Pack
 	switch t.Type {
 	case SingleCoreSimple:
 		s = &Solver{InstalledDatabase: installed, DefinitionDatabase: definitiondb, SolverDatabase: solverdb, Resolver: re}
-	case ParallelSimple:
-		s = &Parallel{InstalledDatabase: installed, DefinitionDatabase: definitiondb, ParallelDatabase: solverdb, Resolver: re, Concurrency: t.Concurrency}
 	}
 
 	return s

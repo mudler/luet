@@ -53,18 +53,13 @@ var upgradeCmd = &cobra.Command{
 		universe, _ := cmd.Flags().GetBool("universe")
 		clean, _ := cmd.Flags().GetBool("clean")
 		sync, _ := cmd.Flags().GetBool("sync")
-		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		yes := LuetCfg.Viper.GetBool("yes")
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
 
 		util.SetSystemConfig()
 		opts := util.SetSolverConfig()
 
-		if concurrent {
-			LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple
-		} else {
-			LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
-		}
+		LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
 
 		Debug("Solver", opts.CompactString())
 

@@ -53,7 +53,6 @@ var replaceCmd = &cobra.Command{
 		force := LuetCfg.Viper.GetBool("force")
 		nodeps := LuetCfg.Viper.GetBool("nodeps")
 		onlydeps := LuetCfg.Viper.GetBool("onlydeps")
-		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		yes := LuetCfg.Viper.GetBool("yes")
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
 
@@ -85,11 +84,7 @@ var replaceCmd = &cobra.Command{
 			repos = append(repos, r)
 		}
 
-		if concurrent {
-			LuetCfg.GetSolverOptions().Implementation = solver.ParallelSimple
-		} else {
-			LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
-		}
+		LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
 
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 

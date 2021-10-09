@@ -111,7 +111,6 @@ Build packages specifying multiple definition trees:
 		full, _ := cmd.Flags().GetBool("full")
 		rebuild, _ := cmd.Flags().GetBool("rebuild")
 
-		concurrent, _ := cmd.Flags().GetBool("solver-concurrent")
 		var results Results
 		backendArgs := LuetCfg.Viper.GetStringSlice("backend-args")
 
@@ -153,11 +152,7 @@ Build packages specifying multiple definition trees:
 
 		Debug("Solver", opts.CompactString())
 
-		if concurrent {
-			opts.Options = solver.Options{Type: solver.ParallelSimple, Concurrency: concurrency}
-		} else {
-			opts.Options = solver.Options{Type: solver.SingleCoreSimple, Concurrency: concurrency}
-		}
+		opts.Options = solver.Options{Type: solver.SingleCoreSimple, Concurrency: concurrency}
 
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(),
 			options.NoDeps(nodeps),
