@@ -1,4 +1,4 @@
-join:
+requires:
 - category: "test"
   name: "f"
   version: ">=0"
@@ -8,3 +8,5 @@ join:
   version: ">=0"
 steps:
 - mv /newnewc /x
+
+requires_final_images: true

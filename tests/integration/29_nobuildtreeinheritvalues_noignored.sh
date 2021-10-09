@@ -56,7 +56,7 @@ EOF
     assertTrue 'create package' "[ -e '$tmpdir/testbuild/c-test-1.0.package.tar.zst' ]"
     assertTrue 'create package Z' "[ -e '$tmpdir/testbuild/z-test-1.0+2.package.tar.zst' ]"
     assertTrue 'create package interpolated' "[ -e '$tmpdir/testbuild/interpolated-test-1.0+2.package.tar.zst' ]"
-    assertContains 'Does use the upstream cache without specifying it (test/c-1.0)' "$build_output" "quay.io/mocaccinoos/integration-test-cache:a786d3fd29d0b8bdfe5f304c8bf8be909d5c764cd7059c0e63294a8bff17f3ef"
+    assertContains 'Does use the upstream cache without specifying it (test/c-1.0)' "$build_output" "quay.io/mocaccinoos/integration-test-cache:895697a8bb51b219b78ed081fa1b778801e81505bb03f56acafcf3c476620fc1"
 }
 
 testRepo() {

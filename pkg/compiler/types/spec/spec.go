@@ -116,8 +116,7 @@ type LuetCompilationSpec struct {
 
 	Copy []CopyField `json:"copy"`
 
-	Join                pkg.DefaultPackages `json:"join"`
-	RequiresFinalImages bool                `json:"requires_final_images" yaml:"requires_final_images"`
+	RequiresFinalImages bool `json:"requires_final_images" yaml:"requires_final_images"`
 }
 
 // Signature is a portion of the spec that yields a signature for the hash
@@ -133,7 +132,7 @@ type Signature struct {
 	Includes            []string
 	Excludes            []string
 	Copy                []CopyField
-	Join                pkg.DefaultPackages
+	Requires            pkg.DefaultPackages
 	RequiresFinalImages bool
 }
 
@@ -150,7 +149,7 @@ func (cs *LuetCompilationSpec) signature() Signature {
 		Includes:            cs.Includes,
 		Excludes:            cs.Excludes,
 		Copy:                cs.Copy,
-		Join:                cs.Join,
+		Requires:            cs.Package.GetRequires(),
 		RequiresFinalImages: cs.RequiresFinalImages,
 	}
 }
@@ -283,7 +282,7 @@ func (cs *LuetCompilationSpec) UnpackedPackage() bool {
 // a compilation spec has an image source when it depends on other packages or have a source image
 // explictly supplied
 func (cs *LuetCompilationSpec) HasImageSource() bool {
-	return (cs.Package != nil && len(cs.GetPackage().GetRequires()) != 0) || cs.GetImage() != "" || len(cs.Join) != 0
+	return (cs.Package != nil && len(cs.GetPackage().GetRequires()) != 0) || cs.GetImage() != "" || (cs.RequiresFinalImages && len(cs.Package.GetRequires()) != 0)
 }
 
 func (cs *LuetCompilationSpec) Hash() (string, error) {

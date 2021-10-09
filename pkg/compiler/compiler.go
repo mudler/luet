@@ -784,12 +784,7 @@ func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool
 	joinTag := ">:loop: final images<"
 	var fromPackages pkg.DefaultPackages
 
-	if len(p.Join) > 0 {
-		fromPackages = p.Join
-		Warning(joinTag, `
-	Attention! the 'join' keyword is going to be deprecated in Luet >=0.18.x. 
-	Use 'requires_final_images: true' instead in the build.yaml file`)
-	} else if p.RequiresFinalImages {
+	if p.RequiresFinalImages {
 		Info(joinTag, "Generating a parent image from final packages")
 		fromPackages = p.Package.GetRequires()
 	} else {
@@ -833,7 +828,7 @@ func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool
 	for _, c := range fromPackages {
 		current++
 		if c != nil && c.Name != "" && c.Version != "" {
-			joinTag2 := fmt.Sprintf("%s %d/%d ⤑ :hammer: build %s", joinTag, current, len(p.Join), c.HumanReadableString())
+			joinTag2 := fmt.Sprintf("%s %d/%d ⤑ :hammer: build %s", joinTag, current, len(p.Package.GetRequires()), c.HumanReadableString())
 
 			Info(joinTag2, "compilation starts")
 			spec, err := cs.FromPackage(c)

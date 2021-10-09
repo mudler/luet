@@ -1,4 +1,4 @@
-join:
+requires:
   - name: "a"
     category: "test"
     version: ">=0"
@@ -6,3 +6,5 @@ join:
     category: "test"
     version: ">=0"
 unpack: true
+
+requires_final_images: true
