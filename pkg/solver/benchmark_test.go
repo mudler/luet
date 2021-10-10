@@ -139,22 +139,23 @@ var _ = Describe("Solver Benchmarks", func() {
 				}
 			})
 
-			Ω(runtime.Seconds()).Should(BeNumerically("<", 70), "Install() shouldn't take too long.")
+			Ω(runtime.Seconds()).Should(BeNumerically("<", 120), "Install() shouldn't take too long.")
 		}, 1)
 	})
 
 	Context("Complex data sets - Parallel Upgrades", func() {
 		BeforeEach(func() {
 			db = pkg.NewInMemoryDatabase(false)
+			tmpfile, _ := ioutil.TempFile(os.TempDir(), "tests")
+			defer os.Remove(tmpfile.Name())              // clean up
+			dbInstalled = pkg.NewInMemoryDatabase(false) // pkg.NewBoltDatabase(tmpfile.Name())
+
 			//	dbInstalled = pkg.NewInMemoryDatabase(false)
 			dbDefinitions = pkg.NewInMemoryDatabase(false)
 			s = NewSolver(Options{Type: SingleCoreSimple, Concurrency: 100}, dbInstalled, dbDefinitions, db)
 			if os.Getenv("BENCHMARK_TESTS") != "true" {
 				Skip("BENCHMARK_TESTS not enabled")
 			}
-			tmpfile, _ := ioutil.TempFile(os.TempDir(), "tests")
-			defer os.Remove(tmpfile.Name()) // clean up
-			dbInstalled = pkg.NewBoltDatabase(tmpfile.Name())
 		})
 
 		Measure("it should be fast in resolution from a 10000*8 dataset", func(b Benchmarker) {
@@ -192,7 +193,7 @@ var _ = Describe("Solver Benchmarks", func() {
 				Expect(err).ToNot(HaveOccurred())
 				fmt.Println("Upgrade starts")
 
-				packages, ass, err := s.Upgrade(false, true)
+				packages, ass, err := s.Upgrade(false, false)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(packages).To(ContainElement(A))
@@ -209,7 +210,7 @@ var _ = Describe("Solver Benchmarks", func() {
 
 			})
 
-			Ω(runtime.Seconds()).Should(BeNumerically("<", 70), "Install() shouldn't take too long.")
+			Ω(runtime.Seconds()).Should(BeNumerically("<", 120), "Install() shouldn't take too long.")
 		}, 1)
 
 		Measure("it should be fast in installation with 12000 packages installed and 2000*8 available", func(b Benchmarker) {
@@ -251,7 +252,7 @@ var _ = Describe("Solver Benchmarks", func() {
 
 			})
 
-			Ω(runtime.Seconds()).Should(BeNumerically("<", 70), "Install() shouldn't take too long.")
+			Ω(runtime.Seconds()).Should(BeNumerically("<", 120), "Install() shouldn't take too long.")
 		}, 1)
 
 		PMeasure("it should be fast in resolution from a 50000 dataset with upgrade universe", func(b Benchmarker) {
@@ -291,7 +292,7 @@ var _ = Describe("Solver Benchmarks", func() {
 
 			})
 
-			Ω(runtime.Seconds()).Should(BeNumerically("<", 70), "Install() shouldn't take too long.")
+			Ω(runtime.Seconds()).Should(BeNumerically("<", 120), "Install() shouldn't take too long.")
 		}, 1)
 	})
 
