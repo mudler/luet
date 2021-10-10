@@ -41,7 +41,7 @@ var Verbose bool
 var LockedCommands = []string{"install", "uninstall", "upgrade"}
 
 const (
-	LuetCLIVersion = "0.18.0"
+	LuetCLIVersion = "0.18.1"
 	LuetEnvPrefix  = "LUET"
 	license        = `
 	Luet Copyright (C) 2019-2021 Ettore Di Giacinto
