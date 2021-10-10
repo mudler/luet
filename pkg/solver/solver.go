@@ -503,36 +503,41 @@ func inPackage(list []pkg.Package, p pkg.Package) bool {
 }
 
 // Compute upgrade between packages if specified, or all if none is specified
-func (s *Solver) computeUpgrade(pps ...pkg.Package) func(defDB pkg.PackageDatabase, installDB pkg.PackageDatabase) (pkg.Packages, pkg.Packages, pkg.PackageDatabase) {
-	return func(defDB pkg.PackageDatabase, installDB pkg.PackageDatabase) (pkg.Packages, pkg.Packages, pkg.PackageDatabase) {
+func (s *Solver) computeUpgrade(ppsToUpgrade, ppsToNotUpgrade []pkg.Package) func(defDB pkg.PackageDatabase, installDB pkg.PackageDatabase) (pkg.Packages, pkg.Packages, pkg.PackageDatabase, []pkg.Package) {
+	return func(defDB pkg.PackageDatabase, installDB pkg.PackageDatabase) (pkg.Packages, pkg.Packages, pkg.PackageDatabase, []pkg.Package) {
 		toUninstall := pkg.Packages{}
 		toInstall := pkg.Packages{}
 
 		// we do this in memory so we take into account of provides, and its faster
 		universe, _ := defDB.Copy()
-
 		installedcopy := pkg.NewInMemoryDatabase(false)
-
 		for _, p := range installDB.World() {
 			installedcopy.CreatePackage(p)
 			packages, err := universe.FindPackageVersions(p)
+
 			if err == nil && len(packages) != 0 {
 				best := packages.Best(nil)
-				if !best.Matches(p) && len(pps) == 0 ||
-					len(pps) != 0 && inPackage(pps, p) {
+
+				// This make sure that we don't try to upgrade something that was specified
+				// specifically to not be marked for upgrade
+				// At the same time, makes sure that if we mark a package to look for upgrades
+				// it doesn't have to be in the blacklist (the packages to NOT upgrade)
+				if !best.Matches(p) &&
+					((len(ppsToUpgrade) == 0 && len(ppsToNotUpgrade) == 0) ||
+						(inPackage(ppsToUpgrade, p) && !inPackage(ppsToNotUpgrade, p)) ||
+						(len(ppsToUpgrade) == 0 && !inPackage(ppsToNotUpgrade, p))) {
 					toUninstall = append(toUninstall, p)
 					toInstall = append(toInstall, best)
 				}
 			}
 		}
-		return toUninstall, toInstall, installedcopy
+		return toUninstall, toInstall, installedcopy, ppsToUpgrade
 	}
 }
 
-func (s *Solver) upgrade(fn func(defDB pkg.PackageDatabase, installDB pkg.PackageDatabase) (pkg.Packages, pkg.Packages, pkg.PackageDatabase), defDB pkg.PackageDatabase, installDB pkg.PackageDatabase, checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error) {
+func (s *Solver) upgrade(psToUpgrade, psToNotUpgrade pkg.Packages, fn func(defDB pkg.PackageDatabase, installDB pkg.PackageDatabase) (pkg.Packages, pkg.Packages, pkg.PackageDatabase, []pkg.Package), defDB pkg.PackageDatabase, installDB pkg.PackageDatabase, checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error) {
 
-	toUninstall, toInstall, installedcopy := fn(defDB, installDB)
-
+	toUninstall, toInstall, installedcopy, packsToUpgrade := fn(defDB, installDB)
 	s2 := NewSolver(Options{Type: SingleCoreSimple}, installedcopy, defDB, pkg.NewInMemoryDatabase(false))
 	s2.SetResolver(s.Resolver)
 	if !full {
@@ -560,14 +565,42 @@ func (s *Solver) upgrade(fn func(defDB pkg.PackageDatabase, installDB pkg.Packag
 		}
 		return toUninstall, ass, nil
 	}
-
 	assertions, err := s2.RelaxedInstall(toInstall.Unique())
 
+	wantedSystem := assertions.ToDB()
+
+	fn = s.computeUpgrade(pkg.Packages{}, pkg.Packages{})
+	if len(packsToUpgrade) > 0 {
+		// If we have packages in input,
+		// compute what we are looking to upgrade.
+		// those are assertions minus packsToUpgrade
+
+		var selectedPackages []pkg.Package
+
+		for _, p := range assertions {
+			if p.Value && !inPackage(psToUpgrade, p.Package) {
+				selectedPackages = append(selectedPackages, p.Package)
+			}
+		}
+		fn = s.computeUpgrade(selectedPackages, psToNotUpgrade)
+	}
+
+	_, toInstall, _, _ = fn(defDB, wantedSystem)
+	if len(toInstall) > 0 {
+		_, toInstall, ass := s.upgrade(psToUpgrade, psToNotUpgrade, fn, defDB, wantedSystem, checkconflicts, full)
+		return toUninstall, toInstall, ass
+	}
 	return toUninstall, assertions, err
 }
 
 func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error) {
-	return s.upgrade(s.computeUpgrade(), s.DefinitionDatabase, s.InstalledDatabase, checkconflicts, full)
+
+	installedcopy := pkg.NewInMemoryDatabase(false)
+	err := s.InstalledDatabase.Clone(installedcopy)
+	if err != nil {
+		return nil, nil, err
+	}
+	return s.upgrade(pkg.Packages{}, pkg.Packages{}, s.computeUpgrade(pkg.Packages{}, pkg.Packages{}), s.DefinitionDatabase, installedcopy, checkconflicts, full)
 }
 
 // Uninstall takes a candidate package and return a list of packages that would be removed
@@ -787,16 +820,18 @@ func (s *Solver) Install(c pkg.Packages) (PackagesAssertions, error) {
 	systemAfterInstall := pkg.NewInMemoryDatabase(false)
 
 	toUpgrade := pkg.Packages{}
-
+	toNotUpgrade := pkg.Packages{}
 	for _, p := range c {
 		if p.GetVersion() == ">=0" || p.GetVersion() == ">0" {
 			toUpgrade = append(toUpgrade, p)
+		} else {
+			toNotUpgrade = append(toNotUpgrade, p)
 		}
 	}
 	for _, p := range assertions {
 		if p.Value {
 			systemAfterInstall.CreatePackage(p.Package)
-			if !inPackage(c, p.Package) {
+			if !inPackage(c, p.Package) && !inPackage(toUpgrade, p.Package) && !inPackage(toNotUpgrade, p.Package) {
 				toUpgrade = append(toUpgrade, p.Package)
 			}
 		}
@@ -805,21 +840,26 @@ func (s *Solver) Install(c pkg.Packages) (PackagesAssertions, error) {
 	if len(toUpgrade) == 0 {
 		return assertions, nil
 	}
-	// do partial upgrade based on input.
-	// IF there is no version specified in the input, or >=0 is specified,
-	// then compute upgrade for those
-	_, newassertions, err := s.upgrade(s.computeUpgrade(toUpgrade...), s.DefinitionDatabase, systemAfterInstall, false, false)
-	if err != nil {
-		// TODO: Emit warning.
-		// We were not able to compute upgrades (maybe for some pinned packages, or a conflict)
-		// so we return the relaxed result
-		return assertions, nil
+
+	toUninstall, _, _, _ := s.computeUpgrade(toUpgrade, toNotUpgrade)(s.DefinitionDatabase, systemAfterInstall)
+	if len(toUninstall) > 0 {
+		// do partial upgrade based on input.
+		// IF there is no version specified in the input, or >=0 is specified,
+		// then compute upgrade for those
+		_, newassertions, err := s.upgrade(toUpgrade, toNotUpgrade, s.computeUpgrade(toUpgrade, toNotUpgrade), s.DefinitionDatabase, systemAfterInstall, false, false)
+		if err != nil {
+			// TODO: Emit warning.
+			// We were not able to compute upgrades (maybe for some pinned packages, or a conflict)
+			// so we return the relaxed result
+			return assertions, nil
+		}
+
+		// Protect if we return no assertion at all
+		if len(newassertions) == 0 && len(assertions) > 0 {
+			return assertions, nil
+		}
+		return newassertions, nil
 	}
 
-	// Protect if we return no assertion at all
-	if len(newassertions) == 0 && len(assertions) > 0 {
-		return assertions, nil
-	}
-
-	return newassertions, nil
+	return assertions, nil
 }

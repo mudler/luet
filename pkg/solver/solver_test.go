@@ -16,8 +16,6 @@
 package solver_test
 
 import (
-	"fmt"
-
 	pkg "github.com/mudler/luet/pkg/package"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -40,141 +38,142 @@ var _ = Describe("Solver", func() {
 	})
 
 	Context("Select of best available package", func() {
+		for i := 0; i < 200; i++ {
 
-		It("picks the best versions available for each package, excluding the ones manually specified while installing", func() {
+			It("picks the best versions available for each package, excluding the ones manually specified while installing", func() {
 
-			B1 := pkg.NewPackage("B", "1.1", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B2 := pkg.NewPackage("B", "1.2", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B3 := pkg.NewPackage("B", "1.3", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B4 := pkg.NewPackage("B", "1.4", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B1 := pkg.NewPackage("B", "1.1", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B2 := pkg.NewPackage("B", "1.2", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B3 := pkg.NewPackage("B", "1.3", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B4 := pkg.NewPackage("B", "1.4", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			A1 := pkg.NewPackage("A", "1.1", []*pkg.DefaultPackage{
-				pkg.NewPackage("B", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{}),
-			}, []*pkg.DefaultPackage{})
-			A2 := pkg.NewPackage("A", "1.2", []*pkg.DefaultPackage{
-				pkg.NewPackage("B", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{}),
-			}, []*pkg.DefaultPackage{})
+				A1 := pkg.NewPackage("A", "1.1", []*pkg.DefaultPackage{
+					pkg.NewPackage("B", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{}),
+				}, []*pkg.DefaultPackage{})
+				A2 := pkg.NewPackage("A", "1.2", []*pkg.DefaultPackage{
+					pkg.NewPackage("B", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{}),
+				}, []*pkg.DefaultPackage{})
 
-			D := pkg.NewPackage("D", "1.0", []*pkg.DefaultPackage{
-				pkg.NewPackage("A", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{}),
-			}, []*pkg.DefaultPackage{})
+				D := pkg.NewPackage("D", "1.0", []*pkg.DefaultPackage{
+					pkg.NewPackage("A", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{}),
+				}, []*pkg.DefaultPackage{})
 
-			C := pkg.NewPackage("C", "1", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				C := pkg.NewPackage("C", "1", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			for _, p := range []pkg.Package{A1, A2, B1, B2, B3, B4, C, D} {
-				_, err := dbDefinitions.CreatePackage(p)
+				for _, p := range []pkg.Package{A1, A2, B1, B2, B3, B4, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				for _, p := range []pkg.Package{C} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+				s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
+
+				solution, err := s.(*Solver).Install([]pkg.Package{D})
+
 				Expect(err).ToNot(HaveOccurred())
-			}
+				Expect(len(solution)).To(Equal(8))
 
-			for _, p := range []pkg.Package{C} {
-				_, err := dbInstalled.CreatePackage(p)
+				//	Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: A2, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B4, Value: true}))
+
+				Expect(solution).To(ContainElement(PackageAssert{Package: A1, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B1, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B2, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B3, Value: false}))
+
+				s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
+
+				solution, err = s.(*Solver).Install([]pkg.Package{D, B2})
 				Expect(err).ToNot(HaveOccurred())
-			}
-			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
+				Expect(len(solution)).To(Equal(8))
 
-			solution, err := s.(*Solver).Install([]pkg.Package{D})
-			fmt.Println(solution)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(solution)).To(Equal(8))
+				//	Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: A2, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B2, Value: true}))
 
-			//	Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: A2, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B4, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: A1, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B1, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B4, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B3, Value: false}))
 
-			Expect(solution).To(ContainElement(PackageAssert{Package: A1, Value: false}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B1, Value: false}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B2, Value: false}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B3, Value: false}))
+			})
 
-			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
+			It("picks the best available excluding those manually input. In this case we the input is a selector >=0", func() {
 
-			solution, err = s.(*Solver).Install([]pkg.Package{D, B2})
-			fmt.Println(solution)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(solution)).To(Equal(8))
+				B1 := pkg.NewPackage("B", "1.1", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B2 := pkg.NewPackage("B", "1.2", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B3 := pkg.NewPackage("B", "1.3", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				B4 := pkg.NewPackage("B", "1.4", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-			//	Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: A2, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B2, Value: true}))
+				A1 := pkg.NewPackage("A", "1.1", []*pkg.DefaultPackage{
+					pkg.NewPackage("B", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{}),
+				}, []*pkg.DefaultPackage{})
+				A2 := pkg.NewPackage("A", "1.2", []*pkg.DefaultPackage{
+					pkg.NewPackage("B", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{}),
+				}, []*pkg.DefaultPackage{})
 
-			Expect(solution).To(ContainElement(PackageAssert{Package: A1, Value: false}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B1, Value: false}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B4, Value: false}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B3, Value: false}))
+				D := pkg.NewPackage("D", "1.0", []*pkg.DefaultPackage{
+					pkg.NewPackage("A", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{}),
+				}, []*pkg.DefaultPackage{})
 
-		})
+				C := pkg.NewPackage("C", "1", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 
-		It("picks the best available excluding those manually input. In this case we the input is a selector >=0", func() {
+				for _, p := range []pkg.Package{A1, A2, B1, B2, B3, B4, C, D} {
+					_, err := dbDefinitions.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
 
-			B1 := pkg.NewPackage("B", "1.1", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B2 := pkg.NewPackage("B", "1.2", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B3 := pkg.NewPackage("B", "1.3", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			B4 := pkg.NewPackage("B", "1.4", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+				for _, p := range []pkg.Package{C} {
+					_, err := dbInstalled.CreatePackage(p)
+					Expect(err).ToNot(HaveOccurred())
+				}
+				s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
-			A1 := pkg.NewPackage("A", "1.1", []*pkg.DefaultPackage{
-				pkg.NewPackage("B", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{}),
-			}, []*pkg.DefaultPackage{})
-			A2 := pkg.NewPackage("A", "1.2", []*pkg.DefaultPackage{
-				pkg.NewPackage("B", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{}),
-			}, []*pkg.DefaultPackage{})
-
-			D := pkg.NewPackage("D", "1.0", []*pkg.DefaultPackage{
-				pkg.NewPackage("A", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{}),
-			}, []*pkg.DefaultPackage{})
-
-			C := pkg.NewPackage("C", "1", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-
-			for _, p := range []pkg.Package{A1, A2, B1, B2, B3, B4, C, D} {
-				_, err := dbDefinitions.CreatePackage(p)
+				solution, err := s.(*Solver).Install([]pkg.Package{pkg.NewPackage("D", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})})
 				Expect(err).ToNot(HaveOccurred())
-			}
+				Expect(len(solution)).To(Equal(8))
 
-			for _, p := range []pkg.Package{C} {
-				_, err := dbInstalled.CreatePackage(p)
+				//	Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: A2, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B4, Value: true}))
+
+				Expect(solution).To(ContainElement(PackageAssert{Package: A1, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B1, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B2, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B3, Value: false}))
+
+				s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
+
+				solution, err = s.(*Solver).Install([]pkg.Package{pkg.NewPackage("D", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{}), B2})
 				Expect(err).ToNot(HaveOccurred())
-			}
-			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
+				Expect(len(solution)).To(Equal(8))
 
-			solution, err := s.(*Solver).Install([]pkg.Package{pkg.NewPackage("D", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})})
-			fmt.Println(solution)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(solution)).To(Equal(8))
+				//	Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: A2, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B2, Value: true}))
 
-			//	Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: A2, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B4, Value: true}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: A1, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B1, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B4, Value: false}))
+				Expect(solution).To(ContainElement(PackageAssert{Package: B3, Value: false}))
 
-			Expect(solution).To(ContainElement(PackageAssert{Package: A1, Value: false}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B1, Value: false}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B2, Value: false}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B3, Value: false}))
+			})
 
-			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
-
-			solution, err = s.(*Solver).Install([]pkg.Package{pkg.NewPackage("D", ">=0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{}), B2})
-			fmt.Println(solution)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(solution)).To(Equal(8))
-
-			//	Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: A2, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B2, Value: true}))
-
-			Expect(solution).To(ContainElement(PackageAssert{Package: A1, Value: false}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B1, Value: false}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B4, Value: false}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B3, Value: false}))
-
-		})
+		}
 	})
+
 	Context("Simple set", func() {
 		It("Solves correctly if the selected package has no requirements or conflicts and we have nothing installed yet", func() {
 

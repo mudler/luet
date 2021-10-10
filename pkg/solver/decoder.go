@@ -146,6 +146,17 @@ func (assertions PackagesAssertions) Search(f string) *PackageAssert {
 	return nil
 }
 
+func (assertions PackagesAssertions) ToDB() pkg.PackageDatabase {
+	db := pkg.NewInMemoryDatabase(false)
+	for _, a := range assertions {
+		if a.Value {
+			db.CreatePackage(a.Package)
+		}
+	}
+
+	return db
+}
+
 func (assertions PackagesAssertions) Order(definitiondb pkg.PackageDatabase, fingerprint string) (PackagesAssertions, error) {
 
 	orderedAssertions := PackagesAssertions{}
