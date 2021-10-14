@@ -24,7 +24,6 @@ import (
 
 	"github.com/containerd/containerd/images"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-	"github.com/mudler/luet/pkg/helpers/imgworker"
 
 	continerdarchive "github.com/containerd/containerd/archive"
 	"github.com/docker/cli/cli/trust"
@@ -130,31 +129,6 @@ type UnpackEventData struct {
 	Dest  string
 }
 
-// privilegedExtractImage uses the imgworker (which requires privileges) to extract a container image
-func privilegedExtractImage(temp, image, dest string, auth *types.AuthConfig, verify bool) (*imgworker.ListedImage, error) {
-	defer os.RemoveAll(temp)
-	c, err := imgworker.New(temp, auth)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed creating client")
-	}
-	defer c.Close()
-
-	listedImage, err := c.Pull(image)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed listing images")
-	}
-
-	os.RemoveAll(dest)
-
-	bus.Manager.Publish(bus.EventImagePreUnPack, UnpackEventData{Image: image, Dest: dest})
-
-	err = c.Unpack(image, dest)
-
-	bus.Manager.Publish(bus.EventImagePostUnPack, UnpackEventData{Image: image, Dest: dest})
-
-	return listedImage, err
-}
-
 // UnarchiveLayers extract layers with archive.Untar from docker instead of containerd
 func UnarchiveLayers(temp string, img v1.Image, image, dest string, auth *types.AuthConfig, verify bool) (int64, error) {
 	layers, err := img.Layers()
@@ -192,17 +166,13 @@ func UnarchiveLayers(temp string, img v1.Image, image, dest string, auth *types.
 }
 
 // DownloadAndExtractDockerImage extracts a container image natively. It supports privileged/unprivileged mode
-func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthConfig, verify bool) (*imgworker.ListedImage, error) {
+func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthConfig, verify bool) (*images.Image, error) {
 	if verify {
 		img, err := verifyImage(image, auth)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed verifying image")
 		}
 		image = img
-	}
-
-	if os.Getenv("LUET_PRIVILEGED_EXTRACT") == "true" {
-		return privilegedExtractImage(temp, image, dest, auth, verify)
 	}
 
 	if !fileHelper.Exists(dest) {
@@ -249,17 +219,14 @@ func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthCon
 
 	bus.Manager.Publish(bus.EventImagePostUnPack, UnpackEventData{Image: image, Dest: dest})
 
-	return &imgworker.ListedImage{
-		Image: images.Image{
-			Name:   image,
-			Labels: m.Annotations,
-			Target: specs.Descriptor{
-				MediaType: string(mt),
-				Digest:    digest.Digest(d.String()),
-				Size:      c,
-			},
+	return &images.Image{
+		Name:   image,
+		Labels: m.Annotations,
+		Target: specs.Descriptor{
+			MediaType: string(mt),
+			Digest:    digest.Digest(d.String()),
+			Size:      c,
 		},
-		ContentSize: c,
 	}, nil
 }
 

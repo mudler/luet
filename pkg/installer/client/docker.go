@@ -109,7 +109,7 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 			}
 
 			Info(fmt.Sprintf("Pulled: %s", info.Target.Digest))
-			Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.ContentSize))))
+			Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
 			Debug("\nCompressing result ", filepath.Join(temp), "to", cacheFile)
 
 			newart := a
@@ -170,7 +170,7 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 		}
 
 		Info(fmt.Sprintf("Pulled: %s", info.Target.Digest))
-		Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.ContentSize))))
+		Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
 
 		Debug("\nCopying file ", filepath.Join(temp, name), "to", file.Name())
 		err = fileHelper.CopyFile(filepath.Join(temp, name), file.Name())

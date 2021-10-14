@@ -84,7 +84,7 @@ func NewUnpackCommand() *cobra.Command {
 				os.Exit(1)
 			}
 			Info(fmt.Sprintf("Pulled: %s %s", info.Target.Digest, info.Name))
-			Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.ContentSize))))
+			Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
 		},
 	}
 
