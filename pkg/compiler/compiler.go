@@ -233,7 +233,10 @@ func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *compi
 	defer os.RemoveAll(rootfs) // clean up
 
 	err = cs.Backend.ExtractRootfs(backend.Options{
-		ImageName: runnerOpts.ImageName, Destination: rootfs}, keepPermissions)
+		ImageName:   runnerOpts.ImageName,
+		Destination: rootfs,
+		PackageDir:  p.GetPackageDir(),
+	}, keepPermissions)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not extract rootfs")
 	}

@@ -24,6 +24,8 @@ func NewBackend(s string) (CompilerBackend, error) {
 		compilerBackend = backend.NewSimpleImgBackend()
 	case backend.DockerBackend:
 		compilerBackend = backend.NewSimpleDockerBackend()
+	case backend.Dockerv2Backend:
+		compilerBackend = backend.NewDockerv2Backend()
 	default:
 		return nil, errors.New("invalid backend. Unsupported")
 	}

@@ -26,8 +26,9 @@ import (
 )
 
 const (
-	ImgBackend    = "img"
-	DockerBackend = "docker"
+	ImgBackend      = "img"
+	DockerBackend   = "docker"
+	Dockerv2Backend = "dockerv2"
 )
 
 func imageAvailable(image string) bool {
@@ -42,6 +43,7 @@ type Options struct {
 	Destination    string
 	Context        string
 	BackendArgs    []string
+	PackageDir     string
 }
 
 func runCommand(cmd *exec.Cmd) error {
