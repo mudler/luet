@@ -704,6 +704,51 @@ func (cs *LuetCompiler) ComputeDepTree(p *compilerspec.LuetCompilationSpec) (sol
 	return dependencies, nil
 }
 
+// BuildTree returns a BuildTree which represent the order in which specs should be compiled.
+// It places specs into levels, and each level can be built in parallel. The root nodes starting from the top.
+// A BuildTree can be marshaled into JSON or walked like:
+// for _, l := range bt.AllLevels() {
+//	fmt.Println(strings.Join(bt.AllInLevel(l), " "))
+// }
+func (cs *LuetCompiler) BuildTree(compilerSpecs compilerspec.LuetCompilationspecs) (*BuildTree, error) {
+	compilationTree := map[string]map[string]interface{}{}
+	bt := &BuildTree{}
+
+	for _, sp := range compilerSpecs.All() {
+		ass, err := cs.ComputeDepTree(sp)
+		if err != nil {
+			return nil, err
+		}
+		bt.Reset(fmt.Sprintf("%s/%s", sp.GetPackage().GetCategory(), sp.GetPackage().GetName()))
+		for _, p := range ass {
+			bt.Reset(fmt.Sprintf("%s/%s", p.Package.GetCategory(), p.Package.GetName()))
+
+			spec, err := cs.FromPackage(p.Package)
+			if err != nil {
+				return nil, err
+			}
+			ass, err := cs.ComputeDepTree(spec)
+			if err != nil {
+				return nil, err
+			}
+			for _, r := range ass {
+				if compilationTree[fmt.Sprintf("%s/%s", p.Package.GetCategory(), p.Package.GetName())] == nil {
+					compilationTree[fmt.Sprintf("%s/%s", p.Package.GetCategory(), p.Package.GetName())] = make(map[string]interface{})
+				}
+				compilationTree[fmt.Sprintf("%s/%s", p.Package.GetCategory(), p.Package.GetName())][fmt.Sprintf("%s/%s", r.Package.GetCategory(), r.Package.GetName())] = nil
+			}
+			if compilationTree[fmt.Sprintf("%s/%s", sp.GetPackage().GetCategory(), sp.GetPackage().GetName())] == nil {
+				compilationTree[fmt.Sprintf("%s/%s", sp.GetPackage().GetCategory(), sp.GetPackage().GetName())] = make(map[string]interface{})
+			}
+			compilationTree[fmt.Sprintf("%s/%s", sp.GetPackage().GetCategory(), sp.GetPackage().GetName())][fmt.Sprintf("%s/%s", p.Package.GetCategory(), p.Package.GetName())] = nil
+		}
+	}
+
+	bt.Order(compilationTree)
+
+	return bt, nil
+}
+
 // ComputeMinimumCompilableSet strips specs that are eventually compiled by leafs
 func (cs *LuetCompiler) ComputeMinimumCompilableSet(p ...*compilerspec.LuetCompilationSpec) ([]*compilerspec.LuetCompilationSpec, error) {
 	// Generate a set with all the deps of the provided specs

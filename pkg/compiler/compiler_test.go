@@ -660,6 +660,30 @@ var _ = Describe("Compiler", func() {
 			Expect(fileHelper.Exists(spec.Rel("extra-layer-0.1.package.tar"))).To(BeTrue())
 		})
 
+		It("Generates a correct buildtree", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err := generalRecipe.Load("../../tests/fixtures/complex/selection")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(10))
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
+
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "vhba", Category: "sys-fs-5.4.2", Version: "20190410"})
+			Expect(err).ToNot(HaveOccurred())
+
+			bt, err := compiler.BuildTree(compilerspec.LuetCompilationspecs{*spec})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(bt.AllLevels()).To(Equal([]int{0, 1, 2, 3, 4, 5}))
+			Expect(bt.AllInLevel(0)).To(Equal([]string{"layer/build"}))
+			Expect(bt.AllInLevel(1)).To(Equal([]string{"layer/sabayon-build-portage"}))
+			Expect(bt.AllInLevel(2)).To(Equal([]string{"layer/build-sabayon-overlay"}))
+			Expect(bt.AllInLevel(3)).To(Equal([]string{"layer/build-sabayon-overlays"}))
+			Expect(bt.AllInLevel(4)).To(ContainElements("sys-kernel/linux-sabayon", "sys-kernel/sabayon-sources"))
+			Expect(bt.AllInLevel(5)).To(Equal([]string{"sys-fs-5.4.2/vhba"}))
+		})
+
 		It("Compiles complex dependencies trees with best matches", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 			tmpdir, err := ioutil.TempDir("", "complex")
