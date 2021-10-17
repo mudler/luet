@@ -69,7 +69,7 @@ jobs:
       - name: Tests
         run: |
               sudo -E \
-                    env "PATH=$PATH" \
+                    env "PATH=$PATH:$GOPATH/bin" \
                     env "TEST_DOCKER_IMAGE=${{ secrets.DOCKER_TESTING_IMAGE }}" \
                     env "UNIT_TEST_DOCKER_IMAGE=${{ secrets.DOCKER_TESTING_IMAGE }}" \
                     env "UNIT_TEST_DOCKER_IMAGE_REPOSITORY=${{ secrets.DOCKER_TESTING_UNIT_TEST_IMAGE }}" \
