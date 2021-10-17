@@ -25,11 +25,19 @@ jobs:
             sudo chmod a+x "/usr/bin/img"
       - name: Login to quay with img
         run: echo ${{ secrets.DOCKER_TESTING_PASSWORD }} | sudo img login -u ${{ secrets.DOCKER_TESTING_USERNAME }} --password-stdin quay.io
+
       - name: Tests with Img backend
         run: |
             sudo -E env "PATH=$PATH" \
                     env "LUET_BACKEND=img" \
                     make test-integration
+
+      - name: Tests with Dockerv2 backend
+        run: |
+            sudo -E env "PATH=$PATH" \
+                    env "LUET_BACKEND=dockerv2" \
+                    make test-integration
+
       - name: Tests
         run: |
               sudo -E \
