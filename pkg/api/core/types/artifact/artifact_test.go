@@ -42,7 +42,7 @@ var _ = Describe("Artifact", func() {
 
 			generalRecipe := tree.NewGeneralRecipe(pkg.NewInMemoryDatabase(false))
 
-			err := generalRecipe.Load("../../../../tests/fixtures/buildtree")
+			err := generalRecipe.Load("../../../../../tests/fixtures/buildtree")
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
