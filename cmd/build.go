@@ -22,8 +22,8 @@ import (
 	"github.com/ghodss/yaml"
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
+	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler"
-	"github.com/mudler/luet/pkg/compiler/types/artifact"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	"github.com/mudler/luet/pkg/installer"
 

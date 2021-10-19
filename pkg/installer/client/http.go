@@ -1,4 +1,4 @@
-// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2019-2021 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -26,9 +26,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/mudler/luet/pkg/compiler/types/artifact"
-	fileHelper "github.com/mudler/luet/pkg/helpers/file"
+	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	. "github.com/mudler/luet/pkg/logger"
+	"github.com/pkg/errors"
 
 	"github.com/cavaliercoder/grab"
 	"github.com/mudler/luet/pkg/config"
@@ -38,14 +38,18 @@ import (
 
 type HttpClient struct {
 	RepoData RepoData
+	Cache    *artifact.ArtifactCache
 }
 
 func NewHttpClient(r RepoData) *HttpClient {
-	return &HttpClient{RepoData: r}
+	return &HttpClient{
+		RepoData: r,
+		Cache:    artifact.NewCache(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()),
+	}
 }
 
 func NewGrabClient() *grab.Client {
-	httpTimeout := 120
+	httpTimeout := 360
 	timeout := os.Getenv("HTTP_TIMEOUT")
 	if timeout != "" {
 		timeoutI, err := strconv.Atoi(timeout)
@@ -65,7 +69,7 @@ func NewGrabClient() *grab.Client {
 	}
 }
 
-func (c *HttpClient) PrepareReq(dst, url string) (*grab.Request, error) {
+func (c *HttpClient) prepareReq(dst, url string) (*grab.Request, error) {
 
 	req, err := grab.NewRequest(dst, url)
 	if err != nil {
@@ -88,169 +92,114 @@ func Round(input float64) float64 {
 	return math.Floor(input + 0.5)
 }
 
-func (c *HttpClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.PackageArtifact, error) {
-	var u *url.URL = nil
-	var err error
-	var req *grab.Request
-	var temp string
-
-	artifactName := path.Base(a.Path)
-	cacheFile := filepath.Join(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), artifactName)
-	ok := false
-
-	// Check if file is already in cache
-	if fileHelper.Exists(cacheFile) {
-		Debug("Use artifact", artifactName, "from cache.")
-	} else {
-
-		temp, err = config.LuetCfg.GetSystem().TempDir("tree")
-		if err != nil {
-			return nil, err
-		}
-		defer os.RemoveAll(temp)
-
-		client := NewGrabClient()
-
-		for _, uri := range c.RepoData.Urls {
-			Debug("Downloading artifact", artifactName, "from", uri)
-
-			u, err = url.Parse(uri)
-			if err != nil {
-				continue
-			}
-			u.Path = path.Join(u.Path, artifactName)
-
-			req, err = c.PrepareReq(temp, u.String())
-			if err != nil {
-				continue
-			}
-
-			resp := client.Do(req)
-
-			bar := progressbar.NewOptions64(
-				resp.Size(),
-				progressbar.OptionSetDescription(
-					fmt.Sprintf("[cyan] %s - [reset]",
-						filepath.Base(resp.Request.HTTPRequest.URL.RequestURI()))),
-				progressbar.OptionSetRenderBlankState(true),
-				progressbar.OptionEnableColorCodes(config.LuetCfg.GetLogging().Color),
-				progressbar.OptionClearOnFinish(),
-				progressbar.OptionShowBytes(true),
-				progressbar.OptionShowCount(),
-				progressbar.OptionSetPredictTime(true),
-				progressbar.OptionFullWidth(),
-				progressbar.OptionSetTheme(progressbar.Theme{
-					Saucer:        "[white]=[reset]",
-					SaucerHead:    "[white]>[reset]",
-					SaucerPadding: " ",
-					BarStart:      "[",
-					BarEnd:        "]",
-				}))
-
-			bar.Reset()
-			// start download loop
-			t := time.NewTicker(500 * time.Millisecond)
-			defer t.Stop()
-
-		download_loop:
-
-			for {
-				select {
-				case <-t.C:
-					bar.Set64(resp.BytesComplete())
-
-				case <-resp.Done:
-					// download is complete
-					break download_loop
-				}
-			}
-
-			if err = resp.Err(); err != nil {
-				continue
-			}
-
-			if err != nil {
-				continue
-			}
-
-			Info("\nDownloaded", artifactName, "of",
-				fmt.Sprintf("%.2f", (float64(resp.BytesComplete())/1000)/1000), "MB (",
-				fmt.Sprintf("%.2f", (float64(resp.BytesPerSecond())/1024)/1024), "MiB/s )")
-
-			Debug("\nCopying file ", filepath.Join(temp, artifactName), "to", cacheFile)
-			err = fileHelper.CopyFile(filepath.Join(temp, artifactName), cacheFile)
-
-			bar.Finish()
-			ok = true
-			break
-		}
-
-		if !ok {
-			return nil, err
-		}
-	}
-
-	newart := a
-	newart.Path = cacheFile
-	return newart, nil
-}
-
-func (c *HttpClient) DownloadFile(name string) (string, error) {
+func (c *HttpClient) DownloadFile(p string) (string, error) {
 	var file *os.File = nil
-	var u *url.URL = nil
-	var err error
-	var req *grab.Request
-	var temp string
-
-	ok := false
-
-	temp, err = config.LuetCfg.GetSystem().TempDir("tree")
+	var downloaded bool
+	temp, err := config.LuetCfg.GetSystem().TempDir("download")
 	if err != nil {
 		return "", err
 	}
+	defer os.RemoveAll(temp)
 
 	client := NewGrabClient()
 
 	for _, uri := range c.RepoData.Urls {
-
 		file, err = config.LuetCfg.GetSystem().TempFile("HttpClient")
 		if err != nil {
+			Debug("Failed downloading", p, "from", uri)
+
 			continue
 		}
+		Debug("Downloading artifact", p, "from", uri)
 
-		u, err = url.Parse(uri)
+		u, err := url.Parse(uri)
 		if err != nil {
 			continue
 		}
-		u.Path = path.Join(u.Path, name)
+		u.Path = path.Join(u.Path, p)
 
-		Debug("Downloading", u.String())
-
-		req, err = c.PrepareReq(temp, u.String())
+		req, err := c.prepareReq(file.Name(), u.String())
 		if err != nil {
 			continue
 		}
 
 		resp := client.Do(req)
+
+		bar := progressbar.NewOptions64(
+			resp.Size(),
+			progressbar.OptionSetDescription(
+				fmt.Sprintf("[cyan] %s - [reset]",
+					filepath.Base(resp.Request.HTTPRequest.URL.RequestURI()))),
+			progressbar.OptionSetRenderBlankState(true),
+			progressbar.OptionEnableColorCodes(config.LuetCfg.GetLogging().Color),
+			progressbar.OptionClearOnFinish(),
+			progressbar.OptionShowBytes(true),
+			progressbar.OptionShowCount(),
+			progressbar.OptionSetPredictTime(true),
+			progressbar.OptionFullWidth(),
+			progressbar.OptionSetTheme(progressbar.Theme{
+				Saucer:        "[white]=[reset]",
+				SaucerHead:    "[white]>[reset]",
+				SaucerPadding: " ",
+				BarStart:      "[",
+				BarEnd:        "]",
+			}))
+
+		bar.Reset()
+		// start download loop
+		t := time.NewTicker(500 * time.Millisecond)
+		defer t.Stop()
+
+	download_loop:
+
+		for {
+			select {
+			case <-t.C:
+				bar.Set64(resp.BytesComplete())
+
+			case <-resp.Done:
+				// download is complete
+				break download_loop
+			}
+		}
+
 		if err = resp.Err(); err != nil {
 			continue
 		}
 
-		Info("Downloaded", filepath.Base(resp.Filename), "of",
+		Info("\nDownloaded", p, "of",
 			fmt.Sprintf("%.2f", (float64(resp.BytesComplete())/1000)/1000), "MB (",
 			fmt.Sprintf("%.2f", (float64(resp.BytesPerSecond())/1024)/1024), "MiB/s )")
 
-		err = fileHelper.CopyFile(filepath.Join(temp, name), file.Name())
-		if err != nil {
-			continue
-		}
-		ok = true
+		bar.Finish()
+		downloaded = true
 		break
 	}
 
-	if !ok {
-		return "", err
+	if !downloaded {
+		return "", errors.Wrap(err, "artifact not available in any of the specified url locations")
+	}
+	return file.Name(), nil
+}
+
+func (c *HttpClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.PackageArtifact, error) {
+	newart := a.ShallowCopy()
+	artifactName := path.Base(a.Path)
+
+	fileName, err := c.Cache.Get(a)
+	// Check if file is already in cache
+	if err == nil {
+		newart.Path = fileName
+		Debug("Use artifact", artifactName, "from cache.")
+	} else {
+		d, err := c.DownloadFile(artifactName)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed downloading %s", artifactName)
+		}
+
+		newart.Path = d
+		c.Cache.Put(newart)
 	}
 
-	return file.Name(), err
+	return newart, nil
 }

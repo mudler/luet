@@ -24,6 +24,7 @@ import (
 	"hash"
 	"io"
 	"os"
+	"sort"
 
 	//	. "github.com/mudler/luet/pkg/logger"
 	"github.com/pkg/errors"
@@ -40,6 +41,18 @@ type Checksums map[string]string
 type HashOptions struct {
 	Hasher hash.Hash
 	Type   HashImplementation
+}
+
+func (c Checksums) List() (res [][]string) {
+	keys := make([]string, 0)
+	for k, _ := range c {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		res = append(res, []string{k, c[k]})
+	}
+	return
 }
 
 // Generate generates all Checksums supported for the artifact

@@ -19,7 +19,7 @@ import (
 	"io/ioutil"
 
 	"github.com/mudler/luet/cmd/util"
-	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
+	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"

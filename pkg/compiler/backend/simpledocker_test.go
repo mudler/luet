@@ -16,11 +16,11 @@
 package backend_test
 
 import (
+	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	. "github.com/mudler/luet/pkg/compiler/backend"
-	"github.com/mudler/luet/pkg/compiler/types/artifact"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	"io/ioutil"

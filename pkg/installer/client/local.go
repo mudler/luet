@@ -1,4 +1,4 @@
-// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2020-2021 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,61 +20,46 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/mudler/luet/pkg/compiler/types/artifact"
+	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/config"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/logger"
+	"github.com/pkg/errors"
 )
 
 type LocalClient struct {
 	RepoData RepoData
+	Cache    *artifact.ArtifactCache
 }
 
 func NewLocalClient(r RepoData) *LocalClient {
-	return &LocalClient{RepoData: r}
+	return &LocalClient{
+		Cache:    artifact.NewCache(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()),
+		RepoData: r,
+	}
 }
 
 func (c *LocalClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.PackageArtifact, error) {
 	var err error
 
-	rootfs := ""
 	artifactName := path.Base(a.Path)
-	cacheFile := filepath.Join(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), artifactName)
+	newart := a.ShallowCopy()
 
-	if !config.LuetCfg.ConfigFromHost {
-		rootfs, err = config.LuetCfg.GetSystem().GetRootFsAbs()
-		if err != nil {
-			return nil, err
-		}
-	}
-
+	fileName, err := c.Cache.Get(a)
 	// Check if file is already in cache
-	if fileHelper.Exists(cacheFile) {
+	if err == nil {
+		newart.Path = fileName
 		Debug("Use artifact", artifactName, "from cache.")
 	} else {
-		ok := false
-		for _, uri := range c.RepoData.Urls {
-
-			uri = filepath.Join(rootfs, uri)
-
-			Info("Downloading artifact", artifactName, "from", uri)
-
-			//defer os.Remove(file.Name())
-			err = fileHelper.CopyFile(filepath.Join(uri, artifactName), cacheFile)
-			if err != nil {
-				continue
-			}
-			ok = true
-			break
+		d, err := c.DownloadFile(artifactName)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed downloading %s", artifactName)
 		}
 
-		if !ok {
-			return nil, err
-		}
+		newart.Path = d
+		c.Cache.Put(newart)
 	}
 
-	newart := a
-	newart.Path = cacheFile
 	return newart, nil
 }
 

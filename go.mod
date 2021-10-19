@@ -62,6 +62,7 @@ require (
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/philopon/go-toposort v0.0.0-20170620085441-9be86dbd762f
 	github.com/pkg/errors v0.9.1
+	github.com/rancher-sandbox/gofilecache v0.0.0-20210330135715-becdeff5df15
 	github.com/schollz/progressbar/v3 v3.7.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cast v1.4.1 // indirect

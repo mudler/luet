@@ -20,10 +20,10 @@ import (
 	"os"
 	"path/filepath"
 
+	. "github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/compiler/backend"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
-	. "github.com/mudler/luet/pkg/compiler/types/artifact"
 	compression "github.com/mudler/luet/pkg/compiler/types/compression"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 

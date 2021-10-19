@@ -16,7 +16,7 @@
 package installer
 
 import (
-	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
+	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	//"github.com/mudler/luet/pkg/solver"
 )
 

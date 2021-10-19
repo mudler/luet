@@ -25,9 +25,9 @@ import (
 	"path/filepath"
 
 	"github.com/mudler/luet/pkg/api/core/types"
+	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
-	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"

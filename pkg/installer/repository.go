@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
+	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	compression "github.com/mudler/luet/pkg/compiler/types/compression"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"go.uber.org/multierr"

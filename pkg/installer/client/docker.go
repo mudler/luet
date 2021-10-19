@@ -1,4 +1,4 @@
-// Copyright © 2020 Ettore Di Giacinto <mudler@mocaccino.org>
+// Copyright © 2020-2021 Ettore Di Giacinto <mudler@mocaccino.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/pkg/errors"
 
-	"github.com/mudler/luet/pkg/compiler/types/artifact"
+	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers/docker"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
@@ -41,6 +41,7 @@ type DockerClient struct {
 	RepoData RepoData
 	auth     *types.AuthConfig
 	verify   bool
+	Cache    *artifact.ArtifactCache
 }
 
 func NewDockerClient(r RepoData) *DockerClient {
@@ -49,25 +50,22 @@ func NewDockerClient(r RepoData) *DockerClient {
 	dat, _ := json.Marshal(r.Authentication)
 	json.Unmarshal(dat, auth)
 
-	return &DockerClient{RepoData: r, auth: auth}
+	return &DockerClient{RepoData: r, auth: auth,
+		Cache: artifact.NewCache(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()),
+	}
 }
 
 func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.PackageArtifact, error) {
 	//var u *url.URL = nil
 	var err error
-	var temp string
 
 	Spinner(22)
 	defer SpinnerStop()
 
-	var resultingArtifact *artifact.PackageArtifact
+	resultingArtifact := a.ShallowCopy()
 	artifactName := path.Base(a.Path)
-	cacheFile := filepath.Join(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), artifactName)
-	Debug("Cache file", cacheFile)
-	if err := fileHelper.EnsureDir(cacheFile); err != nil {
-		return nil, errors.Wrapf(err, "could not create cache folder %s for %s", config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), cacheFile)
-	}
-	ok := false
+
+	downloaded := false
 
 	// TODO:
 	// Files are in URI/packagename:version (GetPackageImageName() method)
@@ -77,19 +75,26 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 	// is done in such cases (see repository.go)
 
 	// Check if file is already in cache
-	if fileHelper.Exists(cacheFile) {
-		Debug("Cache hit for artifact", artifactName)
+	fileName, err := c.Cache.Get(a)
+	// Check if file is already in cache
+	if err == nil {
 		resultingArtifact = a
-		resultingArtifact.Path = cacheFile
+		resultingArtifact.Path = fileName
 		resultingArtifact.Checksums = artifact.Checksums{}
+		Debug("Use artifact", artifactName, "from cache.")
 	} else {
 
-		temp, err = config.LuetCfg.GetSystem().TempDir("tree")
+		temp, err := config.LuetCfg.GetSystem().TempDir("image")
 		if err != nil {
 			return nil, err
 		}
 		defer os.RemoveAll(temp)
 
+		tempArtifact, err := config.LuetCfg.GetSystem().TempFile("artifact")
+		if err != nil {
+			return nil, err
+		}
+		defer os.RemoveAll(tempArtifact.Name())
 		for _, uri := range c.RepoData.Urls {
 
 			imageName := fmt.Sprintf("%s:%s", uri, a.CompileSpec.GetPackage().ImageID())
@@ -110,26 +115,37 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 
 			Info(fmt.Sprintf("Pulled: %s", info.Target.Digest))
 			Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
-			Debug("\nCompressing result ", filepath.Join(temp), "to", cacheFile)
+			Debug("\nCompressing result ", filepath.Join(temp), "to", tempArtifact.Name())
 
-			newart := a
 			// We discard checksum, that are checked while during pull and unpack
-			newart.Checksums = artifact.Checksums{}
-			newart.Path = cacheFile                    // First set to cache file
-			newart.Path = newart.GetUncompressedName() // Calculate the real path from cacheFile
-			err = newart.Compress(temp, 1)
+			resultingArtifact.Checksums = artifact.Checksums{}
+			resultingArtifact.Path = tempArtifact.Name() // First set to cache file
+			err = resultingArtifact.Compress(temp, 1)
 			if err != nil {
 				Error(fmt.Sprintf("Failed compressing package %s: %s", imageName, err.Error()))
 				continue
 			}
-			resultingArtifact = newart
 
-			ok = true
+			_, _, err = c.Cache.Put(resultingArtifact)
+			if err != nil {
+				Error(fmt.Sprintf("Failed storing package %s from cache: %s", imageName, err.Error()))
+				continue
+			}
+
+			fileName, err := c.Cache.Get(resultingArtifact)
+			if err != nil {
+				Error(fmt.Sprintf("Failed getting package %s from cache: %s", imageName, err.Error()))
+				continue
+			}
+
+			resultingArtifact.Path = fileName // Cache is persistent. tempArtifact is not
+
+			downloaded = true
 			break
 		}
 
-		if !ok {
-			return nil, err
+		if !downloaded {
+			return nil, errors.Wrap(err, "no image available from repositories")
 		}
 	}
 

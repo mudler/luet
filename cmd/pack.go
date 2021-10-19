@@ -20,7 +20,7 @@ import (
 	"time"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
-	"github.com/mudler/luet/pkg/compiler/types/artifact"
+	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler/types/compression"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	. "github.com/mudler/luet/pkg/config"

@@ -30,9 +30,9 @@ import (
 	"time"
 
 	"github.com/imdario/mergo"
+	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	bus "github.com/mudler/luet/pkg/bus"
 	"github.com/mudler/luet/pkg/compiler/backend"
-	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
 	"github.com/mudler/luet/pkg/compiler/types/options"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	"github.com/mudler/luet/pkg/helpers"

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
+	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 
 	"github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/config"
