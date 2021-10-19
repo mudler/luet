@@ -53,24 +53,20 @@ $> luet repo update repo1 repo2
 					}
 
 					r := installer.NewSystemRepository(*repo)
-					Spinner(32)
 					_, err = r.Sync(force)
 					if err != nil && !ignore {
 						Fatal("Error on sync repository " + rname + ": " + err.Error())
 					}
-					SpinnerStop()
 				}
 
 			} else {
 				for _, repo := range LuetCfg.SystemRepositories {
 					if repo.Cached && repo.Enable {
 						r := installer.NewSystemRepository(repo)
-						Spinner(32)
 						_, err := r.Sync(force)
 						if err != nil && !ignore {
 							Fatal("Error on sync repository " + r.GetName() + ": " + err.Error())
 						}
-						SpinnerStop()
 					}
 				}
 			}

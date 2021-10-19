@@ -18,7 +18,7 @@ package client_test
 import (
 	"testing"
 
-	. "github.com/mudler/luet/cmd"
+	. "github.com/mudler/luet/cmd/util"
 	config "github.com/mudler/luet/pkg/config"
 
 	. "github.com/onsi/ginkgo"
@@ -27,7 +27,7 @@ import (
 
 func TestClient(t *testing.T) {
 	RegisterFailHandler(Fail)
-	LoadConfig(config.LuetCfg)
+	LoadConfig()
 	// Set temporary directory for rootfs
 	config.LuetCfg.GetSystem().Rootfs = "/tmp/luet-root"
 	// Force dynamic path for packages cache

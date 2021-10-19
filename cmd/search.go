@@ -27,6 +27,7 @@ import (
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type PackageResult struct {
@@ -291,7 +292,7 @@ Search can also return results in the terminal in different ways: as terminal ou
 	PreRun: func(cmd *cobra.Command, args []string) {
 		util.BindSystemFlags(cmd)
 		util.BindSolverFlags(cmd)
-		LuetCfg.Viper.BindPFlag("installed", cmd.Flags().Lookup("installed"))
+		viper.BindPFlag("installed", cmd.Flags().Lookup("installed"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var results Results
@@ -302,7 +303,7 @@ Search can also return results in the terminal in different ways: as terminal ou
 		}
 		hidden, _ := cmd.Flags().GetBool("hidden")
 
-		installed := LuetCfg.Viper.GetBool("installed")
+		installed := viper.GetBool("installed")
 		searchWithLabel, _ := cmd.Flags().GetBool("by-label")
 		searchWithLabelMatch, _ := cmd.Flags().GetBool("by-label-regex")
 		revdeps, _ := cmd.Flags().GetBool("revdeps")

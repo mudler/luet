@@ -24,6 +24,7 @@ import (
 	"github.com/mudler/luet/pkg/solver"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var uninstallCmd = &cobra.Command{
@@ -34,9 +35,9 @@ var uninstallCmd = &cobra.Command{
 	PreRun: func(cmd *cobra.Command, args []string) {
 		util.BindSystemFlags(cmd)
 		util.BindSolverFlags(cmd)
-		LuetCfg.Viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
-		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
-		LuetCfg.Viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
+		viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
+		viper.BindPFlag("force", cmd.Flags().Lookup("force"))
+		viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		toRemove := []pkg.Package{}
@@ -49,12 +50,12 @@ var uninstallCmd = &cobra.Command{
 			toRemove = append(toRemove, pack)
 		}
 
-		force := LuetCfg.Viper.GetBool("force")
+		force := viper.GetBool("force")
 		nodeps, _ := cmd.Flags().GetBool("nodeps")
 		full, _ := cmd.Flags().GetBool("full")
 		checkconflicts, _ := cmd.Flags().GetBool("conflictscheck")
 		fullClean, _ := cmd.Flags().GetBool("full-clean")
-		yes := LuetCfg.Viper.GetBool("yes")
+		yes := viper.GetBool("yes")
 		keepProtected, _ := cmd.Flags().GetBool("keep-protected-files")
 
 		util.SetSystemConfig()

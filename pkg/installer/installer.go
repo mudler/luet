@@ -31,11 +31,12 @@ import (
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/mudler/luet/pkg/helpers/match"
+	"github.com/mudler/luet/pkg/installer/client"
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
+	"github.com/pterm/pterm"
 
-	. "github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 )
 
@@ -122,27 +123,6 @@ func (l *LuetInstaller) computeUpgrade(syncedRepos Repositories, s *System) (pkg
 	}
 
 	return uninstall, toInstall, nil
-}
-
-func packsToList(p pkg.Packages) string {
-	var packs []string
-
-	for _, pp := range p {
-		packs = append(packs, pp.HumanReadableString())
-	}
-
-	sort.Strings(packs)
-	return strings.Join(packs, " ")
-}
-
-func matchesToList(artefacts map[string]ArtifactMatch) string {
-	var packs []string
-
-	for fingerprint, match := range artefacts {
-		packs = append(packs, fmt.Sprintf("%s (%s)", fingerprint, match.Repository.GetName()))
-	}
-	sort.Strings(packs)
-	return strings.Join(packs, " ")
 }
 
 // Upgrade upgrades a System based on the Installer options. Returns error in case of failure
@@ -249,13 +229,17 @@ func (l *LuetInstaller) swap(o Option, syncedRepos Repositories, toRemove pkg.Pa
 	}
 
 	if l.Options.Ask {
-		if len(toRemove) > 0 {
-			Info(":recycle: Packages that are going to be removed from the system:\n ", Yellow(packsToList(toRemove)).BgBlack().String())
-		}
+		// if len(toRemove) > 0 {
+		// 	Info(":recycle: Packages that are going to be removed from the system:\n ", Yellow(packsToList(toRemove)).BgBlack().String())
+		// }
 
-		if len(match) > 0 {
-			Info("Packages that are going to be installed in the system: \n ", Green(matchesToList(match)).BgBlack().String())
-		}
+		// if len(match) > 0 {
+		// 	Info("Packages that are going to be installed in the system:")
+		// 	//	Info("Packages that are going to be installed in the system: \n ", Green(matchesToList(match)).BgBlack().String())
+		// 	printMatches(match)
+		// }
+		Info(":zap: Proposed version changes to the system:\n ")
+		printMatchUpgrade(match, toRemove)
 
 		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
 		if Ask() {
@@ -455,24 +439,19 @@ func (l *LuetInstaller) getOpsWithOptions(
 }
 
 func (l *LuetInstaller) checkAndUpgrade(r Repositories, s *System) error {
-	Spinner(32)
+	//	Spinner(32)
 	uninstall, toInstall, err := l.computeUpgrade(r, s)
 	if err != nil {
 		return errors.Wrap(err, "failed computing upgrade")
 	}
-	SpinnerStop()
-
-	if len(uninstall) > 0 {
-		Info(":recycle: Packages that are going to be removed from the system:\n ", Yellow(packsToList(uninstall)).BgBlack().String())
-	}
-
-	if len(toInstall) > 0 {
-		Info(":zap:Packages that are going to be installed in the system:\n ", Green(packsToList(toInstall)).BgBlack().String())
-	}
+	//	SpinnerStop()
 
 	if len(toInstall) == 0 && len(uninstall) == 0 {
-		Info("Nothing to do")
+		Info("Nothing to upgrade")
 		return nil
+	} else {
+		Info(":zap: Proposed version changes to the system:\n ")
+		printUpgradeList(toInstall, uninstall)
 	}
 
 	// We don't want any conflict with the installed to raise during the upgrade.
@@ -505,6 +484,7 @@ func (l *LuetInstaller) checkAndUpgrade(r Repositories, s *System) error {
 }
 
 func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
+	Screen("Install")
 	syncedRepos, err := l.SyncRepositories()
 	if err != nil {
 		return err
@@ -560,7 +540,10 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 			}
 		}
 	}
-	Info("Packages that are going to be installed in the system: \n ", Green(matchesToList(match)).BgBlack().String())
+	Info("Packages that are going to be installed in the system:")
+	//Info("Packages that are going to be installed in the system: \n ", Green(matchesToList(match)).BgBlack().String())
+
+	printMatches(match)
 
 	if l.Options.Ask {
 		Info("By going forward, you are also accepting the licenses of the packages that you are going to install in your system.")
@@ -581,16 +564,21 @@ func (l *LuetInstaller) download(syncedRepos Repositories, toDownload map[string
 
 	var wg = new(sync.WaitGroup)
 
+	area, _ := pterm.DefaultArea.Start()
+
+	p, _ := pterm.DefaultProgressbar.WithPrintTogether(area).WithTotal(len(toDownload)).WithTitle("Downloading packages").Start()
+
 	// Download
 	for i := 0; i < l.Options.Concurrency; i++ {
 		wg.Add(1)
-		go l.downloadWorker(i, wg, all)
+		go l.downloadWorker(i, wg, all, p, area)
 	}
 	for _, c := range toDownload {
 		all <- c
 	}
 	close(all)
 	wg.Wait()
+	area.Stop()
 
 	return nil
 }
@@ -782,7 +770,7 @@ func (l *LuetInstaller) checkFileconflicts(toInstall map[string]ArtifactMatch, c
 
 	filesToInstall := []string{}
 	for _, m := range toInstall {
-		a, err := l.downloadPackage(m)
+		a, err := l.downloadPackage(m, nil)
 		if err != nil && !l.Options.Force {
 			return errors.Wrap(err, "Failed downloading package")
 		}
@@ -877,9 +865,16 @@ func (l *LuetInstaller) install(o Option, syncedRepos Repositories, toInstall ma
 	return s.ExecuteFinalizers(toFinalize)
 }
 
-func (l *LuetInstaller) downloadPackage(a ArtifactMatch) (*artifact.PackageArtifact, error) {
+func (l *LuetInstaller) downloadPackage(a ArtifactMatch, area *pterm.AreaPrinter) (*artifact.PackageArtifact, error) {
 
-	artifact, err := a.Repository.Client().DownloadArtifact(a.Artifact)
+	cli := a.Repository.Client()
+
+	switch v := cli.(type) {
+	case *client.HttpClient:
+		v.ProgressBarArea = area
+	}
+
+	artifact, err := cli.DownloadArtifact(a.Artifact)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error on download artifact")
 	}
@@ -893,7 +888,7 @@ func (l *LuetInstaller) downloadPackage(a ArtifactMatch) (*artifact.PackageArtif
 
 func (l *LuetInstaller) installPackage(m ArtifactMatch, s *System) error {
 
-	a, err := l.downloadPackage(m)
+	a, err := l.downloadPackage(m, nil)
 	if err != nil && !l.Options.Force {
 		return errors.Wrap(err, "Failed downloading package")
 	}
@@ -913,18 +908,20 @@ func (l *LuetInstaller) installPackage(m ArtifactMatch, s *System) error {
 	return s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: m.Package.GetFingerPrint(), Files: files})
 }
 
-func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch) error {
+func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch, pb *pterm.ProgressbarPrinter, area *pterm.AreaPrinter) error {
 	defer wg.Done()
 
 	for p := range c {
 		// TODO: Keep trace of what was added from the tar, and save it into system
-		_, err := l.downloadPackage(p)
+		_, err := l.downloadPackage(p, area)
 		if err != nil {
-			Fatal("Failed downloading package "+p.Package.GetName(), err.Error())
+			Error("Failed downloading package "+p.Package.GetName(), err.Error())
 			return errors.Wrap(err, "Failed downloading package "+p.Package.GetName())
 		} else {
-			Info(":package: Package ", p.Package.HumanReadableString(), "downloaded")
+			Success(":package: Package ", p.Package.HumanReadableString(), "downloaded")
 		}
+		pb.Increment()
+
 	}
 
 	return nil
@@ -1183,7 +1180,8 @@ func (l *LuetInstaller) Uninstall(s *System, packs ...pkg.Package) error {
 	}
 
 	if l.Options.Ask {
-		Info(":recycle: Packages that are going to be removed from the system:\n   ", Yellow(packsToList(toUninstall)).BgBlack().String())
+		Info(":recycle: Packages that are going to be removed from the system:")
+		printList(toUninstall)
 		if Ask() {
 			l.Options.Ask = false // Don't prompt anymore
 			return uninstall()

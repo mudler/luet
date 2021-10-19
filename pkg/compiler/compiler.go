@@ -29,7 +29,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/imdario/mergo"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	bus "github.com/mudler/luet/pkg/bus"
 	"github.com/mudler/luet/pkg/compiler/backend"
@@ -40,6 +39,8 @@ import (
 	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
+
+	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/pkg/chart"
@@ -486,7 +487,7 @@ func (cs *LuetCompiler) waitForImages(images []string) {
 		available, _ := oneOfImagesAvailable(images, cs.Backend)
 		if !available {
 			Info(fmt.Sprintf("Waiting for image %s to be available... :zzz:", images))
-			Spinner(22)
+			Spinner(32)
 			defer SpinnerStop()
 			for !available {
 				available, _ = oneOfImagesAvailable(images, cs.Backend)

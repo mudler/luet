@@ -29,16 +29,17 @@ import (
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	. "github.com/mudler/luet/pkg/logger"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 
 	"github.com/cavaliercoder/grab"
 	"github.com/mudler/luet/pkg/config"
-
-	"github.com/schollz/progressbar/v3"
 )
 
 type HttpClient struct {
 	RepoData RepoData
 	Cache    *artifact.ArtifactCache
+
+	ProgressBarArea *pterm.AreaPrinter
 }
 
 func NewHttpClient(r RepoData) *HttpClient {
@@ -124,28 +125,11 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 		}
 
 		resp := client.Do(req)
-
-		bar := progressbar.NewOptions64(
-			resp.Size(),
-			progressbar.OptionSetDescription(
-				fmt.Sprintf("[cyan] %s - [reset]",
-					filepath.Base(resp.Request.HTTPRequest.URL.RequestURI()))),
-			progressbar.OptionSetRenderBlankState(true),
-			progressbar.OptionEnableColorCodes(config.LuetCfg.GetLogging().Color),
-			progressbar.OptionClearOnFinish(),
-			progressbar.OptionShowBytes(true),
-			progressbar.OptionShowCount(),
-			progressbar.OptionSetPredictTime(true),
-			progressbar.OptionFullWidth(),
-			progressbar.OptionSetTheme(progressbar.Theme{
-				Saucer:        "[white]=[reset]",
-				SaucerHead:    "[white]>[reset]",
-				SaucerPadding: " ",
-				BarStart:      "[",
-				BarEnd:        "]",
-			}))
-
-		bar.Reset()
+		pb := pterm.DefaultProgressbar.WithTotal(int(resp.Size()))
+		if c.ProgressBarArea != nil {
+			pb = pb.WithPrintTogether(c.ProgressBarArea)
+		}
+		pb, _ = pb.WithTitle(filepath.Base(resp.Request.HTTPRequest.URL.RequestURI())).Start()
 		// start download loop
 		t := time.NewTicker(500 * time.Millisecond)
 		defer t.Stop()
@@ -155,8 +139,9 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 		for {
 			select {
 			case <-t.C:
-				bar.Set64(resp.BytesComplete())
-
+				//	bar.Set64(resp.BytesComplete())
+				//pb.Increment()
+				pb.Increment().Current = int(resp.BytesComplete())
 			case <-resp.Done:
 				// download is complete
 				break download_loop
@@ -167,11 +152,11 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 			continue
 		}
 
-		Info("\nDownloaded", p, "of",
+		Info("Downloaded", p, "of",
 			fmt.Sprintf("%.2f", (float64(resp.BytesComplete())/1000)/1000), "MB (",
 			fmt.Sprintf("%.2f", (float64(resp.BytesPerSecond())/1024)/1024), "MiB/s )")
-
-		bar.Finish()
+		pb.Stop()
+		//bar.Finish()
 		downloaded = true
 		break
 	}

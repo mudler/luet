@@ -25,6 +25,7 @@ import (
 	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var installCmd = &cobra.Command{
@@ -50,10 +51,10 @@ To force install a package:
 	PreRun: func(cmd *cobra.Command, args []string) {
 		util.BindSystemFlags(cmd)
 		util.BindSolverFlags(cmd)
-		LuetCfg.Viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
-		LuetCfg.Viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
-		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
-		LuetCfg.Viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
+		viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
+		viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
+		viper.BindPFlag("force", cmd.Flags().Lookup("force"))
+		viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var toInstall pkg.Packages
@@ -66,10 +67,10 @@ To force install a package:
 			toInstall = append(toInstall, pack)
 		}
 
-		force := LuetCfg.Viper.GetBool("force")
-		nodeps := LuetCfg.Viper.GetBool("nodeps")
-		onlydeps := LuetCfg.Viper.GetBool("onlydeps")
-		yes := LuetCfg.Viper.GetBool("yes")
+		force := viper.GetBool("force")
+		nodeps := viper.GetBool("nodeps")
+		onlydeps := viper.GetBool("onlydeps")
+		yes := viper.GetBool("yes")
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
 		finalizerEnvs, _ := cmd.Flags().GetStringArray("finalizer-env")
 		relax, _ := cmd.Flags().GetBool("relax")

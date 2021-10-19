@@ -53,7 +53,7 @@ func runCommand(cmd *exec.Cmd) error {
 	cmd.Stderr = writer
 
 	if buffered {
-		Spinner(22)
+		Spinner(32)
 		defer SpinnerStop()
 	}
 

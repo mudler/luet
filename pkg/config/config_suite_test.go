@@ -19,8 +19,7 @@ package config_test
 import (
 	"testing"
 
-	. "github.com/mudler/luet/cmd"
-	config "github.com/mudler/luet/pkg/config"
+	. "github.com/mudler/luet/cmd/util"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,6 +27,6 @@ import (
 
 func TestSolver(t *testing.T) {
 	RegisterFailHandler(Fail)
-	LoadConfig(config.LuetCfg)
+	LoadConfig()
 	RunSpecs(t, "Config Suite")
 }

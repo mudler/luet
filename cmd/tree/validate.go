@@ -241,7 +241,7 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 					continue
 				}
 
-				Spinner(32)
+				Spinner(22)
 				solution, err := depSolver.Install(pkg.Packages{r})
 				ass := solution.SearchByName(r.GetPackageName())
 				SpinnerStop()

@@ -22,12 +22,11 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	viper "github.com/spf13/viper"
 )
 
 var _ = Describe("Repository", func() {
 	Context("Load Repository1", func() {
-		cfg := NewLuetConfig(viper.New())
+		cfg := &LuetConfig{}
 		cfg.RepositoriesConfDir = []string{
 			"../../tests/fixtures/repos.conf.d",
 		}

@@ -22,6 +22,7 @@ import (
 	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var reclaimCmd = &cobra.Command{
@@ -29,7 +30,7 @@ var reclaimCmd = &cobra.Command{
 	Short: "Reclaim packages to Luet database from available repositories",
 	PreRun: func(cmd *cobra.Command, args []string) {
 		util.BindSystemFlags(cmd)
-		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
+		viper.BindPFlag("force", cmd.Flags().Lookup("force"))
 	},
 	Long: `Reclaim tries to find association between packages in the online repositories and the system one.
 
@@ -40,7 +41,7 @@ It scans the target file system, and if finds a match with a package available i
 	Run: func(cmd *cobra.Command, args []string) {
 		util.SetSystemConfig()
 
-		force := LuetCfg.Viper.GetBool("force")
+		force := viper.GetBool("force")
 
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
 

@@ -9,24 +9,24 @@ import (
 	"strings"
 
 	"sync"
+
 	. "github.com/mudler/luet/pkg/config"
 
-	"github.com/briandowns/spinner"
 	"github.com/kyokomi/emoji"
 	. "github.com/logrusorgru/aurora"
+	"github.com/pterm/pterm"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-var s *spinner.Spinner = nil
+var s *pterm.SpinnerPrinter
 var z *zap.Logger = nil
 var aurora Aurora = nil
 var spinnerLock = sync.Mutex{}
+
 func NewSpinner() {
 	if s == nil {
-		s = spinner.New(
-			spinner.CharSets[LuetCfg.GetGeneral().SpinnerCharset],
-			LuetCfg.GetGeneral().GetSpinnerMs())
+		s = pterm.DefaultSpinner.WithShowTimer(false).WithRemoveWhenDone(true)
 	}
 }
 
@@ -38,6 +38,10 @@ func InitAurora() {
 
 func GetAurora() Aurora {
 	return aurora
+}
+
+func NoColor() {
+	pterm.DisableColor()
 }
 
 func Ask() bool {
@@ -100,24 +104,41 @@ func Spinner(i int) {
 		i = 43
 	}
 
-	if s != nil && !s.Active() {
+	if s != nil && !s.IsActive {
 		//	s.UpdateCharSet(spinner.CharSets[i])
-		s.Start() // Start the spinner
+		//s.Start() // Start the spinner
+		//		time.Sleep(second)
+		// for i := 14; i > 0; i-- {
+		// 	if i > 1 {
+		// 		introSpinner.UpdateText("Waiting for " + strconv.Itoa(i) + " seconds...")
+		// 	} else {
+		// 		introSpinner.UpdateText("Waiting for " + strconv.Itoa(i) + " second...")
+		// 	}
+		// 	time.Sleep(second)
+		// }
+		//	s = introSpinner
+		s, _ = s.Start()
+		//introSpinner.Stop()
 	}
+}
+
+func Screen(text string) {
+	pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgLightBlue)).WithMargin(2).Println(text)
+	//pterm.DefaultCenter.Print(pterm.DefaultHeader.WithFullWidth().WithBackgroundStyle(pterm.NewStyle(pterm.BgLightBlue)).WithMargin(10).Sprint(text))
 }
 
 func SpinnerText(suffix, prefix string) {
 	if s != nil {
-		s.Lock()
-		defer s.Unlock()
+		spinnerLock.Lock()
+		defer spinnerLock.Unlock()
 		if LuetCfg.GetGeneral().Debug {
 			fmt.Println(fmt.Sprintf("%s %s",
 				Bold(Cyan(prefix)).String(),
 				Bold(Magenta(suffix)).BgBlack().String(),
 			))
 		} else {
-			s.Suffix = Bold(Magenta(suffix)).BgBlack().String()
-			s.Prefix = Bold(Cyan(prefix)).String()
+			s.UpdateText(suffix + prefix)
+
 		}
 	}
 }
@@ -135,7 +156,7 @@ func SpinnerStop() {
 		return
 	}
 	if s != nil {
-		s.Stop()
+		s.Success()
 	}
 }
 
@@ -147,8 +168,10 @@ func level2Number(level string) int {
 		return 1
 	case "info":
 		return 2
-	default:
+	case "success":
 		return 3
+	default:
+		return 4
 	}
 }
 
@@ -158,7 +181,7 @@ func log2File(level, msg string) {
 		z.Error(msg)
 	case "warning":
 		z.Warn(msg)
-	case "info":
+	case "info", "success":
 		z.Info(msg)
 	default:
 		z.Debug(msg)
@@ -171,11 +194,15 @@ func level2AtomicLevel(level string) zap.AtomicLevel {
 		return zap.NewAtomicLevelAt(zap.ErrorLevel)
 	case "warning":
 		return zap.NewAtomicLevelAt(zap.WarnLevel)
-	case "info":
+	case "info", "success":
 		return zap.NewAtomicLevelAt(zap.InfoLevel)
 	default:
 		return zap.NewAtomicLevelAt(zap.DebugLevel)
 	}
+}
+
+func init() {
+	InitAurora()
 }
 
 func Msg(level string, withoutColor, ln bool, msg ...interface{}) {
@@ -206,7 +233,7 @@ func Msg(level string, withoutColor, ln bool, msg ...interface{}) {
 			levelMsg = Yellow(":construction: warning" + message).BgBlack().String()
 		case "debug":
 			levelMsg = White(message).BgBlack().String()
-		case "info":
+		case "info", "success":
 			levelMsg = message
 		case "error":
 			levelMsg = Red(message).String()
@@ -225,9 +252,37 @@ func Msg(level string, withoutColor, ln bool, msg ...interface{}) {
 	}
 
 	if ln {
-		fmt.Println(levelMsg)
+		switch level {
+		case "info":
+			pterm.Info.Println(levelMsg)
+		case "success":
+			pterm.Success.Println(levelMsg)
+		case "warning":
+			pterm.Warning.Println(levelMsg)
+		case "error":
+			pterm.Error.Println(levelMsg)
+		case "fatal":
+			pterm.Fatal.Println(levelMsg)
+		default:
+			fmt.Println(levelMsg)
+		}
+		//
 	} else {
-		fmt.Print(levelMsg)
+		switch level {
+		case "success":
+			pterm.Success.Print(levelMsg)
+		case "info":
+			pterm.Info.Print(levelMsg)
+		case "warning":
+			pterm.Warning.Print(levelMsg)
+		case "error":
+			pterm.Error.Print(levelMsg)
+		case "fatal":
+			pterm.Fatal.Print(levelMsg)
+		default:
+			fmt.Print(levelMsg)
+		}
+
 	}
 
 }
@@ -254,6 +309,10 @@ func DebugC(mess ...interface{}) {
 
 func Info(mess ...interface{}) {
 	Msg("info", false, true, mess...)
+}
+
+func Success(mess ...interface{}) {
+	Msg("success", false, true, mess...)
 }
 
 func InfoC(mess ...interface{}) {

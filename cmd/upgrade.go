@@ -22,6 +22,7 @@ import (
 	"github.com/mudler/luet/pkg/solver"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var upgradeCmd = &cobra.Command{
@@ -31,19 +32,19 @@ var upgradeCmd = &cobra.Command{
 	PreRun: func(cmd *cobra.Command, args []string) {
 		util.BindSystemFlags(cmd)
 		util.BindSolverFlags(cmd)
-		LuetCfg.Viper.BindPFlag("force", cmd.Flags().Lookup("force"))
-		LuetCfg.Viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
+		viper.BindPFlag("force", cmd.Flags().Lookup("force"))
+		viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
 	},
 	Long: `Upgrades packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		force := LuetCfg.Viper.GetBool("force")
+		force := viper.GetBool("force")
 		nodeps, _ := cmd.Flags().GetBool("nodeps")
 		full, _ := cmd.Flags().GetBool("full")
 		universe, _ := cmd.Flags().GetBool("universe")
 		clean, _ := cmd.Flags().GetBool("clean")
 		sync, _ := cmd.Flags().GetBool("sync")
-		yes := LuetCfg.Viper.GetBool("yes")
+		yes := viper.GetBool("yes")
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
 
 		util.SetSystemConfig()

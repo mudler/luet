@@ -1,5 +1,6 @@
 // Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
 //                  Daniele Rondina <geaaru@sabayonlinux.org>
+//             2021 Ettore Di Giacinto <mudler@mocaccino.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,9 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/user"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -32,11 +31,10 @@ import (
 	solver "github.com/mudler/luet/pkg/solver"
 
 	"github.com/pkg/errors"
-	v "github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 )
 
-var LuetCfg = NewLuetConfig(v.GetViper())
+var LuetCfg = &LuetConfig{}
 var AvailableResolvers = strings.Join([]string{solver.QLearningResolverType}, " ")
 
 type LuetLoggingConfig struct {
@@ -162,15 +160,12 @@ func (sc *LuetSystemConfig) GetRootFsAbs() (string, error) {
 	return filepath.Abs(sc.Rootfs)
 }
 
-
 type LuetKV struct {
 	Key   string `json:"key" yaml:"key" mapstructure:"key"`
 	Value string `json:"value" yaml:"value" mapstructure:"value"`
 }
 
 type LuetConfig struct {
-	Viper *v.Viper `yaml:"-"`
-
 	Logging LuetLoggingConfig `yaml:"logging,omitempty" mapstructure:"logging"`
 	General LuetGeneralConfig `yaml:"general,omitempty" mapstructure:"general"`
 	System  LuetSystemConfig  `yaml:"system" mapstructure:"system"`
@@ -185,59 +180,6 @@ type LuetConfig struct {
 	FinalizerEnvs []LuetKV `json:"finalizer_envs,omitempty" yaml:"finalizer_envs,omitempty" mapstructure:"finalizer_envs,omitempty"`
 
 	ConfigProtectConfFiles []ConfigProtectConfFile `yaml:"-" mapstructure:"-"`
-}
-
-func NewLuetConfig(viper *v.Viper) *LuetConfig {
-	if viper == nil {
-		viper = v.New()
-	}
-
-	GenDefault(viper)
-	return &LuetConfig{Viper: viper, ConfigProtectConfFiles: nil}
-}
-
-func GenDefault(viper *v.Viper) {
-	viper.SetDefault("logging.level", "info")
-	viper.SetDefault("logging.enable_logfile", false)
-	viper.SetDefault("logging.path", "/var/log/luet.log")
-	viper.SetDefault("logging.json_format", false)
-	viper.SetDefault("logging.enable_emoji", true)
-	viper.SetDefault("logging.color", true)
-
-	viper.SetDefault("general.concurrency", runtime.NumCPU())
-	viper.SetDefault("general.debug", false)
-	viper.SetDefault("general.show_build_output", false)
-	viper.SetDefault("general.spinner_ms", 100)
-	viper.SetDefault("general.spinner_charset", 22)
-	viper.SetDefault("general.fatal_warnings", false)
-
-	u, err := user.Current()
-	// os/user doesn't work in from scratch environments
-	if err != nil || (u != nil && u.Uid == "0") {
-		viper.SetDefault("general.same_owner", true)
-	} else {
-		viper.SetDefault("general.same_owner", false)
-	}
-
-	viper.SetDefault("system.database_engine", "boltdb")
-	viper.SetDefault("system.database_path", "/var/cache/luet")
-	viper.SetDefault("system.rootfs", "/")
-	viper.SetDefault("system.tmpdir_base", filepath.Join(os.TempDir(), "tmpluet"))
-	viper.SetDefault("system.pkgs_cache_path", "packages")
-
-	viper.SetDefault("repos_confdir", []string{"/etc/luet/repos.conf.d"})
-	viper.SetDefault("config_protect_confdir", []string{"/etc/luet/config.protect.d"})
-	viper.SetDefault("config_protect_skip", false)
-	// TODO: Set default to false when we are ready for migration.
-	viper.SetDefault("config_from_host", true)
-	viper.SetDefault("cache_repositories", []string{})
-	viper.SetDefault("system_repositories", []string{})
-	viper.SetDefault("finalizer_envs", make(map[string]string, 0))
-
-	viper.SetDefault("solver.type", "")
-	viper.SetDefault("solver.rate", 0.7)
-	viper.SetDefault("solver.discount", 1.0)
-	viper.SetDefault("solver.max_attempts", 9000)
 }
 
 func (c *LuetConfig) GetSystemDB() pkg.PackageDatabase {

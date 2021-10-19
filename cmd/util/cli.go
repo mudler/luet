@@ -20,7 +20,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/config"
@@ -28,30 +30,30 @@ import (
 )
 
 func BindSystemFlags(cmd *cobra.Command) {
-	LuetCfg.Viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
-	LuetCfg.Viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
-	LuetCfg.Viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
+	viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
+	viper.BindPFlag("system.rootfs", cmd.Flags().Lookup("system-target"))
+	viper.BindPFlag("system.database_engine", cmd.Flags().Lookup("system-engine"))
 }
 
 func BindSolverFlags(cmd *cobra.Command) {
-	LuetCfg.Viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
-	LuetCfg.Viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
-	LuetCfg.Viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
-	LuetCfg.Viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
+	viper.BindPFlag("solver.type", cmd.Flags().Lookup("solver-type"))
+	viper.BindPFlag("solver.discount", cmd.Flags().Lookup("solver-discount"))
+	viper.BindPFlag("solver.rate", cmd.Flags().Lookup("solver-rate"))
+	viper.BindPFlag("solver.max_attempts", cmd.Flags().Lookup("solver-attempts"))
 }
 
 func BindValuesFlags(cmd *cobra.Command) {
-	LuetCfg.Viper.BindPFlag("values", cmd.Flags().Lookup("values"))
+	viper.BindPFlag("values", cmd.Flags().Lookup("values"))
 }
 
 func ValuesFlags() []string {
-	return LuetCfg.Viper.GetStringSlice("values")
+	return viper.GetStringSlice("values")
 }
 
 func SetSystemConfig() {
-	dbpath := LuetCfg.Viper.GetString("system.database_path")
-	rootfs := LuetCfg.Viper.GetString("system.rootfs")
-	engine := LuetCfg.Viper.GetString("system.database_engine")
+	dbpath := viper.GetString("system.database_path")
+	rootfs := viper.GetString("system.rootfs")
+	engine := viper.GetString("system.database_engine")
 
 	LuetCfg.System.DatabaseEngine = engine
 	LuetCfg.System.DatabasePath = dbpath
@@ -59,10 +61,10 @@ func SetSystemConfig() {
 }
 
 func SetSolverConfig() (c *config.LuetSolverOptions) {
-	stype := LuetCfg.Viper.GetString("solver.type")
-	discount := LuetCfg.Viper.GetFloat64("solver.discount")
-	rate := LuetCfg.Viper.GetFloat64("solver.rate")
-	attempts := LuetCfg.Viper.GetInt("solver.max_attempts")
+	stype := viper.GetString("solver.type")
+	discount := viper.GetFloat64("solver.discount")
+	rate := viper.GetFloat64("solver.rate")
+	attempts := viper.GetInt("solver.max_attempts")
 
 	LuetCfg.GetSolverOptions().Type = stype
 	LuetCfg.GetSolverOptions().LearnRate = float32(rate)
@@ -105,4 +107,15 @@ func TemplateFolders(fromRepo bool, treePaths []string) []string {
 		}
 	}
 	return templateFolders
+}
+
+func IntroScreen() {
+	luetLogo, _ := pterm.DefaultBigText.WithLetters(
+		pterm.NewLettersFromStringWithStyle("LU", pterm.NewStyle(pterm.FgLightMagenta)),
+		pterm.NewLettersFromStringWithStyle("ET", pterm.NewStyle(pterm.FgLightBlue))).
+		Srender()
+
+	pterm.DefaultCenter.Print(luetLogo)
+
+	pterm.DefaultCenter.Print(pterm.DefaultHeader.WithFullWidth().WithBackgroundStyle(pterm.NewStyle(pterm.BgLightBlue)).WithMargin(10).Sprint("Luet - 0-deps container-based package manager"))
 }
