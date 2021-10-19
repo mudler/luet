@@ -36,9 +36,10 @@ type SpecFile struct {
 	RemapUsers  map[string]string `yaml:"remap_users,omitempty" json:"remap_users,omitempty"`
 	RemapGroups map[string]string `yaml:"remap_groups,omitempty" json:"remap_groups,omitempty"`
 
-	SameOwner   bool `yaml:"same_owner,omitempty" json:"same_owner,omitempty"`
-	SameChtimes bool `yaml:"same_chtimes,omitempty" json:"same_chtimes,omitempty"`
-	MapEntities bool `yaml:"map_entities,omitempty" json:"map_entities,omitempty"`
+	SameOwner        bool `yaml:"same_owner,omitempty" json:"same_owner,omitempty"`
+	SameChtimes      bool `yaml:"same_chtimes,omitempty" json:"same_chtimes,omitempty"`
+	MapEntities      bool `yaml:"map_entities,omitempty" json:"map_entities,omitempty"`
+	BrokenLinksFatal bool `yaml:"broken_links_fatal,omitempty" json:"broken_links_fatal,omitempty"`
 }
 
 type RenameRule struct {
@@ -47,8 +48,12 @@ type RenameRule struct {
 }
 
 type Link struct {
-	Name     string
+	// Contains the path of the link to create (header.Name)
+	Name string
+	// Contains the path of the path linked to this link (header.Linkname)
+	Linkname string
+	// Contains the target path merged to the destination path that must be creatd.
 	Path     string
+	TypeFlag byte
 	Mode     os.FileMode
-	Symbolic bool
 }

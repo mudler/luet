@@ -175,7 +175,7 @@ github.com/fatih/color
 github.com/fsnotify/fsnotify
 # github.com/fsouza/go-dockerclient v1.6.4
 github.com/fsouza/go-dockerclient
-# github.com/geaaru/tar-formers v0.1.0
+# github.com/geaaru/tar-formers v0.2.0
 ## explicit
 github.com/geaaru/tar-formers/pkg/executor
 github.com/geaaru/tar-formers/pkg/logger

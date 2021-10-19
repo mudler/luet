@@ -329,6 +329,8 @@ github.com/fsouza/go-dockerclient v1.6.4/go.mod h1:GOdftxWLWIbIWKbIMDroKFJzPdg6I
 github.com/garyburd/redigo v0.0.0-20150301180006-535138d7bcd7/go.mod h1:NR3MbYisc3/PwhQ00EMzDiPmrwpPxAn5GI05/YaO1SY=
 github.com/geaaru/tar-formers v0.1.0 h1:AwriLXB5h5jsRNNHfe1xM7hZRr6p9TkFvfxVJlGwe64=
 github.com/geaaru/tar-formers v0.1.0/go.mod h1:+zwtgS7jkG1OhvIlCRnX4XnMJKxgAfU9bcNPB67FKwE=
+github.com/geaaru/tar-formers v0.2.0 h1:HQUMLLNp7F7G6WeZG7lQokY2dEzc6TCW8dUQVgtP2Fo=
+github.com/geaaru/tar-formers v0.2.0/go.mod h1:+zwtgS7jkG1OhvIlCRnX4XnMJKxgAfU9bcNPB67FKwE=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=

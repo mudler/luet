@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -137,23 +136,26 @@ func (t *TarFormers) HandleTarFlow(tarReader *tar.Reader, dir string) error {
 				return err
 			}
 		case tar.TypeLink:
-			//name := dir + filepath.Dir(header.Name) + "/" + header.Linkname
+			t.Logger.Debug(fmt.Sprintf("Path %s is a hardlink to %s.",
+				header.Name, header.Linkname))
 			links = append(links,
 				specs.Link{
 					Path:     targetPath,
-					Name:     header.Linkname,
+					Linkname: filepath.Join(dir, header.Linkname),
+					Name:     header.Name,
 					Mode:     info.Mode(),
-					Symbolic: false,
+					TypeFlag: header.Typeflag,
 				})
 		case tar.TypeSymlink:
-			//name := dir + filepath.Dir(header.Name) + "/" + header.Linkname
-			//fmt.Println("Add symlink ", targetPath, name)
+			t.Logger.Debug(fmt.Sprintf("Path %s is a symlink to %s.",
+				header.Name, header.Linkname))
 			links = append(links,
 				specs.Link{
 					Path:     targetPath,
-					Name:     header.Linkname,
+					Linkname: header.Linkname,
+					Name:     header.Name,
 					Mode:     info.Mode(),
-					Symbolic: true,
+					TypeFlag: header.Typeflag,
 				})
 		case tar.TypeChar, tar.TypeBlock:
 			err := t.CreateBlockCharFifo(targetPath, info.Mode(), header)
@@ -174,27 +176,13 @@ func (t *TarFormers) HandleTarFlow(tarReader *tar.Reader, dir string) error {
 
 	}
 
-	// Create all hardlinks
+	// Create all links
 	if len(links) > 0 {
+		//links = t.GetOrderedLinks(links)
 		for i := range links {
-			if links[i].Symbolic {
-				t.Logger.Debug("Creating symlink ", links[i].Name, links[i].Path)
-				if err := os.Symlink(links[i].Name, links[i].Path); err != nil {
-					t.Logger.Warning(
-						fmt.Sprintf(
-							"WARNING: Error on create symlink %s -> %s: %s",
-							links[i].Name, links[i].Path, err.Error()))
-				}
-			} else {
-				if err := os.Link(links[i].Name, links[i].Path); err != nil {
-					//  Ignoring link errors because a link could be related to another link
-					// to create yet:
-					// Error on create hardlink pkgdir/mesa/usr/lib64/dri/i965_dri.so -> /mocaccino-funtoo/build/rootfs675930686/pkgdir/mesa/usr/lib64/dri/nouveau_vieux_dri.so: link pkgdir/mesa/usr/lib64/dri/i965_dri.so /mocaccino-funtoo/build/rootfs675930686/pkgdir/mesa/usr/lib64/dri/nouveau_vieux_dri.so: no such file or directory
-					t.Logger.Warning(
-						fmt.Sprintf(
-							"WARNING: Error on create hardlink %s -> %s: %s",
-							links[i].Name, links[i].Path, err.Error()))
-				}
+			err := t.CreateLink(links[i])
+			if err != nil {
+				return err
 			}
 		}
 	}

@@ -129,6 +129,7 @@ func (d *Dockerv2) ExportImage(opts Options) error {
 	spec.SameChtimes = false
 	// In general this must be always set a true.
 	spec.SameOwner = config.LuetCfg.GetGeneral().SameOwner
+	spec.BrokenLinksFatal = true
 
 	buffered := !config.LuetCfg.GetGeneral().ShowBuildOutput
 	writer := NewBackendWriter(buffered)

@@ -35,9 +35,10 @@ func NewSpecFile() *SpecFile {
 		RemapUsers:  make(map[string]string, 0),
 		RemapGroups: make(map[string]string, 0),
 
-		SameOwner:   true,
-		SameChtimes: false,
-		MapEntities: false,
+		SameOwner:        true,
+		SameChtimes:      false,
+		MapEntities:      false,
+		BrokenLinksFatal: false,
 	}
 }
 

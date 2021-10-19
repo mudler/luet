@@ -25,6 +25,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"syscall"
+
+	specs "github.com/geaaru/tar-formers/pkg/specs"
 
 	"golang.org/x/sys/unix"
 )
@@ -69,6 +72,17 @@ func (t *TarFormers) CreateFile(dir string, mode os.FileMode, reader *tar.Reader
 	return nil
 }
 
+func (t *TarFormers) ExistFile(path string) (bool, error) {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
 func (t *TarFormers) SetFileProps(path string, header *tar.Header) error {
 	if t.Task.SameOwner {
 		if err := os.Chown(path, header.Uid, header.Gid); err != nil {
@@ -108,4 +122,36 @@ func (t *TarFormers) CreateBlockCharFifo(file string, mode os.FileMode, header *
 
 	dev := int(uint32(unix.Mkdev(uint32(header.Devmajor), uint32(header.Devminor))))
 	return unix.Mknod(file, modeDev, dev)
+}
+
+func (t *TarFormers) CreateLink(link specs.Link) error {
+
+	if link.TypeFlag == tar.TypeSymlink {
+		t.Logger.Debug("Creating symlink ", link.Name, link.Path)
+		if err := syscall.Symlink(link.Linkname, link.Path); err != nil {
+			errmsg := fmt.Sprintf(
+				"Error on create symlink %s -> %s (%s): %s",
+				link.Path, link.Linkname, link.Name, err.Error())
+
+			if t.Task.BrokenLinksFatal {
+				return errors.New(errmsg)
+			} else {
+				t.Logger.Warning("WARNING: " + errmsg)
+			}
+		}
+	} else {
+		if err := syscall.Link(link.Linkname, link.Path); err != nil {
+			errmsg := fmt.Sprintf(
+				"Error on create hardlink %s -> %s (%s): %s",
+				link.Path, link.Linkname, link.Name, err.Error())
+
+			if t.Task.BrokenLinksFatal {
+				return errors.New(errmsg)
+			} else {
+				t.Logger.Warning("WARNING: " + errmsg)
+			}
+		}
+	}
+
+	return nil
 }
