@@ -120,8 +120,6 @@ testInstallAgain() {
     assertNotContains 'contains warning' "$output" 'No packages to install'
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/c' ]"
     assertTrue 'package Z installed' "[ -e '$tmpdir/testrootfs/z' ]"
-    assertTrue 'package Z in cache' "[ -e '$tmpdir/testrootfs/packages/z-test-1.0+2.package.tar.zst' ]"
-    assertTrue 'package in cache' "[ -e '$tmpdir/testrootfs/packages/c-test-1.0.package.tar.zst' ]"
 }
 
 testCleanup() {

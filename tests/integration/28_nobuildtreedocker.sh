@@ -142,7 +142,7 @@ testInstallAgain() {
     assertEquals 'install test successfully' "$installst" "0"
     assertNotContains 'contains warning' "$output" 'No packages to install'
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/c' ]"
-    assertTrue 'package in cache' "[ -e '$tmpdir/testrootfs/packages/c-test-1.0.package.tar.zst' ]"
+    assertTrue 'cache initialized' "[ -e '$tmpdir/testrootfs/packages/README' ]"
 }
 
 testCleanup() {
@@ -151,6 +151,7 @@ testCleanup() {
     luet cleanup --config $tmpdir/luet-client.yaml
     installst=$?
     assertEquals 'cleanup test successfully' "$installst" "0"
+    assertTrue 'cache removed' "[ ! -e '$tmpdir/testrootfs/packages/README' ]"
 }
 
 # Load shUnit2.

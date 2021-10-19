@@ -60,7 +60,7 @@ testDownloadOnly() {
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package not installed' "[ ! -e '$tmpdir/testrootfs/c' ]"
-    assertTrue 'cache populated' "[ -e '$tmpdir/testrootfs/var/cache/luet/packages/c-test-1.0.package.tar.gz' ]"
+    assertTrue 'cache populated' "[ -e '$tmpdir/testrootfs/var/cache/luet/packages/README' ]"
 
     luet install -y --config $tmpdir/luet.yaml test/c > /dev/null
     installst=$?
@@ -72,7 +72,7 @@ testCleanup() {
     luet cleanup --config $tmpdir/luet.yaml > /dev/null
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
-    assertTrue 'package installed' "[ ! -e '$tmpdir/testrootfs/packages/c-test-1.0.package.tar.gz' ]"
+    assertTrue 'cache dropped' "[ ! -e '$tmpdir/testrootfs/var/cache/luet/packages/README' ]"
 }
 
 # Load shUnit2.
