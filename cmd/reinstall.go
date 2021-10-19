@@ -64,16 +64,6 @@ var reinstallCmd = &cobra.Command{
 			toAdd = append(toAdd, pack)
 		}
 
-		// This shouldn't be necessary, but we need to unmarshal the repositories to a concrete struct, thus we need to port them back to the Repositories type
-		repos := installer.Repositories{}
-		for _, repo := range LuetCfg.SystemRepositories {
-			if !repo.Enable {
-				continue
-			}
-			r := installer.NewSystemRepository(repo)
-			repos = append(repos, r)
-		}
-
 		util.SetSolverConfig()
 
 		LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
@@ -92,8 +82,8 @@ var reinstallCmd = &cobra.Command{
 			PreserveSystemEssentialData: true,
 			Ask:                         !yes,
 			DownloadOnly:                downloadOnly,
+			PackageRepositories:         LuetCfg.SystemRepositories,
 		})
-		inst.Repositories(repos)
 
 		system := &installer.System{Database: LuetCfg.GetSystemDB(), Target: LuetCfg.GetSystem().Rootfs}
 		err := inst.Swap(toUninstall, toAdd, system)

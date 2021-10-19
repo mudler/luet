@@ -40,16 +40,6 @@ It scans the target file system, and if finds a match with a package available i
 	Run: func(cmd *cobra.Command, args []string) {
 		util.SetSystemConfig()
 
-		// This shouldn't be necessary, but we need to unmarshal the repositories to a concrete struct, thus we need to port them back to the Repositories type
-		repos := installer.Repositories{}
-		for _, repo := range LuetCfg.SystemRepositories {
-			if !repo.Enable {
-				continue
-			}
-			r := installer.NewSystemRepository(repo)
-			repos = append(repos, r)
-		}
-
 		force := LuetCfg.Viper.GetBool("force")
 
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
@@ -58,8 +48,8 @@ It scans the target file system, and if finds a match with a package available i
 			Concurrency:                 LuetCfg.GetGeneral().Concurrency,
 			Force:                       force,
 			PreserveSystemEssentialData: true,
+			PackageRepositories:         LuetCfg.SystemRepositories,
 		})
-		inst.Repositories(repos)
 
 		system := &installer.System{Database: LuetCfg.GetSystemDB(), Target: LuetCfg.GetSystem().Rootfs}
 		err := inst.Reclaim(system)

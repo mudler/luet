@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/ghodss/yaml"
+	"github.com/mudler/luet/pkg/api/core/types"
 
 	. "github.com/mudler/luet/pkg/config"
 	. "github.com/mudler/luet/pkg/logger"
@@ -70,7 +70,7 @@ func LoadRepositories(c *LuetConfig) error {
 				continue
 			}
 
-			r, err := LoadRepository(content)
+			r, err := types.LoadRepository(content)
 			if err != nil {
 				Warning("On parse file", file.Name(), ":", err.Error())
 				Warning("File", file.Name(), "skipped.")
@@ -87,13 +87,4 @@ func LoadRepositories(c *LuetConfig) error {
 		}
 	}
 	return nil
-}
-
-func LoadRepository(data []byte) (*LuetRepository, error) {
-	ans := NewEmptyLuetRepository()
-	err := yaml.Unmarshal(data, &ans)
-	if err != nil {
-		return nil, err
-	}
-	return ans, nil
 }

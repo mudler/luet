@@ -100,7 +100,7 @@ func TemplateFolders(fromRepo bool, treePaths []string) []string {
 		templateFolders = append(templateFolders, filepath.Join(t, "templates"))
 	}
 	if fromRepo {
-		for _, s := range installer.SystemRepositories(LuetCfg) {
+		for _, s := range installer.SystemRepositories(LuetCfg.SystemRepositories) {
 			templateFolders = append(templateFolders, filepath.Join(s.TreePath, "templates"))
 		}
 	}

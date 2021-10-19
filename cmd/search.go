@@ -128,23 +128,14 @@ func searchLocally(term string, l list.Writer, t table.Writer, label, labelMatch
 func searchOnline(term string, l list.Writer, t table.Writer, label, labelMatch, revdeps, hidden bool) Results {
 	var results Results
 
-	repos := installer.Repositories{}
-	for _, repo := range LuetCfg.SystemRepositories {
-		if !repo.Enable {
-			continue
-		}
-		r := installer.NewSystemRepository(repo)
-		repos = append(repos, r)
-	}
-
 	inst := installer.NewLuetInstaller(
 		installer.LuetInstallerOptions{
-			Concurrency:   LuetCfg.GetGeneral().Concurrency,
-			SolverOptions: *LuetCfg.GetSolverOptions(),
+			Concurrency:         LuetCfg.GetGeneral().Concurrency,
+			SolverOptions:       *LuetCfg.GetSolverOptions(),
+			PackageRepositories: LuetCfg.SystemRepositories,
 		},
 	)
-	inst.Repositories(repos)
-	synced, err := inst.SyncRepositories(false)
+	synced, err := inst.SyncRepositories()
 	if err != nil {
 		Fatal("Error: " + err.Error())
 	}
@@ -226,23 +217,14 @@ func searchLocalFiles(term string, l list.Writer, t table.Writer) Results {
 func searchFiles(term string, l list.Writer, t table.Writer) Results {
 	var results Results
 
-	repos := installer.Repositories{}
-	for _, repo := range LuetCfg.SystemRepositories {
-		if !repo.Enable {
-			continue
-		}
-		r := installer.NewSystemRepository(repo)
-		repos = append(repos, r)
-	}
-
 	inst := installer.NewLuetInstaller(
 		installer.LuetInstallerOptions{
-			Concurrency:   LuetCfg.GetGeneral().Concurrency,
-			SolverOptions: *LuetCfg.GetSolverOptions(),
+			Concurrency:         LuetCfg.GetGeneral().Concurrency,
+			SolverOptions:       *LuetCfg.GetSolverOptions(),
+			PackageRepositories: LuetCfg.SystemRepositories,
 		},
 	)
-	inst.Repositories(repos)
-	synced, err := inst.SyncRepositories(false)
+	synced, err := inst.SyncRepositories()
 	if err != nil {
 		Fatal("Error: " + err.Error())
 	}

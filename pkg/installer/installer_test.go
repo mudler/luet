@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	//	. "github.com/mudler/luet/pkg/installer"
+	"github.com/mudler/luet/pkg/api/core/types"
 	compiler "github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	compression "github.com/mudler/luet/pkg/compiler/types/compression"
@@ -121,16 +122,18 @@ var _ = Describe("Installer", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
-			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
+enable: true
 urls:
   - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
-
-			inst.Repositories(Repositories{repo2})
+			inst := NewLuetInstaller(LuetInstallerOptions{
+				Concurrency:         1,
+				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
+			})
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 			systemDB := pkg.NewInMemoryDatabase(false)
@@ -241,16 +244,19 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
-			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
+enable: true
 urls:
   - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
-			inst.Repositories(Repositories{repo2})
+			inst := NewLuetInstaller(LuetInstallerOptions{
+				Concurrency:         1,
+				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
+			})
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 			systemDB := pkg.NewInMemoryDatabase(false)
@@ -365,16 +371,18 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
-			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
+enable: true
 urls:
   - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
-
-			inst.Repositories(Repositories{repo2})
+			inst := NewLuetInstaller(LuetInstallerOptions{
+				Concurrency:         1,
+				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
+			})
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
@@ -492,16 +500,19 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
-			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
+enable: true
 urls:
   - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
-			inst.Repositories(Repositories{repo2})
+			inst := NewLuetInstaller(LuetInstallerOptions{
+				Concurrency:         1,
+				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
+			})
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
@@ -547,15 +558,18 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
-			inst = NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err = NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
+enable: true
 urls:
   - "`+tmpdir2+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
-			inst.Repositories(Repositories{repo2})
+			inst = NewLuetInstaller(LuetInstallerOptions{
+				Concurrency:         1,
+				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
+			})
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir2))
 			Expect(repo.GetType()).To(Equal("disk"))
 			system.Target = fakeroot
@@ -625,16 +639,18 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
-			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
+enable: true
 urls:
   - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
-
-			inst.Repositories(Repositories{repo2})
+			inst := NewLuetInstaller(LuetInstallerOptions{
+				Concurrency:         1,
+				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
+			})
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
@@ -749,10 +765,10 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
-			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
+enable: true
 urls:
   - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
@@ -761,12 +777,15 @@ urls:
 			repoupgrade2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
+enable: true
 urls:
   - "`+tmpdirnewrepo+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
-
-			inst.Repositories(Repositories{repo2})
+			inst := NewLuetInstaller(LuetInstallerOptions{
+				Concurrency:         1,
+				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
+			})
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
@@ -792,7 +811,8 @@ urls:
 			files, err := systemDB.GetPackageFiles(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(files).To(Equal([]string{"artifact42", "test5", "test6"}))
 			Expect(err).ToNot(HaveOccurred())
-			inst.Repositories(Repositories{repoupgrade2})
+
+			inst.Options.PackageRepositories = types.LuetRepositories{*repoupgrade2.LuetRepository}
 
 			err = inst.Upgrade(system)
 			Expect(err).ToNot(HaveOccurred())
@@ -879,16 +899,20 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
-			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
+enable: true
 urls:
   - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
-			inst.Repositories(Repositories{repo2})
+			inst := NewLuetInstaller(LuetInstallerOptions{
+				Concurrency:         1,
+				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
+			})
+
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
@@ -1037,16 +1061,20 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
-			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
+enable: true
 urls:
   - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
-			inst.Repositories(Repositories{repo2})
+			inst := NewLuetInstaller(LuetInstallerOptions{
+				Concurrency:         1,
+				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
+			})
+
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
@@ -1136,16 +1164,20 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
-			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err := NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
+enable: true
 urls:
   - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
-			inst.Repositories(Repositories{repo2})
+			inst := NewLuetInstaller(LuetInstallerOptions{
+				Concurrency:         1,
+				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
+			})
+
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
@@ -1209,16 +1241,20 @@ urls:
 			err = repo.Write(tmpdir2, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
-			inst = NewLuetInstaller(LuetInstallerOptions{Concurrency: 1})
 			repo2, err = NewLuetSystemRepositoryFromYaml([]byte(`
 name: "test"
 type: "disk"
+enable: true
 urls:
   - "`+tmpdir2+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 
-			inst.Repositories(Repositories{repo2})
+			inst = NewLuetInstaller(LuetInstallerOptions{
+				Concurrency:         1,
+				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
+			})
+
 			err = inst.Upgrade(system)
 			Expect(err).ToNot(HaveOccurred())
 

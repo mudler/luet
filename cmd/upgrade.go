@@ -37,16 +37,6 @@ var upgradeCmd = &cobra.Command{
 	Long: `Upgrades packages in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		repos := installer.Repositories{}
-		for _, repo := range LuetCfg.SystemRepositories {
-			if !repo.Enable {
-				continue
-			}
-
-			r := installer.NewSystemRepository(repo)
-			repos = append(repos, r)
-		}
-
 		force := LuetCfg.Viper.GetBool("force")
 		nodeps, _ := cmd.Flags().GetBool("nodeps")
 		full, _ := cmd.Flags().GetBool("full")
@@ -78,8 +68,8 @@ var upgradeCmd = &cobra.Command{
 			PreserveSystemEssentialData: true,
 			Ask:                         !yes,
 			DownloadOnly:                downloadOnly,
+			PackageRepositories:         LuetCfg.SystemRepositories,
 		})
-		inst.Repositories(repos)
 
 		system := &installer.System{Database: LuetCfg.GetSystemDB(), Target: LuetCfg.GetSystem().Rootfs}
 		if err := inst.Upgrade(system); err != nil {

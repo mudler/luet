@@ -24,11 +24,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
-	config "github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/installer"
@@ -335,8 +335,8 @@ urls:
 
 			_, err = builder2.GetDatabase().CreatePackage(package2)
 			Expect(err).ToNot(HaveOccurred())
-			repo1 := &LuetSystemRepository{LuetRepository: &config.LuetRepository{Name: "test1"}, Tree: builder1}
-			repo2 := &LuetSystemRepository{LuetRepository: &config.LuetRepository{Name: "test2"}, Tree: builder2}
+			repo1 := &LuetSystemRepository{LuetRepository: &types.LuetRepository{Name: "test1"}, Tree: builder1}
+			repo2 := &LuetSystemRepository{LuetRepository: &types.LuetRepository{Name: "test2"}, Tree: builder2}
 			repositories := Repositories{repo1, repo2}
 			matches := repositories.PackageMatches([]pkg.Package{package1})
 			Expect(matches).To(Equal([]PackageMatch{{Repo: repo1, Package: package1}}))

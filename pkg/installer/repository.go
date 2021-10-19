@@ -32,10 +32,12 @@ import (
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"go.uber.org/multierr"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/installer/client"
 	. "github.com/mudler/luet/pkg/logger"
+
 	pkg "github.com/mudler/luet/pkg/package"
 	tree "github.com/mudler/luet/pkg/tree"
 
@@ -65,7 +67,7 @@ type LuetRepositoryFile struct {
 }
 
 type LuetSystemRepository struct {
-	*config.LuetRepository
+	*types.LuetRepository
 
 	Index           compiler.ArtifactIndex        `json:"index"`
 	BuildTree, Tree tree.Builder                  `json:"-"`
@@ -104,12 +106,10 @@ func NewLuetSystemRepositoryMetadata(file string, removeFile bool) (*LuetSystemR
 }
 
 // SystemRepositories returns the repositories from the local configuration file
-func SystemRepositories(c *config.LuetConfig) Repositories {
+// it filters the available repositories returning the ones that are enabled
+func SystemRepositories(t types.LuetRepositories) Repositories {
 	repos := Repositories{}
-	for _, repo := range c.SystemRepositories {
-		if !repo.Enable {
-			continue
-		}
+	for _, repo := range t.Enabled() {
 		r := NewSystemRepository(repo)
 		repos = append(repos, r)
 	}
@@ -119,7 +119,7 @@ func SystemRepositories(c *config.LuetConfig) Repositories {
 // LoadBuildTree loads to the tree the compilation specs from the system repositories
 func LoadBuildTree(t tree.Builder, db pkg.PackageDatabase, c *config.LuetConfig) error {
 	var reserr error
-	repos := SystemRepositories(c)
+	repos := SystemRepositories(c.SystemRepositories)
 	for _, r := range repos {
 		repodir, err := config.LuetCfg.GetSystem().TempDir(r.Name)
 		if err != nil {
@@ -340,7 +340,7 @@ func GenerateRepository(p ...RepositoryOption) (*LuetSystemRepository, error) {
 	}
 
 	repo := &LuetSystemRepository{
-		LuetRepository:  config.NewLuetRepository(c.Name, c.Type, c.Description, c.Urls, c.Priority, true, false),
+		LuetRepository:  types.NewLuetRepository(c.Name, c.Type, c.Description, c.Urls, c.Priority, true, false),
 		Tree:            tree.NewInstallerRecipe(runtimeTree),
 		BuildTree:       btr,
 		RepositoryFiles: map[string]LuetRepositoryFile{},
@@ -357,7 +357,7 @@ func GenerateRepository(p ...RepositoryOption) (*LuetSystemRepository, error) {
 	return repo, nil
 }
 
-func NewSystemRepository(repo config.LuetRepository) *LuetSystemRepository {
+func NewSystemRepository(repo types.LuetRepository) *LuetSystemRepository {
 	return &LuetSystemRepository{
 		LuetRepository:  &repo,
 		RepositoryFiles: map[string]LuetRepositoryFile{},

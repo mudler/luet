@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/bus"
 	artifact "github.com/mudler/luet/pkg/compiler/types/artifact"
 	"github.com/mudler/luet/pkg/config"
@@ -51,11 +52,10 @@ type LuetInstallerOptions struct {
 	Ask                                                            bool
 	DownloadOnly                                                   bool
 	Relaxed                                                        bool
+	PackageRepositories                                            types.LuetRepositories
 }
 
 type LuetInstaller struct {
-	PackageRepositories Repositories
-
 	Options LuetInstallerOptions
 }
 
@@ -148,7 +148,7 @@ func matchesToList(artefacts map[string]ArtifactMatch) string {
 // Upgrade upgrades a System based on the Installer options. Returns error in case of failure
 func (l *LuetInstaller) Upgrade(s *System) error {
 
-	syncedRepos, err := l.SyncRepositories(true)
+	syncedRepos, err := l.SyncRepositories()
 	if err != nil {
 		return err
 	}
@@ -161,11 +161,11 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 	return l.checkAndUpgrade(syncedRepos, s)
 }
 
-func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
+func (l *LuetInstaller) SyncRepositories() (Repositories, error) {
 	Spinner(32)
 	defer SpinnerStop()
 	syncedRepos := Repositories{}
-	for _, r := range l.PackageRepositories {
+	for _, r := range SystemRepositories(l.Options.PackageRepositories) {
 		repo, err := r.Sync(false)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed syncing repository: "+r.GetName())
@@ -176,15 +176,11 @@ func (l *LuetInstaller) SyncRepositories(inMemory bool) (Repositories, error) {
 	// compute what to install and from where
 	sort.Sort(syncedRepos)
 
-	if !inMemory {
-		l.PackageRepositories = syncedRepos
-	}
-
 	return syncedRepos, nil
 }
 
 func (l *LuetInstaller) Swap(toRemove pkg.Packages, toInstall pkg.Packages, s *System) error {
-	syncedRepos, err := l.SyncRepositories(true)
+	syncedRepos, err := l.SyncRepositories()
 	if err != nil {
 		return err
 	}
@@ -509,7 +505,7 @@ func (l *LuetInstaller) checkAndUpgrade(r Repositories, s *System) error {
 }
 
 func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
-	syncedRepos, err := l.SyncRepositories(true)
+	syncedRepos, err := l.SyncRepositories()
 	if err != nil {
 		return err
 	}
@@ -603,7 +599,7 @@ func (l *LuetInstaller) download(syncedRepos Repositories, toDownload map[string
 // if files from artifacts in the repositories are found
 // in the system target
 func (l *LuetInstaller) Reclaim(s *System) error {
-	syncedRepos, err := l.SyncRepositories(true)
+	syncedRepos, err := l.SyncRepositories()
 	if err != nil {
 		return err
 	}
@@ -1197,5 +1193,3 @@ func (l *LuetInstaller) Uninstall(s *System, packs ...pkg.Package) error {
 	}
 	return uninstall()
 }
-
-func (l *LuetInstaller) Repositories(r []*LuetSystemRepository) { l.PackageRepositories = r }

@@ -80,7 +80,6 @@ To force install a package:
 		LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
 
 		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
-		repos := installer.SystemRepositories(LuetCfg)
 
 		// Load config protect configs
 		installer.LoadConfigProtectConfs(LuetCfg)
@@ -101,8 +100,8 @@ To force install a package:
 			DownloadOnly:                downloadOnly,
 			Ask:                         !yes,
 			Relaxed:                     relax,
+			PackageRepositories:         LuetCfg.SystemRepositories,
 		})
-		inst.Repositories(repos)
 
 		system := &installer.System{Database: LuetCfg.GetSystemDB(), Target: LuetCfg.GetSystem().Rootfs}
 		err = inst.Install(toInstall, system)

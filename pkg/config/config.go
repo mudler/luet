@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	types "github.com/mudler/luet/pkg/api/core/types"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	pkg "github.com/mudler/luet/pkg/package"
 	solver "github.com/mudler/luet/pkg/solver"
@@ -161,64 +162,6 @@ func (sc *LuetSystemConfig) GetRootFsAbs() (string, error) {
 	return filepath.Abs(sc.Rootfs)
 }
 
-type LuetRepository struct {
-	Name           string            `json:"name" yaml:"name" mapstructure:"name"`
-	Description    string            `json:"description,omitempty" yaml:"description,omitempty" mapstructure:"description"`
-	Urls           []string          `json:"urls" yaml:"urls" mapstructure:"urls"`
-	Type           string            `json:"type" yaml:"type" mapstructure:"type"`
-	Mode           string            `json:"mode,omitempty" yaml:"mode,omitempty" mapstructure:"mode,omitempty"`
-	Priority       int               `json:"priority,omitempty" yaml:"priority,omitempty" mapstructure:"priority"`
-	Enable         bool              `json:"enable" yaml:"enable" mapstructure:"enable"`
-	Cached         bool              `json:"cached,omitempty" yaml:"cached,omitempty" mapstructure:"cached,omitempty"`
-	Authentication map[string]string `json:"auth,omitempty" yaml:"auth,omitempty" mapstructure:"auth,omitempty"`
-	TreePath       string            `json:"treepath,omitempty" yaml:"treepath,omitempty" mapstructure:"treepath"`
-	MetaPath       string            `json:"metapath,omitempty" yaml:"metapath,omitempty" mapstructure:"metapath"`
-	Verify         bool              `json:"verify,omitempty" yaml:"verify,omitempty" mapstructure:"verify"`
-
-	// Serialized options not used in repository configuration
-
-	// Incremented value that identify revision of the repository in a user-friendly way.
-	Revision int `json:"revision,omitempty" yaml:"-" mapstructure:"-"`
-	// Epoch time in seconds
-	LastUpdate string `json:"last_update,omitempty" yaml:"-" mapstructure:"-"`
-}
-
-func NewLuetRepository(name, t, descr string, urls []string, priority int, enable, cached bool) *LuetRepository {
-	return &LuetRepository{
-		Name:        name,
-		Description: descr,
-		Urls:        urls,
-		Type:        t,
-		// Used in cached repositories
-		Mode:           "",
-		Priority:       priority,
-		Enable:         enable,
-		Cached:         cached,
-		Authentication: make(map[string]string, 0),
-		TreePath:       "",
-		MetaPath:       "",
-	}
-}
-
-func NewEmptyLuetRepository() *LuetRepository {
-	return &LuetRepository{
-		Name:           "",
-		Description:    "",
-		Urls:           []string{},
-		Type:           "",
-		Priority:       9999,
-		TreePath:       "",
-		MetaPath:       "",
-		Enable:         false,
-		Cached:         false,
-		Authentication: make(map[string]string, 0),
-	}
-}
-
-func (r *LuetRepository) String() string {
-	return fmt.Sprintf("[%s] prio: %d, type: %s, enable: %t, cached: %t",
-		r.Name, r.Priority, r.Type, r.Enable, r.Cached)
-}
 
 type LuetKV struct {
 	Key   string `json:"key" yaml:"key" mapstructure:"key"`
@@ -233,12 +176,11 @@ type LuetConfig struct {
 	System  LuetSystemConfig  `yaml:"system" mapstructure:"system"`
 	Solver  LuetSolverOptions `yaml:"solver,omitempty" mapstructure:"solver"`
 
-	RepositoriesConfDir  []string         `yaml:"repos_confdir,omitempty" mapstructure:"repos_confdir"`
-	ConfigProtectConfDir []string         `yaml:"config_protect_confdir,omitempty" mapstructure:"config_protect_confdir"`
-	ConfigProtectSkip    bool             `yaml:"config_protect_skip,omitempty" mapstructure:"config_protect_skip"`
-	ConfigFromHost       bool             `yaml:"config_from_host,omitempty" mapstructure:"config_from_host"`
-	CacheRepositories    []LuetRepository `yaml:"repetitors,omitempty" mapstructure:"repetitors"`
-	SystemRepositories   []LuetRepository `yaml:"repositories,omitempty" mapstructure:"repositories"`
+	RepositoriesConfDir  []string               `yaml:"repos_confdir,omitempty" mapstructure:"repos_confdir"`
+	ConfigProtectConfDir []string               `yaml:"config_protect_confdir,omitempty" mapstructure:"config_protect_confdir"`
+	ConfigProtectSkip    bool                   `yaml:"config_protect_skip,omitempty" mapstructure:"config_protect_skip"`
+	ConfigFromHost       bool                   `yaml:"config_from_host,omitempty" mapstructure:"config_from_host"`
+	SystemRepositories   types.LuetRepositories `yaml:"repositories,omitempty" mapstructure:"repositories"`
 
 	FinalizerEnvs []LuetKV `json:"finalizer_envs,omitempty" yaml:"finalizer_envs,omitempty" mapstructure:"finalizer_envs,omitempty"`
 
@@ -308,7 +250,7 @@ func (c *LuetConfig) GetSystemDB() pkg.PackageDatabase {
 	}
 }
 
-func (c *LuetConfig) AddSystemRepository(r LuetRepository) {
+func (c *LuetConfig) AddSystemRepository(r types.LuetRepository) {
 	c.SystemRepositories = append(c.SystemRepositories, r)
 }
 
@@ -396,8 +338,8 @@ func (c *LuetConfig) AddConfigProtectConfFile(file *ConfigProtectConfFile) {
 	}
 }
 
-func (c *LuetConfig) GetSystemRepository(name string) (*LuetRepository, error) {
-	var ans *LuetRepository = nil
+func (c *LuetConfig) GetSystemRepository(name string) (*types.LuetRepository, error) {
+	var ans *types.LuetRepository = nil
 
 	for idx, repo := range c.SystemRepositories {
 		if repo.Name == name {
