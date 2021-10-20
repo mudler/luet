@@ -26,8 +26,8 @@ import (
 	"sync"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
-	. "github.com/mudler/luet/pkg/config"
-	. "github.com/mudler/luet/pkg/logger"
+	"github.com/mudler/luet/cmd/util"
+
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 	tree "github.com/mudler/luet/pkg/tree"
@@ -104,7 +104,7 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 		} else {
 			errstr = "No packages"
 		}
-		Error(fmt.Sprintf("[%9s] %s/%s-%s: Broken. No versions could be found by database %s",
+		util.DefaultContext.Error(fmt.Sprintf("[%9s] %s/%s-%s: Broken. No versions could be found by database %s",
 			checkType,
 			p.GetCategory(), p.GetName(), p.GetVersion(),
 			errstr,
@@ -134,7 +134,7 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 			p.GetCategory(), p.GetName(), p.GetVersion(),
 			err.Error(),
 		)
-		Error(errstr)
+		util.DefaultContext.Error(errstr)
 
 		return errors.New(errstr)
 	}
@@ -173,7 +173,7 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 		}
 	}
 
-	Info(fmt.Sprintf("[%9s] Checking package ", checkType)+
+	util.DefaultContext.Info(fmt.Sprintf("[%9s] Checking package ", checkType)+
 		fmt.Sprintf("%s/%s-%s", p.GetCategory(), p.GetName(), p.GetVersion()),
 		"with", len(p.GetRequires()), "dependencies and", len(p.GetConflicts()), "conflicts.")
 
@@ -201,7 +201,7 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 			} else {
 				errstr = "No packages"
 			}
-			Error(fmt.Sprintf("[%9s] %s/%s-%s: Broken Dep %s/%s-%s - %s",
+			util.DefaultContext.Error(fmt.Sprintf("[%9s] %s/%s-%s: Broken Dep %s/%s-%s - %s",
 				checkType,
 				p.GetCategory(), p.GetName(), p.GetVersion(),
 				r.GetCategory(), r.GetName(), r.GetVersion(),
@@ -221,12 +221,12 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 
 		} else {
 
-			Debug(fmt.Sprintf("[%9s] Find packages for dep", checkType),
+			util.DefaultContext.Debug(fmt.Sprintf("[%9s] Find packages for dep", checkType),
 				fmt.Sprintf("%s/%s-%s", r.GetCategory(), r.GetName(), r.GetVersion()))
 
 			if opts.WithSolver {
 
-				Info(fmt.Sprintf("[%9s]  :soap: [%2d/%2d] %s/%s-%s: %s/%s-%s",
+				util.DefaultContext.Info(fmt.Sprintf("[%9s]  :soap: [%2d/%2d] %s/%s-%s: %s/%s-%s",
 					checkType,
 					idx+1, len(all),
 					p.GetCategory(), p.GetName(), p.GetVersion(),
@@ -236,15 +236,15 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 				// Check if the solver is already been done for the deep
 				_, err := cacheDeps.Get(r.HashFingerprint(""))
 				if err == nil {
-					Debug(fmt.Sprintf("[%9s]  :direct_hit: Cache Hit for dep", checkType),
+					util.DefaultContext.Debug(fmt.Sprintf("[%9s]  :direct_hit: Cache Hit for dep", checkType),
 						fmt.Sprintf("%s/%s-%s", r.GetCategory(), r.GetName(), r.GetVersion()))
 					continue
 				}
 
-				Spinner(22)
+				util.DefaultContext.Spinner()
 				solution, err := depSolver.Install(pkg.Packages{r})
 				ass := solution.SearchByName(r.GetPackageName())
-				SpinnerStop()
+				util.DefaultContext.SpinnerStop()
 				if err == nil {
 					if ass == nil {
 
@@ -255,7 +255,7 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 								r.GetCategory(), r.GetName(), r.GetVersion(),
 							))
 
-						if LuetCfg.GetGeneral().Debug {
+						if util.DefaultContext.Config.GetGeneral().Debug {
 							for idx, pa := range solution {
 								fmt.Println(fmt.Sprintf("[%9s] %s/%s-%s: solution %d: %s",
 									checkType,
@@ -264,7 +264,7 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 							}
 						}
 
-						Error(ans.Error())
+						util.DefaultContext.Error(ans.Error())
 						opts.IncrBrokenDeps()
 						validpkg = false
 					} else {
@@ -274,7 +274,7 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 
 				if err != nil {
 
-					Error(fmt.Sprintf("[%9s] %s/%s-%s: solver broken for dep %s/%s-%s - %s",
+					util.DefaultContext.Error(fmt.Sprintf("[%9s] %s/%s-%s: solver broken for dep %s/%s-%s - %s",
 						checkType,
 						p.GetCategory(), p.GetName(), p.GetVersion(),
 						r.GetCategory(), r.GetName(), r.GetVersion(),
@@ -376,28 +376,28 @@ func initOpts(opts *ValidateOpts, onlyRuntime, onlyBuildtime, withSolver bool, t
 	opts.BuildtimeCacheDeps = pkg.NewInMemoryDatabase(false).(*pkg.InMemoryDatabase)
 
 	for _, treePath := range treePaths {
-		Info(fmt.Sprintf("Loading :deciduous_tree: %s...", treePath))
+		util.DefaultContext.Info(fmt.Sprintf("Loading :deciduous_tree: %s...", treePath))
 		if opts.BuildtimeReciper != nil {
 			err = opts.BuildtimeReciper.Load(treePath)
 			if err != nil {
-				Fatal("Error on load tree ", err)
+				util.DefaultContext.Fatal("Error on load tree ", err)
 			}
 		}
 		if opts.RuntimeReciper != nil {
 			err = opts.RuntimeReciper.Load(treePath)
 			if err != nil {
-				Fatal("Error on load tree ", err)
+				util.DefaultContext.Fatal("Error on load tree ", err)
 			}
 		}
 	}
 
 	opts.RegExcludes, err = helpers.CreateRegexArray(opts.Excludes)
 	if err != nil {
-		Fatal(err.Error())
+		util.DefaultContext.Fatal(err.Error())
 	}
 	opts.RegMatches, err = helpers.CreateRegexArray(opts.Matches)
 	if err != nil {
-		Fatal(err.Error())
+		util.DefaultContext.Fatal(err.Error())
 	}
 
 }
@@ -417,16 +417,16 @@ func NewTreeValidateCommand() *cobra.Command {
 			onlyBuildtime, _ := cmd.Flags().GetBool("only-buildtime")
 
 			if len(treePaths) < 1 {
-				Fatal("Mandatory tree param missing.")
+				util.DefaultContext.Fatal("Mandatory tree param missing.")
 			}
 			if onlyRuntime && onlyBuildtime {
-				Fatal("Both --only-runtime and --only-buildtime options are not possibile.")
+				util.DefaultContext.Fatal("Both --only-runtime and --only-buildtime options are not possibile.")
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			var reciper tree.Builder
 
-			concurrency := LuetCfg.GetGeneral().Concurrency
+			concurrency := util.DefaultContext.Config.GetGeneral().Concurrency
 
 			withSolver, _ := cmd.Flags().GetBool("with-solver")
 			onlyRuntime, _ := cmd.Flags().GetBool("only-runtime")
@@ -472,18 +472,18 @@ func NewTreeValidateCommand() *cobra.Command {
 
 			// fmt.Println("Broken packages:", brokenPkgs, "(", brokenDeps, "deps ).")
 			if len(stringerrs) != 0 {
-				Error(fmt.Sprintf("Found %d broken packages and %d broken deps.",
+				util.DefaultContext.Error(fmt.Sprintf("Found %d broken packages and %d broken deps.",
 					opts.BrokenPkgs, opts.BrokenDeps))
-				Fatal("Errors: " + strconv.Itoa(len(stringerrs)))
+				util.DefaultContext.Fatal("Errors: " + strconv.Itoa(len(stringerrs)))
 			} else {
-				Info("All good! :white_check_mark:")
+				util.DefaultContext.Info("All good! :white_check_mark:")
 				os.Exit(0)
 			}
 		},
 	}
 	path, err := os.Getwd()
 	if err != nil {
-		Fatal(err)
+		util.DefaultContext.Fatal(err)
 	}
 	ans.Flags().Bool("only-runtime", false, "Check only runtime dependencies.")
 	ans.Flags().Bool("only-buildtime", false, "Check only buildtime dependencies.")

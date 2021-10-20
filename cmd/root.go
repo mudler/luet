@@ -19,30 +19,26 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/marcsauter/single"
 	"github.com/mudler/luet/cmd/util"
 	bus "github.com/mudler/luet/pkg/bus"
 
-	config "github.com/mudler/luet/pkg/config"
-	. "github.com/mudler/luet/pkg/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var cfgFile string
 var Verbose bool
-var LockedCommands = []string{"install", "uninstall", "upgrade"}
 
 const (
 	LuetCLIVersion = "0.18.1"
 	LuetEnvPrefix  = "LUET"
-	license        = `
-	Luet Copyright (C) 2019-2021 Ettore Di Giacinto
-	This program comes with ABSOLUTELY NO WARRANTY.
-	This is free software, and you are welcome to redistribute it
-	under certain conditions.
-	`
 )
+
+var license = []string{
+	"Luet Copyright (C) 2019-2021 Ettore Di Giacinto",
+	"This program comes with ABSOLUTELY NO WARRANTY.",
+	"This is free software, and you are welcome to redistribute it under certain conditions.",
+}
 
 // Build time and commit information.
 //
@@ -54,44 +50,6 @@ var (
 
 func version() string {
 	return fmt.Sprintf("%s-g%s %s", LuetCLIVersion, BuildCommit, BuildTime)
-}
-
-var bannerCommands = []string{"install", "build", "uninstall", "upgrade"}
-
-func displayVersionBanner() {
-	display := false
-	if len(os.Args) > 1 {
-		for _, c := range bannerCommands {
-			if os.Args[1] == c {
-				display = true
-			}
-		}
-	}
-	if display {
-		util.IntroScreen()
-		Info("Luet version", version())
-		Info(license)
-	}
-}
-
-func handleLock() {
-	if os.Getenv("LUET_NOLOCK") != "true" {
-		if len(os.Args) > 1 {
-			for _, lockedCmd := range LockedCommands {
-				if os.Args[1] == lockedCmd {
-					s := single.New("luet")
-					if err := s.CheckLock(); err != nil && err == single.ErrAlreadyRunning {
-						Fatal("another instance of the app is already running, exiting")
-					} else if err != nil {
-						// Another error occurred, might be worth handling it as well
-						Fatal("failed to acquire exclusive app lock:", err.Error())
-					}
-					defer s.TryUnlock()
-					break
-				}
-			}
-		}
-	}
 }
 
 // RootCmd represents the base command when called without any subcommands
@@ -123,18 +81,18 @@ To build a package, from a tree definition:
 `,
 	Version: version(),
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-
-		_, err := util.LoadConfig()
+		err := util.InitContext(util.DefaultContext)
 		if err != nil {
-			Fatal("failed to load configuration:", err.Error())
+			util.DefaultContext.Error("failed to load configuration:", err.Error())
 		}
+		util.DisplayVersionBanner(util.DefaultContext, util.IntroScreen, version, license)
 
 		// Initialize tmpdir prefix. TODO: Move this with LoadConfig
 		// directly on sub command to ensure the creation only when it's
 		// needed.
-		err = config.LuetCfg.GetSystem().InitTmpDir()
+		err = util.DefaultContext.Config.GetSystem().InitTmpDir()
 		if err != nil {
-			Fatal("failed on init tmp basedir:", err.Error())
+			util.DefaultContext.Fatal("failed on init tmp basedir:", err.Error())
 		}
 
 		viper.BindPFlag("plugin", cmd.Flags().Lookup("plugin"))
@@ -143,17 +101,17 @@ To build a package, from a tree definition:
 
 		bus.Manager.Initialize(plugin...)
 		if len(bus.Manager.Plugins) != 0 {
-			Info(":lollipop:Enabled plugins:")
+			util.DefaultContext.Info(":lollipop:Enabled plugins:")
 			for _, p := range bus.Manager.Plugins {
-				Info("\t:arrow_right:", p.Name)
+				util.DefaultContext.Info("\t:arrow_right:", p.Name)
 			}
 		}
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		// Cleanup all tmp directories used by luet
-		err := config.LuetCfg.GetSystem().CleanupTmpDir()
+		err := util.DefaultContext.Config.GetSystem().CleanupTmpDir()
 		if err != nil {
-			Warning("failed on cleanup tmpdir:", err.Error())
+			util.DefaultContext.Warning("failed on cleanup tmpdir:", err.Error())
 		}
 	},
 	SilenceErrors: true,
@@ -162,9 +120,7 @@ To build a package, from a tree definition:
 // Execute adds all child commands to the root command sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-
-	handleLock()
-	displayVersionBanner()
+	util.HandleLock(util.DefaultContext)
 
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -173,5 +129,5 @@ func Execute() {
 }
 
 func init() {
-	util.InitViper(RootCmd)
+	util.InitViper(util.DefaultContext, RootCmd)
 }

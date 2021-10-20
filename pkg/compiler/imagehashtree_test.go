@@ -16,6 +16,7 @@
 package compiler_test
 
 import (
+	"github.com/mudler/luet/pkg/api/core/types"
 	. "github.com/mudler/luet/pkg/compiler"
 	sd "github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/compiler/types/options"
@@ -26,15 +27,16 @@ import (
 )
 
 var _ = Describe("ImageHashTree", func() {
+	ctx := types.NewContext()
 	generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-	compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(2))
+	compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2))
 	hashtree := NewHashTree(generalRecipe.GetDatabase())
 	Context("Simple package definition", func() {
 		BeforeEach(func() {
 			generalRecipe = tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 			err := generalRecipe.Load("../../tests/fixtures/buildable")
 			Expect(err).ToNot(HaveOccurred())
-			compiler = NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(2))
+			compiler = NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2))
 			hashtree = NewHashTree(generalRecipe.GetDatabase())
 
 		})
@@ -60,7 +62,7 @@ var _ = Describe("ImageHashTree", func() {
 
 			err := generalRecipe.Load("../../tests/fixtures/upgrade_old_repo_revision")
 			Expect(err).ToNot(HaveOccurred())
-			compiler = NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(2))
+			compiler = NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2))
 			hashtree = NewHashTree(generalRecipe.GetDatabase())
 
 		})
@@ -103,7 +105,7 @@ var _ = Describe("ImageHashTree", func() {
 			//Definition of A here is slightly changed in the steps build.yaml file (1 character only)
 			err := generalRecipe.Load("../../tests/fixtures/upgrade_old_repo_revision_content_changed")
 			Expect(err).ToNot(HaveOccurred())
-			compiler = NewLuetCompiler(sd.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(2))
+			compiler = NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2))
 			hashtree = NewHashTree(generalRecipe.GetDatabase())
 
 		})

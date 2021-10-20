@@ -21,10 +21,7 @@ import (
 	"github.com/mudler/luet/cmd/util"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 
-	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
-
-	. "github.com/mudler/luet/pkg/config"
 
 	"github.com/spf13/cobra"
 )
@@ -50,35 +47,35 @@ For reference, inspect a "metadata.yaml" file generated while running "luet buil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 
-			util.SetSystemConfig()
-			systemDB := LuetCfg.GetSystemDB()
+			util.SetSystemConfig(util.DefaultContext)
+			systemDB := util.DefaultContext.Config.GetSystemDB()
 
 			for _, a := range args {
 				dat, err := ioutil.ReadFile(a)
 				if err != nil {
-					Fatal("Failed reading ", a, ": ", err.Error())
+					util.DefaultContext.Fatal("Failed reading ", a, ": ", err.Error())
 				}
 				art, err := artifact.NewPackageArtifactFromYaml(dat)
 				if err != nil {
-					Fatal("Failed reading yaml ", a, ": ", err.Error())
+					util.DefaultContext.Fatal("Failed reading yaml ", a, ": ", err.Error())
 				}
 
 				files := art.Files
 
 				// Check if the package is already present
 				if p, err := systemDB.FindPackage(art.CompileSpec.GetPackage()); err == nil && p.GetName() != "" {
-					Fatal("Package", art.CompileSpec.GetPackage().HumanReadableString(),
+					util.DefaultContext.Fatal("Package", art.CompileSpec.GetPackage().HumanReadableString(),
 						" already present.")
 				}
 
 				if _, err := systemDB.CreatePackage(art.CompileSpec.GetPackage()); err != nil {
-					Fatal("Failed to create ", a, ": ", err.Error())
+					util.DefaultContext.Fatal("Failed to create ", a, ": ", err.Error())
 				}
 				if err := systemDB.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: art.CompileSpec.GetPackage().GetFingerPrint(), Files: files}); err != nil {
-					Fatal("Failed setting package files for ", a, ": ", err.Error())
+					util.DefaultContext.Fatal("Failed setting package files for ", a, ": ", err.Error())
 				}
 
-				Info(art.CompileSpec.GetPackage().HumanReadableString(), " created")
+				util.DefaultContext.Info(art.CompileSpec.GetPackage().HumanReadableString(), " created")
 			}
 
 		},

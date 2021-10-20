@@ -26,11 +26,11 @@ import (
 	"github.com/docker/go-units"
 	"github.com/pkg/errors"
 
+	luetTypes "github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
-	"github.com/mudler/luet/pkg/config"
+
 	"github.com/mudler/luet/pkg/helpers/docker"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-	. "github.com/mudler/luet/pkg/logger"
 )
 
 const (
@@ -40,18 +40,19 @@ const (
 type DockerClient struct {
 	RepoData RepoData
 	auth     *types.AuthConfig
-	verify   bool
 	Cache    *artifact.ArtifactCache
+	context  *luetTypes.Context
 }
 
-func NewDockerClient(r RepoData) *DockerClient {
+func NewDockerClient(r RepoData, ctx *luetTypes.Context) *DockerClient {
 	auth := &types.AuthConfig{}
 
 	dat, _ := json.Marshal(r.Authentication)
 	json.Unmarshal(dat, auth)
 
 	return &DockerClient{RepoData: r, auth: auth,
-		Cache: artifact.NewCache(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()),
+		Cache:   artifact.NewCache(ctx.Config.GetSystem().GetSystemPkgsCacheDirPath()),
+		context: ctx,
 	}
 }
 
@@ -59,8 +60,8 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 	//var u *url.URL = nil
 	var err error
 
-	Spinner(22)
-	defer SpinnerStop()
+	c.context.Spinner()
+	defer c.context.SpinnerStop()
 
 	resultingArtifact := a.ShallowCopy()
 	artifactName := path.Base(a.Path)
@@ -81,16 +82,16 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 		resultingArtifact = a
 		resultingArtifact.Path = fileName
 		resultingArtifact.Checksums = artifact.Checksums{}
-		Debug("Use artifact", artifactName, "from cache.")
+		c.context.Debug("Use artifact", artifactName, "from cache.")
 	} else {
 
-		temp, err := config.LuetCfg.GetSystem().TempDir("image")
+		temp, err := c.context.Config.GetSystem().TempDir("image")
 		if err != nil {
 			return nil, err
 		}
 		defer os.RemoveAll(temp)
 
-		tempArtifact, err := config.LuetCfg.GetSystem().TempFile("artifact")
+		tempArtifact, err := c.context.Config.GetSystem().TempFile("artifact")
 		if err != nil {
 			return nil, err
 		}
@@ -98,43 +99,43 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 		for _, uri := range c.RepoData.Urls {
 
 			imageName := fmt.Sprintf("%s:%s", uri, a.CompileSpec.GetPackage().ImageID())
-			Info("Downloading image", imageName)
+			c.context.Info("Downloading image", imageName)
 
-			contentstore, err := config.LuetCfg.GetSystem().TempDir("contentstore")
+			contentstore, err := c.context.Config.GetSystem().TempDir("contentstore")
 			if err != nil {
-				Warning("Cannot create contentstore", err.Error())
+				c.context.Warning("Cannot create contentstore", err.Error())
 				continue
 			}
 
 			// imageName := fmt.Sprintf("%s/%s", uri, artifact.GetCompileSpec().GetPackage().GetPackageImageName())
 			info, err := docker.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
 			if err != nil {
-				Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
+				c.context.Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
 				continue
 			}
 
-			Info(fmt.Sprintf("Pulled: %s", info.Target.Digest))
-			Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
-			Debug("\nCompressing result ", filepath.Join(temp), "to", tempArtifact.Name())
+			c.context.Info(fmt.Sprintf("Pulled: %s", info.Target.Digest))
+			c.context.Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
+			c.context.Debug("\nCompressing result ", filepath.Join(temp), "to", tempArtifact.Name())
 
 			// We discard checksum, that are checked while during pull and unpack
 			resultingArtifact.Checksums = artifact.Checksums{}
 			resultingArtifact.Path = tempArtifact.Name() // First set to cache file
 			err = resultingArtifact.Compress(temp, 1)
 			if err != nil {
-				Error(fmt.Sprintf("Failed compressing package %s: %s", imageName, err.Error()))
+				c.context.Error(fmt.Sprintf("Failed compressing package %s: %s", imageName, err.Error()))
 				continue
 			}
 
 			_, _, err = c.Cache.Put(resultingArtifact)
 			if err != nil {
-				Error(fmt.Sprintf("Failed storing package %s from cache: %s", imageName, err.Error()))
+				c.context.Error(fmt.Sprintf("Failed storing package %s from cache: %s", imageName, err.Error()))
 				continue
 			}
 
 			fileName, err := c.Cache.Get(resultingArtifact)
 			if err != nil {
-				Error(fmt.Sprintf("Failed getting package %s from cache: %s", imageName, err.Error()))
+				c.context.Error(fmt.Sprintf("Failed getting package %s from cache: %s", imageName, err.Error()))
 				continue
 			}
 
@@ -159,36 +160,36 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 	// Files should be in URI/repository:<file>
 	ok := false
 
-	temp, err = config.LuetCfg.GetSystem().TempDir("tree")
+	temp, err = c.context.Config.GetSystem().TempDir("tree")
 	if err != nil {
 		return "", err
 	}
 
 	for _, uri := range c.RepoData.Urls {
-		file, err = config.LuetCfg.GetSystem().TempFile("DockerClient")
+		file, err = c.context.Config.GetSystem().TempFile("DockerClient")
 		if err != nil {
 			continue
 		}
 
-		contentstore, err = config.LuetCfg.GetSystem().TempDir("contentstore")
+		contentstore, err = c.context.Config.GetSystem().TempDir("contentstore")
 		if err != nil {
-			Warning("Cannot create contentstore", err.Error())
+			c.context.Warning("Cannot create contentstore", err.Error())
 			continue
 		}
 
 		imageName := fmt.Sprintf("%s:%s", uri, docker.StripInvalidStringsFromImage(name))
-		Info("Downloading", imageName)
+		c.context.Info("Downloading", imageName)
 
 		info, err := docker.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
 		if err != nil {
-			Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
+			c.context.Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
 			continue
 		}
 
-		Info(fmt.Sprintf("Pulled: %s", info.Target.Digest))
-		Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
+		c.context.Info(fmt.Sprintf("Pulled: %s", info.Target.Digest))
+		c.context.Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
 
-		Debug("\nCopying file ", filepath.Join(temp, name), "to", file.Name())
+		c.context.Debug("\nCopying file ", filepath.Join(temp, name), "to", file.Name())
 		err = fileHelper.CopyFile(filepath.Join(temp, name), file.Name())
 		if err != nil {
 			continue

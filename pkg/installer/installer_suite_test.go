@@ -18,19 +18,11 @@ package installer_test
 import (
 	"testing"
 
-	. "github.com/mudler/luet/cmd/util"
-	config "github.com/mudler/luet/pkg/config"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 func TestInstaller(t *testing.T) {
 	RegisterFailHandler(Fail)
-	LoadConfig()
-	// Set temporary directory for rootfs
-	config.LuetCfg.GetSystem().Rootfs = "/tmp/luet-root"
-	// Force dynamic path for packages cache
-	config.LuetCfg.GetSystem().PkgsCachePath = ""
 	RunSpecs(t, "Installer Suite")
 }

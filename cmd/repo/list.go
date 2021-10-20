@@ -22,10 +22,10 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/cmd/util"
 	installer "github.com/mudler/luet/pkg/installer"
+	"github.com/pterm/pterm"
 
-	. "github.com/logrusorgru/aurora"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +43,7 @@ func NewRepoListCommand() *cobra.Command {
 			quiet, _ := cmd.Flags().GetBool("quiet")
 			repoType, _ := cmd.Flags().GetString("type")
 
-			for _, repo := range LuetCfg.SystemRepositories {
+			for _, repo := range util.DefaultContext.Config.SystemRepositories {
 				if enable && !repo.Enable {
 					continue
 				}
@@ -58,17 +58,17 @@ func NewRepoListCommand() *cobra.Command {
 					fmt.Println(repo.Name)
 				} else {
 					if repo.Enable {
-						repoColor = Bold(BrightGreen(repo.Name)).String()
+						repoColor = pterm.LightGreen(repo.Name)
 					} else {
-						repoColor = Bold(BrightRed(repo.Name)).String()
+						repoColor = pterm.LightRed(repo.Name)
 					}
 					if repo.Description != "" {
-						repoText = Yellow(repo.Description).String()
+						repoText = pterm.LightYellow(repo.Description)
 					} else {
-						repoText = Yellow(repo.Urls[0]).String()
+						repoText = pterm.LightYellow(repo.Urls[0])
 					}
 
-					repobasedir := LuetCfg.GetSystem().GetRepoDatabaseDirPath(repo.Name)
+					repobasedir := util.DefaultContext.Config.GetSystem().GetRepoDatabaseDirPath(repo.Name)
 					if repo.Cached {
 
 						r := installer.NewSystemRepository(repo)
@@ -76,8 +76,8 @@ func NewRepoListCommand() *cobra.Command {
 							installer.REPOSITORY_SPECFILE))
 						if localRepo != nil {
 							tsec, _ := strconv.ParseInt(localRepo.GetLastUpdate(), 10, 64)
-							repoRevision = Bold(Red(localRepo.GetRevision())).String() +
-								" - " + Bold(Green(time.Unix(tsec, 0).String())).String()
+							repoRevision = pterm.LightRed(localRepo.GetRevision()) +
+								" - " + pterm.LightGreen(time.Unix(tsec, 0).String())
 						}
 					}
 

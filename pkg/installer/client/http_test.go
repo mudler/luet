@@ -1,4 +1,4 @@
-// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2019-2021 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/installer/client"
@@ -31,6 +32,7 @@ import (
 
 var _ = Describe("Http client", func() {
 	Context("With repository", func() {
+		ctx := types.NewContext()
 
 		It("Downloads single files", func() {
 			// setup small staticfile webserver with content
@@ -43,7 +45,7 @@ var _ = Describe("Http client", func() {
 			err = ioutil.WriteFile(filepath.Join(tmpdir, "test.txt"), []byte(`test`), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())
 
-			c := NewHttpClient(RepoData{Urls: []string{ts.URL}})
+			c := NewHttpClient(RepoData{Urls: []string{ts.URL}}, ctx)
 			path, err := c.DownloadFile("test.txt")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Read(path)).To(Equal("test"))
@@ -61,7 +63,7 @@ var _ = Describe("Http client", func() {
 			err = ioutil.WriteFile(filepath.Join(tmpdir, "test.txt"), []byte(`test`), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())
 
-			c := NewHttpClient(RepoData{Urls: []string{ts.URL}})
+			c := NewHttpClient(RepoData{Urls: []string{ts.URL}}, ctx)
 			path, err := c.DownloadArtifact(&artifact.PackageArtifact{Path: "test.txt"})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Read(path.Path)).To(Equal("test"))

@@ -18,8 +18,7 @@ package backend
 import (
 	"os/exec"
 
-	"github.com/mudler/luet/pkg/config"
-	. "github.com/mudler/luet/pkg/logger"
+	"github.com/mudler/luet/pkg/api/core/types"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/pkg/errors"
@@ -44,17 +43,17 @@ type Options struct {
 	BackendArgs    []string
 }
 
-func runCommand(cmd *exec.Cmd) error {
+func runCommand(ctx *types.Context, cmd *exec.Cmd) error {
 	output := ""
-	buffered := !config.LuetCfg.GetGeneral().ShowBuildOutput
-	writer := NewBackendWriter(buffered)
+	buffered := !ctx.Config.GetGeneral().ShowBuildOutput
+	writer := NewBackendWriter(buffered, ctx)
 
 	cmd.Stdout = writer
 	cmd.Stderr = writer
 
 	if buffered {
-		Spinner(32)
-		defer SpinnerStop()
+		ctx.Spinner()
+		defer ctx.SpinnerStop()
 	}
 
 	err := cmd.Start()

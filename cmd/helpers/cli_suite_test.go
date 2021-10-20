@@ -18,14 +18,11 @@ package cmd_helpers_test
 import (
 	"testing"
 
-	. "github.com/mudler/luet/cmd/util"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 func TestSolver(t *testing.T) {
 	RegisterFailHandler(Fail)
-	LoadConfig()
 	RunSpecs(t, "CLI helpers test Suite")
 }

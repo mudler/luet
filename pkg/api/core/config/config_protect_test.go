@@ -17,7 +17,8 @@
 package config_test
 
 import (
-	config "github.com/mudler/luet/pkg/config"
+	config "github.com/mudler/luet/pkg/api/core/config"
+	"github.com/mudler/luet/pkg/api/core/types"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,7 +29,7 @@ var _ = Describe("Config", func() {
 	Context("Test config protect", func() {
 
 		It("Protect1", func() {
-
+			ctx := types.NewContext()
 			files := []string{
 				"etc/foo/my.conf",
 				"usr/bin/foo",
@@ -36,7 +37,7 @@ var _ = Describe("Config", func() {
 			}
 
 			cp := config.NewConfigProtect("/etc")
-			cp.Map(files)
+			cp.Map(files, ctx.Config.ConfigProtectConfFiles)
 
 			Expect(cp.Protected("etc/foo/my.conf")).To(BeTrue())
 			Expect(cp.Protected("/etc/foo/my.conf")).To(BeTrue())
@@ -58,6 +59,7 @@ var _ = Describe("Config", func() {
 		})
 
 		It("Protect2", func() {
+			ctx := types.NewContext()
 
 			files := []string{
 				"etc/foo/my.conf",
@@ -66,7 +68,7 @@ var _ = Describe("Config", func() {
 			}
 
 			cp := config.NewConfigProtect("")
-			cp.Map(files)
+			cp.Map(files, ctx.Config.ConfigProtectConfFiles)
 
 			Expect(cp.Protected("etc/foo/my.conf")).To(BeFalse())
 			Expect(cp.Protected("/etc/foo/my.conf")).To(BeFalse())
@@ -84,6 +86,7 @@ var _ = Describe("Config", func() {
 		})
 
 		It("Protect3: Annotation dir without initial slash", func() {
+			ctx := types.NewContext()
 
 			files := []string{
 				"etc/foo/my.conf",
@@ -92,7 +95,7 @@ var _ = Describe("Config", func() {
 			}
 
 			cp := config.NewConfigProtect("etc")
-			cp.Map(files)
+			cp.Map(files, ctx.Config.ConfigProtectConfFiles)
 
 			Expect(cp.Protected("etc/foo/my.conf")).To(BeTrue())
 			Expect(cp.Protected("/etc/foo/my.conf")).To(BeTrue())

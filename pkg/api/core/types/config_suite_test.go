@@ -18,14 +18,11 @@ package types_test
 import (
 	"testing"
 
-	. "github.com/mudler/luet/cmd/util"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 func TestAPITypes(t *testing.T) {
 	RegisterFailHandler(Fail)
-	LoadConfig()
 	RunSpecs(t, "Types Suite")
 }

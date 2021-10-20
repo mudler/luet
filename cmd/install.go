@@ -15,13 +15,12 @@
 package cmd
 
 import (
+	"github.com/mudler/luet/pkg/api/core/types"
 	installer "github.com/mudler/luet/pkg/installer"
 	"github.com/mudler/luet/pkg/solver"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
-	. "github.com/mudler/luet/pkg/config"
-	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/spf13/cobra"
@@ -62,7 +61,7 @@ To force install a package:
 		for _, a := range args {
 			pack, err := helpers.ParsePackageStr(a)
 			if err != nil {
-				Fatal("Invalid package string ", a, ": ", err.Error())
+				util.DefaultContext.Fatal("Invalid package string ", a, ": ", err.Error())
 			}
 			toInstall = append(toInstall, pack)
 		}
@@ -75,25 +74,25 @@ To force install a package:
 		finalizerEnvs, _ := cmd.Flags().GetStringArray("finalizer-env")
 		relax, _ := cmd.Flags().GetBool("relax")
 
-		util.SetSystemConfig()
-		util.SetSolverConfig()
+		util.SetSystemConfig(util.DefaultContext)
+		util.SetSolverConfig(util.DefaultContext)
 
-		LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
+		util.DefaultContext.Config.GetSolverOptions().Implementation = solver.SingleCoreSimple
 
-		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
+		util.DefaultContext.Debug("Solver", util.DefaultContext.Config.GetSolverOptions().CompactString())
 
 		// Load config protect configs
-		installer.LoadConfigProtectConfs(LuetCfg)
+		util.DefaultContext.Config.LoadConfigProtect(util.DefaultContext)
 
 		// Load finalizer runtime environments
-		err := util.SetCliFinalizerEnvs(finalizerEnvs)
+		err := util.SetCliFinalizerEnvs(util.DefaultContext, finalizerEnvs)
 		if err != nil {
-			Fatal(err.Error())
+			util.DefaultContext.Fatal(err.Error())
 		}
 
 		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-			Concurrency:                 LuetCfg.GetGeneral().Concurrency,
-			SolverOptions:               *LuetCfg.GetSolverOptions(),
+			Concurrency:                 util.DefaultContext.Config.GetGeneral().Concurrency,
+			SolverOptions:               *util.DefaultContext.Config.GetSolverOptions(),
 			NoDeps:                      nodeps,
 			Force:                       force,
 			OnlyDeps:                    onlydeps,
@@ -101,13 +100,14 @@ To force install a package:
 			DownloadOnly:                downloadOnly,
 			Ask:                         !yes,
 			Relaxed:                     relax,
-			PackageRepositories:         LuetCfg.SystemRepositories,
+			PackageRepositories:         util.DefaultContext.Config.SystemRepositories,
+			Context:                     util.DefaultContext,
 		})
 
-		system := &installer.System{Database: LuetCfg.GetSystemDB(), Target: LuetCfg.GetSystem().Rootfs}
+		system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.GetSystem().Rootfs}
 		err = inst.Install(toInstall, system)
 		if err != nil {
-			Fatal("Error: " + err.Error())
+			util.DefaultContext.Fatal("Error: " + err.Error())
 		}
 	},
 }
@@ -117,7 +117,7 @@ func init() {
 	installCmd.Flags().String("system-target", "", "System rootpath")
 	installCmd.Flags().String("system-engine", "", "System DB engine")
 
-	installCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+AvailableResolvers+" )")
+	installCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+types.AvailableResolvers+" )")
 	installCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
 	installCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	installCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")

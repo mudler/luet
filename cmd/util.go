@@ -23,9 +23,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/go-units"
 
-	config "github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/cmd/util"
 	"github.com/mudler/luet/pkg/helpers/docker"
-	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/spf13/cobra"
 )
@@ -42,7 +41,7 @@ func NewUnpackCommand() *cobra.Command {
 		PreRun: func(cmd *cobra.Command, args []string) {
 
 			if len(args) != 2 {
-				Fatal("Expects an image and a path")
+				util.DefaultContext.Fatal("Expects an image and a path")
 			}
 
 		},
@@ -51,7 +50,7 @@ func NewUnpackCommand() *cobra.Command {
 			image := args[0]
 			destination, err := filepath.Abs(args[1])
 			if err != nil {
-				Error("Invalid path %s", destination)
+				util.DefaultContext.Error("Invalid path %s", destination)
 				os.Exit(1)
 			}
 
@@ -63,12 +62,12 @@ func NewUnpackCommand() *cobra.Command {
 			identity, _ := cmd.Flags().GetString("auth-identity-token")
 			registryToken, _ := cmd.Flags().GetString("auth-registry-token")
 
-			temp, err := config.LuetCfg.GetSystem().TempDir("contentstore")
+			temp, err := util.DefaultContext.Config.GetSystem().TempDir("contentstore")
 			if err != nil {
-				Fatal("Cannot create a tempdir", err.Error())
+				util.DefaultContext.Fatal("Cannot create a tempdir", err.Error())
 			}
 
-			Info("Downloading", image, "to", destination)
+			util.DefaultContext.Info("Downloading", image, "to", destination)
 			auth := &types.AuthConfig{
 				Username:      user,
 				Password:      pass,
@@ -80,11 +79,11 @@ func NewUnpackCommand() *cobra.Command {
 
 			info, err := docker.DownloadAndExtractDockerImage(temp, image, destination, auth, verify)
 			if err != nil {
-				Error(err.Error())
+				util.DefaultContext.Error(err.Error())
 				os.Exit(1)
 			}
-			Info(fmt.Sprintf("Pulled: %s %s", info.Target.Digest, info.Name))
-			Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
+			util.DefaultContext.Info(fmt.Sprintf("Pulled: %s %s", info.Target.Digest, info.Name))
+			util.DefaultContext.Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
 		},
 	}
 

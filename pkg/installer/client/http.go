@@ -26,26 +26,27 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
-	. "github.com/mudler/luet/pkg/logger"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 
 	"github.com/cavaliercoder/grab"
-	"github.com/mudler/luet/pkg/config"
 )
 
 type HttpClient struct {
 	RepoData RepoData
 	Cache    *artifact.ArtifactCache
+	context  *types.Context
 
 	ProgressBarArea *pterm.AreaPrinter
 }
 
-func NewHttpClient(r RepoData) *HttpClient {
+func NewHttpClient(r RepoData, ctx *types.Context) *HttpClient {
 	return &HttpClient{
 		RepoData: r,
-		Cache:    artifact.NewCache(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()),
+		Cache:    artifact.NewCache(ctx.Config.GetSystem().GetSystemPkgsCacheDirPath()),
+		context:  ctx,
 	}
 }
 
@@ -96,7 +97,7 @@ func Round(input float64) float64 {
 func (c *HttpClient) DownloadFile(p string) (string, error) {
 	var file *os.File = nil
 	var downloaded bool
-	temp, err := config.LuetCfg.GetSystem().TempDir("download")
+	temp, err := c.context.Config.GetSystem().TempDir("download")
 	if err != nil {
 		return "", err
 	}
@@ -105,13 +106,13 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 	client := NewGrabClient()
 
 	for _, uri := range c.RepoData.Urls {
-		file, err = config.LuetCfg.GetSystem().TempFile("HttpClient")
+		file, err = c.context.Config.GetSystem().TempFile("HttpClient")
 		if err != nil {
-			Debug("Failed downloading", p, "from", uri)
+			c.context.Debug("Failed downloading", p, "from", uri)
 
 			continue
 		}
-		Debug("Downloading artifact", p, "from", uri)
+		c.context.Debug("Downloading artifact", p, "from", uri)
 
 		u, err := url.Parse(uri)
 		if err != nil {
@@ -143,6 +144,7 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 				//pb.Increment()
 				pb.Increment().Current = int(resp.BytesComplete())
 			case <-resp.Done:
+				pb.Increment().Current = int(resp.BytesComplete())
 				// download is complete
 				break download_loop
 			}
@@ -152,7 +154,7 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 			continue
 		}
 
-		Info("Downloaded", p, "of",
+		c.context.Info("Downloaded", p, "of",
 			fmt.Sprintf("%.2f", (float64(resp.BytesComplete())/1000)/1000), "MB (",
 			fmt.Sprintf("%.2f", (float64(resp.BytesPerSecond())/1024)/1024), "MiB/s )")
 		pb.Stop()
@@ -175,7 +177,7 @@ func (c *HttpClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.Pa
 	// Check if file is already in cache
 	if err == nil {
 		newart.Path = fileName
-		Debug("Use artifact", artifactName, "from cache.")
+		c.context.Debug("Use artifact", artifactName, "from cache.")
 	} else {
 		d, err := c.DownloadFile(artifactName)
 		if err != nil {

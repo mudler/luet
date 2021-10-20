@@ -16,11 +16,8 @@
 package cmd_database
 
 import (
-	. "github.com/mudler/luet/pkg/logger"
-
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
-	. "github.com/mudler/luet/pkg/config"
 
 	"github.com/spf13/cobra"
 )
@@ -40,22 +37,22 @@ This commands takes multiple packages as arguments and prunes their entries from
 			util.BindSystemFlags(cmd)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			util.SetSystemConfig()
+			util.SetSystemConfig(util.DefaultContext)
 
-			systemDB := LuetCfg.GetSystemDB()
+			systemDB := util.DefaultContext.Config.GetSystemDB()
 
 			for _, a := range args {
 				pack, err := helpers.ParsePackageStr(a)
 				if err != nil {
-					Fatal("Invalid package string ", a, ": ", err.Error())
+					util.DefaultContext.Fatal("Invalid package string ", a, ": ", err.Error())
 				}
 
 				if err := systemDB.RemovePackage(pack); err != nil {
-					Fatal("Failed removing ", a, ": ", err.Error())
+					util.DefaultContext.Fatal("Failed removing ", a, ": ", err.Error())
 				}
 
 				if err := systemDB.RemovePackageFiles(pack); err != nil {
-					Fatal("Failed removing files for ", a, ": ", err.Error())
+					util.DefaultContext.Fatal("Failed removing files for ", a, ": ", err.Error())
 				}
 			}
 

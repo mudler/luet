@@ -16,8 +16,8 @@
 package installer
 
 import (
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/compiler"
-	"github.com/mudler/luet/pkg/config"
 	pkg "github.com/mudler/luet/pkg/package"
 )
 
@@ -33,7 +33,7 @@ type RepositoryConfig struct {
 	CompilerBackend         compiler.CompilerBackend
 	ImagePrefix             string
 
-	config                                          *config.LuetConfig
+	context                                         *types.Context
 	PushImages, Force, FromRepository, FromMetadata bool
 }
 
@@ -51,9 +51,9 @@ func (cfg *RepositoryConfig) Apply(opts ...RepositoryOption) error {
 	return nil
 }
 
-func WithConfig(c *config.LuetConfig) func(cfg *RepositoryConfig) error {
+func WithContext(c *types.Context) func(cfg *RepositoryConfig) error {
 	return func(cfg *RepositoryConfig) error {
-		cfg.config = c
+		cfg.context = c
 		return nil
 	}
 }

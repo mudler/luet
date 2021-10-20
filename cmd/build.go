@@ -29,8 +29,6 @@ import (
 
 	"github.com/mudler/luet/pkg/compiler/types/compression"
 	"github.com/mudler/luet/pkg/compiler/types/options"
-	. "github.com/mudler/luet/pkg/config"
-	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 	tree "github.com/mudler/luet/pkg/tree"
@@ -94,7 +92,7 @@ Build packages specifying multiple definition trees:
 
 		treePaths := viper.GetStringSlice("tree")
 		dst := viper.GetString("destination")
-		concurrency := LuetCfg.GetGeneral().Concurrency
+		concurrency := util.DefaultContext.Config.GetGeneral().Concurrency
 		backendType := viper.GetString("backend")
 		privileged := viper.GetBool("privileged")
 		revdeps := viper.GetBool("revdeps")
@@ -117,7 +115,7 @@ Build packages specifying multiple definition trees:
 
 		out, _ := cmd.Flags().GetString("output")
 		if out != "terminal" {
-			LuetCfg.GetLogging().SetLogLevel("error")
+			util.DefaultContext.Config.GetLogging().SetLogLevel("error")
 		}
 		pretend, _ := cmd.Flags().GetBool("pretend")
 		fromRepo, _ := cmd.Flags().GetBool("from-repositories")
@@ -125,7 +123,7 @@ Build packages specifying multiple definition trees:
 		compilerSpecs := compilerspec.NewLuetCompilationspecs()
 		var db pkg.PackageDatabase
 
-		compilerBackend, err := compiler.NewBackend(backendType)
+		compilerBackend, err := compiler.NewBackend(util.DefaultContext, backendType)
 		helpers.CheckErr(err)
 
 		db = pkg.NewInMemoryDatabase(false)
@@ -134,24 +132,24 @@ Build packages specifying multiple definition trees:
 		generalRecipe := tree.NewCompilerRecipe(db)
 
 		if fromRepo {
-			if err := installer.LoadBuildTree(generalRecipe, db, LuetCfg); err != nil {
-				Warning("errors while loading trees from repositories", err.Error())
+			if err := installer.LoadBuildTree(generalRecipe, db, util.DefaultContext); err != nil {
+				util.DefaultContext.Warning("errors while loading trees from repositories", err.Error())
 			}
 		}
 
 		for _, src := range treePaths {
-			Info("Loading tree", src)
+			util.DefaultContext.Info("Loading tree", src)
 			helpers.CheckErr(generalRecipe.Load(src))
 		}
 
-		Info("Building in", dst)
+		util.DefaultContext.Info("Building in", dst)
 
-		opts := util.SetSolverConfig()
+		opts := util.SetSolverConfig(util.DefaultContext)
 		pullRepo, _ := cmd.Flags().GetStringArray("pull-repository")
 
-		LuetCfg.GetGeneral().ShowBuildOutput = viper.GetBool("general.show_build_output")
+		util.DefaultContext.Config.GetGeneral().ShowBuildOutput = viper.GetBool("general.show_build_output")
 
-		Debug("Solver", opts.CompactString())
+		util.DefaultContext.Debug("Solver", opts.CompactString())
 
 		opts.Options = solver.Options{Type: solver.SingleCoreSimple, Concurrency: concurrency}
 
@@ -163,13 +161,14 @@ Build packages specifying multiple definition trees:
 			options.WithPullRepositories(pullRepo),
 			options.WithPushRepository(imageRepository),
 			options.Rebuild(rebuild),
-			options.WithTemplateFolder(util.TemplateFolders(fromRepo, treePaths)),
+			options.WithTemplateFolder(util.TemplateFolders(util.DefaultContext, fromRepo, treePaths)),
 			options.WithSolverOptions(*opts),
 			options.Wait(wait),
 			options.OnlyTarget(onlyTarget),
 			options.PullFirst(pull),
 			options.KeepImg(keepImages),
 			options.OnlyDeps(onlydeps),
+			options.WithContext(util.DefaultContext),
 			options.BackendArgs(backendArgs),
 			options.Concurrency(concurrency),
 			options.WithCompressionType(compression.Implementation(compressionType)),
@@ -178,10 +177,10 @@ Build packages specifying multiple definition trees:
 		if full {
 			specs, err := luetCompiler.FromDatabase(generalRecipe.GetDatabase(), true, dst)
 			if err != nil {
-				Fatal(err.Error())
+				util.DefaultContext.Fatal(err.Error())
 			}
 			for _, spec := range specs {
-				Info(":package: Selecting ", spec.GetPackage().GetName(), spec.GetPackage().GetVersion())
+				util.DefaultContext.Info(":package: Selecting ", spec.GetPackage().GetName(), spec.GetPackage().GetVersion())
 
 				compilerSpecs.Add(spec)
 			}
@@ -189,12 +188,12 @@ Build packages specifying multiple definition trees:
 			for _, a := range args {
 				pack, err := helpers.ParsePackageStr(a)
 				if err != nil {
-					Fatal("Invalid package string ", a, ": ", err.Error())
+					util.DefaultContext.Fatal("Invalid package string ", a, ": ", err.Error())
 				}
 
 				spec, err := luetCompiler.FromPackage(pack)
 				if err != nil {
-					Fatal("Error: " + err.Error())
+					util.DefaultContext.Fatal("Error: " + err.Error())
 				}
 
 				spec.SetOutputPath(dst)
@@ -206,9 +205,9 @@ Build packages specifying multiple definition trees:
 			for _, p := range w {
 				spec, err := luetCompiler.FromPackage(p)
 				if err != nil {
-					Fatal("Error: " + err.Error())
+					util.DefaultContext.Fatal("Error: " + err.Error())
 				}
-				Info(":package: Selecting ", p.GetName(), p.GetVersion())
+				util.DefaultContext.Info(":package: Selecting ", p.GetName(), p.GetVersion())
 				spec.SetOutputPath(dst)
 				compilerSpecs.Add(spec)
 			}
@@ -267,7 +266,7 @@ Build packages specifying multiple definition trees:
 				fmt.Println(string(j2))
 			case "terminal":
 				for _, p := range results.Packages {
-					Info(p.String())
+					util.DefaultContext.Info(p.String())
 				}
 			}
 		} else {
@@ -276,12 +275,12 @@ Build packages specifying multiple definition trees:
 		}
 		if len(errs) != 0 {
 			for _, e := range errs {
-				Error("Error: " + e.Error())
+				util.DefaultContext.Error("Error: " + e.Error())
 			}
-			Fatal("Bailing out")
+			util.DefaultContext.Fatal("Bailing out")
 		}
 		for _, a := range artifact {
-			Info("Artifact generated:", a.Path)
+			util.DefaultContext.Info("Artifact generated:", a.Path)
 		}
 	},
 }
@@ -289,7 +288,7 @@ Build packages specifying multiple definition trees:
 func init() {
 	path, err := os.Getwd()
 	if err != nil {
-		Fatal(err)
+		util.DefaultContext.Fatal(err)
 	}
 
 	buildCmd.Flags().StringSliceP("tree", "t", []string{path}, "Path of the tree to use.")
@@ -316,7 +315,7 @@ func init() {
 	buildCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	buildCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	buildCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
-	buildCmd.Flags().Bool("live-output", LuetCfg.GetGeneral().ShowBuildOutput, "Enable live output of the build phase.")
+	buildCmd.Flags().Bool("live-output", util.DefaultContext.Config.GetGeneral().ShowBuildOutput, "Enable live output of the build phase.")
 	buildCmd.Flags().Bool("from-repositories", false, "Consume the user-defined repositories to pull specfiles from")
 	buildCmd.Flags().Bool("rebuild", false, "To combine with --pull. Allows to rebuild the target package even if an image is available, against a local values file")
 	buildCmd.Flags().Bool("pretend", false, "Just print what packages will be compiled")

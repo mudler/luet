@@ -20,8 +20,8 @@ import (
 
 	b64 "encoding/base64"
 
+	"github.com/mudler/luet/cmd/util"
 	"github.com/mudler/luet/pkg/box"
-	. "github.com/mudler/luet/pkg/logger"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -55,12 +55,12 @@ var execCmd = &cobra.Command{
 
 			args = ss
 		}
-		Info("Executing", args, "in", rootfs)
+		util.DefaultContext.Info("Executing", args, "in", rootfs)
 
 		b := box.NewBox(entrypoint, args, mounts, envs, rootfs, stdin, stdout, stderr)
 		err := b.Exec()
 		if err != nil {
-			Fatal(errors.Wrap(err, fmt.Sprintf("entrypoint: %s rootfs: %s", entrypoint, rootfs)))
+			util.DefaultContext.Fatal(errors.Wrap(err, fmt.Sprintf("entrypoint: %s rootfs: %s", entrypoint, rootfs)))
 		}
 	},
 }
@@ -68,7 +68,7 @@ var execCmd = &cobra.Command{
 func init() {
 	path, err := os.Getwd()
 	if err != nil {
-		Fatal(err)
+		util.DefaultContext.Fatal(err)
 	}
 	execCmd.Hidden = true
 	execCmd.Flags().String("rootfs", path, "Rootfs path")

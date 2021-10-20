@@ -18,14 +18,11 @@ package compilerspec_test
 import (
 	"testing"
 
-	. "github.com/mudler/luet/cmd/util"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 func TestSpec(t *testing.T) {
 	RegisterFailHandler(Fail)
-	LoadConfig()
 	RunSpecs(t, "Spec Suite")
 }

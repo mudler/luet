@@ -1,4 +1,4 @@
-// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2019-2021 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,9 +20,8 @@ import (
 	"os/exec"
 
 	"github.com/ghodss/yaml"
+	"github.com/mudler/luet/pkg/api/core/types"
 	box "github.com/mudler/luet/pkg/box"
-	. "github.com/mudler/luet/pkg/config"
-	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/pkg/errors"
 )
@@ -33,7 +32,7 @@ type LuetFinalizer struct {
 	Uninstall []string `json:"uninstall"` // TODO: Where to store?
 }
 
-func (f *LuetFinalizer) RunInstall(s *System) error {
+func (f *LuetFinalizer) RunInstall(ctx *types.Context, s *System) error {
 	var cmd string
 	var args []string
 	if len(f.Shell) == 0 {
@@ -49,17 +48,17 @@ func (f *LuetFinalizer) RunInstall(s *System) error {
 
 	for _, c := range f.Install {
 		toRun := append(args, c)
-		Info(":shell: Executing finalizer on ", s.Target, cmd, toRun)
+		ctx.Info(":shell: Executing finalizer on ", s.Target, cmd, toRun)
 		if s.Target == string(os.PathSeparator) {
 			cmd := exec.Command(cmd, toRun...)
-			cmd.Env = LuetCfg.GetFinalizerEnvs()
+			cmd.Env = ctx.Config.GetFinalizerEnvs()
 			stdoutStderr, err := cmd.CombinedOutput()
 			if err != nil {
 				return errors.Wrap(err, "Failed running command: "+string(stdoutStderr))
 			}
-			Info(string(stdoutStderr))
+			ctx.Info(string(stdoutStderr))
 		} else {
-			b := box.NewBox(cmd, toRun, []string{}, LuetCfg.GetFinalizerEnvs(), s.Target, false, true, true)
+			b := box.NewBox(cmd, toRun, []string{}, ctx.Config.GetFinalizerEnvs(), s.Target, false, true, true)
 			err := b.Run()
 			if err != nil {
 				return errors.Wrap(err, "Failed running command ")
@@ -70,15 +69,15 @@ func (f *LuetFinalizer) RunInstall(s *System) error {
 }
 
 // TODO: We don't store uninstall finalizers ?!
-func (f *LuetFinalizer) RunUnInstall() error {
+func (f *LuetFinalizer) RunUnInstall(ctx *types.Context) error {
 	for _, c := range f.Uninstall {
-		Debug("finalizer:", "sh", "-c", c)
+		ctx.Debug("finalizer:", "sh", "-c", c)
 		cmd := exec.Command("sh", "-c", c)
 		stdoutStderr, err := cmd.CombinedOutput()
 		if err != nil {
 			return errors.Wrap(err, "Failed running command: "+string(stdoutStderr))
 		}
-		Info(string(stdoutStderr))
+		ctx.Info(string(stdoutStderr))
 	}
 	return nil
 }

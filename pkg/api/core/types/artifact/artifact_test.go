@@ -20,11 +20,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	. "github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/compiler/backend"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	compression "github.com/mudler/luet/pkg/compiler/types/compression"
+	"github.com/mudler/luet/pkg/compiler/types/options"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 
 	. "github.com/mudler/luet/pkg/compiler"
@@ -38,6 +40,7 @@ import (
 
 var _ = Describe("Artifact", func() {
 	Context("Simple package build definition", func() {
+		ctx := types.NewContext()
 		It("Generates a verified delta", func() {
 
 			generalRecipe := tree.NewGeneralRecipe(pkg.NewInMemoryDatabase(false))
@@ -47,7 +50,7 @@ var _ = Describe("Artifact", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			cc := NewLuetCompiler(nil, generalRecipe.GetDatabase())
+			cc := NewLuetCompiler(nil, generalRecipe.GetDatabase(), options.WithContext(types.NewContext()))
 			lspec, err := cc.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
 
@@ -81,7 +84,7 @@ WORKDIR /luetbuild
 ENV PACKAGE_NAME=enman
 ENV PACKAGE_VERSION=1.4.0
 ENV PACKAGE_CATEGORY=app-admin`))
-			b := NewSimpleDockerBackend()
+			b := NewSimpleDockerBackend(ctx)
 			opts := backend.Options{
 				ImageName:      "luet/base",
 				SourcePath:     tmpdir,
@@ -115,7 +118,7 @@ RUN echo bar > /test2`))
 			Expect(b.BuildImage(opts2)).ToNot(HaveOccurred())
 			Expect(b.ExportImage(opts2)).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
-			diffs, err := compiler.GenerateChanges(b, opts, opts2)
+			diffs, err := compiler.GenerateChanges(ctx, b, opts, opts2)
 			Expect(err).ToNot(HaveOccurred())
 
 			artifacts := []ArtifactNode{{
@@ -139,7 +142,7 @@ RUN echo bar > /test2`))
 			err = b.ExtractRootfs(backend.Options{ImageName: "test", Destination: rootfs}, false)
 			Expect(err).ToNot(HaveOccurred())
 
-			a, err := ExtractArtifactFromDelta(rootfs, filepath.Join(tmpdir, "package.tar"), diffs, 2, false, []string{}, []string{}, compression.None)
+			a, err := ExtractArtifactFromDelta(ctx, rootfs, filepath.Join(tmpdir, "package.tar"), diffs, 2, false, []string{}, []string{}, compression.None)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(filepath.Join(tmpdir, "package.tar"))).To(BeTrue())
 			err = helpers.Untar(a.Path, unpacked, false)
@@ -164,7 +167,7 @@ RUN echo bar > /test2`))
 		})
 
 		It("Generates packages images", func() {
-			b := NewSimpleDockerBackend()
+			b := NewSimpleDockerBackend(ctx)
 			imageprefix := "foo/"
 			testString := []byte(`funky test data`)
 
@@ -190,7 +193,7 @@ RUN echo bar > /test2`))
 			err = a.Compress(tmpdir, 1)
 			Expect(err).ToNot(HaveOccurred())
 			resultingImage := imageprefix + "foo--1.0"
-			opts, err := a.GenerateFinalImage(resultingImage, b, false)
+			opts, err := a.GenerateFinalImage(ctx, resultingImage, b, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(opts.ImageName).To(Equal(resultingImage))
 
@@ -215,7 +218,7 @@ RUN echo bar > /test2`))
 		})
 
 		It("Generates empty packages images", func() {
-			b := NewSimpleDockerBackend()
+			b := NewSimpleDockerBackend(ctx)
 			imageprefix := "foo/"
 
 			tmpdir, err := ioutil.TempDir(os.TempDir(), "artifact")
@@ -232,7 +235,7 @@ RUN echo bar > /test2`))
 			err = a.Compress(tmpdir, 1)
 			Expect(err).ToNot(HaveOccurred())
 			resultingImage := imageprefix + "foo--1.0"
-			opts, err := a.GenerateFinalImage(resultingImage, b, false)
+			opts, err := a.GenerateFinalImage(ctx, resultingImage, b, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(opts.ImageName).To(Equal(resultingImage))
 

@@ -17,9 +17,8 @@ package cmd
 import (
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
-	. "github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/pkg/api/core/types"
 	installer "github.com/mudler/luet/pkg/installer"
-	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 
@@ -45,7 +44,7 @@ var uninstallCmd = &cobra.Command{
 
 			pack, err := helpers.ParsePackageStr(a)
 			if err != nil {
-				Fatal("Invalid package string ", a, ": ", err.Error())
+				util.DefaultContext.Fatal("Invalid package string ", a, ": ", err.Error())
 			}
 			toRemove = append(toRemove, pack)
 		}
@@ -58,21 +57,21 @@ var uninstallCmd = &cobra.Command{
 		yes := viper.GetBool("yes")
 		keepProtected, _ := cmd.Flags().GetBool("keep-protected-files")
 
-		util.SetSystemConfig()
-		util.SetSolverConfig()
+		util.SetSystemConfig(util.DefaultContext)
+		util.SetSolverConfig(util.DefaultContext)
 
-		LuetCfg.ConfigProtectSkip = !keepProtected
+		util.DefaultContext.Config.ConfigProtectSkip = !keepProtected
 
-		LuetCfg.GetSolverOptions().Implementation = solver.SingleCoreSimple
+		util.DefaultContext.Config.GetSolverOptions().Implementation = solver.SingleCoreSimple
 
-		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
+		util.DefaultContext.Debug("Solver", util.DefaultContext.Config.GetSolverOptions().CompactString())
 
 		// Load config protect configs
-		installer.LoadConfigProtectConfs(LuetCfg)
+		util.DefaultContext.Config.LoadConfigProtect(util.DefaultContext)
 
 		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-			Concurrency:                 LuetCfg.GetGeneral().Concurrency,
-			SolverOptions:               *LuetCfg.GetSolverOptions(),
+			Concurrency:                 util.DefaultContext.Config.GetGeneral().Concurrency,
+			SolverOptions:               *util.DefaultContext.Config.GetSolverOptions(),
 			NoDeps:                      nodeps,
 			Force:                       force,
 			FullUninstall:               full,
@@ -80,12 +79,13 @@ var uninstallCmd = &cobra.Command{
 			CheckConflicts:              checkconflicts,
 			Ask:                         !yes,
 			PreserveSystemEssentialData: true,
+			Context:                     util.DefaultContext,
 		})
 
-		system := &installer.System{Database: LuetCfg.GetSystemDB(), Target: LuetCfg.GetSystem().Rootfs}
+		system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.GetSystem().Rootfs}
 
 		if err := inst.Uninstall(system, toRemove...); err != nil {
-			Fatal("Error: " + err.Error())
+			util.DefaultContext.Fatal("Error: " + err.Error())
 		}
 	},
 }
@@ -96,7 +96,7 @@ func init() {
 	uninstallCmd.Flags().String("system-target", "", "System rootpath")
 	uninstallCmd.Flags().String("system-engine", "", "System DB engine")
 
-	uninstallCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+AvailableResolvers+" )")
+	uninstallCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+types.AvailableResolvers+" )")
 	uninstallCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
 	uninstallCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	uninstallCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")

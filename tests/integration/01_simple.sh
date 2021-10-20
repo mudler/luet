@@ -66,6 +66,7 @@ testInstall() {
 
 testReInstall() {
     output=$(luet install -y --config $tmpdir/luet.yaml  test/c@1.0)
+    echo "$output"
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertContains 'contains warning' "$output" 'No packages to install'

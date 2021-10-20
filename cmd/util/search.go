@@ -1,5 +1,4 @@
-// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
-//                  Daniele Rondina <geaaru@sabayonlinux.org>
+// Copyright © 2021 Ettore Di Giacinto <mudler@mocaccino.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,19 +13,30 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package repository_test
+package util
 
-import (
-	"testing"
+import "github.com/pterm/pterm"
 
-	. "github.com/mudler/luet/cmd/util"
+type TableWriter struct {
+	td pterm.TableData
+}
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-)
+func (l *TableWriter) AppendRow(item []string) {
+	l.td = append(l.td, item)
+}
 
-func TestSolver(t *testing.T) {
-	RegisterFailHandler(Fail)
-	LoadConfig()
-	RunSpecs(t, "Repository Suite")
+func (l *TableWriter) Render() {
+	pterm.DefaultTable.WithHasHeader().WithData(l.td).Render()
+}
+
+type ListWriter struct {
+	bb []pterm.BulletListItem
+}
+
+func (l *ListWriter) AppendItem(item pterm.BulletListItem) {
+	l.bb = append(l.bb, item)
+}
+
+func (l *ListWriter) Render() {
+	pterm.DefaultBulletList.WithItems(l.bb).Render()
 }

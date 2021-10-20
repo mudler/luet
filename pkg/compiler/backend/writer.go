@@ -19,18 +19,20 @@ package backend
 import (
 	"bytes"
 
-	. "github.com/mudler/luet/pkg/logger"
+	"github.com/mudler/luet/pkg/api/core/types"
 )
 
 type BackendWriter struct {
 	BufferedOutput bool
 	Buffer         *bytes.Buffer
+	ctx            *types.Context
 }
 
-func NewBackendWriter(buffered bool) *BackendWriter {
+func NewBackendWriter(buffered bool, ctx *types.Context) *BackendWriter {
 	return &BackendWriter{
 		BufferedOutput: buffered,
 		Buffer:         &bytes.Buffer{},
+		ctx:            ctx,
 	}
 }
 
@@ -39,7 +41,7 @@ func (b *BackendWriter) Write(p []byte) (int, error) {
 		return b.Buffer.Write(p)
 	}
 
-	Msg("info", false, false, (string(p)))
+	b.ctx.Msg("info", false, (string(p)))
 
 	return len(p), nil
 }

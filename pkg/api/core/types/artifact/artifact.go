@@ -36,16 +36,17 @@ import (
 	"strings"
 	"sync"
 
+	config "github.com/mudler/luet/pkg/api/core/config"
+	types "github.com/mudler/luet/pkg/api/core/types"
 	bus "github.com/mudler/luet/pkg/bus"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	compression "github.com/mudler/luet/pkg/compiler/types/compression"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
-	. "github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
+
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -115,7 +116,6 @@ func (a *PackageArtifact) WriteYAML(dst string) error {
 		if err != nil {
 			return errors.Wrapf(err, "getting runtime package for '%s'", a.CompileSpec.Package.HumanReadableString())
 		}
-		Debug(fmt.Sprintf("embedding runtime package (%s) definition to artifact metadata", a.CompileSpec.Package.HumanReadableString()))
 		a.Runtime = runtime
 	}
 
@@ -163,12 +163,12 @@ COPY . /`
 }
 
 // CreateArtifactForFile creates a new artifact from the given file
-func CreateArtifactForFile(s string, opts ...func(*PackageArtifact)) (*PackageArtifact, error) {
+func CreateArtifactForFile(ctx *types.Context, s string, opts ...func(*PackageArtifact)) (*PackageArtifact, error) {
 	if _, err := os.Stat(s); os.IsNotExist(err) {
 		return nil, errors.Wrap(err, "artifact path doesn't exist")
 	}
 	fileName := path.Base(s)
-	archive, err := LuetCfg.GetSystem().TempDir("archive")
+	archive, err := ctx.Config.GetSystem().TempDir("archive")
 	if err != nil {
 		return nil, errors.Wrap(err, "error met while creating tempdir for "+s)
 	}
@@ -178,7 +178,7 @@ func CreateArtifactForFile(s string, opts ...func(*PackageArtifact)) (*PackageAr
 		return nil, errors.Wrapf(err, "error while copying %s to %s", s, dst)
 	}
 
-	artifact, err := LuetCfg.GetSystem().TempDir("artifact")
+	artifact, err := ctx.Config.GetSystem().TempDir("artifact")
 	if err != nil {
 		return nil, errors.Wrap(err, "error met while creating tempdir for "+s)
 	}
@@ -196,9 +196,9 @@ type ImageBuilder interface {
 }
 
 // GenerateFinalImage takes an artifact and builds a Docker image with its content
-func (a *PackageArtifact) GenerateFinalImage(imageName string, b ImageBuilder, keepPerms bool) (backend.Options, error) {
+func (a *PackageArtifact) GenerateFinalImage(ctx *types.Context, imageName string, b ImageBuilder, keepPerms bool) (backend.Options, error) {
 	builderOpts := backend.Options{}
-	archive, err := LuetCfg.GetSystem().TempDir("archive")
+	archive, err := ctx.Config.GetSystem().TempDir("archive")
 	if err != nil {
 		return builderOpts, errors.Wrap(err, "error met while creating tempdir for "+a.Path)
 	}
@@ -211,7 +211,7 @@ func (a *PackageArtifact) GenerateFinalImage(imageName string, b ImageBuilder, k
 		return builderOpts, errors.Wrap(err, "error met while creating tempdir for "+a.Path)
 	}
 
-	if err := a.Unpack(uncompressedFiles, keepPerms); err != nil {
+	if err := a.Unpack(ctx, uncompressedFiles, keepPerms); err != nil {
 		return builderOpts, errors.Wrap(err, "error met while uncompressing artifact "+a.Path)
 	}
 
@@ -281,7 +281,7 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 		}
 
 		os.RemoveAll(a.Path) // Remove original
-		Debug("Removed artifact", a.Path)
+		//	Debug("Removed artifact", a.Path)
 
 		a.Path = zstdFile
 		return nil
@@ -315,7 +315,7 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 		}
 		w.Close()
 		os.RemoveAll(a.Path) // Remove original
-		Debug("Removed artifact", a.Path)
+		//	Debug("Removed artifact", a.Path)
 		//	a.CompressedPath = gzipfile
 		a.Path = gzipfile
 		return nil
@@ -369,72 +369,74 @@ func hashFileContent(path string) (string, error) {
 	return base64.URLEncoding.EncodeToString(h.Sum(nil)), nil
 }
 
-func tarModifierWrapperFunc(dst, path string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
-	// If the destination path already exists I rename target file name with postfix.
-	var destPath string
+func tarModifierWrapperFunc(ctx *types.Context) func(dst, path string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
+	return func(dst, path string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
+		// If the destination path already exists I rename target file name with postfix.
+		var destPath string
 
-	// Read data. TODO: We need change archive callback to permit to return a Reader
-	buffer := bytes.Buffer{}
-	if content != nil {
-		if _, err := buffer.ReadFrom(content); err != nil {
-			return nil, nil, err
-		}
-	}
-	tarHash := hashContent(buffer.Bytes())
-
-	// If file is not present on archive but is defined on mods
-	// I receive the callback. Prevent nil exception.
-	if header != nil {
-		switch header.Typeflag {
-		case tar.TypeReg:
-			destPath = filepath.Join(dst, path)
-		default:
-			// Nothing to do. I return original reader
-			return header, buffer.Bytes(), nil
-		}
-
-		existingHash := ""
-		f, err := os.Lstat(destPath)
-		if err == nil {
-			Debug("File exists already, computing hash for", destPath)
-			hash, herr := hashFileContent(destPath)
-			if herr == nil {
-				existingHash = hash
+		// Read data. TODO: We need change archive callback to permit to return a Reader
+		buffer := bytes.Buffer{}
+		if content != nil {
+			if _, err := buffer.ReadFrom(content); err != nil {
+				return nil, nil, err
 			}
 		}
+		tarHash := hashContent(buffer.Bytes())
 
-		Debug("Existing file hash: ", existingHash, "Tar file hashsum: ", tarHash)
-		// We want to protect file only if the hash of the files are differing OR the file size are
-		differs := (existingHash != "" && existingHash != tarHash) || (err != nil && f != nil && header.Size != f.Size())
-		// Check if exists
-		if fileHelper.Exists(destPath) && differs {
-			for i := 1; i < 1000; i++ {
-				name := filepath.Join(filepath.Join(filepath.Dir(path),
-					fmt.Sprintf("._cfg%04d_%s", i, filepath.Base(path))))
+		// If file is not present on archive but is defined on mods
+		// I receive the callback. Prevent nil exception.
+		if header != nil {
+			switch header.Typeflag {
+			case tar.TypeReg:
+				destPath = filepath.Join(dst, path)
+			default:
+				// Nothing to do. I return original reader
+				return header, buffer.Bytes(), nil
+			}
 
-				if fileHelper.Exists(name) {
-					continue
+			existingHash := ""
+			f, err := os.Lstat(destPath)
+			if err == nil {
+				ctx.Debug("File exists already, computing hash for", destPath)
+				hash, herr := hashFileContent(destPath)
+				if herr == nil {
+					existingHash = hash
 				}
-				Info(fmt.Sprintf("Found protected file %s. Creating %s.", destPath,
-					filepath.Join(dst, name)))
-				return &tar.Header{
-					Mode:       header.Mode,
-					Typeflag:   header.Typeflag,
-					PAXRecords: header.PAXRecords,
-					Name:       name,
-				}, buffer.Bytes(), nil
+			}
+
+			ctx.Debug("Existing file hash: ", existingHash, "Tar file hashsum: ", tarHash)
+			// We want to protect file only if the hash of the files are differing OR the file size are
+			differs := (existingHash != "" && existingHash != tarHash) || (err != nil && f != nil && header.Size != f.Size())
+			// Check if exists
+			if fileHelper.Exists(destPath) && differs {
+				for i := 1; i < 1000; i++ {
+					name := filepath.Join(filepath.Join(filepath.Dir(path),
+						fmt.Sprintf("._cfg%04d_%s", i, filepath.Base(path))))
+
+					if fileHelper.Exists(name) {
+						continue
+					}
+					ctx.Info(fmt.Sprintf("Found protected file %s. Creating %s.", destPath,
+						filepath.Join(dst, name)))
+					return &tar.Header{
+						Mode:       header.Mode,
+						Typeflag:   header.Typeflag,
+						PAXRecords: header.PAXRecords,
+						Name:       name,
+					}, buffer.Bytes(), nil
+				}
 			}
 		}
-	}
 
-	return header, buffer.Bytes(), nil
+		return header, buffer.Bytes(), nil
+	}
 }
 
-func (a *PackageArtifact) GetProtectFiles() []string {
+func (a *PackageArtifact) GetProtectFiles(ctx *types.Context) []string {
 	ans := []string{}
 	annotationDir := ""
 
-	if !LuetCfg.ConfigProtectSkip {
+	if !ctx.Config.ConfigProtectSkip {
 
 		// a.CompileSpec could be nil when artifact.Unpack is used for tree tarball
 		if a.CompileSpec != nil &&
@@ -446,8 +448,8 @@ func (a *PackageArtifact) GetProtectFiles() []string {
 		}
 		// TODO: check if skip this if we have a.CompileSpec nil
 
-		cp := NewConfigProtect(annotationDir)
-		cp.Map(a.Files)
+		cp := config.NewConfigProtect(annotationDir)
+		cp.Map(a.Files, ctx.Config.GetConfigProtectConfFiles())
 
 		// NOTE: for unpack we need files path without initial /
 		ans = cp.GetProtectFiles(false)
@@ -457,15 +459,15 @@ func (a *PackageArtifact) GetProtectFiles() []string {
 }
 
 // Unpack Untar and decompress (TODO) to the given path
-func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
+func (a *PackageArtifact) Unpack(ctx *types.Context, dst string, keepPerms bool) error {
 	if !strings.HasPrefix(dst, "/") {
 		return errors.New("destination must be an absolute path")
 	}
 
 	// Create
-	protectedFiles := a.GetProtectFiles()
+	protectedFiles := a.GetProtectFiles(ctx)
 
-	tarModifier := helpers.NewTarModifierWrapper(dst, tarModifierWrapperFunc)
+	tarModifier := helpers.NewTarModifierWrapper(dst, tarModifierWrapperFunc(ctx))
 
 	switch a.CompressionType {
 	case compression.Zstandard:
@@ -497,7 +499,7 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 		}
 
 		err = helpers.UntarProtect(a.Path+".uncompressed", dst,
-			LuetCfg.GetGeneral().SameOwner, protectedFiles, tarModifier)
+			ctx.Config.GetGeneral().SameOwner, protectedFiles, tarModifier)
 		if err != nil {
 			return err
 		}
@@ -530,14 +532,14 @@ func (a *PackageArtifact) Unpack(dst string, keepPerms bool) error {
 		}
 
 		err = helpers.UntarProtect(a.Path+".uncompressed", dst,
-			LuetCfg.GetGeneral().SameOwner, protectedFiles, tarModifier)
+			ctx.Config.GetGeneral().SameOwner, protectedFiles, tarModifier)
 		if err != nil {
 			return err
 		}
 		return nil
 	// Defaults to tar only (covers when "none" is supplied)
 	default:
-		return helpers.UntarProtect(a.Path, dst, LuetCfg.GetGeneral().SameOwner,
+		return helpers.UntarProtect(a.Path, dst, ctx.Config.GetGeneral().SameOwner,
 			protectedFiles, tarModifier)
 	}
 	return errors.New("Compression type must be supplied")
@@ -630,15 +632,15 @@ type CopyJob struct {
 	Artifact string
 }
 
-func worker(i int, wg *sync.WaitGroup, s <-chan CopyJob) {
+func worker(ctx *types.Context, i int, wg *sync.WaitGroup, s <-chan CopyJob) {
 	defer wg.Done()
 
 	for job := range s {
 		_, err := os.Lstat(job.Dst)
 		if err != nil {
-			Debug("Copying ", job.Src)
+			ctx.Debug("Copying ", job.Src)
 			if err := fileHelper.DeepCopyFile(job.Src, job.Dst); err != nil {
-				Warning("Error copying", job, err)
+				ctx.Warning("Error copying", job, err)
 			}
 		}
 	}
@@ -649,7 +651,6 @@ func compileRegexes(regexes []string) []*regexp.Regexp {
 	for _, i := range regexes {
 		r, e := regexp.Compile(i)
 		if e != nil {
-			Warning("Failed compiling regex:", e)
 			continue
 		}
 		result = append(result, r)
@@ -674,16 +675,16 @@ type ArtifactLayer struct {
 }
 
 // ExtractArtifactFromDelta extracts deltas from ArtifactLayer from an image in tar format
-func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurrency int, keepPerms bool, includes []string, excludes []string, t compression.Implementation) (*PackageArtifact, error) {
+func ExtractArtifactFromDelta(ctx *types.Context, src, dst string, layers []ArtifactLayer, concurrency int, keepPerms bool, includes []string, excludes []string, t compression.Implementation) (*PackageArtifact, error) {
 
-	archive, err := LuetCfg.GetSystem().TempDir("archive")
+	archive, err := ctx.Config.GetSystem().TempDir("archive")
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating tempdir for archive")
 	}
 	defer os.RemoveAll(archive) // clean up
 
 	if strings.HasSuffix(src, ".tar") {
-		rootfs, err := LuetCfg.GetSystem().TempDir("rootfs")
+		rootfs, err := ctx.Config.GetSystem().TempDir("rootfs")
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
 		}
@@ -700,7 +701,7 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 	var wg = new(sync.WaitGroup)
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
-		go worker(i, wg, toCopy)
+		go worker(ctx, i, wg, toCopy)
 	}
 
 	// Handle includes in spec. If specified they filter what gets in the package
@@ -719,10 +720,10 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 				}
 			}
 			for _, a := range l.Diffs.Changes {
-				Debug("File ", a.Name, " changed")
+				ctx.Debug("File ", a.Name, " changed")
 			}
 			for _, a := range l.Diffs.Deletions {
-				Debug("File ", a.Name, " deleted")
+				ctx.Debug("File ", a.Name, " deleted")
 			}
 		}
 
@@ -740,10 +741,10 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 				toCopy <- CopyJob{Src: filepath.Join(src, a.Name), Dst: filepath.Join(archive, a.Name), Artifact: a.Name}
 			}
 			for _, a := range l.Diffs.Changes {
-				Debug("File ", a.Name, " changed")
+				ctx.Debug("File ", a.Name, " changed")
 			}
 			for _, a := range l.Diffs.Deletions {
-				Debug("File ", a.Name, " deleted")
+				ctx.Debug("File ", a.Name, " deleted")
 			}
 		}
 
@@ -768,10 +769,10 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 				}
 			}
 			for _, a := range l.Diffs.Changes {
-				Debug("File ", a.Name, " changed")
+				ctx.Debug("File ", a.Name, " changed")
 			}
 			for _, a := range l.Diffs.Deletions {
-				Debug("File ", a.Name, " deleted")
+				ctx.Debug("File ", a.Name, " deleted")
 			}
 		}
 
@@ -780,14 +781,14 @@ func ExtractArtifactFromDelta(src, dst string, layers []ArtifactLayer, concurren
 		for _, l := range layers {
 			// Consider d.Additions (and d.Changes? - warn at least) only
 			for _, a := range l.Diffs.Additions {
-				Debug("File ", a.Name, " added")
+				ctx.Debug("File ", a.Name, " added")
 				toCopy <- CopyJob{Src: filepath.Join(src, a.Name), Dst: filepath.Join(archive, a.Name), Artifact: a.Name}
 			}
 			for _, a := range l.Diffs.Changes {
-				Debug("File ", a.Name, " changed")
+				ctx.Debug("File ", a.Name, " changed")
 			}
 			for _, a := range l.Diffs.Deletions {
-				Debug("File ", a.Name, " deleted")
+				ctx.Debug("File ", a.Name, " deleted")
 			}
 		}
 	}

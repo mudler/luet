@@ -15,17 +15,18 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package config
+package types
 
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
-	"time"
 
-	types "github.com/mudler/luet/pkg/api/core/types"
+	"github.com/mudler/luet/pkg/api/core/config"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	pkg "github.com/mudler/luet/pkg/package"
 	solver "github.com/mudler/luet/pkg/solver"
@@ -34,7 +35,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var LuetCfg = &LuetConfig{}
 var AvailableResolvers = strings.Join([]string{solver.QLearningResolverType}, " ")
 
 type LuetLoggingConfig struct {
@@ -46,7 +46,7 @@ type LuetLoggingConfig struct {
 	JsonFormat bool `mapstructure:"json_format"`
 
 	// Log level
-	Level string `mapstructure:"level"`
+	Level LogLevel `mapstructure:"level"`
 
 	// Enable emoji
 	EnableEmoji bool `mapstructure:"enable_emoji"`
@@ -59,8 +59,6 @@ type LuetGeneralConfig struct {
 	Concurrency     int  `yaml:"concurrency,omitempty" mapstructure:"concurrency"`
 	Debug           bool `yaml:"debug,omitempty" mapstructure:"debug"`
 	ShowBuildOutput bool `yaml:"show_build_output,omitempty" mapstructure:"show_build_output"`
-	SpinnerMs       int  `yaml:"spinner_ms,omitempty" mapstructure:"spinner_ms"`
-	SpinnerCharset  int  `yaml:"spinner_charset,omitempty" mapstructure:"spinner_charset"`
 	FatalWarns      bool `yaml:"fatal_warnings,omitempty" mapstructure:"fatal_warnings"`
 }
 
@@ -171,33 +169,33 @@ type LuetConfig struct {
 	System  LuetSystemConfig  `yaml:"system" mapstructure:"system"`
 	Solver  LuetSolverOptions `yaml:"solver,omitempty" mapstructure:"solver"`
 
-	RepositoriesConfDir  []string               `yaml:"repos_confdir,omitempty" mapstructure:"repos_confdir"`
-	ConfigProtectConfDir []string               `yaml:"config_protect_confdir,omitempty" mapstructure:"config_protect_confdir"`
-	ConfigProtectSkip    bool                   `yaml:"config_protect_skip,omitempty" mapstructure:"config_protect_skip"`
-	ConfigFromHost       bool                   `yaml:"config_from_host,omitempty" mapstructure:"config_from_host"`
-	SystemRepositories   types.LuetRepositories `yaml:"repositories,omitempty" mapstructure:"repositories"`
+	RepositoriesConfDir  []string         `yaml:"repos_confdir,omitempty" mapstructure:"repos_confdir"`
+	ConfigProtectConfDir []string         `yaml:"config_protect_confdir,omitempty" mapstructure:"config_protect_confdir"`
+	ConfigProtectSkip    bool             `yaml:"config_protect_skip,omitempty" mapstructure:"config_protect_skip"`
+	ConfigFromHost       bool             `yaml:"config_from_host,omitempty" mapstructure:"config_from_host"`
+	SystemRepositories   LuetRepositories `yaml:"repositories,omitempty" mapstructure:"repositories"`
 
 	FinalizerEnvs []LuetKV `json:"finalizer_envs,omitempty" yaml:"finalizer_envs,omitempty" mapstructure:"finalizer_envs,omitempty"`
 
-	ConfigProtectConfFiles []ConfigProtectConfFile `yaml:"-" mapstructure:"-"`
+	ConfigProtectConfFiles []config.ConfigProtectConfFile `yaml:"-" mapstructure:"-"`
 }
 
 func (c *LuetConfig) GetSystemDB() pkg.PackageDatabase {
-	switch LuetCfg.GetSystem().DatabaseEngine {
+	switch c.GetSystem().DatabaseEngine {
 	case "boltdb":
 		return pkg.NewBoltDatabase(
-			filepath.Join(LuetCfg.GetSystem().GetSystemRepoDatabaseDirPath(), "luet.db"))
+			filepath.Join(c.GetSystem().GetSystemRepoDatabaseDirPath(), "luet.db"))
 	default:
 		return pkg.NewInMemoryDatabase(true)
 	}
 }
 
-func (c *LuetConfig) AddSystemRepository(r types.LuetRepository) {
+func (c *LuetConfig) AddSystemRepository(r LuetRepository) {
 	c.SystemRepositories = append(c.SystemRepositories, r)
 }
 
 func (c *LuetConfig) GetFinalizerEnvsMap() map[string]string {
-	ans := make(map[string]string, 0)
+	ans := make(map[string]string)
 
 	for _, kv := range c.FinalizerEnvs {
 		ans[kv.Key] = kv.Value
@@ -268,20 +266,81 @@ func (c *LuetConfig) YAML() ([]byte, error) {
 	return yaml.Marshal(c)
 }
 
-func (c *LuetConfig) GetConfigProtectConfFiles() []ConfigProtectConfFile {
+func (c *LuetConfig) GetConfigProtectConfFiles() []config.ConfigProtectConfFile {
 	return c.ConfigProtectConfFiles
 }
 
-func (c *LuetConfig) AddConfigProtectConfFile(file *ConfigProtectConfFile) {
+func (c *LuetConfig) AddConfigProtectConfFile(file *config.ConfigProtectConfFile) {
 	if c.ConfigProtectConfFiles == nil {
-		c.ConfigProtectConfFiles = []ConfigProtectConfFile{*file}
+		c.ConfigProtectConfFiles = []config.ConfigProtectConfFile{*file}
 	} else {
 		c.ConfigProtectConfFiles = append(c.ConfigProtectConfFiles, *file)
 	}
 }
 
-func (c *LuetConfig) GetSystemRepository(name string) (*types.LuetRepository, error) {
-	var ans *types.LuetRepository = nil
+func (c *LuetConfig) LoadRepositories(ctx *Context) error {
+	var regexRepo = regexp.MustCompile(`.yml$|.yaml$`)
+	var err error
+	rootfs := ""
+
+	// Respect the rootfs param on read repositories
+	if !c.ConfigFromHost {
+		rootfs, err = c.GetSystem().GetRootFsAbs()
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, rdir := range c.RepositoriesConfDir {
+
+		rdir = filepath.Join(rootfs, rdir)
+
+		ctx.Debug("Parsing Repository Directory", rdir, "...")
+
+		files, err := ioutil.ReadDir(rdir)
+		if err != nil {
+			ctx.Debug("Skip dir", rdir, ":", err.Error())
+			continue
+		}
+
+		for _, file := range files {
+			if file.IsDir() {
+				continue
+			}
+
+			if !regexRepo.MatchString(file.Name()) {
+				ctx.Debug("File", file.Name(), "skipped.")
+				continue
+			}
+
+			content, err := ioutil.ReadFile(path.Join(rdir, file.Name()))
+			if err != nil {
+				ctx.Warning("On read file", file.Name(), ":", err.Error())
+				ctx.Warning("File", file.Name(), "skipped.")
+				continue
+			}
+
+			r, err := LoadRepository(content)
+			if err != nil {
+				ctx.Warning("On parse file", file.Name(), ":", err.Error())
+				ctx.Warning("File", file.Name(), "skipped.")
+				continue
+			}
+
+			if r.Name == "" || len(r.Urls) == 0 || r.Type == "" {
+				ctx.Warning("Invalid repository ", file.Name())
+				ctx.Warning("File", file.Name(), "skipped.")
+				continue
+			}
+
+			c.AddSystemRepository(*r)
+		}
+	}
+	return nil
+}
+
+func (c *LuetConfig) GetSystemRepository(name string) (*LuetRepository, error) {
+	var ans *LuetRepository = nil
 
 	for idx, repo := range c.SystemRepositories {
 		if repo.Name == name {
@@ -296,15 +355,78 @@ func (c *LuetConfig) GetSystemRepository(name string) (*types.LuetRepository, er
 	return ans, nil
 }
 
-func (c *LuetGeneralConfig) GetSpinnerMs() time.Duration {
-	duration, err := time.ParseDuration(fmt.Sprintf("%dms", c.SpinnerMs))
-	if err != nil {
-		return 100 * time.Millisecond
+func (c *LuetConfig) LoadConfigProtect(ctx *Context) error {
+	var regexConfs = regexp.MustCompile(`.yml$`)
+	var err error
+
+	rootfs := ""
+
+	// Respect the rootfs param on read repositories
+	if !c.ConfigFromHost {
+		rootfs, err = c.GetSystem().GetRootFsAbs()
+		if err != nil {
+			return err
+		}
 	}
-	return duration
+
+	for _, cdir := range c.ConfigProtectConfDir {
+		cdir = filepath.Join(rootfs, cdir)
+
+		ctx.Debug("Parsing Config Protect Directory", cdir, "...")
+
+		files, err := ioutil.ReadDir(cdir)
+		if err != nil {
+			ctx.Debug("Skip dir", cdir, ":", err.Error())
+			continue
+		}
+
+		for _, file := range files {
+			if file.IsDir() {
+				continue
+			}
+
+			if !regexConfs.MatchString(file.Name()) {
+				ctx.Debug("File", file.Name(), "skipped.")
+				continue
+			}
+
+			content, err := ioutil.ReadFile(path.Join(cdir, file.Name()))
+			if err != nil {
+				ctx.Warning("On read file", file.Name(), ":", err.Error())
+				ctx.Warning("File", file.Name(), "skipped.")
+				continue
+			}
+
+			r, err := loadConfigProtectConFile(file.Name(), content)
+			if err != nil {
+				ctx.Warning("On parse file", file.Name(), ":", err.Error())
+				ctx.Warning("File", file.Name(), "skipped.")
+				continue
+			}
+
+			if r.Name == "" || len(r.Directories) == 0 {
+				ctx.Warning("Invalid config protect file", file.Name())
+				ctx.Warning("File", file.Name(), "skipped.")
+				continue
+			}
+
+			c.AddConfigProtectConfFile(r)
+		}
+	}
+	return nil
+
 }
 
-func (c *LuetLoggingConfig) SetLogLevel(s string) {
+func loadConfigProtectConFile(filename string, data []byte) (*config.ConfigProtectConfFile, error) {
+	ans := config.NewConfigProtectConfFile(filename)
+	err := yaml.Unmarshal(data, &ans)
+	if err != nil {
+		return nil, err
+	}
+	return ans, nil
+}
+
+func (c *LuetLoggingConfig) SetLogLevel(s LogLevel) {
 	c.Level = s
 }
 

@@ -21,8 +21,8 @@ import (
 
 	b64 "encoding/base64"
 
+	"github.com/mudler/luet/cmd/util"
 	"github.com/mudler/luet/pkg/box"
-	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/spf13/cobra"
 )
@@ -54,18 +54,18 @@ func NewBoxExecCommand() *cobra.Command {
 
 				args = ss
 			}
-			Info("Executing", args, "in", rootfs)
+			util.DefaultContext.Info("Executing", args, "in", rootfs)
 
 			b := box.NewBox(entrypoint, args, mounts, envs, rootfs, stdin, stdout, stderr)
 			err := b.Run()
 			if err != nil {
-				Fatal(err)
+				util.DefaultContext.Fatal(err)
 			}
 		},
 	}
 	path, err := os.Getwd()
 	if err != nil {
-		Fatal(err)
+		util.DefaultContext.Fatal(err)
 	}
 	ans.Flags().String("rootfs", path, "Rootfs path")
 	ans.Flags().Bool("stdin", false, "Attach to stdin")

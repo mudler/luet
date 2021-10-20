@@ -19,9 +19,9 @@ import (
 	"path/filepath"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
+	"github.com/mudler/luet/cmd/util"
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/types/compression"
-	. "github.com/mudler/luet/pkg/config"
 	installer "github.com/mudler/luet/pkg/installer"
 
 	//	. "github.com/mudler/luet/pkg/logger"
@@ -96,7 +96,7 @@ Create a repository from the metadata description defined in the luet.yaml confi
 
 		treeFile := installer.NewDefaultTreeRepositoryFile()
 		metaFile := installer.NewDefaultMetaRepositoryFile()
-		compilerBackend, err := compiler.NewBackend(backendType)
+		compilerBackend, err := compiler.NewBackend(util.DefaultContext, backendType)
 		helpers.CheckErr(err)
 		force := viper.GetBool("force-push")
 		imagePush := viper.GetBool("push-images")
@@ -106,16 +106,16 @@ Create a repository from the metadata description defined in the luet.yaml confi
 			installer.WithPushImages(imagePush),
 			installer.WithForce(force),
 			installer.FromRepository(fromRepo),
-			installer.WithConfig(LuetCfg),
 			installer.WithImagePrefix(dst),
 			installer.WithDatabase(pkg.NewInMemoryDatabase(false)),
 			installer.WithCompilerBackend(compilerBackend),
 			installer.FromMetadata(viper.GetBool("from-metadata")),
+			installer.WithContext(util.DefaultContext),
 		}
 
 		if source_repo != "" {
 			// Search for system repository
-			lrepo, err := LuetCfg.GetSystemRepository(source_repo)
+			lrepo, err := util.DefaultContext.Config.GetSystemRepository(source_repo)
 			helpers.CheckErr(err)
 
 			if len(treePaths) <= 0 {
@@ -167,7 +167,7 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		repo.SetRepositoryFile(installer.REPOFILE_TREE_KEY, treeFile)
 		repo.SetRepositoryFile(installer.REPOFILE_META_KEY, metaFile)
 
-		err = repo.Write(dst, reset, true)
+		err = repo.Write(util.DefaultContext, dst, reset, true)
 		helpers.CheckErr(err)
 
 	},

@@ -19,7 +19,7 @@ package cmd_tree
 import (
 	"fmt"
 
-	. "github.com/mudler/luet/pkg/logger"
+	"github.com/mudler/luet/cmd/util"
 	spectooling "github.com/mudler/luet/pkg/spectooling"
 	tree "github.com/mudler/luet/pkg/tree"
 	version "github.com/mudler/luet/pkg/versioner"
@@ -36,7 +36,7 @@ func NewTreeBumpCommand() *cobra.Command {
 		PreRun: func(cmd *cobra.Command, args []string) {
 			df, _ := cmd.Flags().GetString("definition-file")
 			if df == "" {
-				Fatal("Mandatory definition.yaml path missing.")
+				util.DefaultContext.Fatal("Mandatory definition.yaml path missing.")
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -45,34 +45,34 @@ func NewTreeBumpCommand() *cobra.Command {
 			pkgVersion, _ := cmd.Flags().GetString("pkg-version")
 			pack, err := tree.ReadDefinitionFile(spec)
 			if err != nil {
-				Fatal(err.Error())
+				util.DefaultContext.Fatal(err.Error())
 			}
 
 			if pkgVersion != "" {
 				validator := &version.WrappedVersioner{}
 				err := validator.Validate(pkgVersion)
 				if err != nil {
-					Fatal("Invalid version string: " + err.Error())
+					util.DefaultContext.Fatal("Invalid version string: " + err.Error())
 				}
 				pack.SetVersion(pkgVersion)
 			} else {
 				// Retrieve version build section with Gentoo parser
 				err = pack.BumpBuildVersion()
 				if err != nil {
-					Fatal("Error on increment build version: " + err.Error())
+					util.DefaultContext.Fatal("Error on increment build version: " + err.Error())
 				}
 			}
 			if toStdout {
 				data, err := spectooling.NewDefaultPackageSanitized(&pack).Yaml()
 				if err != nil {
-					Fatal("Error on yaml conversion: " + err.Error())
+					util.DefaultContext.Fatal("Error on yaml conversion: " + err.Error())
 				}
 				fmt.Println(string(data))
 			} else {
 
 				err = tree.WriteDefinitionFile(&pack, spec)
 				if err != nil {
-					Fatal("Error on write definition file: " + err.Error())
+					util.DefaultContext.Fatal("Error on write definition file: " + err.Error())
 				}
 
 				fmt.Printf("Bumped package %s/%s-%s.\n", pack.Category, pack.Name, pack.Version)

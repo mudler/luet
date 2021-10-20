@@ -28,6 +28,7 @@ import (
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
+	"github.com/mudler/luet/pkg/compiler/types/options"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
@@ -49,14 +50,16 @@ func dockerStubRepo(tmpdir, tree, image string, push, force bool) (*LuetSystemRe
 		WithSource(tmpdir),
 		WithTree(tree),
 		WithDatabase(pkg.NewInMemoryDatabase(false)),
-		WithCompilerBackend(backend.NewSimpleDockerBackend()),
+		WithCompilerBackend(backend.NewSimpleDockerBackend(types.NewContext())),
 		WithImagePrefix(image),
 		WithPushImages(push),
+		WithContext(types.NewContext()),
 		WithForce(force))
 }
 
 var _ = Describe("Repository", func() {
 	Context("Generation", func() {
+		ctx := types.NewContext()
 		It("Generate repository metadata", func() {
 
 			tmpdir, err := ioutil.TempDir("", "tree")
@@ -70,7 +73,7 @@ var _ = Describe("Repository", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase())
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -110,7 +113,7 @@ var _ = Describe("Repository", func() {
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false, true)
+			err = repo.Write(ctx, tmpdir, false, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).To(BeTrue())
@@ -137,11 +140,11 @@ var _ = Describe("Repository", func() {
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(1))
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase())
+			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), options.WithContext(types.NewContext()))
 			spec2, err := compiler2.FromPackage(&pkg.DefaultPackage{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(types.NewContext()))
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -190,7 +193,7 @@ var _ = Describe("Repository", func() {
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false, true)
+			err = repo.Write(ctx, tmpdir, false, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).To(BeTrue())
@@ -206,7 +209,7 @@ urls:
   - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
-			repos, err := repository.Sync(true)
+			repos, err := repository.Sync(ctx, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = repos.GetTree().GetDatabase().FindPackage(spec.GetPackage())
@@ -234,11 +237,11 @@ urls:
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(1))
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase())
+			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), options.WithContext(ctx))
 			spec2, err := compiler2.FromPackage(&pkg.DefaultPackage{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(ctx))
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -291,6 +294,7 @@ urls:
 				WithSource(tmpdir),
 				FromMetadata(true), // Enabling from metadata makes the package visible
 				WithTree("../../tests/fixtures/buildable"),
+				WithContext(ctx),
 				WithDatabase(pkg.NewInMemoryDatabase(false)),
 			)
 			Expect(err).ToNot(HaveOccurred())
@@ -298,7 +302,7 @@ urls:
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false, true)
+			err = repo.Write(ctx, tmpdir, false, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).To(BeTrue())
@@ -314,7 +318,7 @@ urls:
   - "`+tmpdir+`"
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
-			repos, err := repository.Sync(true)
+			repos, err := repository.Sync(ctx, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = repos.GetTree().GetDatabase().FindPackage(spec.GetPackage())
@@ -345,15 +349,16 @@ urls:
 	})
 	Context("Docker repository", func() {
 		repoImage := os.Getenv("UNIT_TEST_DOCKER_IMAGE_REPOSITORY")
-
+		ctx := types.NewContext()
 		BeforeEach(func() {
 			if repoImage == "" {
 				Skip("UNIT_TEST_DOCKER_IMAGE_REPOSITORY not specified")
 			}
+			ctx = types.NewContext()
 		})
 
 		It("generates images", func() {
-			b := backend.NewSimpleDockerBackend()
+			b := backend.NewSimpleDockerBackend(ctx)
 			tmpdir, err := ioutil.TempDir("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
@@ -365,7 +370,8 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			localcompiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
+			localcompiler := compiler.NewLuetCompiler(
+				backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(ctx))
 
 			spec, err := localcompiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -392,7 +398,7 @@ urls:
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(repoImage, false, true)
+			err = repo.Write(ctx, repoImage, false, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", repoImage, "tree.tar.gz"))).To(BeTrue())
@@ -404,7 +410,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(extracted) // clean up
 
-			c := repo.Client()
+			c := repo.Client(ctx)
 
 			f, err := c.DownloadFile("repository.yaml")
 			Expect(err).ToNot(HaveOccurred())
@@ -422,12 +428,12 @@ urls:
 			})
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(a.Unpack(extracted, false)).ToNot(HaveOccurred())
+			Expect(a.Unpack(ctx, extracted, false)).ToNot(HaveOccurred())
 			Expect(fileHelper.Read(filepath.Join(extracted, "test6"))).To(Equal("artifact6\n"))
 		})
 
 		It("generates images of virtual packages", func() {
-			b := backend.NewSimpleDockerBackend()
+			b := backend.NewSimpleDockerBackend(ctx)
 			tmpdir, err := ioutil.TempDir("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
@@ -439,7 +445,8 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(5))
 
-			localcompiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase())
+			localcompiler := compiler.NewLuetCompiler(
+				backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(ctx))
 
 			spec, err := localcompiler.FromPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.99"})
 			Expect(err).ToNot(HaveOccurred())
@@ -463,7 +470,7 @@ urls:
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_SPECFILE))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(repoImage, false, true)
+			err = repo.Write(ctx, repoImage, false, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", repoImage, "tree.tar.gz"))).To(BeTrue())
@@ -475,7 +482,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(extracted) // clean up
 
-			c := repo.Client()
+			c := repo.Client(ctx)
 
 			f, err := c.DownloadFile("repository.yaml")
 			Expect(err).ToNot(HaveOccurred())
@@ -493,7 +500,7 @@ urls:
 			})
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(a.Unpack(extracted, false)).ToNot(HaveOccurred())
+			Expect(a.Unpack(ctx, extracted, false)).ToNot(HaveOccurred())
 
 			Expect(fileHelper.DirectoryIsEmpty(extracted)).To(BeFalse())
 			content, err := ioutil.ReadFile(filepath.Join(extracted, ".virtual"))

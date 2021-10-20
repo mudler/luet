@@ -1,4 +1,4 @@
-// Copyright © 2020-2021 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2019-2021 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,22 +20,23 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
-	"github.com/mudler/luet/pkg/config"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-	. "github.com/mudler/luet/pkg/logger"
 	"github.com/pkg/errors"
 )
 
 type LocalClient struct {
 	RepoData RepoData
 	Cache    *artifact.ArtifactCache
+	context  *types.Context
 }
 
-func NewLocalClient(r RepoData) *LocalClient {
+func NewLocalClient(r RepoData, ctx *types.Context) *LocalClient {
 	return &LocalClient{
-		Cache:    artifact.NewCache(config.LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()),
+		Cache:    artifact.NewCache(ctx.Config.GetSystem().GetSystemPkgsCacheDirPath()),
 		RepoData: r,
+		context:  ctx,
 	}
 }
 
@@ -49,7 +50,7 @@ func (c *LocalClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.P
 	// Check if file is already in cache
 	if err == nil {
 		newart.Path = fileName
-		Debug("Use artifact", artifactName, "from cache.")
+		c.context.Debug("Use artifact", artifactName, "from cache.")
 	} else {
 		d, err := c.DownloadFile(artifactName)
 		if err != nil {
@@ -69,8 +70,8 @@ func (c *LocalClient) DownloadFile(name string) (string, error) {
 
 	rootfs := ""
 
-	if !config.LuetCfg.ConfigFromHost {
-		rootfs, err = config.LuetCfg.GetSystem().GetRootFsAbs()
+	if !c.context.Config.ConfigFromHost {
+		rootfs, err = c.context.Config.GetSystem().GetRootFsAbs()
 		if err != nil {
 			return "", err
 		}
@@ -81,8 +82,8 @@ func (c *LocalClient) DownloadFile(name string) (string, error) {
 
 		uri = filepath.Join(rootfs, uri)
 
-		Info("Downloading file", name, "from", uri)
-		file, err = config.LuetCfg.GetSystem().TempFile("localclient")
+		c.context.Info("Copying file", name, "from", uri)
+		file, err = c.context.Config.GetSystem().TempFile("localclient")
 		if err != nil {
 			continue
 		}

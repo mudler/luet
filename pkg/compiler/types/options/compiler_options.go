@@ -18,8 +18,8 @@ package options
 import (
 	"runtime"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/compiler/types/compression"
-	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/solver"
 )
 
@@ -33,7 +33,7 @@ type Compiler struct {
 	Wait            bool
 	OnlyDeps        bool
 	NoDeps          bool
-	SolverOptions   config.LuetSolverOptions
+	SolverOptions   types.LuetSolverOptions
 	BuildValuesFile []string
 	BuildValues     []map[string]interface{}
 
@@ -46,6 +46,8 @@ type Compiler struct {
 
 	// TemplatesFolder. should default to tree/templates
 	TemplatesFolder []string
+
+	Context *types.Context
 }
 
 func NewDefaultCompiler() *Compiler {
@@ -58,7 +60,7 @@ func NewDefaultCompiler() *Compiler {
 		Concurrency:         runtime.NumCPU(),
 		OnlyDeps:            false,
 		NoDeps:              false,
-		SolverOptions:       config.LuetSolverOptions{Options: solver.Options{Concurrency: 1, Type: solver.SingleCoreSimple}},
+		SolverOptions:       types.LuetSolverOptions{Options: solver.Options{Concurrency: 1, Type: solver.SingleCoreSimple}},
 	}
 }
 
@@ -201,9 +203,16 @@ func WithCompressionType(t compression.Implementation) func(cfg *Compiler) error
 	}
 }
 
-func WithSolverOptions(c config.LuetSolverOptions) func(cfg *Compiler) error {
+func WithSolverOptions(c types.LuetSolverOptions) func(cfg *Compiler) error {
 	return func(cfg *Compiler) error {
 		cfg.SolverOptions = c
+		return nil
+	}
+}
+
+func WithContext(c *types.Context) func(cfg *Compiler) error {
+	return func(cfg *Compiler) error {
+		cfg.Context = c
 		return nil
 	}
 }

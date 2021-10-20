@@ -20,11 +20,10 @@ import (
 	"time"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
+	"github.com/mudler/luet/cmd/util"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler/types/compression"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
-	. "github.com/mudler/luet/pkg/config"
-	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -53,17 +52,17 @@ Afterwards, you can use the content generated and associate it with a tree and a
 
 		dst := viper.GetString("destination")
 		compressionType := viper.GetString("compression")
-		concurrency := LuetCfg.GetGeneral().Concurrency
+		concurrency := util.DefaultContext.Config.GetGeneral().Concurrency
 
 		if len(args) != 1 {
-			Fatal("You must specify a package name")
+			util.DefaultContext.Fatal("You must specify a package name")
 		}
 
 		packageName := args[0]
 
 		p, err := helpers.ParsePackageStr(packageName)
 		if err != nil {
-			Fatal("Invalid package string ", packageName, ": ", err.Error())
+			util.DefaultContext.Fatal("Invalid package string ", packageName, ": ", err.Error())
 		}
 
 		spec := &compilerspec.LuetCompilationSpec{Package: p}
@@ -71,18 +70,18 @@ Afterwards, you can use the content generated and associate it with a tree and a
 		a.CompressionType = compression.Implementation(compressionType)
 		err = a.Compress(sourcePath, concurrency)
 		if err != nil {
-			Fatal("failed compressing ", packageName, ": ", err.Error())
+			util.DefaultContext.Fatal("failed compressing ", packageName, ": ", err.Error())
 		}
 		a.CompileSpec = spec
 		filelist, err := a.FileList()
 		if err != nil {
-			Fatal("failed generating file list for ", packageName, ": ", err.Error())
+			util.DefaultContext.Fatal("failed generating file list for ", packageName, ": ", err.Error())
 		}
 		a.Files = filelist
 		a.CompileSpec.GetPackage().SetBuildTimestamp(time.Now().String())
 		err = a.WriteYAML(dst)
 		if err != nil {
-			Fatal("failed writing metadata yaml file for ", packageName, ": ", err.Error())
+			util.DefaultContext.Fatal("failed writing metadata yaml file for ", packageName, ": ", err.Error())
 		}
 	},
 }
@@ -90,7 +89,7 @@ Afterwards, you can use the content generated and associate it with a tree and a
 func init() {
 	path, err := os.Getwd()
 	if err != nil {
-		Fatal(err)
+		util.DefaultContext.Fatal(err)
 	}
 	packCmd.Flags().String("source", path, "Source folder")
 	packCmd.Flags().String("destination", path, "Destination folder")

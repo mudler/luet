@@ -22,8 +22,6 @@ import (
 	"github.com/mudler/luet/cmd/util"
 	"gopkg.in/yaml.v2"
 
-	. "github.com/mudler/luet/pkg/config"
-
 	"github.com/spf13/cobra"
 )
 
@@ -43,9 +41,9 @@ To return also files:
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			showFiles, _ := cmd.Flags().GetBool("files")
-			util.SetSystemConfig()
+			util.SetSystemConfig(util.DefaultContext)
 
-			systemDB := LuetCfg.GetSystemDB()
+			systemDB := util.DefaultContext.Config.GetSystemDB()
 
 			for _, a := range args {
 				pack, err := helpers.ParsePackageStr(a)

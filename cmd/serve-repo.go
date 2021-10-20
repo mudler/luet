@@ -18,7 +18,7 @@ import (
 	"net/http"
 	"os"
 
-	. "github.com/mudler/luet/pkg/logger"
+	"github.com/mudler/luet/cmd/util"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -41,15 +41,15 @@ var serverepoCmd = &cobra.Command{
 
 		http.Handle("/", http.FileServer(http.Dir(dir)))
 
-		Info("Serving ", dir, " on HTTP port: ", port)
-		Fatal(http.ListenAndServe(address+":"+port, nil))
+		util.DefaultContext.Info("Serving ", dir, " on HTTP port: ", port)
+		util.DefaultContext.Fatal(http.ListenAndServe(address+":"+port, nil))
 	},
 }
 
 func init() {
 	path, err := os.Getwd()
 	if err != nil {
-		Fatal(err)
+		util.DefaultContext.Fatal(err)
 	}
 	serverepoCmd.Flags().String("dir", path, "Packages folder (output from build)")
 	serverepoCmd.Flags().String("port", "9090", "Listening port")

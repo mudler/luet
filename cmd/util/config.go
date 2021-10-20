@@ -1,3 +1,18 @@
+// Copyright © 2021 Ettore Di Giacinto <mudler@mocaccino.org>
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, see <http://www.gnu.org/licenses/>.
+
 package util
 
 import (
@@ -9,13 +24,10 @@ import (
 	"strings"
 
 	extensions "github.com/mudler/cobra-extensions"
-	. "github.com/mudler/luet/pkg/logger"
+	"github.com/mudler/luet/pkg/api/core/types"
 
-	"github.com/mudler/luet/pkg/config"
 	helpers "github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-	"github.com/mudler/luet/pkg/helpers/terminal"
-	repo "github.com/mudler/luet/pkg/repository"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -29,6 +41,7 @@ var cfgFile string
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	setDefaults(viper.GetViper())
 	// Luet support these priorities on read configuration file:
 	// - command line option (if available)
 	// - $PWD/.luet.yaml
@@ -46,7 +59,7 @@ func initConfig() {
 		// Retrieve pwd directory
 		pwdDir, err := os.Getwd()
 		if err != nil {
-			Error(err)
+			fmt.Println(err)
 			os.Exit(1)
 		}
 		homeDir := helpers.GetHomeDir()
@@ -69,56 +82,31 @@ func initConfig() {
 	replacer := strings.NewReplacer(".", "__")
 	viper.SetEnvKeyReplacer(replacer)
 	viper.SetTypeByDefaultValue(true)
+	// If a config file is found, read it in.
+	viper.ReadInConfig()
+
 }
 
-func LoadConfig() (cc config.LuetConfig, err error) {
-	setDefaults(viper.GetViper())
-	initConfig()
+// InitContext inits the context by parsing the configurations from viper
+// this is meant to be run before each command to be able to parse any override from
+// the CLI/ENV
+func InitContext(ctx *types.Context) (err error) {
 
-	// If a config file is found, read it in.
-	err = viper.ReadInConfig()
+	err = viper.Unmarshal(&ctx.Config)
 	if err != nil {
 		return
 	}
 
-	err = viper.Unmarshal(&cc)
+	// Inits the context with the configurations loaded
+	// It reads system repositories, sets logging, and all the
+	// context which is required to perform luet actions
+	err = ctx.Init()
 	if err != nil {
 		return
 	}
 
-	if terminal.IsTerminal(os.Stdout) {
-		noSpinner := viper.GetBool("no_spinner")
-		InitAurora()
-		if !noSpinner {
-			NewSpinner()
-		}
-		noColor := viper.GetBool("logging.color")
-		if noColor {
-			fmt.Println("Disabling color")
-			NoColor()
-		}
-	} else {
-		fmt.Println("Not a terminal, disabling color")
-		NoColor()
-	}
-
-	Debug("Using config file:", viper.ConfigFileUsed())
-
-	if cc.GetLogging().EnableLogFile && cc.GetLogging().Path != "" {
-		// Init zap logger
-		err = ZapLogger()
-		if err != nil {
-			return
-		}
-	}
-
-	// Load repositories
-	err = repo.LoadRepositories(&cc)
-	if err != nil {
-		return
-	}
-
-	config.LuetCfg = &cc
+	// no_spinner is not mapped in our configs
+	ctx.NoSpinner = viper.GetBool("no_spinner")
 	return
 }
 
@@ -133,8 +121,6 @@ func setDefaults(viper *viper.Viper) {
 	viper.SetDefault("general.concurrency", runtime.NumCPU())
 	viper.SetDefault("general.debug", false)
 	viper.SetDefault("general.show_build_output", false)
-	viper.SetDefault("general.spinner_ms", 100)
-	viper.SetDefault("general.spinner_charset", 22)
 	viper.SetDefault("general.fatal_warnings", false)
 
 	u, err := user.Current()
@@ -158,7 +144,7 @@ func setDefaults(viper *viper.Viper) {
 	viper.SetDefault("config_from_host", true)
 	viper.SetDefault("cache_repositories", []string{})
 	viper.SetDefault("system_repositories", []string{})
-	viper.SetDefault("finalizer_envs", make(map[string]string, 0))
+	viper.SetDefault("finalizer_envs", make(map[string]string))
 
 	viper.SetDefault("solver.type", "")
 	viper.SetDefault("solver.rate", 0.7)
@@ -166,7 +152,9 @@ func setDefaults(viper *viper.Viper) {
 	viper.SetDefault("solver.max_attempts", 9000)
 }
 
-func InitViper(RootCmd *cobra.Command) {
+// InitViper inits a new viper
+// this is meant to be run just once at beginning to setup the root command
+func InitViper(ctx *types.Context, RootCmd *cobra.Command) {
 	cobra.OnInitialize(initConfig)
 	pflags := RootCmd.PersistentFlags()
 	pflags.StringVar(&cfgFile, "config", "", "config file (default is $HOME/.luet.yaml)")
@@ -174,11 +162,11 @@ func InitViper(RootCmd *cobra.Command) {
 	pflags.Bool("fatal", false, "Enables Warnings to exit")
 	pflags.Bool("enable-logfile", false, "Enable log to file")
 	pflags.Bool("no-spinner", false, "Disable spinner.")
-	pflags.Bool("color", config.LuetCfg.GetLogging().Color, "Enable/Disable color.")
-	pflags.Bool("emoji", config.LuetCfg.GetLogging().EnableEmoji, "Enable/Disable emoji.")
-	pflags.Bool("skip-config-protect", config.LuetCfg.ConfigProtectSkip,
+	pflags.Bool("color", ctx.Config.GetLogging().Color, "Enable/Disable color.")
+	pflags.Bool("emoji", ctx.Config.GetLogging().EnableEmoji, "Enable/Disable emoji.")
+	pflags.Bool("skip-config-protect", ctx.Config.ConfigProtectSkip,
 		"Disable config protect analysis.")
-	pflags.StringP("logfile", "l", config.LuetCfg.GetLogging().Path,
+	pflags.StringP("logfile", "l", ctx.Config.GetLogging().Path,
 		"Logfile path. Empty value disable log to file.")
 	pflags.StringSlice("plugin", []string{}, "A list of runtime plugins to load")
 
@@ -186,9 +174,9 @@ func InitViper(RootCmd *cobra.Command) {
 	// Check if i can retrieve user informations.
 	_, err := user.Current()
 	if err != nil {
-		Warning("failed to retrieve user identity:", err.Error())
+		ctx.Warning("failed to retrieve user identity:", err.Error())
 	}
-	pflags.Bool("same-owner", config.LuetCfg.GetGeneral().SameOwner, "Maintain same owner on uncompress.")
+	pflags.Bool("same-owner", ctx.Config.GetGeneral().SameOwner, "Maintain same owner on uncompress.")
 	pflags.Int("concurrency", runtime.NumCPU(), "Concurrency")
 
 	viper.BindPFlag("logging.color", pflags.Lookup("color"))
@@ -213,5 +201,4 @@ func InitViper(RootCmd *cobra.Command) {
 		cobraCmd := ex.CobraCommand()
 		RootCmd.AddCommand(cobraCmd)
 	}
-
 }

@@ -18,7 +18,7 @@ package types_test
 import (
 	"runtime"
 
-	. "github.com/mudler/luet/pkg/api/core/types"
+	types "github.com/mudler/luet/pkg/api/core/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -26,23 +26,23 @@ import (
 var _ = Describe("Types", func() {
 	Context("Repository detects underlying arch", func() {
 		It("is enabled if arch is matching", func() {
-			r := LuetRepository{Arch: runtime.GOARCH}
+			r := types.LuetRepository{Arch: runtime.GOARCH}
 			Expect(r.Enabled()).To(BeTrue())
 		})
 		It("is disabled if arch is NOT matching", func() {
-			r := LuetRepository{Arch: "foo"}
+			r := types.LuetRepository{Arch: "foo"}
 			Expect(r.Enabled()).To(BeFalse())
 		})
 		It("is enabled if arch is NOT matching and enabled is true", func() {
-			r := LuetRepository{Arch: "foo", Enable: true}
+			r := types.LuetRepository{Arch: "foo", Enable: true}
 			Expect(r.Enabled()).To(BeTrue())
 		})
 		It("enabled is true", func() {
-			r := LuetRepository{Enable: true}
+			r := types.LuetRepository{Enable: true}
 			Expect(r.Enabled()).To(BeTrue())
 		})
 		It("enabled is false", func() {
-			r := LuetRepository{Enable: false}
+			r := types.LuetRepository{Enable: false}
 			Expect(r.Enabled()).To(BeFalse())
 		})
 	})

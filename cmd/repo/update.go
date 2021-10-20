@@ -17,9 +17,8 @@
 package cmd_repo
 
 import (
-	. "github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/cmd/util"
 	installer "github.com/mudler/luet/pkg/installer"
-	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/spf13/cobra"
 )
@@ -45,27 +44,27 @@ $> luet repo update repo1 repo2
 
 			if len(args) > 0 {
 				for _, rname := range args {
-					repo, err := LuetCfg.GetSystemRepository(rname)
+					repo, err := util.DefaultContext.Config.GetSystemRepository(rname)
 					if err != nil && !ignore {
-						Fatal(err.Error())
+						util.DefaultContext.Fatal(err.Error())
 					} else if err != nil {
 						continue
 					}
 
 					r := installer.NewSystemRepository(*repo)
-					_, err = r.Sync(force)
+					_, err = r.Sync(util.DefaultContext, force)
 					if err != nil && !ignore {
-						Fatal("Error on sync repository " + rname + ": " + err.Error())
+						util.DefaultContext.Fatal("Error on sync repository " + rname + ": " + err.Error())
 					}
 				}
 
 			} else {
-				for _, repo := range LuetCfg.SystemRepositories {
+				for _, repo := range util.DefaultContext.Config.SystemRepositories {
 					if repo.Cached && repo.Enable {
 						r := installer.NewSystemRepository(repo)
-						_, err := r.Sync(force)
+						_, err := r.Sync(util.DefaultContext, force)
 						if err != nil && !ignore {
-							Fatal("Error on sync repository " + r.GetName() + ": " + err.Error())
+							util.DefaultContext.Fatal("Error on sync repository " + r.GetName() + ": " + err.Error())
 						}
 					}
 				}

@@ -18,8 +18,8 @@ package compiler
 import (
 	"fmt"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
-	"github.com/mudler/luet/pkg/config"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 	"github.com/pkg/errors"
@@ -32,7 +32,7 @@ import (
 // which identifies a Package in a HashTree
 type ImageHashTree struct {
 	Database      pkg.PackageDatabase
-	SolverOptions config.LuetSolverOptions
+	SolverOptions types.LuetSolverOptions
 }
 
 // PackageImageHashTree represent the Package into a given image hash tree

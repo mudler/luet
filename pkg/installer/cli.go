@@ -36,6 +36,7 @@ func packsToList(p pkg.Packages) string {
 }
 
 func printList(p pkg.Packages) {
+	fmt.Println()
 	d := pterm.TableData{{"Program Name", "Version", "License"}}
 	for _, m := range p {
 		d = append(d, []string{
@@ -43,9 +44,12 @@ func printList(p pkg.Packages) {
 			pterm.LightGreen(m.GetVersion()), m.GetLicense()})
 	}
 	pterm.DefaultTable.WithHasHeader().WithData(d).Render()
+	fmt.Println()
 }
 
 func printUpgradeList(install, uninstall pkg.Packages) {
+	fmt.Println()
+
 	d := pterm.TableData{{"Old version", "New version", "License"}}
 	for _, m := range uninstall {
 		if p, err := install.Find(m.GetPackageName()); err == nil {
@@ -64,6 +68,8 @@ func printUpgradeList(install, uninstall pkg.Packages) {
 		}
 	}
 	pterm.DefaultTable.WithHasHeader().WithData(d).Render()
+	fmt.Println()
+
 }
 
 func printMatchUpgrade(artefacts map[string]ArtifactMatch, uninstall pkg.Packages) {
@@ -77,6 +83,7 @@ func printMatchUpgrade(artefacts map[string]ArtifactMatch, uninstall pkg.Package
 }
 
 func printMatches(artefacts map[string]ArtifactMatch) {
+	fmt.Println()
 	d := pterm.TableData{{"Program Name", "Version", "License", "Repository"}}
 	for _, m := range artefacts {
 		d = append(d, []string{
@@ -84,14 +91,5 @@ func printMatches(artefacts map[string]ArtifactMatch) {
 			pterm.LightGreen(m.Package.GetVersion()), m.Package.GetLicense(), m.Repository.Name})
 	}
 	pterm.DefaultTable.WithHasHeader().WithData(d).Render()
-}
-
-func matchesToList(artefacts map[string]ArtifactMatch) string {
-	var packs []string
-
-	for fingerprint, match := range artefacts {
-		packs = append(packs, fmt.Sprintf("%s (%s)", fingerprint, match.Repository.GetName()))
-	}
-	sort.Strings(packs)
-	return strings.Join(packs, " ")
+	fmt.Println()
 }

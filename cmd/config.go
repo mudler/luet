@@ -18,8 +18,7 @@ package cmd
 import (
 	"fmt"
 
-	config "github.com/mudler/luet/pkg/config"
-	. "github.com/mudler/luet/pkg/logger"
+	"github.com/mudler/luet/cmd/util"
 
 	"github.com/spf13/cobra"
 )
@@ -30,9 +29,9 @@ var configCmd = &cobra.Command{
 	Long:    `Show luet configuration`,
 	Aliases: []string{"c"},
 	Run: func(cmd *cobra.Command, args []string) {
-		data, err := config.LuetCfg.YAML()
+		data, err := util.DefaultContext.Config.YAML()
 		if err != nil {
-			Fatal(err.Error())
+			util.DefaultContext.Fatal(err.Error())
 		}
 
 		fmt.Println(string(data))

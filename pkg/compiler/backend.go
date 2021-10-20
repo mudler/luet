@@ -7,23 +7,21 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 
 	"github.com/mudler/luet/pkg/compiler/backend"
-	"github.com/mudler/luet/pkg/config"
 	"github.com/pkg/errors"
-
-	. "github.com/mudler/luet/pkg/logger"
 )
 
-func NewBackend(s string) (CompilerBackend, error) {
+func NewBackend(ctx *types.Context, s string) (CompilerBackend, error) {
 	var compilerBackend CompilerBackend
 
 	switch s {
 	case backend.ImgBackend:
-		compilerBackend = backend.NewSimpleImgBackend()
+		compilerBackend = backend.NewSimpleImgBackend(ctx)
 	case backend.DockerBackend:
-		compilerBackend = backend.NewSimpleDockerBackend()
+		compilerBackend = backend.NewSimpleDockerBackend(ctx)
 	default:
 		return nil, errors.New("invalid backend. Unsupported")
 	}
@@ -73,11 +71,11 @@ type CompilerBackend interface {
 //     }
 //   }
 // ]
-func GenerateChanges(b CompilerBackend, fromImage, toImage backend.Options) ([]artifact.ArtifactLayer, error) {
+func GenerateChanges(ctx *types.Context, b CompilerBackend, fromImage, toImage backend.Options) ([]artifact.ArtifactLayer, error) {
 
 	res := artifact.ArtifactLayer{FromImage: fromImage.ImageName, ToImage: toImage.ImageName}
 
-	tmpdiffs, err := config.LuetCfg.GetSystem().TempDir("extraction")
+	tmpdiffs, err := ctx.Config.GetSystem().TempDir("extraction")
 	if err != nil {
 		return []artifact.ArtifactLayer{}, errors.Wrap(err, "Error met while creating tempdir for rootfs")
 	}
@@ -99,7 +97,7 @@ func GenerateChanges(b CompilerBackend, fromImage, toImage backend.Options) ([]a
 		ImageName:   fromImage.ImageName,
 		Destination: srcRootFS,
 	}
-	Debug("Extracting source image", fromImage.ImageName)
+	ctx.Debug("Extracting source image", fromImage.ImageName)
 	err = b.ExtractRootfs(srcImageExtract, false) // No need to keep permissions as we just collect file diffs
 	if err != nil {
 		return []artifact.ArtifactLayer{}, errors.Wrap(err, "Error met while unpacking src image "+fromImage.ImageName)
@@ -109,7 +107,7 @@ func GenerateChanges(b CompilerBackend, fromImage, toImage backend.Options) ([]a
 		ImageName:   toImage.ImageName,
 		Destination: dstRootFS,
 	}
-	Debug("Extracting destination image", toImage.ImageName)
+	ctx.Debug("Extracting destination image", toImage.ImageName)
 	err = b.ExtractRootfs(dstImageExtract, false)
 	if err != nil {
 		return []artifact.ArtifactLayer{}, errors.Wrap(err, "Error met while unpacking dst image "+toImage.ImageName)
@@ -182,10 +180,10 @@ func GenerateChanges(b CompilerBackend, fromImage, toImage backend.Options) ([]a
 
 	diffs := []artifact.ArtifactLayer{res}
 
-	if config.LuetCfg.GetGeneral().Debug {
+	if ctx.Config.GetGeneral().Debug {
 		summary := ComputeArtifactLayerSummary(diffs)
 		for _, l := range summary.Layers {
-			Debug(fmt.Sprintf("Diff %s -> %s: add %d (%d bytes), del %d (%d bytes), change %d (%d bytes)",
+			ctx.Debug(fmt.Sprintf("Diff %s -> %s: add %d (%d bytes), del %d (%d bytes), change %d (%d bytes)",
 				l.FromImage, l.ToImage,
 				l.AddFiles, l.AddSizes,
 				l.DelFiles, l.DelSizes,

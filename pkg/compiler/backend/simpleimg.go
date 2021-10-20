@@ -20,64 +20,65 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	bus "github.com/mudler/luet/pkg/bus"
-
-	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/pkg/errors"
 )
 
-type SimpleImg struct{}
+type SimpleImg struct {
+	ctx *types.Context
+}
 
-func NewSimpleImgBackend() *SimpleImg {
-	return &SimpleImg{}
+func NewSimpleImgBackend(ctx *types.Context) *SimpleImg {
+	return &SimpleImg{ctx: ctx}
 }
 
 // TODO: Missing still: labels, and build args expansion
-func (*SimpleImg) BuildImage(opts Options) error {
+func (s *SimpleImg) BuildImage(opts Options) error {
 	name := opts.ImageName
 	bus.Manager.Publish(bus.EventImagePreBuild, opts)
 
 	buildarg := genBuildCommand(opts)
 
-	Info(":tea: Building image " + name)
+	s.ctx.Info(":tea: Building image " + name)
 
 	cmd := exec.Command("img", buildarg...)
 	cmd.Dir = opts.SourcePath
-	err := runCommand(cmd)
+	err := runCommand(s.ctx, cmd)
 	if err != nil {
 		return err
 	}
 	bus.Manager.Publish(bus.EventImagePostBuild, opts)
 
-	Info(":tea: Building image " + name + " done")
+	s.ctx.Info(":tea: Building image " + name + " done")
 
 	return nil
 }
 
-func (*SimpleImg) RemoveImage(opts Options) error {
+func (s *SimpleImg) RemoveImage(opts Options) error {
 	name := opts.ImageName
 	buildarg := []string{"rm", name}
-	Spinner(22)
-	defer SpinnerStop()
+	s.ctx.Spinner()
+	defer s.ctx.SpinnerStop()
 	out, err := exec.Command("img", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed removing image: "+string(out))
 	}
 
-	Info(":tea: Image " + name + " removed")
+	s.ctx.Info(":tea: Image " + name + " removed")
 	return nil
 }
 
-func (*SimpleImg) DownloadImage(opts Options) error {
+func (s *SimpleImg) DownloadImage(opts Options) error {
 	name := opts.ImageName
 	bus.Manager.Publish(bus.EventImagePrePull, opts)
 
 	buildarg := []string{"pull", name}
-	Debug(":tea: Downloading image " + name)
+	s.ctx.Debug(":tea: Downloading image " + name)
 
-	Spinner(22)
-	defer SpinnerStop()
+	s.ctx.Spinner()
+	defer s.ctx.SpinnerStop()
 
 	cmd := exec.Command("img", buildarg...)
 	out, err := cmd.CombinedOutput()
@@ -85,27 +86,27 @@ func (*SimpleImg) DownloadImage(opts Options) error {
 		return errors.Wrap(err, "Failed downloading image: "+string(out))
 	}
 
-	Info(":tea: Image " + name + " downloaded")
+	s.ctx.Info(":tea: Image " + name + " downloaded")
 	bus.Manager.Publish(bus.EventImagePostPull, opts)
 
 	return nil
 }
-func (*SimpleImg) CopyImage(src, dst string) error {
-	Spinner(22)
-	defer SpinnerStop()
+func (s *SimpleImg) CopyImage(src, dst string) error {
+	s.ctx.Spinner()
+	defer s.ctx.SpinnerStop()
 
-	Debug(":tea: Tagging image", src, dst)
+	s.ctx.Debug(":tea: Tagging image", src, dst)
 	cmd := exec.Command("img", "tag", src, dst)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed tagging image: "+string(out))
 	}
-	Info(":tea: Image " + dst + " tagged")
+	s.ctx.Info(":tea: Image " + dst + " tagged")
 
 	return nil
 }
 
-func (*SimpleImg) ImageAvailable(imagename string) bool {
+func (s *SimpleImg) ImageAvailable(imagename string) bool {
 	return imageAvailable(imagename)
 }
 
@@ -135,20 +136,20 @@ func (s *SimpleImg) ImageDefinitionToTar(opts Options) error {
 	return nil
 }
 
-func (*SimpleImg) ExportImage(opts Options) error {
+func (s *SimpleImg) ExportImage(opts Options) error {
 	name := opts.ImageName
 	path := opts.Destination
 	buildarg := []string{"save", "-o", path, name}
-	Debug(":tea: Saving image " + name)
+	s.ctx.Debug(":tea: Saving image " + name)
 
-	Spinner(22)
-	defer SpinnerStop()
+	s.ctx.Spinner()
+	defer s.ctx.SpinnerStop()
 
 	out, err := exec.Command("img", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed exporting image: "+string(out))
 	}
-	Info(":tea: Image " + name + " saved")
+	s.ctx.Info(":tea: Image " + name + " saved")
 	return nil
 }
 
@@ -166,20 +167,20 @@ func (s *SimpleImg) ExtractRootfs(opts Options, keepPerms bool) error {
 	os.RemoveAll(path)
 
 	buildarg := []string{"unpack", "-o", path, name}
-	Debug(":tea: Extracting image " + name)
+	s.ctx.Debug(":tea: Extracting image " + name)
 
-	Spinner(22)
-	defer SpinnerStop()
+	s.ctx.Spinner()
+	defer s.ctx.SpinnerStop()
 
 	out, err := exec.Command("img", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed extracting image: "+string(out))
 	}
-	Debug(":tea: Image " + name + " extracted")
+	s.ctx.Debug(":tea: Image " + name + " extracted")
 	return nil
 }
 
-func (*SimpleImg) Push(opts Options) error {
+func (s *SimpleImg) Push(opts Options) error {
 	name := opts.ImageName
 	bus.Manager.Publish(bus.EventImagePrePush, opts)
 
@@ -188,9 +189,9 @@ func (*SimpleImg) Push(opts Options) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed pushing image: "+string(out))
 	}
-	Info(":tea: Pushed image:", name)
+	s.ctx.Info(":tea: Pushed image:", name)
 	bus.Manager.Publish(bus.EventImagePostPush, opts)
 
-	//Info(string(out))
+	//s.ctx.Info(string(out))
 	return nil
 }

@@ -16,6 +16,7 @@
 package compiler_test
 
 import (
+	"github.com/mudler/luet/pkg/api/core/types"
 	. "github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/compiler/backend"
 
@@ -25,9 +26,9 @@ import (
 
 var _ = Describe("Docker image diffs", func() {
 	var b CompilerBackend
-
+	ctx := types.NewContext()
 	BeforeEach(func() {
-		b = NewSimpleDockerBackend()
+		b = NewSimpleDockerBackend(ctx)
 	})
 
 	Context("Generate diffs from docker images", func() {
@@ -38,7 +39,7 @@ var _ = Describe("Docker image diffs", func() {
 			err := b.DownloadImage(opts)
 			Expect(err).ToNot(HaveOccurred())
 
-			layers, err := GenerateChanges(b, opts, opts)
+			layers, err := GenerateChanges(ctx, b, opts, opts)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(layers)).To(Equal(1))
 			Expect(len(layers[0].Diffs.Additions)).To(Equal(0))
@@ -56,7 +57,7 @@ var _ = Describe("Docker image diffs", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 
-			layers, err := GenerateChanges(b, Options{
+			layers, err := GenerateChanges(ctx, b, Options{
 				ImageName: "quay.io/mocaccino/micro",
 			}, Options{
 				ImageName: "quay.io/mocaccino/extra",

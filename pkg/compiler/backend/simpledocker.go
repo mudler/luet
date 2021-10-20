@@ -23,64 +23,66 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	bus "github.com/mudler/luet/pkg/bus"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	capi "github.com/mudler/docker-companion/api"
 
 	"github.com/mudler/luet/pkg/helpers"
-	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/pkg/errors"
 )
 
-type SimpleDocker struct{}
+type SimpleDocker struct {
+	ctx *types.Context
+}
 
-func NewSimpleDockerBackend() *SimpleDocker {
-	return &SimpleDocker{}
+func NewSimpleDockerBackend(ctx *types.Context) *SimpleDocker {
+	return &SimpleDocker{ctx: ctx}
 }
 
 // TODO: Missing still: labels, and build args expansion
-func (*SimpleDocker) BuildImage(opts Options) error {
+func (s *SimpleDocker) BuildImage(opts Options) error {
 	name := opts.ImageName
 	bus.Manager.Publish(bus.EventImagePreBuild, opts)
 
 	buildarg := genBuildCommand(opts)
-	Info(":whale2: Building image " + name)
+	s.ctx.Info(":whale2: Building image " + name)
 	cmd := exec.Command("docker", buildarg...)
 	cmd.Dir = opts.SourcePath
-	err := runCommand(cmd)
+	err := runCommand(s.ctx, cmd)
 	if err != nil {
 		return err
 	}
 
-	Info(":whale: Building image " + name + " done")
+	s.ctx.Info(":whale: Building image " + name + " done")
 
 	bus.Manager.Publish(bus.EventImagePostBuild, opts)
 
 	return nil
 }
 
-func (*SimpleDocker) CopyImage(src, dst string) error {
-	Debug(":whale: Tagging image:", src, "->", dst)
+func (s *SimpleDocker) CopyImage(src, dst string) error {
+	s.ctx.Debug(":whale: Tagging image:", src, "->", dst)
 	cmd := exec.Command("docker", "tag", src, dst)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed tagging image: "+string(out))
 	}
-	Info(":whale: Tagged image:", src, "->", dst)
+	s.ctx.Info(":whale: Tagged image:", src, "->", dst)
 	return nil
 }
 
-func (*SimpleDocker) DownloadImage(opts Options) error {
+func (s *SimpleDocker) DownloadImage(opts Options) error {
 	name := opts.ImageName
 	bus.Manager.Publish(bus.EventImagePrePull, opts)
 
 	buildarg := []string{"pull", name}
-	Debug(":whale: Downloading image " + name)
+	s.ctx.Debug(":whale: Downloading image " + name)
 
-	Spinner(22)
-	defer SpinnerStop()
+	s.ctx.Spinner()
+	defer s.ctx.SpinnerStop()
 
 	cmd := exec.Command("docker", buildarg...)
 	out, err := cmd.CombinedOutput()
@@ -88,20 +90,20 @@ func (*SimpleDocker) DownloadImage(opts Options) error {
 		return errors.Wrap(err, "Failed pulling image: "+string(out))
 	}
 
-	Info(":whale: Downloaded image:", name)
+	s.ctx.Info(":whale: Downloaded image:", name)
 	bus.Manager.Publish(bus.EventImagePostPull, opts)
 
 	return nil
 }
 
-func (*SimpleDocker) ImageExists(imagename string) bool {
+func (s *SimpleDocker) ImageExists(imagename string) bool {
 	buildarg := []string{"inspect", "--type=image", imagename}
-	Debug(":whale: Checking existance of docker image: " + imagename)
+	s.ctx.Debug(":whale: Checking existance of docker image: " + imagename)
 	cmd := exec.Command("docker", buildarg...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		Debug("Image not present")
-		Debug(string(out))
+		s.ctx.Debug("Image not present")
+		s.ctx.Debug(string(out))
 		return false
 	}
 	return true
@@ -111,31 +113,31 @@ func (*SimpleDocker) ImageAvailable(imagename string) bool {
 	return imageAvailable(imagename)
 }
 
-func (*SimpleDocker) RemoveImage(opts Options) error {
+func (s *SimpleDocker) RemoveImage(opts Options) error {
 	name := opts.ImageName
 	buildarg := []string{"rmi", name}
 	out, err := exec.Command("docker", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed removing image: "+string(out))
 	}
-	Info(":whale: Removed image:", name)
+	s.ctx.Info(":whale: Removed image:", name)
 	//Info(string(out))
 	return nil
 }
 
-func (*SimpleDocker) Push(opts Options) error {
+func (s *SimpleDocker) Push(opts Options) error {
 	name := opts.ImageName
 	pusharg := []string{"push", name}
 	bus.Manager.Publish(bus.EventImagePrePush, opts)
 
-	Spinner(22)
-	defer SpinnerStop()
+	s.ctx.Spinner()
+	defer s.ctx.SpinnerStop()
 
 	out, err := exec.Command("docker", pusharg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed pushing image: "+string(out))
 	}
-	Info(":whale: Pushed image:", name)
+	s.ctx.Info(":whale: Pushed image:", name)
 	bus.Manager.Publish(bus.EventImagePostPush, opts)
 
 	//Info(string(out))
@@ -155,22 +157,22 @@ func (s *SimpleDocker) ImageDefinitionToTar(opts Options) error {
 	return nil
 }
 
-func (*SimpleDocker) ExportImage(opts Options) error {
+func (s *SimpleDocker) ExportImage(opts Options) error {
 	name := opts.ImageName
 	path := opts.Destination
 
 	buildarg := []string{"save", name, "-o", path}
-	Debug(":whale: Saving image " + name)
+	s.ctx.Debug(":whale: Saving image " + name)
 
-	Spinner(22)
-	defer SpinnerStop()
+	s.ctx.Spinner()
+	defer s.ctx.SpinnerStop()
 
 	out, err := exec.Command("docker", buildarg...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed exporting image: "+string(out))
 	}
 
-	Debug(":whale: Exported image:", name)
+	s.ctx.Debug(":whale: Exported image:", name)
 	return nil
 }
 
@@ -196,14 +198,12 @@ func (b *SimpleDocker) ExtractRootfs(opts Options, keepPerms bool) error {
 
 	imageExport := filepath.Join(tempexport, "image.tar")
 
-	Spinner(22)
-	defer SpinnerStop()
+	b.ctx.Spinner()
+	defer b.ctx.SpinnerStop()
 
 	if err := b.ExportImage(Options{ImageName: name, Destination: imageExport}); err != nil {
 		return errors.Wrap(err, "failed while extracting rootfs for "+name)
 	}
-
-	SpinnerStop()
 
 	src := imageExport
 

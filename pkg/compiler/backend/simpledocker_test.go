@@ -16,6 +16,7 @@
 package backend_test
 
 import (
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/compiler"
@@ -35,6 +36,7 @@ import (
 
 var _ = Describe("Docker backend", func() {
 	Context("Simple Docker backend satisfies main interface functionalities", func() {
+		ctx := types.NewContext()
 		It("Builds and generate tars", func() {
 			generalRecipe := tree.NewGeneralRecipe(pkg.NewInMemoryDatabase(false))
 
@@ -69,7 +71,7 @@ WORKDIR /luetbuild
 ENV PACKAGE_NAME=enman
 ENV PACKAGE_VERSION=1.4.0
 ENV PACKAGE_CATEGORY=app-admin`))
-			b := NewSimpleDockerBackend()
+			b := NewSimpleDockerBackend(ctx)
 			opts := backend.Options{
 				ImageName:      "luet/base",
 				SourcePath:     tmpdir,
@@ -115,7 +117,7 @@ RUN echo bar > /test2`))
 			artifacts = append(artifacts, artifact.ArtifactNode{Name: "/test", Size: 4})
 			artifacts = append(artifacts, artifact.ArtifactNode{Name: "/test2", Size: 4})
 
-			Expect(compiler.GenerateChanges(b, opts, opts2)).To(Equal(
+			Expect(compiler.GenerateChanges(ctx, b, opts, opts2)).To(Equal(
 				[]artifact.ArtifactLayer{{
 					FromImage: "luet/base",
 					ToImage:   "test",
@@ -137,7 +139,7 @@ RUN echo bar > /test2`))
 		})
 
 		It("Detects available images", func() {
-			b := NewSimpleDockerBackend()
+			b := NewSimpleDockerBackend(ctx)
 			Expect(b.ImageAvailable("quay.io/mocaccino/extra")).To(BeTrue())
 			Expect(b.ImageAvailable("ubuntu:20.10")).To(BeTrue())
 			Expect(b.ImageAvailable("igjo5ijgo25nho52")).To(BeFalse())

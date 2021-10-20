@@ -21,11 +21,9 @@ import (
 	"os"
 	"sort"
 
-	//. "github.com/mudler/luet/pkg/config"
 	"github.com/ghodss/yaml"
 	helpers "github.com/mudler/luet/cmd/helpers"
-	. "github.com/mudler/luet/pkg/config"
-	. "github.com/mudler/luet/pkg/logger"
+	"github.com/mudler/luet/cmd/util"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 	tree "github.com/mudler/luet/pkg/tree"
@@ -75,13 +73,13 @@ func NewTreePkglistCommand() *cobra.Command {
 		PreRun: func(cmd *cobra.Command, args []string) {
 			t, _ := cmd.Flags().GetStringArray("tree")
 			if len(t) == 0 {
-				Fatal("Mandatory tree param missing.")
+				util.DefaultContext.Fatal("Mandatory tree param missing.")
 			}
 
 			revdeps, _ := cmd.Flags().GetBool("revdeps")
 			deps, _ := cmd.Flags().GetBool("deps")
 			if revdeps && deps {
-				Fatal("Both revdeps and deps option used. Choice only one.")
+				util.DefaultContext.Fatal("Both revdeps and deps option used. Choice only one.")
 			}
 
 		},
@@ -98,7 +96,7 @@ func NewTreePkglistCommand() *cobra.Command {
 
 			out, _ := cmd.Flags().GetString("output")
 			if out != "terminal" {
-				LuetCfg.GetLogging().SetLogLevel("error")
+				util.DefaultContext.Config.GetLogging().SetLogLevel("error")
 			}
 
 			var reciper tree.Builder
@@ -111,7 +109,7 @@ func NewTreePkglistCommand() *cobra.Command {
 			for _, t := range treePath {
 				err := reciper.Load(t)
 				if err != nil {
-					Fatal("Error on load tree ", err)
+					util.DefaultContext.Fatal("Error on load tree ", err)
 				}
 			}
 
@@ -126,11 +124,11 @@ func NewTreePkglistCommand() *cobra.Command {
 
 			regExcludes, err := helpers.CreateRegexArray(excludes)
 			if err != nil {
-				Fatal(err.Error())
+				util.DefaultContext.Fatal(err.Error())
 			}
 			regMatches, err := helpers.CreateRegexArray(matches)
 			if err != nil {
-				Fatal(err.Error())
+				util.DefaultContext.Fatal(err.Error())
 			}
 
 			plist := make([]string, 0)
@@ -194,12 +192,12 @@ func NewTreePkglistCommand() *cobra.Command {
 
 					solution, err := depSolver.Install(pkg.Packages{p})
 					if err != nil {
-						Fatal(err.Error())
+						util.DefaultContext.Fatal(err.Error())
 					}
 					ass := solution.SearchByName(p.GetPackageName())
 					solution, err = solution.Order(reciper.GetDatabase(), ass.Package.GetFingerPrint())
 					if err != nil {
-						Fatal(err.Error())
+						util.DefaultContext.Fatal(err.Error())
 					}
 
 					for _, pa := range solution {
@@ -270,7 +268,7 @@ func NewTreePkglistCommand() *cobra.Command {
 	}
 	path, err := os.Getwd()
 	if err != nil {
-		Fatal(err)
+		util.DefaultContext.Fatal(err)
 	}
 	ans.Flags().BoolP("buildtime", "b", false, "Build time match")
 	ans.Flags().StringP("output", "o", "terminal", "Output format ( Defaults: terminal, available: json,yaml )")

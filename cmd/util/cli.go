@@ -17,17 +17,23 @@ package util
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/marcsauter/single"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/mudler/luet/pkg/config"
-	. "github.com/mudler/luet/pkg/config"
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/installer"
 )
+
+var DefaultContext = types.NewContext()
+
+var lockedCommands = []string{"install", "uninstall", "upgrade"}
+var bannerCommands = []string{"install", "build", "uninstall", "upgrade"}
 
 func BindSystemFlags(cmd *cobra.Command) {
 	viper.BindPFlag("system.database_path", cmd.Flags().Lookup("system-dbpath"))
@@ -50,28 +56,28 @@ func ValuesFlags() []string {
 	return viper.GetStringSlice("values")
 }
 
-func SetSystemConfig() {
+func SetSystemConfig(ctx *types.Context) {
 	dbpath := viper.GetString("system.database_path")
 	rootfs := viper.GetString("system.rootfs")
 	engine := viper.GetString("system.database_engine")
 
-	LuetCfg.System.DatabaseEngine = engine
-	LuetCfg.System.DatabasePath = dbpath
-	LuetCfg.System.SetRootFS(rootfs)
+	ctx.Config.System.DatabaseEngine = engine
+	ctx.Config.System.DatabasePath = dbpath
+	ctx.Config.System.SetRootFS(rootfs)
 }
 
-func SetSolverConfig() (c *config.LuetSolverOptions) {
+func SetSolverConfig(ctx *types.Context) (c *types.LuetSolverOptions) {
 	stype := viper.GetString("solver.type")
 	discount := viper.GetFloat64("solver.discount")
 	rate := viper.GetFloat64("solver.rate")
 	attempts := viper.GetInt("solver.max_attempts")
 
-	LuetCfg.GetSolverOptions().Type = stype
-	LuetCfg.GetSolverOptions().LearnRate = float32(rate)
-	LuetCfg.GetSolverOptions().Discount = float32(discount)
-	LuetCfg.GetSolverOptions().MaxAttempts = attempts
+	ctx.Config.GetSolverOptions().Type = stype
+	ctx.Config.GetSolverOptions().LearnRate = float32(rate)
+	ctx.Config.GetSolverOptions().Discount = float32(discount)
+	ctx.Config.GetSolverOptions().MaxAttempts = attempts
 
-	return &config.LuetSolverOptions{
+	return &types.LuetSolverOptions{
 		Type:        stype,
 		LearnRate:   float32(rate),
 		Discount:    float32(discount),
@@ -79,7 +85,7 @@ func SetSolverConfig() (c *config.LuetSolverOptions) {
 	}
 }
 
-func SetCliFinalizerEnvs(finalizerEnvs []string) error {
+func SetCliFinalizerEnvs(ctx *types.Context, finalizerEnvs []string) error {
 	if len(finalizerEnvs) > 0 {
 		for _, v := range finalizerEnvs {
 			idx := strings.Index(v, "=")
@@ -87,7 +93,7 @@ func SetCliFinalizerEnvs(finalizerEnvs []string) error {
 				return errors.New("Found invalid runtime finalizer environment: " + v)
 			}
 
-			LuetCfg.SetFinalizerEnv(v[0:idx], v[idx+1:])
+			ctx.Config.SetFinalizerEnv(v[0:idx], v[idx+1:])
 		}
 
 	}
@@ -96,13 +102,13 @@ func SetCliFinalizerEnvs(finalizerEnvs []string) error {
 }
 
 // TemplateFolders returns the default folders which holds shared template between packages in a given tree path
-func TemplateFolders(fromRepo bool, treePaths []string) []string {
+func TemplateFolders(ctx *types.Context, fromRepo bool, treePaths []string) []string {
 	templateFolders := []string{}
 	for _, t := range treePaths {
 		templateFolders = append(templateFolders, filepath.Join(t, "templates"))
 	}
 	if fromRepo {
-		for _, s := range installer.SystemRepositories(LuetCfg.SystemRepositories) {
+		for _, s := range installer.SystemRepositories(ctx.Config.SystemRepositories) {
 			templateFolders = append(templateFolders, filepath.Join(s.TreePath, "templates"))
 		}
 	}
@@ -118,4 +124,43 @@ func IntroScreen() {
 	pterm.DefaultCenter.Print(luetLogo)
 
 	pterm.DefaultCenter.Print(pterm.DefaultHeader.WithFullWidth().WithBackgroundStyle(pterm.NewStyle(pterm.BgLightBlue)).WithMargin(10).Sprint("Luet - 0-deps container-based package manager"))
+}
+
+func HandleLock(c *types.Context) {
+	if os.Getenv("LUET_NOLOCK") != "true" {
+		if len(os.Args) > 1 {
+			for _, lockedCmd := range lockedCommands {
+				if os.Args[1] == lockedCmd {
+					s := single.New("luet")
+					if err := s.CheckLock(); err != nil && err == single.ErrAlreadyRunning {
+						c.Fatal("another instance of the app is already running, exiting")
+					} else if err != nil {
+						// Another error occurred, might be worth handling it as well
+						c.Fatal("failed to acquire exclusive app lock:", err.Error())
+					}
+					defer s.TryUnlock()
+					break
+				}
+			}
+		}
+	}
+}
+
+func DisplayVersionBanner(c *types.Context, banner func(), version func() string, license []string) {
+	display := false
+	if len(os.Args) > 1 {
+		for _, c := range bannerCommands {
+			if os.Args[1] == c {
+				display = true
+			}
+		}
+	}
+	if display {
+		banner()
+		pterm.DefaultCenter.Print(version())
+		for _, l := range license {
+			pterm.DefaultCenter.Print(l)
+
+		}
+	}
 }

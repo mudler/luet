@@ -18,9 +18,6 @@ import (
 	"github.com/mudler/luet/cmd/util"
 	installer "github.com/mudler/luet/pkg/installer"
 
-	. "github.com/mudler/luet/pkg/config"
-	. "github.com/mudler/luet/pkg/logger"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -39,23 +36,24 @@ var reclaimCmd = &cobra.Command{
 It scans the target file system, and if finds a match with a package available in the repositories, it marks as installed in the system database.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		util.SetSystemConfig()
+		util.SetSystemConfig(util.DefaultContext)
 
 		force := viper.GetBool("force")
 
-		Debug("Solver", LuetCfg.GetSolverOptions().CompactString())
+		util.DefaultContext.Debug("Solver", util.DefaultContext.Config.GetSolverOptions().CompactString())
 
 		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-			Concurrency:                 LuetCfg.GetGeneral().Concurrency,
+			Concurrency:                 util.DefaultContext.Config.GetGeneral().Concurrency,
 			Force:                       force,
 			PreserveSystemEssentialData: true,
-			PackageRepositories:         LuetCfg.SystemRepositories,
+			PackageRepositories:         util.DefaultContext.Config.SystemRepositories,
+			Context:                     util.DefaultContext,
 		})
 
-		system := &installer.System{Database: LuetCfg.GetSystemDB(), Target: LuetCfg.GetSystem().Rootfs}
+		system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.GetSystem().Rootfs}
 		err := inst.Reclaim(system)
 		if err != nil {
-			Fatal("Error: " + err.Error())
+			util.DefaultContext.Fatal("Error: " + err.Error())
 		}
 	},
 }

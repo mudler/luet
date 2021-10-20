@@ -21,9 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/mudler/luet/cmd/util"
-	. "github.com/mudler/luet/pkg/config"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-	. "github.com/mudler/luet/pkg/logger"
 
 	"github.com/spf13/cobra"
 )
@@ -37,13 +35,13 @@ var cleanupCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var cleaned int = 0
-		util.SetSystemConfig()
+		util.SetSystemConfig(util.DefaultContext)
 		// Check if cache dir exists
-		if fileHelper.Exists(LuetCfg.GetSystem().GetSystemPkgsCacheDirPath()) {
+		if fileHelper.Exists(util.DefaultContext.Config.GetSystem().GetSystemPkgsCacheDirPath()) {
 
-			files, err := ioutil.ReadDir(LuetCfg.GetSystem().GetSystemPkgsCacheDirPath())
+			files, err := ioutil.ReadDir(util.DefaultContext.Config.GetSystem().GetSystemPkgsCacheDirPath())
 			if err != nil {
-				Fatal("Error on read cachedir ", err.Error())
+				util.DefaultContext.Fatal("Error on read cachedir ", err.Error())
 			}
 
 			for _, file := range files {
@@ -51,20 +49,20 @@ var cleanupCmd = &cobra.Command{
 					continue
 				}
 
-				if LuetCfg.GetGeneral().Debug {
-					Info("Removing ", file.Name())
+				if util.DefaultContext.Config.GetGeneral().Debug {
+					util.DefaultContext.Info("Removing ", file.Name())
 				}
 
 				err := os.RemoveAll(
-					filepath.Join(LuetCfg.GetSystem().GetSystemPkgsCacheDirPath(), file.Name()))
+					filepath.Join(util.DefaultContext.Config.GetSystem().GetSystemPkgsCacheDirPath(), file.Name()))
 				if err != nil {
-					Fatal("Error on removing", file.Name())
+					util.DefaultContext.Fatal("Error on removing", file.Name())
 				}
 				cleaned++
 			}
 		}
 
-		Info("Cleaned: ", cleaned, "packages.")
+		util.DefaultContext.Info("Cleaned: ", cleaned, "packages.")
 
 	},
 }

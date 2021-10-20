@@ -24,14 +24,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/bus"
 	compiler "github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
-	"github.com/mudler/luet/pkg/config"
 	"github.com/mudler/luet/pkg/helpers"
 	"github.com/mudler/luet/pkg/helpers/docker"
-	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/pkg/errors"
@@ -41,18 +40,19 @@ type dockerRepositoryGenerator struct {
 	b                compiler.CompilerBackend
 	imagePrefix      string
 	imagePush, force bool
+	context          *types.Context
 }
 
 func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
-	Info("Generating docker images for packages in", l.imagePrefix)
+	l.context.Info("Generating docker images for packages in", l.imagePrefix)
 	var art []*artifact.PackageArtifact
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
 		if err != nil {
-			Debug("Skipping", info.Name(), err.Error())
+			l.context.Debug("Skipping", info.Name(), err.Error())
 			return nil
 		}
 		if info.IsDir() {
-			Debug("Skipping directories")
+			l.context.Debug("Skipping directories")
 			return nil
 		}
 
@@ -80,7 +80,7 @@ func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDataba
 		// We want to include packages that are ONLY referenced in the tree.
 		// the ones which aren't should be deleted. (TODO: by another cli command?)
 		if _, notfound := db.FindPackage(a.CompileSpec.Package); notfound != nil {
-			Debug(fmt.Sprintf("Package %s not found in tree. Ignoring it.",
+			l.context.Debug(fmt.Sprintf("Package %s not found in tree. Ignoring it.",
 				a.CompileSpec.Package.HumanReadableString()))
 			return nil
 		}
@@ -88,16 +88,16 @@ func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDataba
 		packageImage := fmt.Sprintf("%s:%s", l.imagePrefix, a.CompileSpec.GetPackage().ImageID())
 
 		if l.imagePush && l.b.ImageAvailable(packageImage) && !l.force {
-			Info("Image", packageImage, "already present, skipping. use --force-push to override")
+			l.context.Info("Image", packageImage, "already present, skipping. use --force-push to override")
 		} else {
-			Info("Generating final image", packageImage,
+			l.context.Info("Generating final image", packageImage,
 				"for package ", a.CompileSpec.GetPackage().HumanReadableString())
-			if opts, err := a.GenerateFinalImage(packageImage, l.b, true); err != nil {
+			if opts, err := a.GenerateFinalImage(l.context, packageImage, l.b, true); err != nil {
 				return errors.Wrap(err, "Failed generating metadata tree"+opts.ImageName)
 			}
 		}
 		if l.imagePush {
-			if err := pushImage(l.b, packageImage, l.force); err != nil {
+			if err := pushImage(l.context, l.b, packageImage, l.force); err != nil {
 				return errors.Wrapf(err, "Failed while pushing image: '%s'", packageImage)
 			}
 		}
@@ -115,21 +115,21 @@ func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDataba
 	return art, nil
 }
 
-func pushImage(b compiler.CompilerBackend, image string, force bool) error {
+func pushImage(ctx *types.Context, b compiler.CompilerBackend, image string, force bool) error {
 	if b.ImageAvailable(image) && !force {
-		Debug("Image", image, "already present, skipping")
+		ctx.Debug("Image", image, "already present, skipping")
 		return nil
 	}
 	return b.Push(backend.Options{ImageName: image})
 }
 
 func (d *dockerRepositoryGenerator) pushFileFromArtifact(a *artifact.PackageArtifact, imageTree string) error {
-	Debug("Generating image", imageTree)
-	if opts, err := a.GenerateFinalImage(imageTree, d.b, false); err != nil {
+	d.context.Debug("Generating image", imageTree)
+	if opts, err := a.GenerateFinalImage(d.context, imageTree, d.b, false); err != nil {
 		return errors.Wrap(err, "Failed generating metadata tree "+opts.ImageName)
 	}
 	if d.imagePush {
-		if err := pushImage(d.b, imageTree, true); err != nil {
+		if err := pushImage(d.context, d.b, imageTree, true); err != nil {
 			return errors.Wrapf(err, "Failed while pushing image: '%s'", imageTree)
 		}
 	}
@@ -138,7 +138,7 @@ func (d *dockerRepositoryGenerator) pushFileFromArtifact(a *artifact.PackageArti
 
 func (d *dockerRepositoryGenerator) pushRepoMetadata(repospec string, r *LuetSystemRepository) error {
 	// create temp dir for metafile
-	metaDir, err := config.LuetCfg.GetSystem().TempDir("metadata")
+	metaDir, err := d.context.Config.GetSystem().TempDir("metadata")
 	if err != nil {
 		return errors.Wrap(err, "Error met while creating tempdir for metadata")
 	}
@@ -161,13 +161,13 @@ func (d *dockerRepositoryGenerator) pushRepoMetadata(repospec string, r *LuetSys
 func (d *dockerRepositoryGenerator) pushImageFromArtifact(a *artifact.PackageArtifact, b compiler.CompilerBackend, checkIfExists bool) error {
 	// we generate a new archive containing the required compressed file.
 	// TODO: Bundle all the extra files in 1 docker image only, instead of an image for each file
-	treeArchive, err := artifact.CreateArtifactForFile(a.Path)
+	treeArchive, err := artifact.CreateArtifactForFile(d.context, a.Path)
 	if err != nil {
 		return errors.Wrap(err, "failed generating checksums for tree")
 	}
 	imageTree := fmt.Sprintf("%s:%s", d.imagePrefix, docker.StripInvalidStringsFromImage(a.GetFileName()))
 	if checkIfExists && d.imagePush && d.b.ImageAvailable(imageTree) && !d.force {
-		Info("Image", imageTree, "already present, skipping. use --force-push to override")
+		d.context.Info("Image", imageTree, "already present, skipping. use --force-push to override")
 		return nil
 	} else {
 		return d.pushFileFromArtifact(treeArchive, imageTree)
@@ -184,7 +184,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 
 	r.LastUpdate = strconv.FormatInt(time.Now().Unix(), 10)
 
-	repoTemp, err := config.LuetCfg.GetSystem().TempDir("repo")
+	repoTemp, err := d.context.Config.GetSystem().TempDir("repo")
 	if err != nil {
 		return errors.Wrap(err, "error met while creating tempdir for repository")
 	}
@@ -207,7 +207,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 		return err
 	}
 
-	Info(fmt.Sprintf(
+	d.context.Info(fmt.Sprintf(
 		"For repository %s creating revision %d and last update %s...",
 		r.Name, r.Revision, r.LastUpdate,
 	))
@@ -221,7 +221,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 	})
 
 	// Create tree and repository file
-	a, err := r.AddTree(r.GetTree(), repoTemp, REPOFILE_TREE_KEY, NewDefaultTreeRepositoryFile())
+	a, err := r.AddTree(d.context, r.GetTree(), repoTemp, REPOFILE_TREE_KEY, NewDefaultTreeRepositoryFile())
 	if err != nil {
 		return errors.Wrap(err, "error met while adding runtime tree to repository")
 	}
@@ -232,7 +232,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 		return errors.Wrap(err, "error met while pushing runtime tree")
 	}
 
-	a, err = r.AddTree(r.BuildTree, repoTemp, REPOFILE_COMPILER_TREE_KEY, NewDefaultCompilerTreeRepositoryFile())
+	a, err = r.AddTree(d.context, r.BuildTree, repoTemp, REPOFILE_COMPILER_TREE_KEY, NewDefaultCompilerTreeRepositoryFile())
 	if err != nil {
 		return errors.Wrap(err, "error met while adding compiler tree to repository")
 	}
@@ -243,13 +243,13 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 	}
 
 	// create temp dir for metafile
-	metaDir, err := config.LuetCfg.GetSystem().TempDir("metadata")
+	metaDir, err := d.context.Config.GetSystem().TempDir("metadata")
 	if err != nil {
 		return errors.Wrap(err, "error met while creating tempdir for metadata")
 	}
 	defer os.RemoveAll(metaDir) // clean up
 
-	a, err = r.AddMetadata(repospec, metaDir)
+	a, err = r.AddMetadata(d.context, repospec, metaDir)
 	if err != nil {
 		return errors.Wrap(err, "failed adding Metadata file to repository")
 	}

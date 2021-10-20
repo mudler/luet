@@ -1,4 +1,4 @@
-// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2019-2021 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
@@ -37,6 +38,8 @@ import (
 // mount/unmount layers.
 var _ = Describe("Docker client", func() {
 	Context("With repository", func() {
+		ctx := types.NewContext()
+
 		repoImage := os.Getenv("UNIT_TEST_DOCKER_IMAGE")
 		var repoURL []string
 		var c *DockerClient
@@ -45,7 +48,7 @@ var _ = Describe("Docker client", func() {
 				Skip("UNIT_TEST_DOCKER_IMAGE not specified")
 			}
 			repoURL = []string{repoImage}
-			c = NewDockerClient(RepoData{Urls: repoURL})
+			c = NewDockerClient(RepoData{Urls: repoURL}, ctx)
 		})
 
 		It("Downloads single files", func() {
@@ -70,7 +73,8 @@ var _ = Describe("Docker client", func() {
 			tmpdir, err := ioutil.TempDir("", "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
-			Expect(f.Unpack(tmpdir, false)).ToNot(HaveOccurred())
+
+			Expect(f.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 			Expect(fileHelper.Read(filepath.Join(tmpdir, "c"))).To(Equal("c\n"))
 			Expect(fileHelper.Read(filepath.Join(tmpdir, "cd"))).To(Equal("c\n"))
 			os.RemoveAll(f.Path)

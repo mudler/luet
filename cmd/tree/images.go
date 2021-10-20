@@ -20,15 +20,13 @@ import (
 	"fmt"
 	"os"
 
-	//. "github.com/mudler/luet/pkg/config"
 	"github.com/ghodss/yaml"
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/compiler/types/options"
-	. "github.com/mudler/luet/pkg/config"
-	. "github.com/mudler/luet/pkg/logger"
+
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 	tree "github.com/mudler/luet/pkg/tree"
@@ -45,11 +43,11 @@ func NewTreeImageCommand() *cobra.Command {
 		PreRun: func(cmd *cobra.Command, args []string) {
 			t, _ := cmd.Flags().GetStringArray("tree")
 			if len(t) == 0 {
-				Fatal("Mandatory tree param missing.")
+				util.DefaultContext.Fatal("Mandatory tree param missing.")
 			}
 
 			if len(args) != 1 {
-				Fatal("Expects one package as parameter")
+				util.DefaultContext.Fatal("Expects one package as parameter")
 			}
 			util.BindValuesFlags(cmd)
 			viper.BindPFlag("image-repository", cmd.Flags().Lookup("image-repository"))
@@ -65,7 +63,7 @@ func NewTreeImageCommand() *cobra.Command {
 
 			out, _ := cmd.Flags().GetString("output")
 			if out != "terminal" {
-				LuetCfg.GetLogging().SetLogLevel("error")
+				util.DefaultContext.Config.GetLogging().SetLogLevel("error")
 			}
 
 			reciper := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
@@ -73,20 +71,21 @@ func NewTreeImageCommand() *cobra.Command {
 			for _, t := range treePath {
 				err := reciper.Load(t)
 				if err != nil {
-					Fatal("Error on load tree ", err)
+					util.DefaultContext.Fatal("Error on load tree ", err)
 				}
 			}
-			compilerBackend := backend.NewSimpleDockerBackend()
+			compilerBackend := backend.NewSimpleDockerBackend(util.DefaultContext)
 
-			opts := *LuetCfg.GetSolverOptions()
+			opts := *util.DefaultContext.Config.GetSolverOptions()
 			opts.Options = solver.Options{Type: solver.SingleCoreSimple, Concurrency: 1}
 			luetCompiler := compiler.NewLuetCompiler(
 				compilerBackend,
 				reciper.GetDatabase(),
 				options.WithBuildValues(values),
+				options.WithContext(util.DefaultContext),
 				options.WithPushRepository(imageRepository),
 				options.WithPullRepositories(pullRepo),
-				options.WithTemplateFolder(util.TemplateFolders(false, treePath)),
+				options.WithTemplateFolder(util.TemplateFolders(util.DefaultContext, false, treePath)),
 				options.WithSolverOptions(opts),
 			)
 
@@ -94,18 +93,18 @@ func NewTreeImageCommand() *cobra.Command {
 
 			pack, err := helpers.ParsePackageStr(a)
 			if err != nil {
-				Fatal("Invalid package string ", a, ": ", err.Error())
+				util.DefaultContext.Fatal("Invalid package string ", a, ": ", err.Error())
 			}
 
 			spec, err := luetCompiler.FromPackage(pack)
 			if err != nil {
-				Fatal("Error: " + err.Error())
+				util.DefaultContext.Fatal("Error: " + err.Error())
 			}
 
 			ht := compiler.NewHashTree(reciper.GetDatabase())
 			hashtree, err := ht.Query(luetCompiler, spec)
 			if err != nil {
-				Fatal("Error: " + err.Error())
+				util.DefaultContext.Fatal("Error: " + err.Error())
 			}
 
 			for _, assertion := range hashtree.Solution { //highly dependent on the order
@@ -145,7 +144,7 @@ func NewTreeImageCommand() *cobra.Command {
 	}
 	path, err := os.Getwd()
 	if err != nil {
-		Fatal(err)
+		util.DefaultContext.Fatal(err)
 	}
 	ans.Flags().StringP("output", "o", "terminal", "Output format ( Defaults: terminal, available: json,yaml )")
 	ans.Flags().StringArrayP("tree", "t", []string{path}, "Path of the tree to use.")

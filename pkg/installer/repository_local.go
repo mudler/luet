@@ -24,26 +24,26 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
-	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/mudler/luet/pkg/bus"
 	"github.com/pkg/errors"
 )
 
-type localRepositoryGenerator struct{}
+type localRepositoryGenerator struct{ context *types.Context }
 
 func (l *localRepositoryGenerator) Initialize(path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
-	return buildPackageIndex(path, db)
+	return buildPackageIndex(l.context, path, db)
 }
 
-func buildPackageIndex(path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
+func buildPackageIndex(ctx *types.Context, path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
 
 	var art []*artifact.PackageArtifact
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
 		if err != nil {
-			Debug("Failed walking", err.Error())
+			ctx.Debug("Failed walking", err.Error())
 			return err
 		}
 
@@ -64,7 +64,7 @@ func buildPackageIndex(path string, db pkg.PackageDatabase) ([]*artifact.Package
 		// We want to include packages that are ONLY referenced in the tree.
 		// the ones which aren't should be deleted. (TODO: by another cli command?)
 		if _, notfound := db.FindPackage(a.CompileSpec.GetPackage()); notfound != nil {
-			Debug(fmt.Sprintf("Package %s not found in tree. Ignoring it.",
+			ctx.Debug(fmt.Sprintf("Package %s not found in tree. Ignoring it.",
 				a.CompileSpec.GetPackage().HumanReadableString()))
 			return nil
 		}
@@ -83,7 +83,7 @@ func buildPackageIndex(path string, db pkg.PackageDatabase) ([]*artifact.Package
 }
 
 // Generate creates a Local luet repository
-func (*localRepositoryGenerator) Generate(r *LuetSystemRepository, dst string, resetRevision bool) error {
+func (g *localRepositoryGenerator) Generate(r *LuetSystemRepository, dst string, resetRevision bool) error {
 	err := os.MkdirAll(dst, os.ModePerm)
 	if err != nil {
 		return err
@@ -96,7 +96,7 @@ func (*localRepositoryGenerator) Generate(r *LuetSystemRepository, dst string, r
 		return err
 	}
 
-	Info(fmt.Sprintf(
+	g.context.Info(fmt.Sprintf(
 		"Repository %s: creating revision %d and last update %s...",
 		r.Name, r.Revision, r.LastUpdate,
 	))
@@ -109,15 +109,15 @@ func (*localRepositoryGenerator) Generate(r *LuetSystemRepository, dst string, r
 		Path: dst,
 	})
 
-	if _, err := r.AddTree(r.GetTree(), dst, REPOFILE_TREE_KEY, NewDefaultTreeRepositoryFile()); err != nil {
+	if _, err := r.AddTree(g.context, r.GetTree(), dst, REPOFILE_TREE_KEY, NewDefaultTreeRepositoryFile()); err != nil {
 		return errors.Wrap(err, "error met while adding runtime tree to repository")
 	}
 
-	if _, err := r.AddTree(r.BuildTree, dst, REPOFILE_COMPILER_TREE_KEY, NewDefaultCompilerTreeRepositoryFile()); err != nil {
+	if _, err := r.AddTree(g.context, r.BuildTree, dst, REPOFILE_COMPILER_TREE_KEY, NewDefaultCompilerTreeRepositoryFile()); err != nil {
 		return errors.Wrap(err, "error met while adding compiler tree to repository")
 	}
 
-	if _, err := r.AddMetadata(repospec, dst); err != nil {
+	if _, err := r.AddMetadata(g.context, repospec, dst); err != nil {
 		return errors.Wrap(err, "failed adding Metadata file to repository")
 	}
 

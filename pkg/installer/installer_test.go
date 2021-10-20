@@ -46,11 +46,17 @@ func stubRepo(tmpdir, tree string) (*LuetSystemRepository, error) {
 		WithPriority(1),
 		WithSource(tmpdir),
 		WithTree(tree),
+		WithContext(types.NewContext()),
 		WithDatabase(pkg.NewInMemoryDatabase(false)),
 	)
 }
 
 var _ = Describe("Installer", func() {
+	ctx := types.NewContext()
+
+	BeforeEach(func() {
+		ctx = types.NewContext()
+	})
 
 	Context("Writes a repository definition", func() {
 		It("Writes a repo and can install packages from it", func() {
@@ -67,7 +73,7 @@ var _ = Describe("Installer", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(),
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx),
 				generalRecipe.GetDatabase(),
 				options.Concurrency(2))
 
@@ -109,7 +115,7 @@ var _ = Describe("Installer", func() {
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false, false)
+			err = repo.Write(ctx, tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
@@ -131,7 +137,7 @@ urls:
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			inst := NewLuetInstaller(LuetInstallerOptions{
-				Concurrency:         1,
+				Concurrency: 1, Context: ctx,
 				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
 			})
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
@@ -185,7 +191,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(),
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx),
 				generalRecipe.GetDatabase(), options.Concurrency(2))
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
@@ -231,7 +237,7 @@ urls:
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false, false)
+			err = repo.Write(ctx, tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
@@ -254,7 +260,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 
 			inst := NewLuetInstaller(LuetInstallerOptions{
-				Concurrency:         1,
+				Concurrency: 1, Context: ctx,
 				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
 			})
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
@@ -308,7 +314,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(),
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(),
 				options.Concurrency(2))
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
@@ -358,7 +364,7 @@ urls:
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false, false)
+			err = repo.Write(ctx, tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
@@ -380,7 +386,7 @@ urls:
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			inst := NewLuetInstaller(LuetInstallerOptions{
-				Concurrency:         1,
+				Concurrency: 1, Context: ctx,
 				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
 			})
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
@@ -437,7 +443,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(),
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(),
 				options.Concurrency(2))
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
@@ -487,7 +493,7 @@ urls:
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false, false)
+			err = repo.Write(ctx, tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
@@ -510,7 +516,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 
 			inst := NewLuetInstaller(LuetInstallerOptions{
-				Concurrency:         1,
+				Concurrency: 1, Context: ctx,
 				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
 			})
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
@@ -536,7 +542,7 @@ urls:
 
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(1))
 
-			c = compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase(), options.Concurrency(2))
+			c = compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), options.Concurrency(2))
 
 			spec, err = c.FromPackage(&pkg.DefaultPackage{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -551,7 +557,7 @@ urls:
 
 			repo, err = stubRepo(tmpdir2, "../../tests/fixtures/alpine")
 			Expect(err).ToNot(HaveOccurred())
-			err = repo.Write(tmpdir2, false, false)
+			err = repo.Write(ctx, tmpdir2, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			fakeroot, err = ioutil.TempDir("", "fakeroot")
@@ -567,7 +573,7 @@ urls:
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			inst = NewLuetInstaller(LuetInstallerOptions{
-				Concurrency:         1,
+				Concurrency: 1, Context: ctx,
 				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
 			})
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir2))
@@ -597,7 +603,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(2))
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2))
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -626,7 +632,7 @@ urls:
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false, false)
+			err = repo.Write(ctx, tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
@@ -648,7 +654,7 @@ urls:
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			inst := NewLuetInstaller(LuetInstallerOptions{
-				Concurrency:         1,
+				Concurrency: 1, Context: ctx,
 				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
 			})
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
@@ -716,8 +722,8 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 			Expect(len(generalRecipeNewRepo.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(), options.Concurrency(2))
-			c2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipeNewRepo.GetDatabase())
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2))
+			c2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipeNewRepo.GetDatabase())
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -753,12 +759,12 @@ urls:
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false, false)
+			err = repo.Write(ctx, tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			repoupgrade, err := stubRepo(tmpdirnewrepo, "../../tests/fixtures/upgrade_new_repo")
 			Expect(err).ToNot(HaveOccurred())
-			err = repoupgrade.Write(tmpdirnewrepo, false, false)
+			err = repoupgrade.Write(ctx, tmpdirnewrepo, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			fakeroot, err := ioutil.TempDir("", "fakeroot")
@@ -783,7 +789,7 @@ urls:
 `), pkg.NewInMemoryDatabase(false))
 			Expect(err).ToNot(HaveOccurred())
 			inst := NewLuetInstaller(LuetInstallerOptions{
-				Concurrency:         1,
+				Concurrency: 1, Context: ctx,
 				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
 			})
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
@@ -852,7 +858,7 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
 			c := compiler.NewLuetCompiler(
-				backend.NewSimpleDockerBackend(),
+				backend.NewSimpleDockerBackend(ctx),
 				generalRecipe.GetDatabase(),
 				options.Concurrency(2),
 				options.WithCompressionType(compression.GZip),
@@ -884,7 +890,7 @@ urls:
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false, false)
+			err = repo.Write(ctx, tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(spec.Rel("b-test-1.1.package.tar.gz"))).To(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("b-test-1.1.package.tar"))).ToNot(BeTrue())
@@ -909,7 +915,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 
 			inst := NewLuetInstaller(LuetInstallerOptions{
-				Concurrency:         1,
+				Concurrency: 1, Context: ctx,
 				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
 			})
 
@@ -974,7 +980,7 @@ urls:
 			systemDB := pkg.NewBoltDatabase(filepath.Join(bolt, "db.db"))
 			system := &System{Database: systemDB, Target: fakeroot}
 
-			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1, CheckConflicts: true})
+			inst := NewLuetInstaller(LuetInstallerOptions{Concurrency: 1, Context: ctx, CheckConflicts: true})
 
 			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
 			B := pkg.NewPackage("calamares", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
@@ -1017,7 +1023,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(),
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(),
 				options.Concurrency(2),
 				options.WithCompressionType(compression.GZip))
 
@@ -1046,7 +1052,7 @@ urls:
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false, false)
+			err = repo.Write(ctx, tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(spec.Rel("b-test-1.1.package.tar.gz"))).To(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("b-test-1.1.package.tar"))).ToNot(BeTrue())
@@ -1071,7 +1077,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 
 			inst := NewLuetInstaller(LuetInstallerOptions{
-				Concurrency:         1,
+				Concurrency: 1, Context: ctx,
 				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
 			})
 
@@ -1126,7 +1132,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe.GetDatabase(),
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(),
 				options.WithCompressionType(compression.GZip))
 
 			spec, err := c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
@@ -1151,7 +1157,7 @@ urls:
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(TREE_TARBALL + ".gz"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel(REPOSITORY_METAFILE + ".tar"))).ToNot(BeTrue())
-			err = repo.Write(tmpdir, false, false)
+			err = repo.Write(ctx, tmpdir, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("repository.yaml"))).To(BeTrue())
@@ -1174,7 +1180,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 
 			inst := NewLuetInstaller(LuetInstallerOptions{
-				Concurrency:         1,
+				Concurrency: 1, Context: ctx,
 				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
 			})
 
@@ -1221,7 +1227,7 @@ urls:
 
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(3))
 
-			c = compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(), generalRecipe2.GetDatabase())
+			c = compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase())
 
 			spec, err = c.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.1"})
 			Expect(err).ToNot(HaveOccurred())
@@ -1238,7 +1244,7 @@ urls:
 			repo, err = stubRepo(tmpdir2, "../../tests/fixtures/upgrade_new_repo")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
-			err = repo.Write(tmpdir2, false, false)
+			err = repo.Write(ctx, tmpdir2, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			repo2, err = NewLuetSystemRepositoryFromYaml([]byte(`
@@ -1251,7 +1257,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 
 			inst = NewLuetInstaller(LuetInstallerOptions{
-				Concurrency:         1,
+				Concurrency: 1, Context: ctx,
 				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
 			})
 
