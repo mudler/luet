@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/pkg/archive"
+	"github.com/pkg/errors"
 )
 
 func Tar(src, dest string) error {
@@ -131,7 +132,7 @@ func unTarIgnoreOwner(dest string, in io.ReadCloser, mods map[string]archive.Tar
 			if ok {
 				header, data, err = modifier(header.Name, header, tr)
 				if err != nil {
-					return err
+					return errors.Wrap(err, "running modifier wrapper")
 				}
 
 				// Override target path
@@ -157,7 +158,7 @@ func unTarIgnoreOwner(dest string, in io.ReadCloser, mods map[string]archive.Tar
 
 			f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
 			if err != nil {
-				return err
+				return errors.Wrap(err, "creating destination")
 			}
 
 			// copy over contents
@@ -188,12 +189,11 @@ tarEof:
 }
 
 // Untar just a wrapper around the docker functions
-func Untar(src, dest string, sameOwner bool) error {
-	var ans error
+func Untar(src, dest string, sameOwner bool) (err error) {
 
 	in, err := os.Open(src)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "while opening "+src+" for untar ")
 	}
 	defer in.Close()
 
@@ -204,10 +204,14 @@ func Untar(src, dest string, sameOwner bool) error {
 			ContinueOnError: true,
 		}
 
-		ans = archive.Untar(in, dest, opts)
+		err = archive.Untar(in, dest, opts)
 	} else {
-		ans = unTarIgnoreOwner(dest, in, nil)
+		err = unTarIgnoreOwner(dest, in, nil)
 	}
 
-	return ans
+	if err != nil {
+		err = errors.Wrap(err, "while untarring "+src+" into "+dest)
+	}
+
+	return
 }

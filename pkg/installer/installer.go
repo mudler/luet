@@ -902,7 +902,7 @@ func (l *LuetInstaller) installPackage(m ArtifactMatch, s *System) error {
 
 	err = a.Unpack(l.Options.Context, s.Target, true)
 	if err != nil && !l.Options.Force {
-		return errors.Wrap(err, "Error met while unpacking rootfs")
+		return errors.Wrap(err, "error met while unpacking package "+a.Path)
 	}
 
 	// First create client and download
@@ -950,9 +950,13 @@ func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan Arti
 	return nil
 }
 
-func checkAndPrunePath(ctx *types.Context, path string) {
+func checkAndPrunePath(ctx *types.Context, target, path string) {
 	// check if now the target path is empty
 	targetPath := filepath.Dir(path)
+
+	if target == targetPath {
+		return
+	}
 
 	fi, err := os.Lstat(targetPath)
 	if err != nil {
@@ -978,8 +982,8 @@ func checkAndPrunePath(ctx *types.Context, path string) {
 }
 
 // We will try to cleanup every path from the file, if the folders left behind are empty
-func pruneEmptyFilePath(ctx *types.Context, path string) {
-	checkAndPrunePath(ctx, path)
+func pruneEmptyFilePath(ctx *types.Context, target string, path string) {
+	checkAndPrunePath(ctx, target, path)
 
 	// A path is for e.g. /usr/bin/bar
 	// we want to create an array
@@ -987,14 +991,19 @@ func pruneEmptyFilePath(ctx *types.Context, path string) {
 	// excluding the target (in the case above was /)
 	paths := strings.Split(path, string(os.PathSeparator))
 	currentPath := filepath.Join(string(os.PathSeparator), paths[0])
-	allPaths := []string{currentPath}
+	allPaths := []string{}
+	if strings.HasPrefix(currentPath, target) && target != currentPath {
+		allPaths = append(allPaths, currentPath)
+	}
 	for _, p := range paths[1:] {
 		currentPath = filepath.Join(currentPath, p)
-		allPaths = append(allPaths, currentPath)
+		if strings.HasPrefix(currentPath, target) && target != currentPath {
+			allPaths = append(allPaths, currentPath)
+		}
 	}
 	match.ReverseAny(allPaths)
 	for _, p := range allPaths {
-		checkAndPrunePath(ctx, p)
+		checkAndPrunePath(ctx, target, p)
 	}
 }
 
@@ -1058,9 +1067,11 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 
 		if err = os.Remove(target); err != nil {
 			l.Options.Context.Warning("Failed removing file (maybe not present in the system target anymore ?)", target, err.Error())
+		} else {
+			l.Options.Context.Debug("Removed", target)
 		}
 
-		pruneEmptyFilePath(l.Options.Context, target)
+		pruneEmptyFilePath(l.Options.Context, s.Target, target)
 	}
 
 	for _, f := range notPresent {
@@ -1073,9 +1084,11 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 
 		if err = os.Remove(target); err != nil {
 			l.Options.Context.Debug("Failed removing file (not present in the system target)", target, err.Error())
+		} else {
+			l.Options.Context.Debug("Removed", target)
 		}
 
-		pruneEmptyFilePath(l.Options.Context, target)
+		pruneEmptyFilePath(l.Options.Context, s.Target, target)
 	}
 
 	err = s.Database.RemovePackageFiles(p)
