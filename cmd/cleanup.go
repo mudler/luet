@@ -16,6 +16,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -45,9 +46,6 @@ var cleanupCmd = &cobra.Command{
 			}
 
 			for _, file := range files {
-				if file.IsDir() {
-					continue
-				}
 
 				if util.DefaultContext.Config.GetGeneral().Debug {
 					util.DefaultContext.Info("Removing ", file.Name())
@@ -62,7 +60,7 @@ var cleanupCmd = &cobra.Command{
 			}
 		}
 
-		util.DefaultContext.Info("Cleaned: ", cleaned, "packages.")
+		util.DefaultContext.Info(fmt.Sprintf("Cleaned: %d files from %s", cleaned, util.DefaultContext.Config.GetSystem().GetSystemPkgsCacheDirPath()))
 
 	},
 }
