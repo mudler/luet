@@ -56,9 +56,17 @@ func (c *LocalClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.P
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed downloading %s", artifactName)
 		}
+		defer os.RemoveAll(d)
 
 		newart.Path = d
 		c.Cache.Put(newart)
+
+		fileName, err := c.Cache.Get(newart)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting file from cache %v", newart)
+		}
+
+		newart.Path = fileName
 	}
 
 	return newart, nil
