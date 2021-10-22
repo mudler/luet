@@ -56,7 +56,7 @@ func (s *SimpleDocker) BuildImage(opts Options) error {
 		return err
 	}
 
-	s.ctx.Info(":whale: Building image " + name + " done")
+	s.ctx.Success(":whale: Building image " + name + " done")
 
 	bus.Manager.Publish(bus.EventImagePostBuild, opts)
 
@@ -70,7 +70,7 @@ func (s *SimpleDocker) CopyImage(src, dst string) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed tagging image: "+string(out))
 	}
-	s.ctx.Info(":whale: Tagged image:", src, "->", dst)
+	s.ctx.Success(":whale: Tagged image:", src, "->", dst)
 	return nil
 }
 
@@ -90,7 +90,7 @@ func (s *SimpleDocker) DownloadImage(opts Options) error {
 		return errors.Wrap(err, "Failed pulling image: "+string(out))
 	}
 
-	s.ctx.Info(":whale: Downloaded image:", name)
+	s.ctx.Success(":whale: Downloaded image:", name)
 	bus.Manager.Publish(bus.EventImagePostPull, opts)
 
 	return nil
@@ -120,7 +120,7 @@ func (s *SimpleDocker) RemoveImage(opts Options) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed removing image: "+string(out))
 	}
-	s.ctx.Info(":whale: Removed image:", name)
+	s.ctx.Success(":whale: Removed image:", name)
 	//Info(string(out))
 	return nil
 }
@@ -137,7 +137,7 @@ func (s *SimpleDocker) Push(opts Options) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed pushing image: "+string(out))
 	}
-	s.ctx.Info(":whale: Pushed image:", name)
+	s.ctx.Success(":whale: Pushed image:", name)
 	bus.Manager.Publish(bus.EventImagePostPush, opts)
 
 	//Info(string(out))

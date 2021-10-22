@@ -447,7 +447,7 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 		if err != nil {
 			return a, errors.Wrap(err, "Failed while writing metadata file")
 		}
-		cs.Options.Context.Info(pkgTag, "   :white_check_mark: done (empty virtual package)")
+		cs.Options.Context.Success(pkgTag, "   :white_check_mark: done (empty virtual package)")
 		return a, nil
 	}
 
@@ -477,7 +477,7 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 	if err != nil {
 		return a, errors.Wrap(err, "Failed while writing metadata file")
 	}
-	cs.Options.Context.Info(pkgTag, "   :white_check_mark: Done")
+	cs.Options.Context.Success(pkgTag, "   :white_check_mark: Done")
 
 	return a, nil
 }
@@ -965,7 +965,7 @@ func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions
 				Source:      c.Source,
 				Destination: c.Destination,
 			})
-			cs.Options.Context.Info(copyTag2, ":white_check_mark: Done")
+			cs.Options.Context.Success(copyTag2, ":white_check_mark: Done")
 		} else {
 			resolvedCopyFields = append(resolvedCopyFields, c)
 		}
@@ -1128,7 +1128,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 
 			a.PackageCacheImage = assertion.Hash.PackageHash
 
-			cs.Options.Context.Info(pkgTag, ":white_check_mark: Done")
+			cs.Options.Context.Success(pkgTag, ":white_check_mark: Done")
 
 			bus.Manager.Publish(bus.EventPackagePostBuild, struct {
 				CompileSpec *compilerspec.LuetCompilationSpec

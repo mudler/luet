@@ -262,7 +262,6 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 	artifacts, snapshotRepoFile, err := r.Snapshot(id, repoTemp)
 	if err != nil {
 		return errors.Wrap(err, "while creating snapshot")
-
 	}
 	if err := d.pushRepoMetadata(snapshotRepoFile, filepath.Base(snapshotRepoFile), r); err != nil {
 		return errors.Wrap(err, "while pushing repository snapshot metadata tree")
