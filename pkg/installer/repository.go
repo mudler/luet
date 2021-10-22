@@ -772,6 +772,14 @@ func (r *LuetSystemRepository) SyncBuildMetadata(ctx *types.Context, path string
 	return nil
 }
 
+func (r *LuetSystemRepository) referenceID() string {
+	repositoryReferenceID := REPOSITORY_SPECFILE
+	if r.ReferenceID != "" {
+		repositoryReferenceID = r.ReferenceID
+	}
+	return repositoryReferenceID
+}
+
 func (r *LuetSystemRepository) Sync(ctx *types.Context, force bool) (*LuetSystemRepository, error) {
 	var repoUpdated bool = false
 	var treefs, metafs string
@@ -782,10 +790,12 @@ func (r *LuetSystemRepository) Sync(ctx *types.Context, force bool) (*LuetSystem
 		return nil, errors.New("no client could be generated from repository")
 	}
 
+	repositoryReferenceID := r.referenceID()
+
 	// Retrieve remote repository.yaml for retrieve revision and date
-	file, err := c.DownloadFile(REPOSITORY_SPECFILE)
+	file, err := c.DownloadFile(repositoryReferenceID)
 	if err != nil {
-		return nil, errors.Wrap(err, "while downloading "+REPOSITORY_SPECFILE)
+		return nil, errors.Wrap(err, "while downloading "+repositoryReferenceID)
 	}
 
 	repobasedir := ctx.Config.GetSystem().GetRepoDatabaseDirPath(r.GetName())
@@ -799,7 +809,7 @@ func (r *LuetSystemRepository) Sync(ctx *types.Context, force bool) (*LuetSystem
 
 	if r.Cached {
 		if !force {
-			localRepo, _ := r.ReadSpecFile(filepath.Join(repobasedir, REPOSITORY_SPECFILE))
+			localRepo, _ := r.ReadSpecFile(filepath.Join(repobasedir, repositoryReferenceID))
 			if localRepo != nil {
 				if localRepo.GetRevision() == downloadedRepoMeta.GetRevision() &&
 					localRepo.GetLastUpdate() == downloadedRepoMeta.GetLastUpdate() {
@@ -850,9 +860,9 @@ func (r *LuetSystemRepository) Sync(ctx *types.Context, force bool) (*LuetSystem
 
 		if r.Cached {
 			// Copy updated repository.yaml file to repo dir now that the tree is synced.
-			err = fileHelper.CopyFile(file, filepath.Join(repobasedir, REPOSITORY_SPECFILE))
+			err = fileHelper.CopyFile(file, filepath.Join(repobasedir, repositoryReferenceID))
 			if err != nil {
-				return nil, errors.Wrap(err, "Error on update "+REPOSITORY_SPECFILE)
+				return nil, errors.Wrap(err, "Error on update "+repositoryReferenceID)
 			}
 			// Remove previous tree
 			os.RemoveAll(treefs)

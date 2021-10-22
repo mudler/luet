@@ -37,6 +37,8 @@ type LuetRepository struct {
 	Verify         bool              `json:"verify,omitempty" yaml:"verify,omitempty" mapstructure:"verify"`
 	Arch           string            `json:"arch,omitempty" yaml:"arch,omitempty" mapstructure:"arch"`
 
+	ReferenceID string `json:"reference,omitempty" yaml:"reference,omitempty" mapstructure:"reference"`
+
 	// Incremented value that identify revision of the repository in a user-friendly way.
 	Revision int `json:"revision,omitempty" yaml:"-" mapstructure:"-"`
 	// Epoch time in seconds
