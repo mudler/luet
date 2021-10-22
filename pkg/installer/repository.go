@@ -539,6 +539,7 @@ func (r *LuetSystemRepository) AddMetadata(ctx *types.Context, repospec, dst str
 	if err != nil {
 		return nil, err
 	}
+
 	a, err := r.AddRepositoryFile(metaTmpDir, REPOFILE_META_KEY, dst, NewDefaultMetaRepositoryFile())
 	if err != nil {
 		return a, errors.Wrap(err, "Error met while adding archive to repository")
@@ -558,7 +559,7 @@ func (r *LuetSystemRepository) AddMetadata(ctx *types.Context, repospec, dst str
 // AddTree adds a tree.Builder with the given key to the repository.
 // It will generate an artifact which will be then embedded in the repository manifest
 // It returns the generated artifacts and an error
-func (r *LuetSystemRepository) AddTree(ctx *types.Context, t tree.Builder, dst, key string, f LuetRepositoryFile) (*artifact.PackageArtifact, error) {
+func (r *LuetSystemRepository) AddTree(ctx *types.Context, t tree.Builder, dst, key string, defaults LuetRepositoryFile) (*artifact.PackageArtifact, error) {
 	// Create tree and repository file
 	archive, err := ctx.Config.GetSystem().TempDir("archive")
 	if err != nil {
@@ -570,11 +571,68 @@ func (r *LuetSystemRepository) AddTree(ctx *types.Context, t tree.Builder, dst, 
 		return nil, errors.Wrap(err, "Error met while saving the tree")
 	}
 
-	a, err := r.AddRepositoryFile(archive, key, dst, f)
+	a, err := r.AddRepositoryFile(archive, key, dst, defaults)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while adding archive to repository")
 	}
 	return a, nil
+}
+
+// Snapshot creates a copy of the current repository index into dst.
+// The copy will be prefixed with "id".
+// This allows the clients to refer to old versions of the repository by using the reference_id
+func (r *LuetSystemRepository) Snapshot(id, dst string) (artifacts []*artifact.PackageArtifact, snapshotIndex string, err error) {
+
+	var snapshotFmt string = "%s-%s"
+
+	repospec := filepath.Join(dst, REPOSITORY_SPECFILE)
+	snapshotIndex = filepath.Join(dst, fmt.Sprintf(snapshotFmt, id, REPOSITORY_SPECFILE))
+
+	err = fileHelper.CopyFile(repospec, filepath.Join(dst, snapshotIndex))
+	if err != nil {
+		err = errors.Wrap(err, "while copying repo spec")
+		return
+	}
+
+	b, err := ioutil.ReadFile(repospec)
+	if err != nil {
+		return
+	}
+
+	newRepoIndex := &LuetSystemRepository{}
+	err = yaml.Unmarshal(b, newRepoIndex)
+	if err != nil {
+		return
+	}
+
+	for _, key := range []string{REPOFILE_META_KEY, REPOFILE_TREE_KEY, REPOFILE_COMPILER_TREE_KEY} {
+		var luetFile LuetRepositoryFile
+		luetFile, err = r.GetRepositoryFile(key)
+		if err != nil {
+			return
+		}
+		newMetaFile := fmt.Sprintf(snapshotFmt, id, luetFile.FileName)
+		err = fileHelper.CopyFile(filepath.Join(dst, luetFile.FileName), filepath.Join(dst, newMetaFile))
+		if err != nil {
+			return
+		}
+
+		m := &luetFile
+		m.FileName = newMetaFile
+		newRepoIndex.RepositoryFiles[key] = *m
+		artifacts = append(artifacts, artifact.NewPackageArtifact(filepath.Join(dst, newMetaFile)))
+	}
+
+	_, serialized := newRepoIndex.Serialize()
+
+	data, err := yaml.Marshal(serialized)
+	if err != nil {
+		return
+	}
+
+	err = ioutil.WriteFile(snapshotIndex, data, os.ModePerm)
+
+	return
 }
 
 // AddRepositoryFile adds a path to a key in the repository manifest.

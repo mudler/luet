@@ -121,6 +121,13 @@ func (g *localRepositoryGenerator) Generate(r *LuetSystemRepository, dst string,
 		return errors.Wrap(err, "failed adding Metadata file to repository")
 	}
 
+	// Create named snapshot.
+	// It edits the metadata pointing at the repository files associated with the snapshot
+	// And copies the new files
+	if _, _, err := r.Snapshot(time.Now().Format("20060102150405"), dst); err != nil {
+		return errors.Wrap(err, "while creating snapshot")
+	}
+
 	bus.Manager.Publish(bus.EventRepositoryPostBuild, struct {
 		Repo LuetSystemRepository
 		Path string

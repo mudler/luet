@@ -136,7 +136,7 @@ func (d *dockerRepositoryGenerator) pushFileFromArtifact(a *artifact.PackageArti
 	return nil
 }
 
-func (d *dockerRepositoryGenerator) pushRepoMetadata(repospec string, r *LuetSystemRepository) error {
+func (d *dockerRepositoryGenerator) pushRepoMetadata(repospec, tag string, r *LuetSystemRepository) error {
 	// create temp dir for metafile
 	metaDir, err := d.context.Config.GetSystem().TempDir("metadata")
 	if err != nil {
@@ -144,13 +144,13 @@ func (d *dockerRepositoryGenerator) pushRepoMetadata(repospec string, r *LuetSys
 	}
 	defer os.RemoveAll(metaDir) // clean up
 
-	tempRepoFile := filepath.Join(metaDir, REPOSITORY_SPECFILE+".tar")
+	tempRepoFile := filepath.Join(metaDir, tag+".tar")
 	if err := helpers.Tar(repospec, tempRepoFile); err != nil {
 		return errors.Wrap(err, "Error met while archiving repository file")
 	}
 
 	a := artifact.NewPackageArtifact(tempRepoFile)
-	imageRepo := fmt.Sprintf("%s:%s", d.imagePrefix, REPOSITORY_SPECFILE)
+	imageRepo := fmt.Sprintf("%s:%s", d.imagePrefix, tag)
 
 	if err := d.pushFileFromArtifact(a, imageRepo); err != nil {
 		return errors.Wrap(err, "while pushing file from artifact")
@@ -242,14 +242,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 		return errors.Wrap(err, "error met while pushing compiler tree")
 	}
 
-	// create temp dir for metafile
-	metaDir, err := d.context.Config.GetSystem().TempDir("metadata")
-	if err != nil {
-		return errors.Wrap(err, "error met while creating tempdir for metadata")
-	}
-	defer os.RemoveAll(metaDir) // clean up
-
-	a, err = r.AddMetadata(d.context, repospec, metaDir)
+	a, err = r.AddMetadata(d.context, repospec, repoTemp)
 	if err != nil {
 		return errors.Wrap(err, "failed adding Metadata file to repository")
 	}
@@ -258,8 +251,27 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 		return errors.Wrap(err, "error met while pushing docker image from artifact")
 	}
 
-	if err := d.pushRepoMetadata(repospec, r); err != nil {
+	if err := d.pushRepoMetadata(repospec, REPOSITORY_SPECFILE, r); err != nil {
 		return errors.Wrap(err, "while pushing repository metadata tree")
+	}
+
+	// Create a named snapshot and push it.
+	// It edits the metadata pointing at the repository files associated with the snapshot
+	// And copies the new files
+	id := time.Now().Format("20060102150405")
+	artifacts, snapshotRepoFile, err := r.Snapshot(id, repoTemp)
+	if err != nil {
+		return errors.Wrap(err, "while creating snapshot")
+
+	}
+	if err := d.pushRepoMetadata(snapshotRepoFile, filepath.Base(snapshotRepoFile), r); err != nil {
+		return errors.Wrap(err, "while pushing repository snapshot metadata tree")
+	}
+
+	for _, a := range artifacts {
+		if err := d.pushImageFromArtifact(a, d.b, false); err != nil {
+			return errors.Wrap(err, "error met while pushing docker image from artifact")
+		}
 	}
 
 	bus.Manager.Publish(bus.EventRepositoryPostBuild, struct {
