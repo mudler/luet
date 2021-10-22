@@ -75,8 +75,11 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 	// - Check how verification is done when calling DownloadArtifact outside, similarly we need to check DownloadFile, and how verification
 	// is done in such cases (see repository.go)
 
+	// We discard checksum, that are checked while during pull and unpack by containerd
+	resultingArtifact.Checksums = artifact.Checksums{}
+
 	// Check if file is already in cache
-	fileName, err := c.Cache.Get(a)
+	fileName, err := c.Cache.Get(resultingArtifact)
 	// Check if file is already in cache
 	if err == nil {
 		resultingArtifact = a
@@ -118,8 +121,6 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 			c.context.Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
 			c.context.Debug("\nCompressing result ", filepath.Join(temp), "to", tempArtifact.Name())
 
-			// We discard checksum, that are checked while during pull and unpack
-			resultingArtifact.Checksums = artifact.Checksums{}
 			resultingArtifact.Path = tempArtifact.Name() // First set to cache file
 			err = resultingArtifact.Compress(temp, 1)
 			if err != nil {
