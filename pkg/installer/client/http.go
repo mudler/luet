@@ -38,8 +38,6 @@ type HttpClient struct {
 	RepoData RepoData
 	Cache    *artifact.ArtifactCache
 	context  *types.Context
-
-	ProgressBarArea *pterm.AreaPrinter
 }
 
 func NewHttpClient(r RepoData, ctx *types.Context) *HttpClient {
@@ -126,11 +124,16 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 		}
 
 		resp := client.Do(req)
-		pb := pterm.DefaultProgressbar.WithTotal(int(resp.Size()))
-		if c.ProgressBarArea != nil {
-			pb = pb.WithPrintTogether(c.ProgressBarArea)
+
+		// Initialize a progressbar only if we have one in the current context
+		var pb *pterm.ProgressbarPrinter
+		if c.context.ProgressBar != nil {
+			pb = pterm.DefaultProgressbar.WithTotal(int(resp.Size()))
+			if c.context.AreaPrinter != nil {
+				pb = pb.WithPrintTogether(c.context.AreaPrinter)
+			}
+			pb, _ = pb.WithTitle(filepath.Base(resp.Request.HTTPRequest.URL.RequestURI())).Start()
 		}
-		pb, _ = pb.WithTitle(filepath.Base(resp.Request.HTTPRequest.URL.RequestURI())).Start()
 		// start download loop
 		t := time.NewTicker(500 * time.Millisecond)
 		defer t.Stop()
@@ -140,11 +143,15 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 		for {
 			select {
 			case <-t.C:
-				//	bar.Set64(resp.BytesComplete())
-				//pb.Increment()
-				pb.Increment().Current = int(resp.BytesComplete())
+				//	update the progress bar
+				if pb != nil {
+					pb.Increment().Current = int(resp.BytesComplete())
+				}
 			case <-resp.Done:
-				pb.Increment().Current = int(resp.BytesComplete())
+				//	update the progress bar
+				if pb != nil {
+					pb.Increment().Current = int(resp.BytesComplete())
+				}
 				// download is complete
 				break download_loop
 			}
@@ -157,7 +164,11 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 		c.context.Info("Downloaded", p, "of",
 			fmt.Sprintf("%.2f", (float64(resp.BytesComplete())/1000)/1000), "MB (",
 			fmt.Sprintf("%.2f", (float64(resp.BytesPerSecond())/1024)/1024), "MiB/s )")
-		pb.Stop()
+
+		if pb != nil {
+			// stop the progressbar if active
+			pb.Stop()
+		}
 		//bar.Finish()
 		downloaded = true
 		break

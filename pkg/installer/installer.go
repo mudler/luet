@@ -32,7 +32,6 @@ import (
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/mudler/luet/pkg/helpers/match"
-	"github.com/mudler/luet/pkg/installer/client"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 	"github.com/pterm/pterm"
@@ -566,21 +565,30 @@ func (l *LuetInstaller) download(syncedRepos Repositories, toDownload map[string
 
 	var wg = new(sync.WaitGroup)
 
-	area, _ := pterm.DefaultArea.Start()
+	ctx := l.Options.Context.Copy()
 
-	p, _ := pterm.DefaultProgressbar.WithPrintTogether(area).WithTotal(len(toDownload)).WithTitle("Downloading packages").Start()
+	// Check if the terminal is big enough to display a progress bar
+	// https://github.com/pterm/pterm/blob/4c725e56bfd9eb38e1c7b9dec187b50b93baa8bd/progressbar_printer.go#L190
+	w, _, err := ctx.GetTerminalSize()
+	if ctx.IsTerminal && err == nil && w > 100 {
+		area, _ := pterm.DefaultArea.Start()
+		p, _ := pterm.DefaultProgressbar.WithPrintTogether(area).WithTotal(len(toDownload)).WithTitle("Downloading packages").Start()
+
+		ctx.AreaPrinter = area
+		ctx.ProgressBar = p
+		defer area.Stop()
+	}
 
 	// Download
 	for i := 0; i < l.Options.Concurrency; i++ {
 		wg.Add(1)
-		go l.downloadWorker(i, wg, all, p, area)
+		go l.downloadWorker(i, wg, all, ctx)
 	}
 	for _, c := range toDownload {
 		all <- c
 	}
 	close(all)
 	wg.Wait()
-	area.Stop()
 
 	return nil
 }
@@ -772,7 +780,7 @@ func (l *LuetInstaller) checkFileconflicts(toInstall map[string]ArtifactMatch, c
 
 	filesToInstall := []string{}
 	for _, m := range toInstall {
-		a, err := l.downloadPackage(m, nil)
+		a, err := l.downloadPackage(m, l.Options.Context)
 		if err != nil && !l.Options.Force {
 			return errors.Wrap(err, "Failed downloading package")
 		}
@@ -867,14 +875,9 @@ func (l *LuetInstaller) install(o Option, syncedRepos Repositories, toInstall ma
 	return s.ExecuteFinalizers(l.Options.Context, toFinalize)
 }
 
-func (l *LuetInstaller) downloadPackage(a ArtifactMatch, area *pterm.AreaPrinter) (*artifact.PackageArtifact, error) {
+func (l *LuetInstaller) downloadPackage(a ArtifactMatch, ctx *types.Context) (*artifact.PackageArtifact, error) {
 
-	cli := a.Repository.Client(l.Options.Context)
-
-	switch v := cli.(type) {
-	case *client.HttpClient:
-		v.ProgressBarArea = area
-	}
+	cli := a.Repository.Client(ctx)
 
 	artifact, err := cli.DownloadArtifact(a.Artifact)
 	if err != nil {
@@ -890,7 +893,7 @@ func (l *LuetInstaller) downloadPackage(a ArtifactMatch, area *pterm.AreaPrinter
 
 func (l *LuetInstaller) installPackage(m ArtifactMatch, s *System) error {
 
-	a, err := l.downloadPackage(m, nil)
+	a, err := l.downloadPackage(m, l.Options.Context)
 	if err != nil && !l.Options.Force {
 		return errors.Wrap(err, "Failed downloading package")
 	}
@@ -910,20 +913,21 @@ func (l *LuetInstaller) installPackage(m ArtifactMatch, s *System) error {
 	return s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: m.Package.GetFingerPrint(), Files: files})
 }
 
-func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch, pb *pterm.ProgressbarPrinter, area *pterm.AreaPrinter) error {
+func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch, ctx *types.Context) error {
 	defer wg.Done()
 
 	for p := range c {
 		// TODO: Keep trace of what was added from the tar, and save it into system
-		_, err := l.downloadPackage(p, area)
+		_, err := l.downloadPackage(p, ctx)
 		if err != nil {
 			l.Options.Context.Error("Failed downloading package "+p.Package.GetName(), err.Error())
 			return errors.Wrap(err, "Failed downloading package "+p.Package.GetName())
 		} else {
 			l.Options.Context.Success(":package: Package ", p.Package.HumanReadableString(), "downloaded")
 		}
-		pb.Increment()
-
+		if ctx.ProgressBar != nil {
+			ctx.ProgressBar.Increment()
+		}
 	}
 
 	return nil

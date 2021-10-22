@@ -28,9 +28,11 @@ import (
 
 	"github.com/kyokomi/emoji"
 	"github.com/mudler/luet/pkg/helpers/terminal"
+	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/term"
 )
 
 const (
@@ -48,13 +50,16 @@ type Context struct {
 	NoSpinner  bool
 
 	s           *pterm.SpinnerPrinter
-	spinnerLock sync.Mutex
+	spinnerLock *sync.Mutex
 	z           *zap.Logger
+	AreaPrinter *pterm.AreaPrinter
+	ProgressBar *pterm.ProgressbarPrinter
 }
 
 func NewContext() *Context {
 	return &Context{
-		IsTerminal: terminal.IsTerminal(os.Stdout),
+		spinnerLock: &sync.Mutex{},
+		IsTerminal:  terminal.IsTerminal(os.Stdout),
 		Config: &LuetConfig{
 			ConfigFromHost: true,
 			Logging:        LuetLoggingConfig{},
@@ -66,6 +71,35 @@ func NewContext() *Context {
 		},
 		s: pterm.DefaultSpinner.WithShowTimer(false).WithRemoveWhenDone(true),
 	}
+}
+
+func (c *Context) Copy() *Context {
+
+	configCopy := *c.Config
+	configCopy.System = *c.Config.GetSystem()
+	configCopy.General = *c.Config.GetGeneral()
+	configCopy.Logging = *c.Config.GetLogging()
+
+	ctx := *c
+	ctxCopy := &ctx
+	ctxCopy.Config = &configCopy
+
+	return ctxCopy
+}
+
+// GetTerminalSize returns the width and the height of the active terminal.
+func (c *Context) GetTerminalSize() (width, height int, err error) {
+	w, h, err := term.GetSize(int(os.Stdout.Fd()))
+	if w <= 0 {
+		w = 0
+	}
+	if h <= 0 {
+		h = 0
+	}
+	if err != nil {
+		err = errors.New("size not detectable")
+	}
+	return w, h, err
 }
 
 func (c *Context) Init() (err error) {
