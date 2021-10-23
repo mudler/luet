@@ -60,6 +60,7 @@ type LuetGeneralConfig struct {
 	Debug           bool `yaml:"debug,omitempty" mapstructure:"debug"`
 	ShowBuildOutput bool `yaml:"show_build_output,omitempty" mapstructure:"show_build_output"`
 	FatalWarns      bool `yaml:"fatal_warnings,omitempty" mapstructure:"fatal_warnings"`
+	HTTPTimeout     int  `yaml:"http_timeout,omitempty" mapstructure:"http_timeout"`
 }
 
 type LuetSolverOptions struct {

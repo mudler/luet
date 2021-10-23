@@ -122,6 +122,7 @@ func setDefaults(viper *viper.Viper) {
 	viper.SetDefault("general.debug", false)
 	viper.SetDefault("general.show_build_output", false)
 	viper.SetDefault("general.fatal_warnings", false)
+	viper.SetDefault("general.http_timeout", 360)
 
 	u, err := user.Current()
 	// os/user doesn't work in from scratch environments
@@ -178,6 +179,7 @@ func InitViper(ctx *types.Context, RootCmd *cobra.Command) {
 	}
 	pflags.Bool("same-owner", ctx.Config.GetGeneral().SameOwner, "Maintain same owner on uncompress.")
 	pflags.Int("concurrency", runtime.NumCPU(), "Concurrency")
+	pflags.Int("http-timeout", ctx.Config.General.HTTPTimeout, "Default timeout for http(s) requests")
 
 	viper.BindPFlag("logging.color", pflags.Lookup("color"))
 	viper.BindPFlag("logging.enable_emoji", pflags.Lookup("emoji"))
@@ -189,6 +191,7 @@ func InitViper(ctx *types.Context, RootCmd *cobra.Command) {
 	viper.BindPFlag("general.fatal_warnings", pflags.Lookup("fatal"))
 	viper.BindPFlag("general.same_owner", pflags.Lookup("same-owner"))
 	viper.BindPFlag("plugin", pflags.Lookup("plugin"))
+	viper.BindPFlag("general.http_timeout", pflags.Lookup("http-timeout"))
 
 	// Currently I maintain this only from cli.
 	viper.BindPFlag("no_spinner", pflags.Lookup("no-spinner"))

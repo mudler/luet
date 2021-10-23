@@ -23,7 +23,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/mudler/luet/pkg/api/core/types"
@@ -48,20 +47,11 @@ func NewHttpClient(r RepoData, ctx *types.Context) *HttpClient {
 	}
 }
 
-func NewGrabClient() *grab.Client {
-	httpTimeout := 360
-	timeout := os.Getenv("HTTP_TIMEOUT")
-	if timeout != "" {
-		timeoutI, err := strconv.Atoi(timeout)
-		if err == nil {
-			httpTimeout = timeoutI
-		}
-	}
-
+func NewGrabClient(timeout int) *grab.Client {
 	return &grab.Client{
 		UserAgent: "grab",
 		HTTPClient: &http.Client{
-			Timeout: time.Duration(httpTimeout) * time.Second,
+			Timeout: time.Duration(timeout) * time.Second,
 			Transport: &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 			},
@@ -101,7 +91,7 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 	}
 	defer os.RemoveAll(temp)
 
-	client := NewGrabClient()
+	client := NewGrabClient(c.context.Config.General.HTTPTimeout)
 
 	for _, uri := range c.RepoData.Urls {
 		file, err = c.context.Config.GetSystem().TempFile("HttpClient")
