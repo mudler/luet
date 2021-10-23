@@ -227,36 +227,37 @@ func (cs *LuetCompiler) stripFromRootfs(includes []string, rootfs string, includ
 }
 
 func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec, runnerOpts backend.Options) (*artifact.PackageArtifact, error) {
-
-	rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
+	img, err := cs.Backend.ImageReference(runnerOpts.ImageName)
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not create tempdir")
+		return nil, err
+	}
+
+	// TODO: Trim includes/excludes from "/" ?
+	rootfs, err := image.Extract(
+		cs.Options.Context,
+		img,
+		image.ExtractFiles(
+			cs.Options.Context,
+			strings.TrimLeft(p.GetPackageDir(), "/"),
+			p.GetIncludes(),
+			p.GetExcludes(),
+		),
+	)
+	if err != nil {
+		return nil, err
 	}
 	defer os.RemoveAll(rootfs) // clean up
 
-	err = cs.Backend.ExtractRootfs(backend.Options{
-		ImageName: runnerOpts.ImageName, Destination: rootfs}, keepPermissions)
-	if err != nil {
-		return nil, errors.Wrap(err, "Could not extract rootfs")
+	toUnpack := rootfs
+
+	if p.PackageDir != "" {
+		toUnpack = filepath.Join(toUnpack, p.PackageDir)
 	}
 
-	if p.GetPackageDir() != "" {
-		cs.Options.Context.Info(":tophat: Packing from output dir", p.GetPackageDir())
-		rootfs = filepath.Join(rootfs, p.GetPackageDir())
-	}
-
-	if len(p.GetIncludes()) > 0 {
-		// strip from includes
-		cs.stripFromRootfs(p.GetIncludes(), rootfs, true)
-	}
-	if len(p.GetExcludes()) > 0 {
-		// strip from excludes
-		cs.stripFromRootfs(p.GetExcludes(), rootfs, false)
-	}
 	a := artifact.NewPackageArtifact(p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar"))
 	a.CompressionType = cs.Options.CompressionType
 
-	if err := a.Compress(rootfs, concurrency); err != nil {
+	if err := a.Compress(toUnpack, concurrency); err != nil {
 		return nil, errors.Wrap(err, "Error met while creating package archive")
 	}
 

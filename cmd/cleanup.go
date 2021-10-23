@@ -47,9 +47,7 @@ var cleanupCmd = &cobra.Command{
 
 			for _, file := range files {
 
-				if util.DefaultContext.Config.GetGeneral().Debug {
-					util.DefaultContext.Info("Removing ", file.Name())
-				}
+				util.DefaultContext.Debug("Removing ", file.Name())
 
 				err := os.RemoveAll(
 					filepath.Join(util.DefaultContext.Config.GetSystem().GetSystemPkgsCacheDirPath(), file.Name()))

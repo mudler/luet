@@ -18,6 +18,9 @@ package image
 import (
 	"archive/tar"
 	"context"
+	"os"
+	"path/filepath"
+	"strings"
 
 	containerdarchive "github.com/containerd/containerd/archive"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -50,7 +53,7 @@ func ExtractDeltaFiles(
 							return false, nil
 						}
 					}
-					ctx.Info("Adding name", h.Name)
+					ctx.Debug("Adding name", h.Name)
 
 					return true, nil
 				}
@@ -60,7 +63,7 @@ func ExtractDeltaFiles(
 			for _, a := range d.Additions {
 				for _, i := range includeRegexp {
 					if i.MatchString(a.Name) && h.Name == a.Name {
-						ctx.Info("Adding name", h.Name)
+						ctx.Debug("Adding name", h.Name)
 
 						return true, nil
 					}
@@ -76,7 +79,7 @@ func ExtractDeltaFiles(
 								return false, nil
 							}
 						}
-						ctx.Info("Adding name", h.Name)
+						ctx.Debug("Adding name", h.Name)
 
 						return true, nil
 					}
@@ -86,7 +89,7 @@ func ExtractDeltaFiles(
 		default:
 			for _, a := range d.Additions {
 				if h.Name == a.Name {
-					ctx.Info("Adding name", h.Name)
+					ctx.Debug("Adding name", h.Name)
 
 					return true, nil
 				}
@@ -106,8 +109,14 @@ func Extract(ctx *types.Context, img v1.Image, filter func(h *tar.Header) (bool,
 		return "", errors.Wrap(err, "Error met while creating tempdir for rootfs")
 	}
 
+	perms := map[string][]int{}
+	f := func(h *tar.Header) (bool, error) {
+		perms[h.Name] = []int{h.Gid, h.Uid}
+		return filter(h)
+	}
+
 	if filter != nil {
-		opts = append(opts, containerdarchive.WithFilter(filter))
+		opts = append(opts, containerdarchive.WithFilter(f))
 	}
 
 	_, err = containerdarchive.Apply(context.Background(), tmpdiffs, src, opts...)
@@ -115,5 +124,76 @@ func Extract(ctx *types.Context, img v1.Image, filter func(h *tar.Header) (bool,
 		return "", err
 	}
 
+	for f, p := range perms {
+		ff := filepath.Join(tmpdiffs, f)
+		if _, err := os.Lstat(ff); err == nil {
+			if err := os.Chown(ff, p[0], p[1]); err != nil {
+				ctx.Warning(err, "failed chowning file")
+			}
+		}
+	}
+
 	return tmpdiffs, nil
+}
+
+func ExtractFiles(
+	ctx *types.Context,
+	prefixPath string,
+	includes []string, excludes []string,
+) func(h *tar.Header) (bool, error) {
+	includeRegexp := compileRegexes(includes)
+	excludeRegexp := compileRegexes(excludes)
+
+	return func(h *tar.Header) (bool, error) {
+
+		switch {
+		case len(includes) == 0 && len(excludes) != 0:
+			for _, i := range excludeRegexp {
+				if i.MatchString(filepath.Join(prefixPath, h.Name)) {
+					return false, nil
+				}
+			}
+			if prefixPath != "" {
+				return strings.HasPrefix(h.Name, prefixPath), nil
+			}
+			ctx.Debug("Adding name", h.Name)
+			return true, nil
+
+		case len(includes) > 0 && len(excludes) == 0:
+			for _, i := range includeRegexp {
+				if i.MatchString(filepath.Join(prefixPath, h.Name)) {
+					if prefixPath != "" {
+						return strings.HasPrefix(h.Name, prefixPath), nil
+					}
+					ctx.Debug("Adding name", h.Name)
+
+					return true, nil
+				}
+			}
+			return false, nil
+		case len(includes) != 0 && len(excludes) != 0:
+			for _, i := range includeRegexp {
+				if i.MatchString(filepath.Join(prefixPath, h.Name)) {
+					for _, e := range excludeRegexp {
+						if e.MatchString(filepath.Join(prefixPath, h.Name)) {
+							return false, nil
+						}
+					}
+					if prefixPath != "" {
+						return strings.HasPrefix(h.Name, prefixPath), nil
+					}
+					ctx.Debug("Adding name", h.Name)
+
+					return true, nil
+				}
+			}
+			return false, nil
+		default:
+			if prefixPath != "" {
+				return strings.HasPrefix(h.Name, prefixPath), nil
+			}
+
+			return true, nil
+		}
+	}
 }
