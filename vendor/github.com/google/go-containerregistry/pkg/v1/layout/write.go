@@ -23,6 +23,9 @@ import (
 	"path/filepath"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/match"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"golang.org/x/sync/errgroup"
 )
@@ -59,10 +62,9 @@ func (l Path) AppendImage(img v1.Image, options ...Option) error {
 		Digest:    d,
 	}
 
-	for _, opt := range options {
-		if err := opt(&desc); err != nil {
-			return err
-		}
+	o := makeOptions(options...)
+	for _, opt := range o.descOpts {
+		opt(&desc)
 	}
 
 	return l.AppendDescriptor(desc)
@@ -96,10 +98,9 @@ func (l Path) AppendIndex(ii v1.ImageIndex, options ...Option) error {
 		Digest:    d,
 	}
 
-	for _, opt := range options {
-		if err := opt(&desc); err != nil {
-			return err
-		}
+	o := makeOptions(options...)
+	for _, opt := range o.descOpts {
+		opt(&desc)
 	}
 
 	return l.AppendDescriptor(desc)
@@ -118,6 +119,84 @@ func (l Path) AppendDescriptor(desc v1.Descriptor) error {
 	}
 
 	index.Manifests = append(index.Manifests, desc)
+
+	rawIndex, err := json.MarshalIndent(index, "", "   ")
+	if err != nil {
+		return err
+	}
+
+	return l.WriteFile("index.json", rawIndex, os.ModePerm)
+}
+
+// ReplaceImage writes a v1.Image to the Path and updates
+// the index.json to reference it, replacing any existing one that matches matcher, if found.
+func (l Path) ReplaceImage(img v1.Image, matcher match.Matcher, options ...Option) error {
+	if err := l.WriteImage(img); err != nil {
+		return err
+	}
+
+	return l.replaceDescriptor(img, matcher, options...)
+}
+
+// ReplaceIndex writes a v1.ImageIndex to the Path and updates
+// the index.json to reference it, replacing any existing one that matches matcher, if found.
+func (l Path) ReplaceIndex(ii v1.ImageIndex, matcher match.Matcher, options ...Option) error {
+	if err := l.WriteIndex(ii); err != nil {
+		return err
+	}
+
+	return l.replaceDescriptor(ii, matcher, options...)
+}
+
+// replaceDescriptor adds a descriptor to the index.json of the Path, replacing
+// any one matching matcher, if found.
+func (l Path) replaceDescriptor(append mutate.Appendable, matcher match.Matcher, options ...Option) error {
+	ii, err := l.ImageIndex()
+	if err != nil {
+		return err
+	}
+
+	desc, err := partial.Descriptor(append)
+	if err != nil {
+		return err
+	}
+
+	o := makeOptions(options...)
+	for _, opt := range o.descOpts {
+		opt(desc)
+	}
+
+	add := mutate.IndexAddendum{
+		Add:        append,
+		Descriptor: *desc,
+	}
+	ii = mutate.AppendManifests(mutate.RemoveManifests(ii, matcher), add)
+
+	index, err := ii.IndexManifest()
+	if err != nil {
+		return err
+	}
+
+	rawIndex, err := json.MarshalIndent(index, "", "   ")
+	if err != nil {
+		return err
+	}
+
+	return l.WriteFile("index.json", rawIndex, os.ModePerm)
+}
+
+// RemoveDescriptors removes any descriptors that match the match.Matcher from the index.json of the Path.
+func (l Path) RemoveDescriptors(matcher match.Matcher) error {
+	ii, err := l.ImageIndex()
+	if err != nil {
+		return err
+	}
+	ii = mutate.RemoveManifests(ii, matcher)
+
+	index, err := ii.IndexManifest()
+	if err != nil {
+		return err
+	}
 
 	rawIndex, err := json.MarshalIndent(index, "", "   ")
 	if err != nil {
@@ -182,6 +261,19 @@ func (l Path) writeLayer(layer v1.Layer) error {
 	return l.WriteBlob(d, r)
 }
 
+// RemoveBlob removes a file from the blobs directory in the Path
+// at blobs/{hash.Algorithm}/{hash.Hex}
+// It does *not* remove any reference to it from other manifests or indexes, or
+// from the root index.json.
+func (l Path) RemoveBlob(hash v1.Hash) error {
+	dir := l.path("blobs", hash.Algorithm)
+	err := os.Remove(filepath.Join(dir, hash.Hex))
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
 // WriteImage writes an image, including its manifest, config and all of its
 // layers, to the blobs directory. If any blob already exists, as determined by
 // the hash filename, does not write it.
@@ -232,6 +324,14 @@ func (l Path) WriteImage(img v1.Image) error {
 	return l.WriteBlob(d, ioutil.NopCloser(bytes.NewReader(manifest)))
 }
 
+type withLayer interface {
+	Layer(v1.Hash) (v1.Layer, error)
+}
+
+type withBlob interface {
+	Blob(v1.Hash) (io.ReadCloser, error)
+}
+
 func (l Path) writeIndexToFile(indexFile string, ii v1.ImageIndex) error {
 	index, err := ii.IndexManifest()
 	if err != nil {
@@ -261,6 +361,24 @@ func (l Path) writeIndexToFile(indexFile string, ii v1.ImageIndex) error {
 		default:
 			// TODO: The layout could reference arbitrary things, which we should
 			// probably just pass through.
+
+			var blob io.ReadCloser
+			// Workaround for #819.
+			if wl, ok := ii.(withLayer); ok {
+				layer, lerr := wl.Layer(desc.Digest)
+				if lerr != nil {
+					return lerr
+				}
+				blob, err = layer.Compressed()
+			} else if wb, ok := ii.(withBlob); ok {
+				blob, err = wb.Blob(desc.Digest)
+			}
+			if err != nil {
+				return err
+			}
+			if err := l.WriteBlob(desc.Digest, blob); err != nil {
+				return err
+			}
 		}
 	}
 

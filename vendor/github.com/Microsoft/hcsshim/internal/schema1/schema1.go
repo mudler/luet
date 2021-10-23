@@ -119,9 +119,9 @@ type PropertyType string
 
 const (
 	PropertyTypeStatistics        PropertyType = "Statistics"        // V1 and V2
-	PropertyTypeProcessList                    = "ProcessList"       // V1 and V2
-	PropertyTypeMappedVirtualDisk              = "MappedVirtualDisk" // Not supported in V2 schema call
-	PropertyTypeGuestConnection                = "GuestConnection"   // V1 and V2. Nil return from HCS before RS5
+	PropertyTypeProcessList       PropertyType = "ProcessList"       // V1 and V2
+	PropertyTypeMappedVirtualDisk PropertyType = "MappedVirtualDisk" // Not supported in V2 schema call
+	PropertyTypeGuestConnection   PropertyType = "GuestConnection"   // V1 and V2. Nil return from HCS before RS5
 )
 
 type PropertyQuery struct {
@@ -214,9 +214,11 @@ type MappedVirtualDiskController struct {
 
 // GuestDefinedCapabilities is part of the GuestConnectionInfo returned by a GuestConnection call on a utility VM
 type GuestDefinedCapabilities struct {
-	NamespaceAddRequestSupported bool `json:",omitempty"`
-	SignalProcessSupported       bool `json:",omitempty"`
-	DumpStacksSupported          bool `json:",omitempty"`
+	NamespaceAddRequestSupported  bool `json:",omitempty"`
+	SignalProcessSupported        bool `json:",omitempty"`
+	DumpStacksSupported           bool `json:",omitempty"`
+	DeleteContainerStateSupported bool `json:",omitempty"`
+	UpdateContainerSupported      bool `json:",omitempty"`
 }
 
 // GuestConnectionInfo is the structure of an iterm return by a GuestConnection call on a utility VM
