@@ -7,12 +7,10 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
 	github.com/Sabayon/pkgs-checker v0.8.4
-	github.com/apex/log v1.9.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 	github.com/cavaliercoder/grab v1.0.1-0.20201108051000-98a5bfe305ec
 	github.com/containerd/containerd v1.5.2
-	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/crillab/gophersat v1.3.2-0.20210701121804-72b19f5b6b38
 	github.com/docker/cli v20.10.7+incompatible
 	github.com/docker/distribution v2.7.1+incompatible
@@ -27,6 +25,7 @@ require (
 	github.com/google/renameio v1.0.0
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gookit/color v1.5.0
+	github.com/gorilla/mux v1.7.4 // indirect
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-version v1.3.0
 	github.com/huandu/xstrings v1.3.2 // indirect
@@ -42,7 +41,6 @@ require (
 	github.com/mitchellh/mapstructure v1.4.2 // indirect
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
-	github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87
 	github.com/mudler/go-pluggable v0.0.0-20210513155700-54c6443073af
 	github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290
 	github.com/onsi/ginkgo v1.16.4

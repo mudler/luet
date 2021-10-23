@@ -44,9 +44,6 @@ github.com/Microsoft/hcsshim/pkg/ociwclayer
 # github.com/Sabayon/pkgs-checker v0.8.4
 ## explicit
 github.com/Sabayon/pkgs-checker/pkg/gentoo
-# github.com/apex/log v1.9.0
-## explicit
-github.com/apex/log
 # github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
 ## explicit
 github.com/asaskevich/govalidator
@@ -91,9 +88,6 @@ github.com/containerd/continuity/sysx
 # github.com/containerd/stargz-snapshotter/estargz v0.7.0
 github.com/containerd/stargz-snapshotter/estargz
 github.com/containerd/stargz-snapshotter/estargz/errorutil
-# github.com/cpuguy83/go-md2man/v2 v2.0.1
-## explicit
-github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/crillab/gophersat v1.3.2-0.20210701121804-72b19f5b6b38
 ## explicit
 github.com/crillab/gophersat/bf
@@ -114,9 +108,6 @@ github.com/docker/cli/cli/trust
 ## explicit
 github.com/docker/distribution
 github.com/docker/distribution/digestset
-github.com/docker/distribution/manifest
-github.com/docker/distribution/manifest/schema1
-github.com/docker/distribution/manifest/schema2
 github.com/docker/distribution/metrics
 github.com/docker/distribution/reference
 github.com/docker/distribution/registry/api/errcode
@@ -156,7 +147,6 @@ github.com/docker/docker/pkg/ioutils
 github.com/docker/docker/pkg/jsonmessage
 github.com/docker/docker/pkg/longpath
 github.com/docker/docker/pkg/pools
-github.com/docker/docker/pkg/stdcopy
 github.com/docker/docker/pkg/stringid
 github.com/docker/docker/pkg/system
 github.com/docker/docker/pkg/tarsum
@@ -179,16 +169,12 @@ github.com/docker/go-metrics
 # github.com/docker/go-units v0.4.0
 ## explicit
 github.com/docker/go-units
-# github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7
-github.com/docker/libtrust
 # github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
 ## explicit
 github.com/ecooper/qlearning
 # github.com/fsnotify/fsnotify v1.5.1
 ## explicit
 github.com/fsnotify/fsnotify
-# github.com/fsouza/go-dockerclient v1.6.4
-github.com/fsouza/go-dockerclient
 # github.com/ghodss/yaml v1.0.0
 ## explicit
 github.com/ghodss/yaml
@@ -265,6 +251,7 @@ github.com/googleapis/gnostic/openapiv2
 ## explicit
 github.com/gookit/color
 # github.com/gorilla/mux v1.7.4
+## explicit
 github.com/gorilla/mux
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
@@ -285,8 +272,6 @@ github.com/hashicorp/hcl/hcl/token
 github.com/hashicorp/hcl/json/parser
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
-# github.com/heroku/docker-registry-client v0.0.0-20181004091502-47ecf50fd8d4
-github.com/heroku/docker-registry-client/registry
 # github.com/huandu/xstrings v1.3.2
 ## explicit
 github.com/huandu/xstrings
@@ -352,9 +337,6 @@ github.com/morikuni/aec
 # github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
 ## explicit
 github.com/mudler/cobra-extensions
-# github.com/mudler/docker-companion v0.4.6-0.20200418093252-41846f112d87
-## explicit
-github.com/mudler/docker-companion/api
 # github.com/mudler/go-pluggable v0.0.0-20210513155700-54c6443073af
 ## explicit
 github.com/mudler/go-pluggable
@@ -400,21 +382,6 @@ github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
-# github.com/openSUSE/umoci v0.1.1-0.20191030112807-c0dd46ae078f
-github.com/openSUSE/umoci/oci/cas
-github.com/openSUSE/umoci/oci/casext
-github.com/openSUSE/umoci/oci/casext/mediatype
-github.com/openSUSE/umoci/oci/config/convert
-github.com/openSUSE/umoci/oci/config/generate
-github.com/openSUSE/umoci/oci/layer
-github.com/openSUSE/umoci/pkg/fseval
-github.com/openSUSE/umoci/pkg/hardening
-github.com/openSUSE/umoci/pkg/idtools
-github.com/openSUSE/umoci/pkg/system
-github.com/openSUSE/umoci/pkg/testutils
-github.com/openSUSE/umoci/pkg/unpriv
-github.com/openSUSE/umoci/third_party/shared
-github.com/openSUSE/umoci/third_party/user
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit
 github.com/opencontainers/go-digest
@@ -425,8 +392,6 @@ github.com/opencontainers/image-spec/specs-go/v1
 # github.com/opencontainers/runc v1.0.0-rc93
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
-# github.com/opencontainers/runtime-spec v1.0.3-0.20200929063507-e6143ca7d51d
-github.com/opencontainers/runtime-spec/specs-go
 # github.com/otiai10/copy v1.2.1-0.20200916181228-26f84a0b1578
 ## explicit
 github.com/otiai10/copy
@@ -467,10 +432,6 @@ github.com/rogpeppe/go-internal/internal/syscall/windows
 github.com/rogpeppe/go-internal/internal/syscall/windows/sysdll
 github.com/rogpeppe/go-internal/lockedfile
 github.com/rogpeppe/go-internal/lockedfile/internal/filelock
-# github.com/rootless-containers/proto v0.1.0
-github.com/rootless-containers/proto/go-proto
-# github.com/russross/blackfriday/v2 v2.1.0
-github.com/russross/blackfriday/v2
 # github.com/sirupsen/logrus v1.8.1
 ## explicit
 github.com/sirupsen/logrus
@@ -508,12 +469,6 @@ github.com/theupdateframework/notary/tuf/data
 github.com/theupdateframework/notary/tuf/signed
 github.com/theupdateframework/notary/tuf/utils
 github.com/theupdateframework/notary/tuf/validation
-# github.com/urfave/cli v1.22.2
-github.com/urfave/cli
-# github.com/vbatts/go-mtree v0.4.4
-github.com/vbatts/go-mtree
-github.com/vbatts/go-mtree/pkg/govis
-github.com/vbatts/go-mtree/xattr
 # github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f
 github.com/xeipuuv/gojsonpointer
 # github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415
@@ -551,7 +506,6 @@ golang.org/x/crypto/blowfish
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/pbkdf2
-golang.org/x/crypto/ripemd160
 golang.org/x/crypto/scrypt
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/mod v0.4.2
