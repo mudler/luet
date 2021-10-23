@@ -31,6 +31,7 @@ import (
 )
 
 var _ = Describe("Extract", func() {
+
 	Context("extract files from images", func() {
 		Context("ExtractFiles", func() {
 			ctx := types.NewContext()
@@ -70,7 +71,7 @@ var _ = Describe("Extract", func() {
 				tmpdir, err := Extract(
 					ctx,
 					img,
-					ExtractFiles(ctx, "usr", []string{}, []string{}),
+					ExtractFiles(ctx, "/usr", []string{}, []string{}),
 				)
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
@@ -83,7 +84,7 @@ var _ = Describe("Extract", func() {
 				tmpdir, err := Extract(
 					ctx,
 					img,
-					ExtractFiles(ctx, "usr", []string{"bin"}, []string{"sbin"}),
+					ExtractFiles(ctx, "/usr", []string{"bin"}, []string{"sbin"}),
 				)
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
@@ -97,7 +98,7 @@ var _ = Describe("Extract", func() {
 				tmpdir, err := Extract(
 					ctx,
 					img,
-					ExtractFiles(ctx, "", []string{"usr", "usr/bin"}, []string{"^bin"}),
+					ExtractFiles(ctx, "", []string{"/usr|/usr/bin"}, []string{"^/bin"}),
 				)
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up

@@ -16,7 +16,6 @@
 package image_test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -31,9 +30,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("DeltaInfo", func() {
+var _ = Describe("Delta", func() {
 	Context("Generates deltas of images", func() {
-		It("Correctly detect packages", func() {
+		It("computes delta", func() {
 			ref, err := name.ParseReference("alpine")
 			Expect(err).ToNot(HaveOccurred())
 
@@ -78,7 +77,7 @@ var _ = Describe("DeltaInfo", func() {
 
 				Expect(len(diff.Additions) > 0).To(BeTrue())
 				Expect(len(diff.Changes) > 0).To(BeTrue())
-				Expect(len(diff.Deletions) > 0).To(BeTrue())
+				Expect(len(diff.Deletions) == 0).To(BeTrue())
 			})
 
 			It("Extract all deltas", func() {
@@ -90,14 +89,13 @@ var _ = Describe("DeltaInfo", func() {
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
 
-				fmt.Println(file.ListDir(tmpdir))
 				Expect(file.Exists(filepath.Join(tmpdir, "root", ".cache"))).To(BeTrue())
 				Expect(file.Exists(filepath.Join(tmpdir, "bin", "sh"))).To(BeFalse())
 				Expect(file.Exists(filepath.Join(tmpdir, "usr", "local", "go"))).To(BeTrue())
 				Expect(file.Exists(filepath.Join(tmpdir, "usr", "local", "go", "bin"))).To(BeTrue())
 			})
 
-			It("Extract deltas and excludes stuff", func() {
+			It("Extract deltas and excludes /usr/local/go", func() {
 				tmpdir, err := Extract(
 					ctx,
 					img2,
@@ -107,7 +105,7 @@ var _ = Describe("DeltaInfo", func() {
 				defer os.RemoveAll(tmpdir) // clean up
 				Expect(file.Exists(filepath.Join(tmpdir, "usr", "local", "go"))).To(BeFalse())
 			})
-			It("Extract deltas and excludes stuff", func() {
+			It("Extract deltas and excludes /usr/local/go/bin, but includes /usr/local/go", func() {
 				tmpdir, err := Extract(
 					ctx,
 					img2,
@@ -119,7 +117,7 @@ var _ = Describe("DeltaInfo", func() {
 				Expect(file.Exists(filepath.Join(tmpdir, "usr", "local", "go", "bin"))).To(BeFalse())
 			})
 
-			It("Extract deltas and excludes stuff", func() {
+			It("Extract deltas and includes /usr/local/go", func() {
 				tmpdir, err := Extract(
 					ctx,
 					img2,

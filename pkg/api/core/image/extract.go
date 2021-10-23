@@ -18,11 +18,14 @@ package image
 import (
 	"archive/tar"
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	containerdarchive "github.com/containerd/containerd/archive"
+	"github.com/docker/docker/pkg/system"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/mudler/luet/pkg/api/core/types"
@@ -100,42 +103,6 @@ func ExtractDeltaFiles(
 	}
 }
 
-func Extract(ctx *types.Context, img v1.Image, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (string, error) {
-	src := mutate.Extract(img)
-	defer src.Close()
-
-	tmpdiffs, err := ctx.Config.GetSystem().TempDir("extraction")
-	if err != nil {
-		return "", errors.Wrap(err, "Error met while creating tempdir for rootfs")
-	}
-
-	perms := map[string][]int{}
-	f := func(h *tar.Header) (bool, error) {
-		perms[h.Name] = []int{h.Gid, h.Uid}
-		return filter(h)
-	}
-
-	if filter != nil {
-		opts = append(opts, containerdarchive.WithFilter(f))
-	}
-
-	_, err = containerdarchive.Apply(context.Background(), tmpdiffs, src, opts...)
-	if err != nil {
-		return "", err
-	}
-
-	for f, p := range perms {
-		ff := filepath.Join(tmpdiffs, f)
-		if _, err := os.Lstat(ff); err == nil {
-			if err := os.Chown(ff, p[0], p[1]); err != nil {
-				ctx.Warning(err, "failed chowning file")
-			}
-		}
-	}
-
-	return tmpdiffs, nil
-}
-
 func ExtractFiles(
 	ctx *types.Context,
 	prefixPath string,
@@ -164,7 +131,7 @@ func ExtractFiles(
 			for _, i := range includeRegexp {
 				if i.MatchString(filepath.Join(prefixPath, fileName)) {
 					if prefixPath != "" {
-						return strings.HasPrefix(h.Name, prefixPath), nil
+						return strings.HasPrefix(fileName, prefixPath), nil
 					}
 					ctx.Debug("Adding name", fileName)
 
@@ -197,4 +164,65 @@ func ExtractFiles(
 			return true, nil
 		}
 	}
+}
+
+func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (string, error) {
+	defer reader.Close()
+
+	perms := map[string][]int{}
+	xattrs := map[string]map[string]string{}
+	paxrecords := map[string]map[string]string{}
+
+	f := func(h *tar.Header) (bool, error) {
+		perms[h.Name] = []int{h.Gid, h.Uid}
+		xattrs[h.Name] = h.Xattrs
+		paxrecords[h.Name] = h.PAXRecords
+
+		return filter(h)
+	}
+
+	if filter != nil {
+		opts = append(opts, containerdarchive.WithFilter(f))
+	}
+
+	_, err := containerdarchive.Apply(context.Background(), output, reader, opts...)
+	if err != nil {
+		return "", err
+	}
+
+	for f, p := range perms {
+		ff := filepath.Join(output, f)
+		if _, err := os.Lstat(ff); err == nil {
+			if err := os.Lchown(ff, p[1], p[0]); err != nil {
+				ctx.Warning(err, "failed chowning file")
+			}
+		}
+	}
+
+	for _, m := range []map[string]map[string]string{xattrs, paxrecords} {
+		for key, attrs := range m {
+			ff := filepath.Join(output, key)
+			for k, attr := range attrs {
+				if err := system.Lsetxattr(ff, k, []byte(attr), 0); err != nil {
+					if errors.Is(err, syscall.ENOTSUP) {
+						ctx.Debug("ignored xattr %s in archive", key)
+					}
+				}
+			}
+		}
+	}
+
+	return output, nil
+}
+
+func Extract(ctx *types.Context, img v1.Image, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (string, error) {
+	tmpdiffs, err := ctx.Config.GetSystem().TempDir("extraction")
+	if err != nil {
+		return "", errors.Wrap(err, "Error met while creating tempdir for rootfs")
+	}
+	return ExtractReader(ctx, mutate.Extract(img), tmpdiffs, filter, opts...)
+}
+
+func ExtractTo(ctx *types.Context, img v1.Image, output string, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (string, error) {
+	return ExtractReader(ctx, mutate.Extract(img), output, filter, opts...)
 }

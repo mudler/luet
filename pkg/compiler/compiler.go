@@ -238,7 +238,7 @@ func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *compi
 		img,
 		image.ExtractFiles(
 			cs.Options.Context,
-			strings.TrimLeft(p.GetPackageDir(), "/"),
+			p.GetPackageDir(),
 			p.GetIncludes(),
 			p.GetExcludes(),
 		),
