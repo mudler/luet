@@ -288,7 +288,9 @@ func (c *Context) Msg(level LogLevel, ln bool, msg ...interface{}) {
 		switch level {
 		case WarningLevel:
 			levelMsg = pterm.LightYellow(":construction: warning" + message)
-		case InfoLevel, SuccessLevel:
+		case InfoLevel:
+			levelMsg = message
+		case SuccessLevel:
 			levelMsg = pterm.LightGreen(message)
 		case ErrorLevel:
 			levelMsg = pterm.Red(message)
