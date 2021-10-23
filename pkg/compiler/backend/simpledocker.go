@@ -23,10 +23,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/mudler/luet/pkg/api/core/types"
 	bus "github.com/mudler/luet/pkg/bus"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	capi "github.com/mudler/docker-companion/api"
 
 	"github.com/mudler/luet/pkg/helpers"
@@ -142,6 +145,19 @@ func (s *SimpleDocker) Push(opts Options) error {
 
 	//Info(string(out))
 	return nil
+}
+
+func (s *SimpleDocker) ImageReference(a string) (v1.Image, error) {
+	ref, err := name.ParseReference(a)
+	if err != nil {
+		return nil, err
+	}
+
+	img, err := daemon.Image(ref)
+	if err != nil {
+		return nil, err
+	}
+	return img, nil
 }
 
 func (s *SimpleDocker) ImageDefinitionToTar(opts Options) error {

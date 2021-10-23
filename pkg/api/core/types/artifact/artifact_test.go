@@ -22,7 +22,6 @@ import (
 
 	"github.com/mudler/luet/pkg/api/core/types"
 	. "github.com/mudler/luet/pkg/api/core/types/artifact"
-	"github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/compiler/backend"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	compression "github.com/mudler/luet/pkg/compiler/types/compression"
@@ -30,7 +29,6 @@ import (
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 
 	. "github.com/mudler/luet/pkg/compiler"
-	helpers "github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/tree"
@@ -117,53 +115,7 @@ RUN echo bar > /test2`))
 			}
 			Expect(b.BuildImage(opts2)).ToNot(HaveOccurred())
 			Expect(b.ExportImage(opts2)).ToNot(HaveOccurred())
-			Expect(fileHelper.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
-			diffs, err := compiler.GenerateChanges(ctx, b, opts, opts2)
-			Expect(err).ToNot(HaveOccurred())
 
-			artifacts := []ArtifactNode{{
-				Name: "/luetbuild/LuetDockerfile",
-				Size: 175,
-			}}
-			if os.Getenv("DOCKER_BUILDKIT") == "1" {
-				artifacts = append(artifacts, ArtifactNode{Name: "/etc/resolv.conf", Size: 0})
-			}
-			artifacts = append(artifacts, ArtifactNode{Name: "/test", Size: 4})
-			artifacts = append(artifacts, ArtifactNode{Name: "/test2", Size: 4})
-
-			Expect(diffs).To(Equal(
-				[]ArtifactLayer{{
-					FromImage: "luet/base",
-					ToImage:   "test",
-					Diffs: ArtifactDiffs{
-						Additions: artifacts,
-					},
-				}}))
-			err = b.ExtractRootfs(backend.Options{ImageName: "test", Destination: rootfs}, false)
-			Expect(err).ToNot(HaveOccurred())
-
-			a, err := ExtractArtifactFromDelta(ctx, rootfs, filepath.Join(tmpdir, "package.tar"), diffs, 2, false, []string{}, []string{}, compression.None)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(fileHelper.Exists(filepath.Join(tmpdir, "package.tar"))).To(BeTrue())
-			err = helpers.Untar(a.Path, unpacked, false)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(fileHelper.Exists(filepath.Join(unpacked, "test"))).To(BeTrue())
-			Expect(fileHelper.Exists(filepath.Join(unpacked, "test2"))).To(BeTrue())
-			content1, err := fileHelper.Read(filepath.Join(unpacked, "test"))
-			Expect(err).ToNot(HaveOccurred())
-			Expect(content1).To(Equal("foo\n"))
-			content2, err := fileHelper.Read(filepath.Join(unpacked, "test2"))
-			Expect(err).ToNot(HaveOccurred())
-			Expect(content2).To(Equal("bar\n"))
-
-			err = a.Hash()
-			Expect(err).ToNot(HaveOccurred())
-			err = a.Verify()
-			Expect(err).ToNot(HaveOccurred())
-			Expect(fileHelper.CopyFile(filepath.Join(tmpdir, "output2.tar"), filepath.Join(tmpdir, "package.tar"))).ToNot(HaveOccurred())
-
-			err = a.Verify()
-			Expect(err).To(HaveOccurred())
 		})
 
 		It("Generates packages images", func() {

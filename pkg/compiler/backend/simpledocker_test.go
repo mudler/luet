@@ -17,8 +17,6 @@ package backend_test
 
 import (
 	"github.com/mudler/luet/pkg/api/core/types"
-	"github.com/mudler/luet/pkg/api/core/types/artifact"
-	"github.com/mudler/luet/pkg/compiler"
 	. "github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	. "github.com/mudler/luet/pkg/compiler/backend"
@@ -107,35 +105,6 @@ RUN echo bar > /test2`))
 			Expect(b.ExportImage(opts2)).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(filepath.Join(tmpdir, "output2.tar"))).To(BeTrue())
 
-			artifacts := []artifact.ArtifactNode{{
-				Name: "/luetbuild/LuetDockerfile",
-				Size: 175,
-			}}
-			if os.Getenv("DOCKER_BUILDKIT") == "1" {
-				artifacts = append(artifacts, artifact.ArtifactNode{Name: "/etc/resolv.conf", Size: 0})
-			}
-			artifacts = append(artifacts, artifact.ArtifactNode{Name: "/test", Size: 4})
-			artifacts = append(artifacts, artifact.ArtifactNode{Name: "/test2", Size: 4})
-
-			Expect(compiler.GenerateChanges(ctx, b, opts, opts2)).To(Equal(
-				[]artifact.ArtifactLayer{{
-					FromImage: "luet/base",
-					ToImage:   "test",
-					Diffs: artifact.ArtifactDiffs{
-						Additions: artifacts,
-					},
-				}}))
-
-			opts2 = backend.Options{
-				ImageName:      "test",
-				SourcePath:     tmpdir,
-				DockerFileName: "LuetDockerfile",
-				Destination:    filepath.Join(tmpdir, "output3.tar"),
-			}
-
-			Expect(b.ImageDefinitionToTar(opts2)).ToNot(HaveOccurred())
-			Expect(fileHelper.Exists(filepath.Join(tmpdir, "output3.tar"))).To(BeTrue())
-			Expect(b.ImageExists(opts2.ImageName)).To(BeFalse())
 		})
 
 		It("Detects available images", func() {

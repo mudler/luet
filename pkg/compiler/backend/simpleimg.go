@@ -20,6 +20,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mudler/luet/pkg/api/core/types"
 	bus "github.com/mudler/luet/pkg/bus"
 
@@ -68,6 +70,29 @@ func (s *SimpleImg) RemoveImage(opts Options) error {
 
 	s.ctx.Info(":tea: Image " + name + " removed")
 	return nil
+}
+
+func (s *SimpleImg) ImageReference(a string) (v1.Image, error) {
+
+	f, err := s.ctx.Config.GetSystem().TempFile("snapshot")
+	if err != nil {
+		return nil, err
+	}
+	buildarg := []string{"save", a, "-o", f.Name()}
+	s.ctx.Spinner()
+	defer s.ctx.SpinnerStop()
+
+	out, err := exec.Command("img", buildarg...).CombinedOutput()
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed saving image: "+string(out))
+	}
+
+	img, err := crane.Load(f.Name())
+	if err != nil {
+		return nil, err
+	}
+
+	return img, nil
 }
 
 func (s *SimpleImg) DownloadImage(opts Options) error {

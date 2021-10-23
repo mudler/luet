@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	bus "github.com/mudler/luet/pkg/bus"
@@ -280,23 +281,36 @@ func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p *co
 	}
 
 	cs.Options.Context.Info(pkgTag, ":hammer: Generating delta")
-	diffs, err := GenerateChanges(cs.Options.Context, cs.Backend, builderOpts, runnerOpts)
+
+	ref, err := cs.Backend.ImageReference(builderOpts.ImageName)
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not generate changes from layers")
+		return nil, err
 	}
 
-	cs.Options.Context.Debug("Extracting image to grab files from delta")
-	if err := cs.Backend.ExtractRootfs(backend.Options{
-		ImageName: runnerOpts.ImageName, Destination: rootfs}, keepPermissions); err != nil {
-		return nil, errors.Wrap(err, "Could not extract rootfs")
-	}
-	artifact, err := artifact.ExtractArtifactFromDelta(cs.Options.Context, rootfs, p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"), diffs, concurrency, keepPermissions, p.GetIncludes(), p.GetExcludes(), cs.Options.CompressionType)
+	ref2, err := cs.Backend.ImageReference(runnerOpts.ImageName)
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not generate deltas")
+		return nil, err
 	}
 
-	artifact.CompileSpec = p
-	return artifact, nil
+	diff, err := image.Delta(ref, ref2)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: includes/excludes might need to get "/" stripped from prefix
+	a, err := artifact.ImageToArtifact(
+		cs.Options.Context,
+		ref2,
+		cs.Options.CompressionType,
+		p.Rel(fmt.Sprintf("%s%s", p.GetPackage().GetFingerPrint(), ".package.tar")),
+		image.ExtractDeltaFiles(cs.Options.Context, diff, p.GetIncludes(), p.GetExcludes()),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	a.CompileSpec = p
+	return a, nil
 }
 
 func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImage string,

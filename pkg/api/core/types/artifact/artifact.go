@@ -27,16 +27,16 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	zstd "github.com/klauspost/compress/zstd"
 	gzip "github.com/klauspost/pgzip"
 
 	//"strconv"
 	"strings"
-	"sync"
 
 	config "github.com/mudler/luet/pkg/api/core/config"
+	"github.com/mudler/luet/pkg/api/core/image"
 	types "github.com/mudler/luet/pkg/api/core/types"
 	bus "github.com/mudler/luet/pkg/bus"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
@@ -65,6 +65,22 @@ type PackageArtifact struct {
 	Files             []string                          `json:"files"`
 	PackageCacheImage string                            `json:"package_cacheimage"`
 	Runtime           *pkg.DefaultPackage               `json:"runtime,omitempty"`
+}
+
+func ImageToArtifact(ctx *types.Context, img v1.Image, t compression.Implementation, output string, filter func(h *tar.Header) (bool, error)) (*PackageArtifact, error) {
+	tmpdiffs, err := image.Extract(ctx, img, filter)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
+	}
+	defer os.RemoveAll(tmpdiffs) // clean up
+
+	a := NewPackageArtifact(output)
+	a.CompressionType = t
+	err = a.Compress(tmpdiffs, 1)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error met while creating package archive")
+	}
+	return a, nil
 }
 
 func (p *PackageArtifact) ShallowCopy() *PackageArtifact {
@@ -625,182 +641,4 @@ func (a *PackageArtifact) FileList() ([]string, error) {
 		// if a dir, create it, then go to next segment
 	}
 	return files, nil
-}
-
-type CopyJob struct {
-	Src, Dst string
-	Artifact string
-}
-
-func worker(ctx *types.Context, i int, wg *sync.WaitGroup, s <-chan CopyJob) {
-	defer wg.Done()
-
-	for job := range s {
-		_, err := os.Lstat(job.Dst)
-		if err != nil {
-			ctx.Debug("Copying ", job.Src)
-			if err := fileHelper.DeepCopyFile(job.Src, job.Dst); err != nil {
-				ctx.Warning("Error copying", job, err)
-			}
-		}
-	}
-}
-
-func compileRegexes(regexes []string) []*regexp.Regexp {
-	var result []*regexp.Regexp
-	for _, i := range regexes {
-		r, e := regexp.Compile(i)
-		if e != nil {
-			continue
-		}
-		result = append(result, r)
-	}
-	return result
-}
-
-type ArtifactNode struct {
-	Name string `json:"Name"`
-	Size int    `json:"Size"`
-}
-type ArtifactDiffs struct {
-	Additions []ArtifactNode `json:"Adds"`
-	Deletions []ArtifactNode `json:"Dels"`
-	Changes   []ArtifactNode `json:"Mods"`
-}
-
-type ArtifactLayer struct {
-	FromImage string        `json:"Image1"`
-	ToImage   string        `json:"Image2"`
-	Diffs     ArtifactDiffs `json:"Diff"`
-}
-
-// ExtractArtifactFromDelta extracts deltas from ArtifactLayer from an image in tar format
-func ExtractArtifactFromDelta(ctx *types.Context, src, dst string, layers []ArtifactLayer, concurrency int, keepPerms bool, includes []string, excludes []string, t compression.Implementation) (*PackageArtifact, error) {
-
-	archive, err := ctx.Config.GetSystem().TempDir("archive")
-	if err != nil {
-		return nil, errors.Wrap(err, "Error met while creating tempdir for archive")
-	}
-	defer os.RemoveAll(archive) // clean up
-
-	if strings.HasSuffix(src, ".tar") {
-		rootfs, err := ctx.Config.GetSystem().TempDir("rootfs")
-		if err != nil {
-			return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
-		}
-		defer os.RemoveAll(rootfs) // clean up
-		err = helpers.Untar(src, rootfs, keepPerms)
-		if err != nil {
-			return nil, errors.Wrap(err, "Error met while unpacking rootfs")
-		}
-		src = rootfs
-	}
-
-	toCopy := make(chan CopyJob)
-
-	var wg = new(sync.WaitGroup)
-	for i := 0; i < concurrency; i++ {
-		wg.Add(1)
-		go worker(ctx, i, wg, toCopy)
-	}
-
-	// Handle includes in spec. If specified they filter what gets in the package
-
-	if len(includes) > 0 && len(excludes) == 0 {
-		includeRegexp := compileRegexes(includes)
-		for _, l := range layers {
-			// Consider d.Additions (and d.Changes? - warn at least) only
-		ADDS:
-			for _, a := range l.Diffs.Additions {
-				for _, i := range includeRegexp {
-					if i.MatchString(a.Name) {
-						toCopy <- CopyJob{Src: filepath.Join(src, a.Name), Dst: filepath.Join(archive, a.Name), Artifact: a.Name}
-						continue ADDS
-					}
-				}
-			}
-			for _, a := range l.Diffs.Changes {
-				ctx.Debug("File ", a.Name, " changed")
-			}
-			for _, a := range l.Diffs.Deletions {
-				ctx.Debug("File ", a.Name, " deleted")
-			}
-		}
-
-	} else if len(includes) == 0 && len(excludes) != 0 {
-		excludeRegexp := compileRegexes(excludes)
-		for _, l := range layers {
-			// Consider d.Additions (and d.Changes? - warn at least) only
-		ADD:
-			for _, a := range l.Diffs.Additions {
-				for _, i := range excludeRegexp {
-					if i.MatchString(a.Name) {
-						continue ADD
-					}
-				}
-				toCopy <- CopyJob{Src: filepath.Join(src, a.Name), Dst: filepath.Join(archive, a.Name), Artifact: a.Name}
-			}
-			for _, a := range l.Diffs.Changes {
-				ctx.Debug("File ", a.Name, " changed")
-			}
-			for _, a := range l.Diffs.Deletions {
-				ctx.Debug("File ", a.Name, " deleted")
-			}
-		}
-
-	} else if len(includes) != 0 && len(excludes) != 0 {
-		includeRegexp := compileRegexes(includes)
-		excludeRegexp := compileRegexes(excludes)
-
-		for _, l := range layers {
-			// Consider d.Additions (and d.Changes? - warn at least) only
-		EXCLUDES:
-			for _, a := range l.Diffs.Additions {
-				for _, i := range includeRegexp {
-					if i.MatchString(a.Name) {
-						for _, e := range excludeRegexp {
-							if e.MatchString(a.Name) {
-								continue EXCLUDES
-							}
-						}
-						toCopy <- CopyJob{Src: filepath.Join(src, a.Name), Dst: filepath.Join(archive, a.Name), Artifact: a.Name}
-						continue EXCLUDES
-					}
-				}
-			}
-			for _, a := range l.Diffs.Changes {
-				ctx.Debug("File ", a.Name, " changed")
-			}
-			for _, a := range l.Diffs.Deletions {
-				ctx.Debug("File ", a.Name, " deleted")
-			}
-		}
-
-	} else {
-		// Otherwise just grab all
-		for _, l := range layers {
-			// Consider d.Additions (and d.Changes? - warn at least) only
-			for _, a := range l.Diffs.Additions {
-				ctx.Debug("File ", a.Name, " added")
-				toCopy <- CopyJob{Src: filepath.Join(src, a.Name), Dst: filepath.Join(archive, a.Name), Artifact: a.Name}
-			}
-			for _, a := range l.Diffs.Changes {
-				ctx.Debug("File ", a.Name, " changed")
-			}
-			for _, a := range l.Diffs.Deletions {
-				ctx.Debug("File ", a.Name, " deleted")
-			}
-		}
-	}
-
-	close(toCopy)
-	wg.Wait()
-
-	a := NewPackageArtifact(dst)
-	a.CompressionType = t
-	err = a.Compress(archive, concurrency)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error met while creating package archive")
-	}
-	return a, nil
 }
