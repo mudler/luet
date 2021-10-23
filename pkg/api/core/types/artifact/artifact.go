@@ -68,7 +68,7 @@ type PackageArtifact struct {
 }
 
 func ImageToArtifact(ctx *types.Context, img v1.Image, t compression.Implementation, output string, filter func(h *tar.Header) (bool, error)) (*PackageArtifact, error) {
-	tmpdiffs, err := image.Extract(ctx, img, filter)
+	_, tmpdiffs, err := image.Extract(ctx, img, filter)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
 	}

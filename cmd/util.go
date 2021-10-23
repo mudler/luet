@@ -62,11 +62,6 @@ func NewUnpackCommand() *cobra.Command {
 			identity, _ := cmd.Flags().GetString("auth-identity-token")
 			registryToken, _ := cmd.Flags().GetString("auth-registry-token")
 
-			temp, err := util.DefaultContext.Config.GetSystem().TempDir("contentstore")
-			if err != nil {
-				util.DefaultContext.Fatal("Cannot create a tempdir", err.Error())
-			}
-
 			util.DefaultContext.Info("Downloading", image, "to", destination)
 			auth := &types.AuthConfig{
 				Username:      user,
@@ -77,7 +72,7 @@ func NewUnpackCommand() *cobra.Command {
 				RegistryToken: registryToken,
 			}
 
-			info, err := docker.DownloadAndExtractDockerImage(temp, image, destination, auth, verify)
+			info, err := docker.DownloadAndExtractDockerImage(util.DefaultContext, image, destination, auth, verify)
 			if err != nil {
 				util.DefaultContext.Error(err.Error())
 				os.Exit(1)

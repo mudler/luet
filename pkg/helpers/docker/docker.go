@@ -20,12 +20,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/containerd/containerd/images"
+	luetimages "github.com/mudler/luet/pkg/api/core/image"
+	luettypes "github.com/mudler/luet/pkg/api/core/types"
+
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
-	continerdarchive "github.com/containerd/containerd/archive"
 	"github.com/docker/cli/cli/trust"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
@@ -34,7 +35,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/mudler/luet/pkg/bus"
 	"github.com/opencontainers/go-digest"
@@ -166,7 +166,7 @@ func UnarchiveLayers(temp string, img v1.Image, image, dest string, auth *types.
 }
 
 // DownloadAndExtractDockerImage extracts a container image natively. It supports privileged/unprivileged mode
-func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthConfig, verify bool) (*images.Image, error) {
+func DownloadAndExtractDockerImage(ctx *luettypes.Context, image, dest string, auth *types.AuthConfig, verify bool) (*images.Image, error) {
 	if verify {
 		img, err := verifyImage(image, auth)
 		if err != nil {
@@ -206,13 +206,20 @@ func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthCon
 		return nil, err
 	}
 
-	reader := mutate.Extract(img)
-	defer reader.Close()
-	defer os.RemoveAll(temp)
-
 	bus.Manager.Publish(bus.EventImagePreUnPack, UnpackEventData{Image: image, Dest: dest})
 
-	c, err := continerdarchive.Apply(context.TODO(), dest, reader)
+	var c int64
+	c, _, err = luetimages.ExtractTo(
+		ctx,
+		img,
+		dest,
+		luetimages.ExtractFiles(
+			ctx,
+			"",
+			[]string{},
+			[]string{},
+		),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -228,8 +235,4 @@ func DownloadAndExtractDockerImage(temp, image, dest string, auth *types.AuthCon
 			Size:      c,
 		},
 	}, nil
-}
-
-func StripInvalidStringsFromImage(s string) string {
-	return strings.ReplaceAll(s, "+", "-")
 }

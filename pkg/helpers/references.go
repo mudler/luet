@@ -17,8 +17,9 @@
 package helpers
 
 import (
-	"github.com/asaskevich/govalidator"
 	"strings"
+
+	"github.com/asaskevich/govalidator"
 )
 
 func StripRegistryFromImage(image string) string {
@@ -27,4 +28,8 @@ func StripRegistryFromImage(image string) string {
 		return img[1]
 	}
 	return image
+}
+
+func SanitizeImageString(s string) string {
+	return strings.ReplaceAll(s, "+", "-")
 }

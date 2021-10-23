@@ -27,9 +27,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
-	"github.com/mudler/luet/pkg/helpers/docker"
 	"github.com/mudler/luet/pkg/helpers/match"
 	version "github.com/mudler/luet/pkg/versioner"
 
@@ -350,7 +350,7 @@ func (p *DefaultPackage) GetPackageName() string {
 }
 
 func (p *DefaultPackage) ImageID() string {
-	return docker.StripInvalidStringsFromImage(p.GetFingerPrint())
+	return helpers.SanitizeImageString(p.GetFingerPrint())
 }
 
 // GetBuildTimestamp returns the package build timestamp

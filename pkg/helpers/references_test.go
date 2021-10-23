@@ -23,6 +23,11 @@ import (
 )
 
 var _ = Describe("Helpers", func() {
+	Context("Image names", func() {
+		It("strips invalid chars", func() {
+			Expect(SanitizeImageString("foo+bar")).To(Equal("foo-bar"))
+		})
+	})
 	Context("StripRegistryFromImage", func() {
 		It("Strips the domain name", func() {
 			out := StripRegistryFromImage("valid.domain.org/base/image:tag")

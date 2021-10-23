@@ -81,7 +81,7 @@ var _ = Describe("Delta", func() {
 			})
 
 			It("Extract all deltas", func() {
-				tmpdir, err := Extract(
+				_, tmpdir, err := Extract(
 					ctx,
 					img2,
 					ExtractDeltaFiles(ctx, diff, []string{}, []string{}),
@@ -96,7 +96,7 @@ var _ = Describe("Delta", func() {
 			})
 
 			It("Extract deltas and excludes /usr/local/go", func() {
-				tmpdir, err := Extract(
+				_, tmpdir, err := Extract(
 					ctx,
 					img2,
 					ExtractDeltaFiles(ctx, diff, []string{}, []string{"usr/local/go"}),
@@ -106,7 +106,7 @@ var _ = Describe("Delta", func() {
 				Expect(file.Exists(filepath.Join(tmpdir, "usr", "local", "go"))).To(BeFalse())
 			})
 			It("Extract deltas and excludes /usr/local/go/bin, but includes /usr/local/go", func() {
-				tmpdir, err := Extract(
+				_, tmpdir, err := Extract(
 					ctx,
 					img2,
 					ExtractDeltaFiles(ctx, diff, []string{"usr/local/go"}, []string{"usr/local/go/bin"}),
@@ -118,7 +118,7 @@ var _ = Describe("Delta", func() {
 			})
 
 			It("Extract deltas and includes /usr/local/go", func() {
-				tmpdir, err := Extract(
+				_, tmpdir, err := Extract(
 					ctx,
 					img2,
 					ExtractDeltaFiles(ctx, diff, []string{"usr/local/go"}, []string{}),

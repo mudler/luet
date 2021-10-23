@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/api/core/types"
 	. "github.com/mudler/luet/pkg/api/core/types/artifact"
 	. "github.com/mudler/luet/pkg/compiler/backend"
@@ -155,7 +156,19 @@ RUN echo bar > /test2`))
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(result) // clean up
 
-			err = b.ExtractRootfs(backend.Options{ImageName: resultingImage, Destination: result}, false)
+			img, err := b.ImageReference(resultingImage)
+			Expect(err).ToNot(HaveOccurred())
+			_, _, err = image.ExtractTo(
+				ctx,
+				img,
+				resultingImage,
+				image.ExtractFiles(
+					ctx,
+					"",
+					[]string{},
+					[]string{},
+				),
+			)
 			Expect(err).ToNot(HaveOccurred())
 
 			content, err := ioutil.ReadFile(filepath.Join(result, "test"))
@@ -197,7 +210,19 @@ RUN echo bar > /test2`))
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(result) // clean up
 
-			err = b.ExtractRootfs(backend.Options{ImageName: resultingImage, Destination: result}, false)
+			img, err := b.ImageReference(resultingImage)
+			Expect(err).ToNot(HaveOccurred())
+			_, _, err = image.ExtractTo(
+				ctx,
+				img,
+				resultingImage,
+				image.ExtractFiles(
+					ctx,
+					"",
+					[]string{},
+					[]string{},
+				),
+			)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fileHelper.DirectoryIsEmpty(result)).To(BeFalse())

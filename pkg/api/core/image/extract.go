@@ -166,7 +166,7 @@ func ExtractFiles(
 	}
 }
 
-func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (string, error) {
+func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
 	defer reader.Close()
 
 	perms := map[string][]int{}
@@ -177,17 +177,17 @@ func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, filt
 		perms[h.Name] = []int{h.Gid, h.Uid}
 		xattrs[h.Name] = h.Xattrs
 		paxrecords[h.Name] = h.PAXRecords
-
-		return filter(h)
+		if filter != nil {
+			return filter(h)
+		}
+		return true, nil
 	}
 
-	if filter != nil {
-		opts = append(opts, containerdarchive.WithFilter(f))
-	}
+	opts = append(opts, containerdarchive.WithFilter(f))
 
-	_, err := containerdarchive.Apply(context.Background(), output, reader, opts...)
+	c, err := containerdarchive.Apply(context.Background(), output, reader, opts...)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 
 	for f, p := range perms {
@@ -212,17 +212,17 @@ func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, filt
 		}
 	}
 
-	return output, nil
+	return c, output, nil
 }
 
-func Extract(ctx *types.Context, img v1.Image, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (string, error) {
+func Extract(ctx *types.Context, img v1.Image, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
 	tmpdiffs, err := ctx.Config.GetSystem().TempDir("extraction")
 	if err != nil {
-		return "", errors.Wrap(err, "Error met while creating tempdir for rootfs")
+		return 0, "", errors.Wrap(err, "Error met while creating tempdir for rootfs")
 	}
 	return ExtractReader(ctx, mutate.Extract(img), tmpdiffs, filter, opts...)
 }
 
-func ExtractTo(ctx *types.Context, img v1.Image, output string, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (string, error) {
+func ExtractTo(ctx *types.Context, img v1.Image, output string, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
 	return ExtractReader(ctx, mutate.Extract(img), output, filter, opts...)
 }

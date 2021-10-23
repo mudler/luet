@@ -28,6 +28,7 @@ import (
 
 	luetTypes "github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
+	"github.com/mudler/luet/pkg/helpers"
 
 	"github.com/mudler/luet/pkg/helpers/docker"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
@@ -104,14 +105,8 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 			imageName := fmt.Sprintf("%s:%s", uri, a.CompileSpec.GetPackage().ImageID())
 			c.context.Info("Downloading image", imageName)
 
-			contentstore, err := c.context.Config.GetSystem().TempDir("contentstore")
-			if err != nil {
-				c.context.Warning("Cannot create contentstore", err.Error())
-				continue
-			}
-
 			// imageName := fmt.Sprintf("%s/%s", uri, artifact.GetCompileSpec().GetPackage().GetPackageImageName())
-			info, err := docker.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
+			info, err := docker.DownloadAndExtractDockerImage(c.context, imageName, temp, c.auth, c.RepoData.Verify)
 			if err != nil {
 				c.context.Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
 				continue
@@ -157,7 +152,7 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 func (c *DockerClient) DownloadFile(name string) (string, error) {
 	var file *os.File = nil
 	var err error
-	var temp, contentstore string
+	var temp string
 	// Files should be in URI/repository:<file>
 	ok := false
 
@@ -172,16 +167,10 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 			continue
 		}
 
-		contentstore, err = c.context.Config.GetSystem().TempDir("contentstore")
-		if err != nil {
-			c.context.Warning("Cannot create contentstore", err.Error())
-			continue
-		}
-
-		imageName := fmt.Sprintf("%s:%s", uri, docker.StripInvalidStringsFromImage(name))
+		imageName := fmt.Sprintf("%s:%s", uri, helpers.SanitizeImageString(name))
 		c.context.Info("Downloading", imageName)
 
-		info, err := docker.DownloadAndExtractDockerImage(contentstore, imageName, temp, c.auth, c.RepoData.Verify)
+		info, err := docker.DownloadAndExtractDockerImage(c.context, imageName, temp, c.auth, c.RepoData.Verify)
 		if err != nil {
 			c.context.Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
 			continue

@@ -16,23 +16,14 @@
 package backend
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/mudler/luet/pkg/api/core/types"
 	bus "github.com/mudler/luet/pkg/bus"
-	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	capi "github.com/mudler/docker-companion/api"
-
-	"github.com/mudler/luet/pkg/helpers"
 
 	"github.com/pkg/errors"
 )
@@ -194,103 +185,4 @@ func (s *SimpleDocker) ExportImage(opts Options) error {
 
 type ManifestEntry struct {
 	Layers []string `json:"Layers"`
-}
-
-func (b *SimpleDocker) ExtractRootfs(opts Options, keepPerms bool) error {
-	name := opts.ImageName
-	dst := opts.Destination
-
-	if !b.ImageExists(name) {
-		if err := b.DownloadImage(opts); err != nil {
-			return errors.Wrap(err, "failed pulling image "+name+" during extraction")
-		}
-	}
-
-	tempexport, err := ioutil.TempDir(dst, "tmprootfs")
-	if err != nil {
-		return errors.Wrap(err, "Error met while creating tempdir for rootfs")
-	}
-	defer os.RemoveAll(tempexport) // clean up
-
-	imageExport := filepath.Join(tempexport, "image.tar")
-
-	b.ctx.Spinner()
-	defer b.ctx.SpinnerStop()
-
-	if err := b.ExportImage(Options{ImageName: name, Destination: imageExport}); err != nil {
-		return errors.Wrap(err, "failed while extracting rootfs for "+name)
-	}
-
-	src := imageExport
-
-	if src == "" && opts.ImageName != "" {
-		tempUnpack, err := ioutil.TempDir(dst, "tempUnpack")
-		if err != nil {
-			return errors.Wrap(err, "Error met while creating tempdir for rootfs")
-		}
-		defer os.RemoveAll(tempUnpack) // clean up
-		imageExport := filepath.Join(tempUnpack, "image.tar")
-		if err := b.ExportImage(Options{ImageName: opts.ImageName, Destination: imageExport}); err != nil {
-			return errors.Wrap(err, "while exporting image before extraction")
-		}
-		src = imageExport
-	}
-
-	rootfs, err := ioutil.TempDir(dst, "tmprootfs")
-	if err != nil {
-		return errors.Wrap(err, "Error met while creating tempdir for rootfs")
-	}
-	defer os.RemoveAll(rootfs) // clean up
-
-	// TODO: Following as option if archive as output?
-	// archive, err := ioutil.TempDir(os.TempDir(), "archive")
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
-	// }
-	// defer os.RemoveAll(archive) // clean up
-
-	err = helpers.Untar(src, rootfs, keepPerms)
-	if err != nil {
-		return errors.Wrap(err, "Error met while unpacking rootfs")
-	}
-
-	manifest, err := fileHelper.Read(filepath.Join(rootfs, "manifest.json"))
-	if err != nil {
-		return errors.Wrap(err, "Error met while reading image manifest")
-	}
-
-	// Unpack all layers
-	var manifestData []ManifestEntry
-
-	if err := json.Unmarshal([]byte(manifest), &manifestData); err != nil {
-		return errors.Wrap(err, "Error met while unmarshalling manifest")
-	}
-
-	layers_sha := []string{}
-
-	for _, data := range manifestData {
-
-		for _, l := range data.Layers {
-			if strings.Contains(l, "layer.tar") {
-				layers_sha = append(layers_sha, strings.Replace(l, "/layer.tar", "", -1))
-			}
-		}
-	}
-	// TODO: Drop capi in favor of the img approach already used in pkg/installer/repository
-	export, err := capi.CreateExport(rootfs)
-	if err != nil {
-		return err
-	}
-
-	err = export.UnPackLayers(layers_sha, dst, "containerd")
-	if err != nil {
-		return err
-	}
-
-	// err = helpers.Tar(archive, dst)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "Error met while creating package archive")
-	// }
-
-	return nil
 }

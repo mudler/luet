@@ -55,7 +55,7 @@ var _ = Describe("Extract", func() {
 			})
 
 			It("Extract all files", func() {
-				tmpdir, err := Extract(
+				_, tmpdir, err := Extract(
 					ctx,
 					img,
 					ExtractFiles(ctx, "", []string{}, []string{}),
@@ -68,7 +68,7 @@ var _ = Describe("Extract", func() {
 			})
 
 			It("Extract specific dir", func() {
-				tmpdir, err := Extract(
+				_, tmpdir, err := Extract(
 					ctx,
 					img,
 					ExtractFiles(ctx, "/usr", []string{}, []string{}),
@@ -81,7 +81,7 @@ var _ = Describe("Extract", func() {
 			})
 
 			It("Extract a dir with includes/excludes", func() {
-				tmpdir, err := Extract(
+				_, tmpdir, err := Extract(
 					ctx,
 					img,
 					ExtractFiles(ctx, "/usr", []string{"bin"}, []string{"sbin"}),
@@ -95,7 +95,7 @@ var _ = Describe("Extract", func() {
 			})
 
 			It("Extract with includes/excludes", func() {
-				tmpdir, err := Extract(
+				_, tmpdir, err := Extract(
 					ctx,
 					img,
 					ExtractFiles(ctx, "", []string{"/usr|/usr/bin"}, []string{"^/bin"}),

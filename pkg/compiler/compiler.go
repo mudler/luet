@@ -232,8 +232,20 @@ func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *compi
 		return nil, err
 	}
 
+	// artifact.ImageToArtifact(
+	// 	cs.Options.Context,
+	// 	img,
+	// 	cs.Options.CompressionType,
+	// 	p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"),
+	// 	image.ExtractFiles(
+	// 		cs.Options.Context,
+	// 		strings.TrimLeft(p.GetPackageDir(), "/"),
+	// 		p.GetIncludes(),
+	// 		p.GetExcludes(),
+	// 	),
+	// )
 	// TODO: Trim includes/excludes from "/" ?
-	rootfs, err := image.Extract(
+	_, rootfs, err := image.Extract(
 		cs.Options.Context,
 		img,
 		image.ExtractFiles(

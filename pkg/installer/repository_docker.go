@@ -24,13 +24,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/bus"
 	compiler "github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/helpers"
-	"github.com/mudler/luet/pkg/helpers/docker"
 	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/pkg/errors"
@@ -165,7 +165,7 @@ func (d *dockerRepositoryGenerator) pushImageFromArtifact(a *artifact.PackageArt
 	if err != nil {
 		return errors.Wrap(err, "failed generating checksums for tree")
 	}
-	imageTree := fmt.Sprintf("%s:%s", d.imagePrefix, docker.StripInvalidStringsFromImage(a.GetFileName()))
+	imageTree := fmt.Sprintf("%s:%s", d.imagePrefix, helpers.SanitizeImageString(a.GetFileName()))
 	if checkIfExists && d.imagePush && d.b.ImageAvailable(imageTree) && !d.force {
 		d.context.Info("Image", imageTree, "already present, skipping. use --force-push to override")
 		return nil
@@ -191,13 +191,26 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 	defer os.RemoveAll(repoTemp) // clean up
 
 	if r.GetBackend().ImageAvailable(imageRepository) {
-		if err := r.GetBackend().DownloadImage(backend.Options{ImageName: imageRepository}); err != nil {
+		img, err := r.GetBackend().ImageReference(imageRepository)
+		if err != nil {
 			return errors.Wrapf(err, "while downloading '%s'", imageRepository)
 		}
 
-		if err := r.GetBackend().ExtractRootfs(backend.Options{ImageName: imageRepository, Destination: repoTemp}, false); err != nil {
+		_, _, err = image.ExtractTo(
+			d.context,
+			img,
+			repoTemp,
+			image.ExtractFiles(
+				d.context,
+				"",
+				[]string{},
+				[]string{},
+			),
+		)
+		if err != nil {
 			return errors.Wrapf(err, "while extracting '%s'", imageRepository)
 		}
+
 	}
 
 	repospec := filepath.Join(repoTemp, REPOSITORY_SPECFILE)

@@ -28,7 +28,6 @@ type CompilerBackend interface {
 	ExportImage(backend.Options) error
 	RemoveImage(backend.Options) error
 	ImageDefinitionToTar(backend.Options) error
-	ExtractRootfs(opts backend.Options, keepPerms bool) error
 
 	CopyImage(string, string) error
 	DownloadImage(opts backend.Options) error

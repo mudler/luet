@@ -16,7 +16,6 @@
 package backend
 
 import (
-	"os"
 	"os/exec"
 	"strings"
 
@@ -175,33 +174,6 @@ func (s *SimpleImg) ExportImage(opts Options) error {
 		return errors.Wrap(err, "Failed exporting image: "+string(out))
 	}
 	s.ctx.Info(":tea: Image " + name + " saved")
-	return nil
-}
-
-// ExtractRootfs extracts the docker image content inside the destination
-func (s *SimpleImg) ExtractRootfs(opts Options, keepPerms bool) error {
-	name := opts.ImageName
-	path := opts.Destination
-
-	if !s.ImageExists(name) {
-		if err := s.DownloadImage(opts); err != nil {
-			return errors.Wrap(err, "failed pulling image "+name+" during extraction")
-		}
-	}
-
-	os.RemoveAll(path)
-
-	buildarg := []string{"unpack", "-o", path, name}
-	s.ctx.Debug(":tea: Extracting image " + name)
-
-	s.ctx.Spinner()
-	defer s.ctx.SpinnerStop()
-
-	out, err := exec.Command("img", buildarg...).CombinedOutput()
-	if err != nil {
-		return errors.Wrap(err, "Failed extracting image: "+string(out))
-	}
-	s.ctx.Debug(":tea: Image " + name + " extracted")
 	return nil
 }
 
