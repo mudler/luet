@@ -146,26 +146,27 @@ func ExtractFiles(
 
 	return func(h *tar.Header) (bool, error) {
 
+		fileName := filepath.Join(string(os.PathSeparator), h.Name)
 		switch {
 		case len(includes) == 0 && len(excludes) != 0:
 			for _, i := range excludeRegexp {
-				if i.MatchString(filepath.Join(prefixPath, h.Name)) {
+				if i.MatchString(filepath.Join(prefixPath, fileName)) {
 					return false, nil
 				}
 			}
 			if prefixPath != "" {
-				return strings.HasPrefix(h.Name, prefixPath), nil
+				return strings.HasPrefix(fileName, prefixPath), nil
 			}
-			ctx.Debug("Adding name", h.Name)
+			ctx.Debug("Adding name", fileName)
 			return true, nil
 
 		case len(includes) > 0 && len(excludes) == 0:
 			for _, i := range includeRegexp {
-				if i.MatchString(filepath.Join(prefixPath, h.Name)) {
+				if i.MatchString(filepath.Join(prefixPath, fileName)) {
 					if prefixPath != "" {
 						return strings.HasPrefix(h.Name, prefixPath), nil
 					}
-					ctx.Debug("Adding name", h.Name)
+					ctx.Debug("Adding name", fileName)
 
 					return true, nil
 				}
@@ -173,16 +174,16 @@ func ExtractFiles(
 			return false, nil
 		case len(includes) != 0 && len(excludes) != 0:
 			for _, i := range includeRegexp {
-				if i.MatchString(filepath.Join(prefixPath, h.Name)) {
+				if i.MatchString(filepath.Join(prefixPath, fileName)) {
 					for _, e := range excludeRegexp {
-						if e.MatchString(filepath.Join(prefixPath, h.Name)) {
+						if e.MatchString(filepath.Join(prefixPath, fileName)) {
 							return false, nil
 						}
 					}
 					if prefixPath != "" {
-						return strings.HasPrefix(h.Name, prefixPath), nil
+						return strings.HasPrefix(fileName, prefixPath), nil
 					}
-					ctx.Debug("Adding name", h.Name)
+					ctx.Debug("Adding name", fileName)
 
 					return true, nil
 				}
@@ -190,7 +191,7 @@ func ExtractFiles(
 			return false, nil
 		default:
 			if prefixPath != "" {
-				return strings.HasPrefix(h.Name, prefixPath), nil
+				return strings.HasPrefix(fileName, prefixPath), nil
 			}
 
 			return true, nil
