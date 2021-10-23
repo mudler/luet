@@ -4,8 +4,8 @@ concurrency:
 
 name: Build on push
 jobs:
-  tests-integration:
-    name: Integration tests
+  tests-integration-img:
+    name: Integration tests with img
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
@@ -30,6 +30,23 @@ jobs:
             sudo -E env "PATH=$PATH" \
                     env "LUET_BACKEND=img" \
                     make test-integration
+  tests-integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.x
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: setup-docker
+        uses: docker-practice/actions-setup-docker@0.0.1
+      - name: Login to quay
+        run: echo ${{ secrets.DOCKER_TESTING_PASSWORD }} | sudo -E docker login -u ${{ secrets.DOCKER_TESTING_USERNAME }} --password-stdin quay.io
+      - name: Install deps
+        run: |
+            sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
       - name: Tests
         run: |
               sudo -E \
