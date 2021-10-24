@@ -22,7 +22,7 @@ It is written entirely in Golang and where used as package manager, it can run i
 ## In a glance
 
 - Luet can reuse Gentoo's portage tree hierarchy, and it is heavily inspired from it.
-- It builds, installs, uninstalls and perform upgrades on machines
+- It builds from containers, but installs, uninstalls and perform upgrades on machines
 - Installer doesn't depend on anything ( 0 dep installer !), statically built
 - You can install it aside also with your current distro package manager, and start building and distributing your packages
 - [Support for packages as "layers"](https://luet-lab.github.io/docs/docs/concepts/packages/specfile/#building-strategies)
@@ -30,6 +30,7 @@ It is written entirely in Golang and where used as package manager, it can run i
 - Support for [collections](https://luet-lab.github.io/docs/docs/concepts/packages/collections/) and [templated package definitions](https://luet-lab.github.io/docs/docs/concepts/packages/templates/)
 - [Can be extended with Plugins and Extensions](https://luet-lab.github.io/docs/docs/concepts/plugins-and-extensions/)
 - [Can build packages in Kubernetes (experimental)](https://github.com/mudler/luet-k8s)
+- Uses containerd/go-containerregistry to manipulate images - works also daemonless with the img backend
 
 ## Install
 
