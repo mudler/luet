@@ -30,7 +30,6 @@ import (
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/compiler/types/options"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
-	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/installer"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -92,7 +91,7 @@ var _ = Describe("Repository", func() {
 			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
-			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
+			Expect(artifact.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -165,12 +164,12 @@ var _ = Describe("Repository", func() {
 			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
-			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
+			Expect(artifact.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 
 			artifact2, err := compiler2.Compile(false, spec2)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(artifact2.Path)).To(BeTrue())
-			Expect(helpers.Untar(artifact2.Path, tmpdir, false)).ToNot(HaveOccurred())
+			Expect(artifact2.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -262,12 +261,12 @@ urls:
 			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
-			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
+			Expect(artifact.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 
 			artifact2, err := compiler2.Compile(false, spec2)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(artifact2.Path)).To(BeTrue())
-			Expect(helpers.Untar(artifact2.Path, tmpdir, false)).ToNot(HaveOccurred())
+			Expect(artifact2.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -380,12 +379,12 @@ urls:
 			artifact, err := compiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
-			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
+			Expect(artifact.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 
 			artifact2, err := compiler2.Compile(false, spec2)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(artifact2.Path)).To(BeTrue())
-			Expect(helpers.Untar(artifact2.Path, tmpdir, false)).ToNot(HaveOccurred())
+			Expect(artifact2.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -505,7 +504,7 @@ urls:
 			a, err := localcompiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(a.Path)).To(BeTrue())
-			Expect(helpers.Untar(a.Path, tmpdir, false)).ToNot(HaveOccurred())
+			Expect(a.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -580,7 +579,7 @@ urls:
 			a, err := localcompiler.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(a.Path)).To(BeTrue())
-			Expect(helpers.Untar(a.Path, tmpdir, false)).ToNot(HaveOccurred())
+			Expect(a.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 
 			repo, err := dockerStubRepo(tmpdir, "../../tests/fixtures/virtuals", repoImage, true, true)
 			Expect(err).ToNot(HaveOccurred())

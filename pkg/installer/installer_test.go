@@ -27,7 +27,6 @@ import (
 	compression "github.com/mudler/luet/pkg/compiler/types/compression"
 	"github.com/mudler/luet/pkg/compiler/types/options"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
-	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	. "github.com/mudler/luet/pkg/installer"
@@ -94,7 +93,7 @@ var _ = Describe("Installer", func() {
 			a, err := c.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(a.Path)).To(BeTrue())
-			Expect(helpers.Untar(a.Path, tmpdir, false)).ToNot(HaveOccurred())
+			Expect(a.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -211,7 +210,7 @@ urls:
 			artifact, err := c.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
-			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
+			Expect(artifact.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -334,7 +333,7 @@ urls:
 			artifact, err := c.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
-			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
+			Expect(artifact.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
@@ -463,7 +462,7 @@ urls:
 			artifact, err := c.Compile(false, spec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
-			Expect(helpers.Untar(artifact.Path, tmpdir, false)).ToNot(HaveOccurred())
+			Expect(artifact.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 
 			Expect(fileHelper.Exists(spec.Rel("test5"))).To(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("test6"))).To(BeTrue())
