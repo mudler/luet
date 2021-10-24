@@ -97,6 +97,15 @@ func relativeToCwd(p string) (string, error) {
 	return filepath.Join(cwd, p), nil
 }
 
+func (m *Manager) insertPlugin(p Plugin) {
+	for _, i := range m.Plugins {
+		if i.Executable == p.Executable {
+			return
+		}
+	}
+	m.Plugins = append(m.Plugins, p)
+}
+
 // Autoload automatically loads plugins binaries prefixed by 'prefix' in the current path
 // optionally takes a list of paths to look also into
 func (m *Manager) Autoload(prefix string, extensionpath ...string) *Manager {
@@ -123,7 +132,7 @@ func (m *Manager) Autoload(prefix string, extensionpath ...string) *Manager {
 		}
 		for _, ma := range matches {
 			short := strings.TrimPrefix(filepath.Base(ma), projPrefix)
-			m.Plugins = append(m.Plugins, Plugin{Name: short, Executable: ma})
+			m.insertPlugin(Plugin{Name: short, Executable: ma})
 		}
 	}
 	return m
@@ -140,7 +149,7 @@ func (m *Manager) Load(extname ...string) *Manager {
 			if err != nil {
 				continue
 			}
-			m.Plugins = append(m.Plugins, Plugin{Name: n, Executable: path})
+			m.insertPlugin(Plugin{Name: n, Executable: path})
 		}
 	}
 	return m

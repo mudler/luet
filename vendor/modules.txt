@@ -339,7 +339,7 @@ github.com/morikuni/aec
 # github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
 ## explicit
 github.com/mudler/cobra-extensions
-# github.com/mudler/go-pluggable v0.0.0-20210513155700-54c6443073af
+# github.com/mudler/go-pluggable v0.0.0-20211022125509-94dbf124830d
 ## explicit
 github.com/mudler/go-pluggable
 # github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290
@@ -434,7 +434,6 @@ github.com/rogpeppe/go-internal/internal/syscall/windows/sysdll
 github.com/rogpeppe/go-internal/lockedfile
 github.com/rogpeppe/go-internal/lockedfile/internal/filelock
 # github.com/sirupsen/logrus v1.8.1
-## explicit
 github.com/sirupsen/logrus
 # github.com/spf13/afero v1.6.0
 github.com/spf13/afero

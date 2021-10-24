@@ -42,7 +42,7 @@ require (
 	github.com/moby/moby v20.10.9+incompatible
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
-	github.com/mudler/go-pluggable v0.0.0-20210513155700-54c6443073af
+	github.com/mudler/go-pluggable v0.0.0-20211022125509-94dbf124830d
 	github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.16.0
@@ -54,7 +54,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.32-0.20211002183613-ada9ef6790c3
 	github.com/rancher-sandbox/gofilecache v0.0.0-20210330135715-becdeff5df15
-	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.8.1
