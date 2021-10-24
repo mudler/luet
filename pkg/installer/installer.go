@@ -325,11 +325,12 @@ func (l *LuetInstaller) runOps(ops []installerOp, s *System) error {
 	all := make(chan installerOp)
 
 	wg := new(sync.WaitGroup)
+	systemLock := &sync.Mutex{}
 
 	// Do the real install
 	for i := 0; i < l.Options.Concurrency; i++ {
 		wg.Add(1)
-		go l.installerOpWorker(i, wg, all, s)
+		go l.installerOpWorker(i, wg, systemLock, all, s)
 	}
 
 	for _, c := range ops {
@@ -343,7 +344,7 @@ func (l *LuetInstaller) runOps(ops []installerOp, s *System) error {
 
 // TODO: use installerOpWorker in place of all the other workers.
 // This one is general enough to read a list of operations and execute them.
-func (l *LuetInstaller) installerOpWorker(i int, wg *sync.WaitGroup, c <-chan installerOp, s *System) error {
+func (l *LuetInstaller) installerOpWorker(i int, wg *sync.WaitGroup, systemLock *sync.Mutex, c <-chan installerOp, s *System) error {
 	defer wg.Done()
 
 	for p := range c {
@@ -368,6 +369,7 @@ func (l *LuetInstaller) installerOpWorker(i int, wg *sync.WaitGroup, c <-chan in
 			ass := p.Install.Assertions.Search(p.Install.Package.GetFingerPrint())
 			packageToInstall, _ := p.Install.Packages.Find(p.Install.Package.GetPackageName())
 
+			systemLock.Lock()
 			err := l.install(
 				p.Install.Option,
 				p.Install.Reposiories,
@@ -377,6 +379,7 @@ func (l *LuetInstaller) installerOpWorker(i int, wg *sync.WaitGroup, c <-chan in
 				p.Install.Database,
 				s,
 			)
+			systemLock.Unlock()
 			if err != nil {
 				l.Options.Context.Error(err)
 			}
@@ -841,11 +844,12 @@ func (l *LuetInstaller) install(o Option, syncedRepos Repositories, toInstall ma
 	all := make(chan ArtifactMatch)
 
 	wg := new(sync.WaitGroup)
+	installLock := &sync.Mutex{}
 
 	// Do the real install
 	for i := 0; i < l.Options.Concurrency; i++ {
 		wg.Add(1)
-		go l.installerWorker(i, wg, all, s)
+		go l.installerWorker(i, wg, installLock, all, s)
 	}
 
 	for _, c := range toInstall {
@@ -933,12 +937,14 @@ func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, c <-chan Artif
 	return nil
 }
 
-func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch, s *System) error {
+func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, installLock *sync.Mutex, c <-chan ArtifactMatch, s *System) error {
 	defer wg.Done()
 
 	for p := range c {
 		// TODO: Keep trace of what was added from the tar, and save it into system
+		installLock.Lock()
 		err := l.installPackage(p, s)
+		installLock.Unlock()
 		if err != nil && !l.Options.Force {
 			//TODO: Uninstall, rollback.
 			l.Options.Context.Fatal("Failed installing package "+p.Package.GetName(), err.Error())

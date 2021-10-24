@@ -161,13 +161,8 @@ RUN echo bar > /test2`))
 			_, _, err = image.ExtractTo(
 				ctx,
 				img,
-				resultingImage,
-				image.ExtractFiles(
-					ctx,
-					"",
-					[]string{},
-					[]string{},
-				),
+				result,
+				nil,
 			)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -215,13 +210,8 @@ RUN echo bar > /test2`))
 			_, _, err = image.ExtractTo(
 				ctx,
 				img,
-				resultingImage,
-				image.ExtractFiles(
-					ctx,
-					"",
-					[]string{},
-					[]string{},
-				),
+				result,
+				nil,
 			)
 			Expect(err).ToNot(HaveOccurred())
 
