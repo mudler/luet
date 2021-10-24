@@ -28,7 +28,7 @@ import (
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	pkg "github.com/mudler/luet/pkg/package"
 
-	"github.com/mudler/luet/pkg/bus"
+	"github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/pkg/errors"
 )
 

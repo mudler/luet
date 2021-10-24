@@ -21,8 +21,8 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	bus "github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/mudler/luet/pkg/api/core/types"
-	bus "github.com/mudler/luet/pkg/bus"
 
 	"github.com/pkg/errors"
 )

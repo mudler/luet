@@ -29,10 +29,10 @@ import (
 	"sync"
 	"time"
 
+	bus "github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
-	bus "github.com/mudler/luet/pkg/bus"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/compiler/types/options"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"

@@ -20,7 +20,7 @@ import (
 	"os"
 
 	"github.com/mudler/luet/cmd/util"
-	bus "github.com/mudler/luet/pkg/bus"
+	bus "github.com/mudler/luet/pkg/api/core/bus"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -99,7 +99,7 @@ To build a package, from a tree definition:
 
 		plugin := viper.GetStringSlice("plugin")
 
-		bus.Manager.Initialize(plugin...)
+		bus.Manager.Initialize(util.DefaultContext, plugin...)
 		if len(bus.Manager.Plugins) != 0 {
 			util.DefaultContext.Info(":lollipop:Enabled plugins:")
 			for _, p := range bus.Manager.Plugins {

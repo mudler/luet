@@ -2,7 +2,7 @@ package bus
 
 import (
 	"github.com/mudler/go-pluggable"
-	"github.com/sirupsen/logrus"
+	"github.com/mudler/luet/pkg/api/core/types"
 )
 
 var (
@@ -82,15 +82,15 @@ type Bus struct {
 	*pluggable.Manager
 }
 
-func (b *Bus) Initialize(plugin ...string) {
+func (b *Bus) Initialize(ctx *types.Context, plugin ...string) {
 	b.Manager.Load(plugin...).Register()
 
 	for _, e := range b.Manager.Events {
 		b.Manager.Response(e, func(p *pluggable.Plugin, r *pluggable.EventResponse) {
 			if r.Errored() {
-				logrus.Fatal("Plugin", p.Name, "at", p.Executable, "Error", r.Error)
+				ctx.Fatal("Plugin", p.Name, "at", p.Executable, "Error", r.Error)
 			}
-			logrus.Debug(
+			ctx.Debug(
 				"plugin_event",
 				"received from",
 				p.Name,

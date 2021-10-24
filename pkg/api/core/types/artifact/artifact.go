@@ -37,10 +37,10 @@ import (
 	"strings"
 
 	containerdCompression "github.com/containerd/containerd/archive/compression"
+	bus "github.com/mudler/luet/pkg/api/core/bus"
 	config "github.com/mudler/luet/pkg/api/core/config"
 	"github.com/mudler/luet/pkg/api/core/image"
 	types "github.com/mudler/luet/pkg/api/core/types"
-	bus "github.com/mudler/luet/pkg/bus"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	compression "github.com/mudler/luet/pkg/compiler/types/compression"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"

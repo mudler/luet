@@ -20,8 +20,8 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	bus "github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/mudler/luet/pkg/api/core/types"
-	bus "github.com/mudler/luet/pkg/bus"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
