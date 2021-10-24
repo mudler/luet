@@ -53,7 +53,7 @@ func NewConfigProtect(annotationDir string) *ConfigProtect {
 	}
 	return &ConfigProtect{
 		AnnotationDir: annotationDir,
-		MapProtected:  make(map[string]bool, 0),
+		MapProtected:  make(map[string]bool),
 	}
 }
 
@@ -97,7 +97,7 @@ func (c *ConfigProtect) Protected(file string) bool {
 func (c *ConfigProtect) GetProtectFiles(withSlash bool) []string {
 	ans := []string{}
 
-	for key, _ := range c.MapProtected {
+	for key := range c.MapProtected {
 		if withSlash {
 			ans = append(ans, key)
 		} else {

@@ -47,16 +47,21 @@ func ExtractDeltaFiles(
 	excludeRegexp := compileRegexes(excludes)
 
 	return func(h *tar.Header) (bool, error) {
+		fileName := filepath.Join(string(os.PathSeparator), h.Name)
+		ctx.Debug("Includes", includes)
+		ctx.Debug("Excludes", excludes)
+		ctx.Debug("Additions", d.Additions)
 		switch {
 		case len(includes) == 0 && len(excludes) != 0:
 			for _, a := range d.Additions {
 				if h.Name == a.Name {
 					for _, i := range excludeRegexp {
-						if i.MatchString(a.Name) && h.Name == a.Name {
+						if i.MatchString(filepath.Join(string(os.PathSeparator), a.Name)) &&
+							fileName == filepath.Join(string(os.PathSeparator), a.Name) {
 							return false, nil
 						}
 					}
-					ctx.Debug("Adding name", h.Name)
+					ctx.Debug("Adding name", fileName)
 
 					return true, nil
 				}
@@ -65,8 +70,8 @@ func ExtractDeltaFiles(
 		case len(includes) > 0 && len(excludes) == 0:
 			for _, a := range d.Additions {
 				for _, i := range includeRegexp {
-					if i.MatchString(a.Name) && h.Name == a.Name {
-						ctx.Debug("Adding name", h.Name)
+					if i.MatchString(filepath.Join(string(os.PathSeparator), a.Name)) && fileName == filepath.Join(string(os.PathSeparator), a.Name) {
+						ctx.Debug("Adding name", fileName)
 
 						return true, nil
 					}
@@ -76,13 +81,13 @@ func ExtractDeltaFiles(
 		case len(includes) != 0 && len(excludes) != 0:
 			for _, a := range d.Additions {
 				for _, i := range includeRegexp {
-					if i.MatchString(a.Name) && h.Name == a.Name {
+					if i.MatchString(filepath.Join(string(os.PathSeparator), a.Name)) && fileName == filepath.Join(string(os.PathSeparator), a.Name) {
 						for _, e := range excludeRegexp {
-							if e.MatchString(a.Name) {
+							if e.MatchString(fileName) {
 								return false, nil
 							}
 						}
-						ctx.Debug("Adding name", h.Name)
+						ctx.Debug("Adding name", fileName)
 
 						return true, nil
 					}
@@ -91,8 +96,8 @@ func ExtractDeltaFiles(
 			return false, nil
 		default:
 			for _, a := range d.Additions {
-				if h.Name == a.Name {
-					ctx.Debug("Adding name", h.Name)
+				if fileName == filepath.Join(string(os.PathSeparator), a.Name) {
+					ctx.Debug("Adding name", fileName)
 
 					return true, nil
 				}

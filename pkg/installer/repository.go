@@ -812,6 +812,10 @@ func (r *LuetSystemRepository) SyncBuildMetadata(ctx *types.Context, path string
 
 	defer os.RemoveAll(a.Path)
 
+	if !fileHelper.Exists(filepath.Join(path, "tree")) {
+		os.MkdirAll(filepath.Join(path, "tree"), 0600)
+	}
+
 	if err := a.Unpack(ctx, filepath.Join(path, "tree"), false); err != nil {
 		return errors.Wrapf(err, "while unpacking: %s", REPOFILE_COMPILER_TREE_KEY)
 	}

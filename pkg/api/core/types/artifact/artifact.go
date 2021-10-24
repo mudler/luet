@@ -419,7 +419,7 @@ func replaceFileTarWrapper(dst string, inputTarStream io.ReadCloser, mods []stri
 			}
 			return nil
 		}
-		var remaining []string
+		//	var remaining []string
 		var err error
 		var originalHeader *tar.Header
 		for {
@@ -432,7 +432,7 @@ func replaceFileTarWrapper(dst string, inputTarStream io.ReadCloser, mods []stri
 				return
 			}
 
-			if helpers.Contains(mods, originalHeader.Name) {
+			if !helpers.Contains(mods, originalHeader.Name) {
 				// No modifiers for this file, copy the header and data
 				if err := tarWriter.WriteHeader(originalHeader); err != nil {
 					pipeWriter.CloseWithError(err)
@@ -442,7 +442,6 @@ func replaceFileTarWrapper(dst string, inputTarStream io.ReadCloser, mods []stri
 					pipeWriter.CloseWithError(err)
 					return
 				}
-				remaining = append(remaining, originalHeader.Name)
 				continue
 			}
 
@@ -453,12 +452,6 @@ func replaceFileTarWrapper(dst string, inputTarStream io.ReadCloser, mods []stri
 		}
 
 		// Apply the modifiers that haven't matched any files in the archive
-		for _, name := range remaining {
-			if err := modify(name, nil, nil); err != nil {
-				pipeWriter.CloseWithError(err)
-				return
-			}
-		}
 
 		pipeWriter.Close()
 
@@ -501,11 +494,15 @@ func tarModifierWrapperFunc(ctx *types.Context) func(dst, path string, header *t
 				}
 			}
 
-			ctx.Debug("Existing file hash: ", existingHash, "Tar file hashsum: ", tarHash)
+			ctx.Debug(destPath, "- existing file hash: ", existingHash, "Tar file hashsum: ", tarHash)
+			if fileHelper.Exists(destPath) {
+				ctx.Debug(destPath, "already exists")
+			}
 			// We want to protect file only if the hash of the files are differing OR the file size are
 			differs := (existingHash != "" && existingHash != tarHash) || (err != nil && f != nil && header.Size != f.Size())
 			// Check if exists
 			if fileHelper.Exists(destPath) && differs {
+				ctx.Debug(destPath, "already exists and differs")
 				for i := 1; i < 1000; i++ {
 					name := filepath.Join(filepath.Join(filepath.Dir(path),
 						fmt.Sprintf("._cfg%04d_%s", i, filepath.Base(path))))
@@ -577,10 +574,8 @@ func (a *PackageArtifact) Unpack(ctx *types.Context, dst string, keepPerms bool)
 	if err != nil {
 		return errors.Wrap(err, "Cannot open "+a.Path)
 	}
-	defer decompressed.Close()
 
 	replacerArchive := replaceFileTarWrapper(dst, decompressed, protectedFiles, mod)
-	defer replacerArchive.Close()
 
 	// or with filter?
 	// func(header *tar.Header) (bool, error) {
