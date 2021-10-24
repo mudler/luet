@@ -29,6 +29,7 @@ import (
 
 	"github.com/mudler/luet/pkg/compiler/types/compression"
 	"github.com/mudler/luet/pkg/compiler/types/options"
+	fileHelpers "github.com/mudler/luet/pkg/helpers/file"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 	tree "github.com/mudler/luet/pkg/tree"
@@ -143,6 +144,11 @@ Build packages specifying multiple definition trees:
 		}
 
 		util.DefaultContext.Info("Building in", dst)
+
+		if !fileHelpers.Exists(dst) {
+			os.MkdirAll(dst, 0600)
+			util.DefaultContext.Debug("Creating destination folder", dst)
+		}
 
 		opts := util.SetSolverConfig(util.DefaultContext)
 		pullRepo, _ := cmd.Flags().GetStringArray("pull-repository")
