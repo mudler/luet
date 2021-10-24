@@ -46,18 +46,42 @@ func ExtractDeltaFiles(
 	includeRegexp := compileRegexes(includes)
 	excludeRegexp := compileRegexes(excludes)
 
+	additions := map[string]interface{}{}
+	for _, a := range d.Additions {
+		additions[a.Name] = nil
+	}
 	return func(h *tar.Header) (bool, error) {
 		fileName := filepath.Join(string(os.PathSeparator), h.Name)
-		ctx.Debug("Includes", includes)
-		ctx.Debug("Excludes", excludes)
-		ctx.Debug("Additions", d.Additions)
+		_, exists := additions[h.Name]
+		if !exists {
+			return false, nil
+		}
+
 		switch {
 		case len(includes) == 0 && len(excludes) != 0:
-			for _, a := range d.Additions {
-				if h.Name == a.Name {
-					for _, i := range excludeRegexp {
-						if i.MatchString(filepath.Join(string(os.PathSeparator), a.Name)) &&
-							fileName == filepath.Join(string(os.PathSeparator), a.Name) {
+			for _, i := range excludeRegexp {
+				if i.MatchString(filepath.Join(string(os.PathSeparator), h.Name)) &&
+					fileName == filepath.Join(string(os.PathSeparator), h.Name) {
+					return false, nil
+				}
+			}
+			ctx.Debug("Adding name", fileName)
+
+			return true, nil
+		case len(includes) > 0 && len(excludes) == 0:
+			for _, i := range includeRegexp {
+				if i.MatchString(filepath.Join(string(os.PathSeparator), h.Name)) && fileName == filepath.Join(string(os.PathSeparator), h.Name) {
+					ctx.Debug("Adding name", fileName)
+
+					return true, nil
+				}
+			}
+			return false, nil
+		case len(includes) != 0 && len(excludes) != 0:
+			for _, i := range includeRegexp {
+				if i.MatchString(filepath.Join(string(os.PathSeparator), h.Name)) && fileName == filepath.Join(string(os.PathSeparator), h.Name) {
+					for _, e := range excludeRegexp {
+						if e.MatchString(fileName) {
 							return false, nil
 						}
 					}
@@ -66,43 +90,11 @@ func ExtractDeltaFiles(
 					return true, nil
 				}
 			}
-			return false, nil
-		case len(includes) > 0 && len(excludes) == 0:
-			for _, a := range d.Additions {
-				for _, i := range includeRegexp {
-					if i.MatchString(filepath.Join(string(os.PathSeparator), a.Name)) && fileName == filepath.Join(string(os.PathSeparator), a.Name) {
-						ctx.Debug("Adding name", fileName)
 
-						return true, nil
-					}
-				}
-			}
-			return false, nil
-		case len(includes) != 0 && len(excludes) != 0:
-			for _, a := range d.Additions {
-				for _, i := range includeRegexp {
-					if i.MatchString(filepath.Join(string(os.PathSeparator), a.Name)) && fileName == filepath.Join(string(os.PathSeparator), a.Name) {
-						for _, e := range excludeRegexp {
-							if e.MatchString(fileName) {
-								return false, nil
-							}
-						}
-						ctx.Debug("Adding name", fileName)
-
-						return true, nil
-					}
-				}
-			}
 			return false, nil
 		default:
-			for _, a := range d.Additions {
-				if fileName == filepath.Join(string(os.PathSeparator), a.Name) {
-					ctx.Debug("Adding name", fileName)
-
-					return true, nil
-				}
-			}
-			return false, nil
+			ctx.Debug("Adding name", fileName)
+			return true, nil
 		}
 
 	}
