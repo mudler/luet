@@ -28,6 +28,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/docker/docker/pkg/pools"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	zstd "github.com/klauspost/compress/zstd"
 	gzip "github.com/klauspost/pgzip"
@@ -35,6 +36,7 @@ import (
 	//"strconv"
 	"strings"
 
+	containerdCompression "github.com/containerd/containerd/archive/compression"
 	config "github.com/mudler/luet/pkg/api/core/config"
 	"github.com/mudler/luet/pkg/api/core/image"
 	types "github.com/mudler/luet/pkg/api/core/types"
@@ -67,8 +69,8 @@ type PackageArtifact struct {
 	Runtime           *pkg.DefaultPackage               `json:"runtime,omitempty"`
 }
 
-func ImageToArtifact(ctx *types.Context, img v1.Image, t compression.Implementation, output string, filter func(h *tar.Header) (bool, error)) (*PackageArtifact, error) {
-	_, tmpdiffs, err := image.Extract(ctx, img, filter)
+func ImageToArtifact(ctx *types.Context, img v1.Image, t compression.Implementation, output string, keepPerms bool, filter func(h *tar.Header) (bool, error)) (*PackageArtifact, error) {
+	_, tmpdiffs, err := image.Extract(ctx, img, keepPerms, filter)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
 	}
@@ -385,6 +387,85 @@ func hashFileContent(path string) (string, error) {
 	return base64.URLEncoding.EncodeToString(h.Sum(nil)), nil
 }
 
+func replaceFileTarWrapper(dst string, inputTarStream io.ReadCloser, mods []string, fn func(dst, path string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error)) io.ReadCloser {
+	pipeReader, pipeWriter := io.Pipe()
+
+	go func() {
+		tarReader := tar.NewReader(inputTarStream)
+		tarWriter := tar.NewWriter(pipeWriter)
+		defer inputTarStream.Close()
+		defer tarWriter.Close()
+
+		modify := func(name string, original *tar.Header, tarReader io.Reader) error {
+			header, data, err := fn(dst, name, original, tarReader)
+			switch {
+			case err != nil:
+				return err
+			case header == nil:
+				return nil
+			}
+
+			if header.Name == "" {
+				header.Name = name
+			}
+			header.Size = int64(len(data))
+			if err := tarWriter.WriteHeader(header); err != nil {
+				return err
+			}
+			if len(data) != 0 {
+				if _, err := tarWriter.Write(data); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		var remaining []string
+		var err error
+		var originalHeader *tar.Header
+		for {
+			originalHeader, err = tarReader.Next()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				pipeWriter.CloseWithError(err)
+				return
+			}
+
+			if helpers.Contains(mods, originalHeader.Name) {
+				// No modifiers for this file, copy the header and data
+				if err := tarWriter.WriteHeader(originalHeader); err != nil {
+					pipeWriter.CloseWithError(err)
+					return
+				}
+				if _, err := pools.Copy(tarWriter, tarReader); err != nil {
+					pipeWriter.CloseWithError(err)
+					return
+				}
+				remaining = append(remaining, originalHeader.Name)
+				continue
+			}
+
+			if err := modify(originalHeader.Name, originalHeader, tarReader); err != nil {
+				pipeWriter.CloseWithError(err)
+				return
+			}
+		}
+
+		// Apply the modifiers that haven't matched any files in the archive
+		for _, name := range remaining {
+			if err := modify(name, nil, nil); err != nil {
+				pipeWriter.CloseWithError(err)
+				return
+			}
+		}
+
+		pipeWriter.Close()
+
+	}()
+	return pipeReader
+}
+
 func tarModifierWrapperFunc(ctx *types.Context) func(dst, path string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
 	return func(dst, path string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
 		// If the destination path already exists I rename target file name with postfix.
@@ -448,8 +529,7 @@ func tarModifierWrapperFunc(ctx *types.Context) func(dst, path string, header *t
 	}
 }
 
-func (a *PackageArtifact) GetProtectFiles(ctx *types.Context) []string {
-	ans := []string{}
+func (a *PackageArtifact) GetProtectFiles(ctx *types.Context) (res []string) {
 	annotationDir := ""
 
 	if !ctx.Config.ConfigProtectSkip {
@@ -468,159 +548,75 @@ func (a *PackageArtifact) GetProtectFiles(ctx *types.Context) []string {
 		cp.Map(a.Files, ctx.Config.GetConfigProtectConfFiles())
 
 		// NOTE: for unpack we need files path without initial /
-		ans = cp.GetProtectFiles(false)
+		res = cp.GetProtectFiles(false)
 	}
 
-	return ans
+	return
 }
 
 // Unpack Untar and decompress (TODO) to the given path
 func (a *PackageArtifact) Unpack(ctx *types.Context, dst string, keepPerms bool) error {
-	if !strings.HasPrefix(dst, "/") {
+
+	if !strings.HasPrefix(dst, string(os.PathSeparator)) {
 		return errors.New("destination must be an absolute path")
 	}
 
 	// Create
 	protectedFiles := a.GetProtectFiles(ctx)
 
-	tarModifier := helpers.NewTarModifierWrapper(dst, tarModifierWrapperFunc(ctx))
+	mod := tarModifierWrapperFunc(ctx)
+	//tarModifier := helpers.NewTarModifierWrapper(dst, mod)
 
-	switch a.CompressionType {
-	case compression.Zstandard:
-		// Create the uncompressed archive
-		archive, err := os.Create(a.Path + ".uncompressed")
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(a.Path + ".uncompressed")
-		defer archive.Close()
-
-		original, err := os.Open(a.Path)
-		if err != nil {
-			return errors.Wrap(err, "Cannot open "+a.Path)
-		}
-		defer original.Close()
-
-		bufferedReader := bufio.NewReader(original)
-
-		d, err := zstd.NewReader(bufferedReader)
-		if err != nil {
-			return err
-		}
-		defer d.Close()
-
-		_, err = io.Copy(archive, d)
-		if err != nil {
-			return errors.Wrap(err, "Cannot copy to "+a.Path+".uncompressed")
-		}
-
-		err = helpers.UntarProtect(a.Path+".uncompressed", dst,
-			ctx.Config.GetGeneral().SameOwner, protectedFiles, tarModifier)
-		if err != nil {
-			return err
-		}
-		return nil
-	case compression.GZip:
-		// Create the uncompressed archive
-		archive, err := os.Create(a.Path + ".uncompressed")
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(a.Path + ".uncompressed")
-		defer archive.Close()
-
-		original, err := os.Open(a.Path)
-		if err != nil {
-			return errors.Wrap(err, "Cannot open "+a.Path)
-		}
-		defer original.Close()
-
-		bufferedReader := bufio.NewReader(original)
-		r, err := gzip.NewReader(bufferedReader)
-		if err != nil {
-			return err
-		}
-		defer r.Close()
-
-		_, err = io.Copy(archive, r)
-		if err != nil {
-			return errors.Wrap(err, "Cannot copy to "+a.Path+".uncompressed")
-		}
-
-		err = helpers.UntarProtect(a.Path+".uncompressed", dst,
-			ctx.Config.GetGeneral().SameOwner, protectedFiles, tarModifier)
-		if err != nil {
-			return err
-		}
-		return nil
-	// Defaults to tar only (covers when "none" is supplied)
-	default:
-		return helpers.UntarProtect(a.Path, dst, ctx.Config.GetGeneral().SameOwner,
-			protectedFiles, tarModifier)
+	archiveFile, err := os.Open(a.Path)
+	if err != nil {
+		return errors.Wrap(err, "Cannot open "+a.Path)
 	}
-	return errors.New("Compression type must be supplied")
+	defer archiveFile.Close()
+
+	decompressed, err := containerdCompression.DecompressStream(archiveFile)
+	if err != nil {
+		return errors.Wrap(err, "Cannot open "+a.Path)
+	}
+	defer decompressed.Close()
+
+	replacerArchive := replaceFileTarWrapper(dst, decompressed, protectedFiles, mod)
+	defer replacerArchive.Close()
+
+	// or with filter?
+	// func(header *tar.Header) (bool, error) {
+	// 	if helpers.Contains(protectedFiles, header.Name) {
+	// 		newHead, _, err := mod(dst, header.Name, header, decompressed)
+	// 		if err != nil {
+	// 			return false, err
+	// 		}
+	// 		header.Name = newHead.Name
+	// 		// Override target path
+	// 		//target = filepath.Join(dest, header.Name)
+	// 	}
+	// 	//	tarModifier.Modifier()
+	// 	return true, nil
+	// },
+	_, _, err = image.ExtractReader(ctx, replacerArchive, dst, ctx.Config.GetGeneral().SameOwner, nil)
+	return err
 }
 
 // FileList generates the list of file of a package from the local archive
 func (a *PackageArtifact) FileList() ([]string, error) {
-	var tr *tar.Reader
-	switch a.CompressionType {
-	case compression.Zstandard:
-		archive, err := os.Create(a.Path + ".uncompressed")
-		if err != nil {
-			return []string{}, err
-		}
-		defer os.RemoveAll(a.Path + ".uncompressed")
-		defer archive.Close()
-
-		original, err := os.Open(a.Path)
-		if err != nil {
-			return []string{}, errors.Wrap(err, "Cannot open "+a.Path)
-		}
-		defer original.Close()
-
-		bufferedReader := bufio.NewReader(original)
-		r, err := zstd.NewReader(bufferedReader)
-		if err != nil {
-			return []string{}, err
-		}
-		defer r.Close()
-		tr = tar.NewReader(r)
-	case compression.GZip:
-		// Create the uncompressed archive
-		archive, err := os.Create(a.Path + ".uncompressed")
-		if err != nil {
-			return []string{}, err
-		}
-		defer os.RemoveAll(a.Path + ".uncompressed")
-		defer archive.Close()
-
-		original, err := os.Open(a.Path)
-		if err != nil {
-			return []string{}, errors.Wrap(err, "Cannot open "+a.Path)
-		}
-		defer original.Close()
-
-		bufferedReader := bufio.NewReader(original)
-		r, err := gzip.NewReader(bufferedReader)
-		if err != nil {
-			return []string{}, err
-		}
-		defer r.Close()
-		tr = tar.NewReader(r)
-
-	// Defaults to tar only (covers when "none" is supplied)
-	default:
-		tarFile, err := os.Open(a.Path)
-		if err != nil {
-			return []string{}, errors.Wrap(err, "Could not open package archive")
-		}
-		defer tarFile.Close()
-		tr = tar.NewReader(tarFile)
-
-	}
-
 	var files []string
+
+	archiveFile, err := os.Open(a.Path)
+	if err != nil {
+		return files, errors.Wrap(err, "Cannot open "+a.Path)
+	}
+	defer archiveFile.Close()
+
+	decompressed, err := containerdCompression.DecompressStream(archiveFile)
+	if err != nil {
+		return files, errors.Wrap(err, "Cannot open "+a.Path)
+	}
+	defer decompressed.Close()
+	tr := tar.NewReader(decompressed)
+
 	// untar each segment
 	for {
 		hdr, err := tr.Next()

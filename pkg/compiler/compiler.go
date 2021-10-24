@@ -248,6 +248,7 @@ func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *compi
 	_, rootfs, err := image.Extract(
 		cs.Options.Context,
 		img,
+		keepPermissions,
 		image.ExtractFiles(
 			cs.Options.Context,
 			p.GetPackageDir(),
@@ -316,6 +317,7 @@ func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p *co
 		ref2,
 		cs.Options.CompressionType,
 		p.Rel(fmt.Sprintf("%s%s", p.GetPackage().GetFingerPrint(), ".package.tar")),
+		keepPermissions,
 		image.ExtractDeltaFiles(cs.Options.Context, diff, p.GetIncludes(), p.GetExcludes()),
 	)
 	if err != nil {

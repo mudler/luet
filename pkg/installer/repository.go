@@ -929,7 +929,11 @@ func (r *LuetSystemRepository) Sync(ctx *types.Context, force bool) (*LuetSystem
 		}
 		ctx.Debug("Decompress tree of the repository " + r.Name + "...")
 
-		err = treeFileArtifact.Unpack(ctx, treefs, true)
+		if _, err := os.Lstat(treefs); os.IsNotExist(err) {
+			os.MkdirAll(treefs, 0600)
+		}
+
+		err = treeFileArtifact.Unpack(ctx, treefs, false)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while unpacking tree")
 		}
@@ -937,7 +941,7 @@ func (r *LuetSystemRepository) Sync(ctx *types.Context, force bool) (*LuetSystem
 		// FIXME: It seems that tar with only one file doesn't create destination
 		//       directory. I create directory directly for now.
 		os.MkdirAll(metafs, os.ModePerm)
-		err = metaFileArtifact.Unpack(ctx, metafs, true)
+		err = metaFileArtifact.Unpack(ctx, metafs, false)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while unpacking metadata")
 		}

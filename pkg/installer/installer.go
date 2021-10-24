@@ -348,6 +348,7 @@ func (l *LuetInstaller) installerOpWorker(i int, wg *sync.WaitGroup, systemLock 
 	defer wg.Done()
 
 	for p := range c {
+
 		if p.Uninstall.Package != nil {
 			l.Options.Context.Debug("Replacing package inplace")
 			toUninstall, uninstall, err := l.generateUninstallFn(p.Uninstall.Option, s, p.Uninstall.Package)
@@ -356,8 +357,10 @@ func (l *LuetInstaller) installerOpWorker(i int, wg *sync.WaitGroup, systemLock 
 				continue
 				//return errors.Wrap(err, "while computing uninstall")
 			}
-
+			systemLock.Lock()
 			err = uninstall()
+			systemLock.Unlock()
+
 			if err != nil {
 				l.Options.Context.Error("Failed uninstall for ", packsToList(toUninstall))
 				continue

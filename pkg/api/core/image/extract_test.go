@@ -58,6 +58,7 @@ var _ = Describe("Extract", func() {
 				_, tmpdir, err := Extract(
 					ctx,
 					img,
+					true,
 					ExtractFiles(ctx, "", []string{}, []string{}),
 				)
 				Expect(err).ToNot(HaveOccurred())
@@ -71,6 +72,7 @@ var _ = Describe("Extract", func() {
 				_, tmpdir, err := Extract(
 					ctx,
 					img,
+					true,
 					ExtractFiles(ctx, "/usr", []string{}, []string{}),
 				)
 				Expect(err).ToNot(HaveOccurred())
@@ -84,6 +86,7 @@ var _ = Describe("Extract", func() {
 				_, tmpdir, err := Extract(
 					ctx,
 					img,
+					true,
 					ExtractFiles(ctx, "/usr", []string{"bin"}, []string{"sbin"}),
 				)
 				Expect(err).ToNot(HaveOccurred())
@@ -98,6 +101,7 @@ var _ = Describe("Extract", func() {
 				_, tmpdir, err := Extract(
 					ctx,
 					img,
+					true,
 					ExtractFiles(ctx, "", []string{"/usr|/usr/bin"}, []string{"^/bin"}),
 				)
 				Expect(err).ToNot(HaveOccurred())

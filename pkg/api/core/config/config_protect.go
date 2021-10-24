@@ -57,14 +57,6 @@ func NewConfigProtect(annotationDir string) *ConfigProtect {
 	}
 }
 
-func (c *ConfigProtect) AddAnnotationDir(d string) {
-	c.AnnotationDir = d
-}
-
-func (c *ConfigProtect) GetAnnotationDir() string {
-	return c.AnnotationDir
-}
-
 func (c *ConfigProtect) Map(files []string, protected []ConfigProtectConfFile) {
 
 	for _, file := range files {

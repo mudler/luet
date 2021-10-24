@@ -72,6 +72,7 @@ var _ = Describe("Delta", func() {
 				_, tmpdir, err := Extract(
 					ctx,
 					img2,
+					true,
 					ExtractDeltaFiles(ctx, diff, []string{}, []string{}),
 				)
 				Expect(err).ToNot(HaveOccurred())
@@ -87,6 +88,7 @@ var _ = Describe("Delta", func() {
 				_, tmpdir, err := Extract(
 					ctx,
 					img2,
+					true,
 					ExtractDeltaFiles(ctx, diff, []string{}, []string{"usr/local/go"}),
 				)
 				Expect(err).ToNot(HaveOccurred())
@@ -98,6 +100,7 @@ var _ = Describe("Delta", func() {
 				_, tmpdir, err := Extract(
 					ctx,
 					img2,
+					true,
 					ExtractDeltaFiles(ctx, diff, []string{"usr/local/go"}, []string{"usr/local/go/bin"}),
 				)
 				Expect(err).ToNot(HaveOccurred())
@@ -110,6 +113,7 @@ var _ = Describe("Delta", func() {
 				_, tmpdir, err := Extract(
 					ctx,
 					img2,
+					true,
 					ExtractDeltaFiles(ctx, diff, []string{"usr/local/go"}, []string{}),
 				)
 				Expect(err).ToNot(HaveOccurred())

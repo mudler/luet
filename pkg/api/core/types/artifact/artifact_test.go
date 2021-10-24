@@ -162,6 +162,7 @@ RUN echo bar > /test2`))
 				ctx,
 				img,
 				result,
+				false,
 				nil,
 			)
 			Expect(err).ToNot(HaveOccurred())
@@ -211,6 +212,7 @@ RUN echo bar > /test2`))
 				ctx,
 				img,
 				result,
+				false,
 				nil,
 			)
 			Expect(err).ToNot(HaveOccurred())

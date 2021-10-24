@@ -166,7 +166,7 @@ func ExtractFiles(
 	}
 }
 
-func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
+func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, keepPerms bool, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
 	defer reader.Close()
 
 	perms := map[string][]int{}
@@ -190,39 +190,41 @@ func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, filt
 		return 0, "", err
 	}
 
-	for f, p := range perms {
-		ff := filepath.Join(output, f)
-		if _, err := os.Lstat(ff); err == nil {
-			if err := os.Lchown(ff, p[1], p[0]); err != nil {
-				ctx.Warning(err, "failed chowning file")
+	// TODO: Parametrize this
+	if keepPerms {
+		for f, p := range perms {
+			ff := filepath.Join(output, f)
+			if _, err := os.Lstat(ff); err == nil {
+				if err := os.Lchown(ff, p[1], p[0]); err != nil {
+					ctx.Warning(err, "failed chowning file")
+				}
 			}
 		}
-	}
 
-	for _, m := range []map[string]map[string]string{xattrs, paxrecords} {
-		for key, attrs := range m {
-			ff := filepath.Join(output, key)
-			for k, attr := range attrs {
-				if err := system.Lsetxattr(ff, k, []byte(attr), 0); err != nil {
-					if errors.Is(err, syscall.ENOTSUP) {
-						ctx.Debug("ignored xattr %s in archive", key)
+		for _, m := range []map[string]map[string]string{xattrs, paxrecords} {
+			for key, attrs := range m {
+				ff := filepath.Join(output, key)
+				for k, attr := range attrs {
+					if err := system.Lsetxattr(ff, k, []byte(attr), 0); err != nil {
+						if errors.Is(err, syscall.ENOTSUP) {
+							ctx.Debug("ignored xattr %s in archive", key)
+						}
 					}
 				}
 			}
 		}
 	}
-
 	return c, output, nil
 }
 
-func Extract(ctx *types.Context, img v1.Image, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
+func Extract(ctx *types.Context, img v1.Image, keepPerms bool, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
 	tmpdiffs, err := ctx.Config.GetSystem().TempDir("extraction")
 	if err != nil {
 		return 0, "", errors.Wrap(err, "Error met while creating tempdir for rootfs")
 	}
-	return ExtractReader(ctx, mutate.Extract(img), tmpdiffs, filter, opts...)
+	return ExtractReader(ctx, mutate.Extract(img), tmpdiffs, keepPerms, filter, opts...)
 }
 
-func ExtractTo(ctx *types.Context, img v1.Image, output string, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
-	return ExtractReader(ctx, mutate.Extract(img), output, filter, opts...)
+func ExtractTo(ctx *types.Context, img v1.Image, output string, keepPerms bool, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
+	return ExtractReader(ctx, mutate.Extract(img), output, keepPerms, filter, opts...)
 }
