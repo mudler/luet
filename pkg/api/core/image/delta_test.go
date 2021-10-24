@@ -54,30 +54,18 @@ var _ = Describe("Delta", func() {
 			var diff ImageDiff
 			var err error
 
+			ref, _ = name.ParseReference("alpine")
+			ref2, _ = name.ParseReference("golang:alpine")
+			img, _ = daemon.Image(ref)
+			img2, _ = daemon.Image(ref2)
+			diff, err = Delta(img, img2)
+
 			BeforeEach(func() {
 				ctx = types.NewContext()
 
 				tmpfile, err = ioutil.TempFile("", "delta")
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpfile.Name()) // clean up
-
-				ref, err = name.ParseReference("alpine")
-				Expect(err).ToNot(HaveOccurred())
-
-				ref2, err = name.ParseReference("golang:alpine")
-				Expect(err).ToNot(HaveOccurred())
-
-				img, err = daemon.Image(ref)
-				Expect(err).ToNot(HaveOccurred())
-				img2, err = daemon.Image(ref2)
-				Expect(err).ToNot(HaveOccurred())
-
-				diff, err = Delta(img, img2)
-				Expect(err).ToNot(HaveOccurred())
-
-				Expect(len(diff.Additions) > 0).To(BeTrue())
-				Expect(len(diff.Changes) > 0).To(BeTrue())
-				Expect(len(diff.Deletions) == 0).To(BeTrue())
 			})
 
 			It("Extract all deltas", func() {
@@ -105,6 +93,7 @@ var _ = Describe("Delta", func() {
 				defer os.RemoveAll(tmpdir) // clean up
 				Expect(file.Exists(filepath.Join(tmpdir, "usr", "local", "go"))).To(BeFalse())
 			})
+
 			It("Extract deltas and excludes /usr/local/go/bin, but includes /usr/local/go", func() {
 				_, tmpdir, err := Extract(
 					ctx,

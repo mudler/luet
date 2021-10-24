@@ -200,17 +200,11 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 		if err != nil {
 			return errors.Wrapf(err, "while downloading '%s'", imageRepository)
 		}
-
 		_, _, err = image.ExtractTo(
 			d.context,
 			img,
 			repoTemp,
-			image.ExtractFiles(
-				d.context,
-				"",
-				[]string{},
-				[]string{},
-			),
+			nil,
 		)
 		if err != nil {
 			return errors.Wrapf(err, "while extracting '%s'", imageRepository)
