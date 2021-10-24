@@ -23,7 +23,7 @@ coveragetxt="coverage.txt"
 
 
 generate_cover_data() {
-  ginkgo -flakeAttempts=3 -race -failFast -cover -r .
+  ginkgo -flakeAttempts=3 -failFast -cover -r .
   echo "" > ${coveragetxt}
   find . -type f -name "*.coverprofile" | while read -r file;  do cat "$file" >> ${coveragetxt} && mv "$file" "${coverdir}"; done
   echo "mode: $covermode" >"$profile"
