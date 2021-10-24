@@ -344,15 +344,11 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	p.SetSeedImage(image) // In this case, we ignore the build deps as we suppose that the image has them - otherwise we recompose the tree with a solver,
 	// and we build all the images first.
 
-	err := os.MkdirAll(p.Rel("build"), os.ModePerm)
+	buildDir, err := cs.Options.Context.Config.System.TempDir("build")
 	if err != nil {
-		return builderOpts, runnerOpts, errors.Wrap(err, "Error met while creating tempdir for building")
+		return builderOpts, runnerOpts, err
 	}
-	buildDir, err := ioutil.TempDir(p.Rel("build"), "pack")
-	if err != nil {
-		return builderOpts, runnerOpts, errors.Wrap(err, "Error met while creating tempdir for building")
-	}
-	defer os.RemoveAll(buildDir) // clean up
+	defer os.RemoveAll(buildDir)
 
 	// First we copy the source definitions into the output - we create a copy which the builds will need (we need to cache this phase somehow)
 	err = fileHelper.CopyDir(p.GetPackage().GetPath(), buildDir)
