@@ -19,7 +19,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/docker/docker/pkg/archive"
+	"github.com/moby/moby/pkg/archive"
 )
 
 func Tar(src, dest string) error {

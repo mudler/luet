@@ -32,13 +32,14 @@ require (
 	github.com/imdario/mergo v0.3.12
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
 	github.com/klauspost/compress v1.13.0
-	github.com/klauspost/pgzip v1.2.1
+	github.com/klauspost/pgzip v1.2.5
 	github.com/knqyf263/go-deb-version v0.0.0-20190517075300-09fca494f03d
 	github.com/kyokomi/emoji v2.1.0+incompatible
 	github.com/marcsauter/single v0.0.0-20181104081128-f8bf46f26ec0
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.1
 	github.com/mitchellh/mapstructure v1.4.2 // indirect
+	github.com/moby/moby v20.10.9+incompatible
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
 	github.com/mudler/go-pluggable v0.0.0-20210513155700-54c6443073af
@@ -74,5 +75,3 @@ require (
 	helm.sh/helm/v3 v3.3.4
 
 )
-
-replace github.com/docker/docker => github.com/Luet-lab/moby v17.12.0-ce-rc1.0.20200605210607-749178b8f80d+incompatible
