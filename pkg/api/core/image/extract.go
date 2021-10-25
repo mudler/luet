@@ -37,23 +37,38 @@ import (
 // Afterward create artifact pointing to the dir
 
 // ExtractDeltaFiles returns an handler to extract files in a list
-func ExtractDeltaFiles(
+func ExtractDeltaAdditionsFiles(
 	ctx *types.Context,
-	d ImageDiff,
+	srcimg v1.Image,
 	includes []string, excludes []string,
-) func(h *tar.Header) (bool, error) {
+) (func(h *tar.Header) (bool, error), error) {
 
 	includeRegexp := compileRegexes(includes)
 	excludeRegexp := compileRegexes(excludes)
+	filesSrc := map[string]interface{}{}
 
-	additions := map[string]interface{}{}
-	for _, a := range d.Additions {
-		additions[a.Name] = nil
+	srcReader := mutate.Extract(srcimg)
+	defer srcReader.Close()
+
+	srcTar := tar.NewReader(srcReader)
+
+	for {
+		var hdr *tar.Header
+		hdr, err := srcTar.Next()
+		if err == io.EOF {
+			// end of tar archive
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		filesSrc[hdr.Name] = nil
 	}
+
 	return func(h *tar.Header) (bool, error) {
 		fileName := filepath.Join(string(os.PathSeparator), h.Name)
-		_, exists := additions[h.Name]
-		if !exists {
+		_, exists := filesSrc[h.Name]
+		if exists {
 			return false, nil
 		}
 
@@ -97,7 +112,7 @@ func ExtractDeltaFiles(
 			return true, nil
 		}
 
-	}
+	}, nil
 }
 
 func ExtractFiles(
@@ -166,51 +181,63 @@ func ExtractFiles(
 func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, keepPerms bool, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
 	defer reader.Close()
 
-	perms := map[string][]int{}
-	xattrs := map[string]map[string]string{}
-	paxrecords := map[string]map[string]string{}
+	// If no filter is specified, grab all.
+	if filter == nil {
+		filter = func(h *tar.Header) (bool, error) { return true, nil }
+	}
+
+	// Keep records of permissions as we walk the tar
+	type permData struct {
+		PAX, Xattrs map[string]string
+		Uid, Gid    int
+		Name        string
+	}
+
+	perms := []permData{}
 
 	f := func(h *tar.Header) (bool, error) {
-		perms[h.Name] = []int{h.Gid, h.Uid}
-		xattrs[h.Name] = h.Xattrs
-		paxrecords[h.Name] = h.PAXRecords
-		if filter != nil {
-			return filter(h)
+		res, err := filter(h)
+		if res {
+			perms = append(perms, permData{
+				PAX: h.PAXRecords,
+				Uid: h.Uid, Gid: h.Gid,
+				Xattrs: h.Xattrs,
+				Name:   h.Name,
+			})
 		}
-		return true, nil
+		return res, err
 	}
 
 	opts = append(opts, containerdarchive.WithFilter(f))
 
+	// Handle the extraction
 	c, err := containerdarchive.Apply(context.Background(), output, reader, opts...)
 	if err != nil {
 		return 0, "", err
 	}
 
-	// TODO: Parametrize this
+	// Reconstruct permissions
 	if keepPerms {
-		for f, p := range perms {
-			ff := filepath.Join(output, f)
+		ctx.Info("Reconstructing permissions")
+		for _, p := range perms {
+			ff := filepath.Join(output, p.Name)
 			if _, err := os.Lstat(ff); err == nil {
-				if err := os.Lchown(ff, p[1], p[0]); err != nil {
+				if err := os.Lchown(ff, p.Uid, p.Gid); err != nil {
 					ctx.Warning(err, "failed chowning file")
 				}
 			}
-		}
-
-		for _, m := range []map[string]map[string]string{xattrs, paxrecords} {
-			for key, attrs := range m {
-				ff := filepath.Join(output, key)
+			for _, attrs := range []map[string]string{p.Xattrs, p.PAX} {
 				for k, attr := range attrs {
 					if err := system.Lsetxattr(ff, k, []byte(attr), 0); err != nil {
 						if errors.Is(err, syscall.ENOTSUP) {
-							ctx.Debug("ignored xattr %s in archive", key)
+							ctx.Debug("ignored xattr %s in archive", ff)
 						}
 					}
 				}
 			}
 		}
 	}
+
 	return c, output, nil
 }
 

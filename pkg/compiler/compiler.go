@@ -311,29 +311,35 @@ func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p *co
 
 	cs.Options.Context.Info(pkgTag, ":hammer: Generating delta")
 
+	cs.Options.Context.Info(pkgTag, ":hammer: Retrieving reference for", builderOpts.ImageName)
+
 	ref, err := cs.Backend.ImageReference(builderOpts.ImageName)
 	if err != nil {
 		return nil, err
 	}
+
+	cs.Options.Context.Info(pkgTag, ":hammer: Retrieving reference for", runnerOpts.ImageName)
 
 	ref2, err := cs.Backend.ImageReference(runnerOpts.ImageName)
 	if err != nil {
 		return nil, err
 	}
 
-	diff, err := image.Delta(ref, ref2)
+	cs.Options.Context.Info(pkgTag, ":hammer: Generating filters for extraction")
+
+	filter, err := image.ExtractDeltaAdditionsFiles(cs.Options.Context, ref, p.GetIncludes(), p.GetExcludes())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed generating filter for extraction")
 	}
 
-	// TODO: includes/excludes might need to get "/" stripped from prefix
+	cs.Options.Context.Info(pkgTag, ":hammer: Extracting artifact from image", runnerOpts.ImageName)
 	a, err := artifact.ImageToArtifact(
 		cs.Options.Context,
 		ref2,
 		cs.Options.CompressionType,
 		p.Rel(fmt.Sprintf("%s%s", p.GetPackage().GetFingerPrint(), ".package.tar")),
 		keepPermissions,
-		image.ExtractDeltaFiles(cs.Options.Context, diff, p.GetIncludes(), p.GetExcludes()),
+		filter,
 	)
 	if err != nil {
 		return nil, err

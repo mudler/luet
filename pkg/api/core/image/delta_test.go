@@ -51,14 +51,12 @@ var _ = Describe("Delta", func() {
 			var tmpfile *os.File
 			var ref, ref2 name.Reference
 			var img, img2 v1.Image
-			var diff ImageDiff
 			var err error
 
 			ref, _ = name.ParseReference("alpine")
 			ref2, _ = name.ParseReference("golang:alpine")
 			img, _ = daemon.Image(ref)
 			img2, _ = daemon.Image(ref2)
-			diff, err = Delta(img, img2)
 
 			BeforeEach(func() {
 				ctx = types.NewContext()
@@ -69,11 +67,15 @@ var _ = Describe("Delta", func() {
 			})
 
 			It("Extract all deltas", func() {
+
+				f, err := ExtractDeltaAdditionsFiles(ctx, img, []string{}, []string{})
+				Expect(err).ToNot(HaveOccurred())
+
 				_, tmpdir, err := Extract(
 					ctx,
 					img2,
 					true,
-					ExtractDeltaFiles(ctx, diff, []string{}, []string{}),
+					f,
 				)
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
@@ -85,11 +87,15 @@ var _ = Describe("Delta", func() {
 			})
 
 			It("Extract deltas and excludes /usr/local/go", func() {
+				f, err := ExtractDeltaAdditionsFiles(ctx, img, []string{}, []string{"usr/local/go"})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(err).ToNot(HaveOccurred())
 				_, tmpdir, err := Extract(
 					ctx,
 					img2,
 					true,
-					ExtractDeltaFiles(ctx, diff, []string{}, []string{"usr/local/go"}),
+					f,
 				)
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
@@ -97,11 +103,14 @@ var _ = Describe("Delta", func() {
 			})
 
 			It("Extract deltas and excludes /usr/local/go/bin, but includes /usr/local/go", func() {
+				f, err := ExtractDeltaAdditionsFiles(ctx, img, []string{"usr/local/go"}, []string{"usr/local/go/bin"})
+				Expect(err).ToNot(HaveOccurred())
+
 				_, tmpdir, err := Extract(
 					ctx,
 					img2,
 					true,
-					ExtractDeltaFiles(ctx, diff, []string{"usr/local/go"}, []string{"usr/local/go/bin"}),
+					f,
 				)
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
@@ -110,11 +119,13 @@ var _ = Describe("Delta", func() {
 			})
 
 			It("Extract deltas and includes /usr/local/go", func() {
+				f, err := ExtractDeltaAdditionsFiles(ctx, img, []string{"usr/local/go"}, []string{})
+				Expect(err).ToNot(HaveOccurred())
 				_, tmpdir, err := Extract(
 					ctx,
 					img2,
 					true,
-					ExtractDeltaFiles(ctx, diff, []string{"usr/local/go"}, []string{}),
+					f,
 				)
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
