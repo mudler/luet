@@ -144,7 +144,7 @@ func (s *SimpleDocker) ImageReference(a string) (v1.Image, error) {
 		return nil, err
 	}
 
-	img, err := daemon.Image(ref)
+	img, err := daemon.Image(ref, daemon.WithUnbufferedOpener())
 	if err != nil {
 		return nil, err
 	}
