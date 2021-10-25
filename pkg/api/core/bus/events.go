@@ -1,6 +1,7 @@
 package bus
 
 import (
+	"fmt"
 	"github.com/mudler/go-pluggable"
 	"github.com/mudler/luet/pkg/api/core/types"
 )
@@ -88,7 +89,8 @@ func (b *Bus) Initialize(ctx *types.Context, plugin ...string) {
 	for _, e := range b.Manager.Events {
 		b.Manager.Response(e, func(p *pluggable.Plugin, r *pluggable.EventResponse) {
 			if r.Errored() {
-				ctx.Fatal("Plugin", p.Name, "at", p.Executable, "Error", r.Error)
+				err := fmt.Sprintf("Plugin %s at %s had an error: %s", p.Name, p.Executable, r.Error)
+				ctx.Fatal(err)
 			}
 			ctx.Debug(
 				"plugin_event",
