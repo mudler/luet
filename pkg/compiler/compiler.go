@@ -227,6 +227,13 @@ func (cs *LuetCompiler) stripFromRootfs(includes []string, rootfs string, includ
 }
 
 func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec, runnerOpts backend.Options) (*artifact.PackageArtifact, error) {
+
+	if !cs.Backend.ImageExists(runnerOpts.ImageName) {
+		if err := cs.Backend.DownloadImage(runnerOpts); err != nil {
+			return nil, errors.Wrap(err, "failed pulling image "+runnerOpts.ImageName+" during extraction")
+		}
+	}
+
 	img, err := cs.Backend.ImageReference(runnerOpts.ImageName)
 	if err != nil {
 		return nil, err
@@ -287,10 +294,18 @@ func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p *co
 	defer os.RemoveAll(rootfs) // clean up
 
 	pkgTag := ":package: " + p.GetPackage().HumanReadableString()
-	if cs.Options.PullFirst && !cs.Backend.ImageExists(builderOpts.ImageName) && cs.Backend.ImageAvailable(builderOpts.ImageName) {
-		err := cs.Backend.DownloadImage(builderOpts)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not pull image")
+	if cs.Options.PullFirst {
+		if !cs.Backend.ImageExists(builderOpts.ImageName) {
+			err := cs.Backend.DownloadImage(builderOpts)
+			if err != nil {
+				return nil, errors.Wrap(err, "Could not pull image")
+			}
+		}
+		if !cs.Backend.ImageExists(runnerOpts.ImageName) {
+			err := cs.Backend.DownloadImage(runnerOpts)
+			if err != nil {
+				return nil, errors.Wrap(err, "Could not pull image")
+			}
 		}
 	}
 
