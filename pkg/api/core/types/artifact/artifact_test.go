@@ -156,7 +156,7 @@ RUN echo bar > /test2`))
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(result) // clean up
 
-			img, err := b.ImageReference(resultingImage, false)
+			img, err := b.ImageReference(resultingImage, true)
 			Expect(err).ToNot(HaveOccurred())
 			_, _, err = image.ExtractTo(
 				ctx,

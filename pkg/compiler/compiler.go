@@ -234,7 +234,7 @@ func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *compi
 		}
 	}
 
-	img, err := cs.Backend.ImageReference(runnerOpts.ImageName, false)
+	img, err := cs.Backend.ImageReference(runnerOpts.ImageName, true)
 	if err != nil {
 		return nil, err
 	}

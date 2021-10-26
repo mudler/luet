@@ -140,6 +140,11 @@ func (s *SimpleDocker) Push(opts Options) error {
 }
 
 func (s *SimpleDocker) ImageReference(a string, ondisk bool) (v1.Image, error) {
+	// TODO: We could also handle this from docker's pipe, but needs benchmarking:
+	// daemon.Image takes a client optionally. Otherwise we can return a new image
+	// from a tarball by providing ourselves a reader from docker stdout pipe.
+	// See daemon.Image implementation below for an example (which returns the tarball stream
+	// from the HTTP api endpoint instead ).
 	if ondisk {
 		f, err := s.ctx.Config.GetSystem().TempFile("snapshot")
 		if err != nil {
