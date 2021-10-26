@@ -45,8 +45,12 @@ func ExtractDeltaAdditionsFiles(
 
 	includeRegexp := compileRegexes(includes)
 	excludeRegexp := compileRegexes(excludes)
-	filesSrc := map[string]interface{}{}
-	
+
+	srcfilesd, err := ctx.Config.System.TempDir("srcfiles")
+	if err != nil {
+		return nil, err
+	}
+	filesSrc := NewCache(srcfilesd, 50*1024*1024, 10000)
 
 	srcReader := mutate.Extract(srcimg)
 	defer srcReader.Close()
@@ -63,12 +67,12 @@ func ExtractDeltaAdditionsFiles(
 		if err != nil {
 			return nil, err
 		}
-		filesSrc[hdr.Name] = nil
+		filesSrc.Set(hdr.Name, "")
 	}
 
 	return func(h *tar.Header) (bool, error) {
 		fileName := filepath.Join(string(os.PathSeparator), h.Name)
-		_, exists := filesSrc[h.Name]
+		_, exists := filesSrc.Get(h.Name)
 		if exists {
 			return false, nil
 		}
@@ -194,17 +198,22 @@ func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, keep
 		Name        string
 	}
 
-	perms := []permData{}
+	permstore, err := ctx.Config.System.TempDir("permstore")
+	if err != nil {
+		return 0, "", err
+	}
+	perms := NewCache(permstore, 50*1024*1024, 10000)
 
 	f := func(h *tar.Header) (bool, error) {
 		res, err := filter(h)
 		if res {
-			perms = append(perms, permData{
+			perms.SetValue(h.Name, permData{
 				PAX: h.PAXRecords,
 				Uid: h.Uid, Gid: h.Gid,
 				Xattrs: h.Xattrs,
 				Name:   h.Name,
 			})
+			//perms = append(perms, })
 		}
 		return res, err
 	}
@@ -219,8 +228,10 @@ func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, keep
 
 	// Reconstruct permissions
 	if keepPerms {
-		ctx.Info("Reconstructing permissions")
-		for _, p := range perms {
+		ctx.Debug("Reconstructing permissions")
+		perms.All(func(cr CacheResult) {
+			p := &permData{}
+			cr.Unmarshal(p)
 			ff := filepath.Join(output, p.Name)
 			if _, err := os.Lstat(ff); err == nil {
 				if err := os.Lchown(ff, p.Uid, p.Gid); err != nil {
@@ -236,9 +247,8 @@ func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, keep
 					}
 				}
 			}
-		}
+		})
 	}
-
 	return c, output, nil
 }
 
