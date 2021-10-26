@@ -88,10 +88,6 @@ func (b *Bus) Initialize(ctx *types.Context, plugin ...string) {
 
 	for _, e := range b.Manager.Events {
 		b.Manager.Response(e, func(p *pluggable.Plugin, r *pluggable.EventResponse) {
-			if r.Errored() {
-				err := fmt.Sprintf("Plugin %s at %s had an error: %s", p.Name, p.Executable, r.Error)
-				ctx.Fatal(err)
-			}
 			ctx.Debug(
 				"plugin_event",
 				"received from",
@@ -100,6 +96,10 @@ func (b *Bus) Initialize(ctx *types.Context, plugin ...string) {
 				p.Executable,
 				r,
 			)
+			if r.Errored() {
+				err := fmt.Sprintf("Plugin %s at %s had an error: %s", p.Name, p.Executable, r.Error)
+				ctx.Fatal(err)
+			}
 		})
 	}
 }
