@@ -311,21 +311,21 @@ func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p *co
 
 	cs.Options.Context.Info(pkgTag, ":hammer: Generating delta")
 
-	cs.Options.Context.Info(pkgTag, ":hammer: Retrieving reference for", builderOpts.ImageName)
+	cs.Options.Context.Debug(pkgTag, ":hammer: Retrieving reference for", builderOpts.ImageName)
 
 	ref, err := cs.Backend.ImageReference(builderOpts.ImageName, true)
 	if err != nil {
 		return nil, err
 	}
 
-	cs.Options.Context.Info(pkgTag, ":hammer: Retrieving reference for", runnerOpts.ImageName)
+	cs.Options.Context.Debug(pkgTag, ":hammer: Retrieving reference for", runnerOpts.ImageName)
 
 	ref2, err := cs.Backend.ImageReference(runnerOpts.ImageName, true)
 	if err != nil {
 		return nil, err
 	}
 
-	cs.Options.Context.Info(pkgTag, ":hammer: Generating filters for extraction")
+	cs.Options.Context.Debug(pkgTag, ":hammer: Generating filters for extraction")
 
 	filter, err := image.ExtractDeltaAdditionsFiles(cs.Options.Context, ref, p.GetIncludes(), p.GetExcludes())
 	if err != nil {
