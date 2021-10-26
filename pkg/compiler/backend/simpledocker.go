@@ -1,4 +1,4 @@
-// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2019-2021 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,11 +16,13 @@
 package backend
 
 import (
+	"io"
 	"os/exec"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	bus "github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/mudler/luet/pkg/api/core/types"
 
@@ -139,39 +141,66 @@ func (s *SimpleDocker) Push(opts Options) error {
 	return nil
 }
 
-func (s *SimpleDocker) ImageReference(a string, ondisk bool) (v1.Image, error) {
-	// TODO: We could also handle this from docker's pipe, but needs benchmarking:
-	// daemon.Image takes a client optionally. Otherwise we can return a new image
-	// from a tarball by providing ourselves a reader from docker stdout pipe.
-	// See daemon.Image implementation below for an example (which returns the tarball stream
-	// from the HTTP api endpoint instead ).
-	if ondisk {
-		f, err := s.ctx.Config.GetSystem().TempFile("snapshot")
-		if err != nil {
-			return nil, err
-		}
-		buildarg := []string{"save", a, "-o", f.Name()}
-		s.ctx.Spinner()
-		defer s.ctx.SpinnerStop()
-
-		out, err := exec.Command("docker", buildarg...).CombinedOutput()
-		if err != nil {
-			return nil, errors.Wrap(err, "Failed saving image: "+string(out))
-		}
-
-		return crane.Load(f.Name())
-	}
-
+func (s *SimpleDocker) imagefromDaemon(a string) (v1.Image, error) {
 	ref, err := name.ParseReference(a)
 	if err != nil {
 		return nil, err
 	}
-
 	img, err := daemon.Image(ref, daemon.WithUnbufferedOpener())
 	if err != nil {
 		return nil, err
 	}
 	return img, nil
+}
+
+// TODO: Make it possible optionally to use this?
+// It might be unsafer, as it relies on the pipe.
+// imageFromCLIPipe returns a new image from a tarball by providing a reader from the docker stdout pipe.
+// See also daemon.Image implementation below for an example (which returns the tarball stream
+// from the HTTP api endpoint instead ).
+func (s *SimpleDocker) imageFromCLIPipe(a string) (v1.Image, error) {
+	return tarball.Image(func() (io.ReadCloser, error) {
+		buildarg := []string{"save", a}
+		s.ctx.Spinner()
+		defer s.ctx.SpinnerStop()
+		c := exec.Command("docker", buildarg...)
+		p, err := c.StdoutPipe()
+		if err != nil {
+			return nil, err
+		}
+		err = c.Start()
+		if err != nil {
+			return nil, err
+		}
+
+		go func() { c.Wait() }()
+		return p, nil
+	}, nil)
+}
+
+func (s *SimpleDocker) imageFromDisk(a string) (v1.Image, error) {
+	f, err := s.ctx.Config.GetSystem().TempFile("snapshot")
+	if err != nil {
+		return nil, err
+	}
+	buildarg := []string{"save", a, "-o", f.Name()}
+	s.ctx.Spinner()
+	defer s.ctx.SpinnerStop()
+
+	out, err := exec.Command("docker", buildarg...).CombinedOutput()
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed saving image: "+string(out))
+	}
+
+	return crane.Load(f.Name())
+}
+
+func (s *SimpleDocker) ImageReference(a string, ondisk bool) (v1.Image, error) {
+	if ondisk {
+		return s.imageFromDisk(a)
+	}
+
+	return s.imagefromDaemon(a)
 }
 
 func (s *SimpleDocker) ImageDefinitionToTar(opts Options) error {
