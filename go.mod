@@ -50,6 +50,7 @@ require (
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/otiai10/copy v1.2.1-0.20200916181228-26f84a0b1578
 	github.com/pelletier/go-toml v1.9.4 // indirect
+	github.com/peterbourgon/diskv v2.0.1+incompatible
 	github.com/philopon/go-toposort v0.0.0-20170620085441-9be86dbd762f
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.32-0.20211002183613-ada9ef6790c3

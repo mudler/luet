@@ -203,6 +203,8 @@ github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
 # github.com/golang/snappy v0.0.3
 github.com/golang/snappy
+# github.com/google/btree v1.0.0
+github.com/google/btree
 # github.com/google/go-containerregistry v0.6.0
 ## explicit
 github.com/google/go-containerregistry/internal/and
@@ -399,6 +401,9 @@ github.com/otiai10/copy
 # github.com/pelletier/go-toml v1.9.4
 ## explicit
 github.com/pelletier/go-toml
+# github.com/peterbourgon/diskv v2.0.1+incompatible
+## explicit
+github.com/peterbourgon/diskv
 # github.com/philopon/go-toposort v0.0.0-20170620085441-9be86dbd762f
 ## explicit
 github.com/philopon/go-toposort
