@@ -46,6 +46,7 @@ func ExtractDeltaAdditionsFiles(
 	includeRegexp := compileRegexes(includes)
 	excludeRegexp := compileRegexes(excludes)
 	filesSrc := map[string]interface{}{}
+	
 
 	srcReader := mutate.Extract(srcimg)
 	defer srcReader.Close()

@@ -196,7 +196,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 		if err != nil {
 			return errors.Wrapf(err, "while downloading '%s'", imageRepository)
 		}
-		img, err := r.GetBackend().ImageReference(imageRepository)
+		img, err := r.GetBackend().ImageReference(imageRepository, true)
 		if err != nil {
 			return errors.Wrapf(err, "while downloading '%s'", imageRepository)
 		}

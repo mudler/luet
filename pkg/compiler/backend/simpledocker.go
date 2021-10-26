@@ -18,6 +18,7 @@ package backend
 import (
 	"os/exec"
 
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	bus "github.com/mudler/luet/pkg/api/core/bus"
@@ -138,7 +139,24 @@ func (s *SimpleDocker) Push(opts Options) error {
 	return nil
 }
 
-func (s *SimpleDocker) ImageReference(a string) (v1.Image, error) {
+func (s *SimpleDocker) ImageReference(a string, ondisk bool) (v1.Image, error) {
+	if ondisk {
+		f, err := s.ctx.Config.GetSystem().TempFile("snapshot")
+		if err != nil {
+			return nil, err
+		}
+		buildarg := []string{"save", a, "-o", f.Name()}
+		s.ctx.Spinner()
+		defer s.ctx.SpinnerStop()
+
+		out, err := exec.Command("docker", buildarg...).CombinedOutput()
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed saving image: "+string(out))
+		}
+
+		return crane.Load(f.Name())
+	}
+
 	ref, err := name.ParseReference(a)
 	if err != nil {
 		return nil, err

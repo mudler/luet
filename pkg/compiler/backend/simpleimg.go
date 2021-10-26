@@ -71,7 +71,7 @@ func (s *SimpleImg) RemoveImage(opts Options) error {
 	return nil
 }
 
-func (s *SimpleImg) ImageReference(a string) (v1.Image, error) {
+func (s *SimpleImg) ImageReference(a string, ondisk bool) (v1.Image, error) {
 
 	f, err := s.ctx.Config.GetSystem().TempFile("snapshot")
 	if err != nil {

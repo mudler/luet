@@ -234,7 +234,7 @@ func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *compi
 		}
 	}
 
-	img, err := cs.Backend.ImageReference(runnerOpts.ImageName)
+	img, err := cs.Backend.ImageReference(runnerOpts.ImageName, false)
 	if err != nil {
 		return nil, err
 	}
@@ -313,14 +313,14 @@ func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p *co
 
 	cs.Options.Context.Info(pkgTag, ":hammer: Retrieving reference for", builderOpts.ImageName)
 
-	ref, err := cs.Backend.ImageReference(builderOpts.ImageName)
+	ref, err := cs.Backend.ImageReference(builderOpts.ImageName, true)
 	if err != nil {
 		return nil, err
 	}
 
 	cs.Options.Context.Info(pkgTag, ":hammer: Retrieving reference for", runnerOpts.ImageName)
 
-	ref2, err := cs.Backend.ImageReference(runnerOpts.ImageName)
+	ref2, err := cs.Backend.ImageReference(runnerOpts.ImageName, true)
 	if err != nil {
 		return nil, err
 	}
