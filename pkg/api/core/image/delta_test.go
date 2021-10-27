@@ -79,7 +79,7 @@ var _ = Describe("Delta", func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
-
+				Expect(file.Exists(filepath.Join(tmpdir, "home"))).To(BeFalse())
 				Expect(file.Exists(filepath.Join(tmpdir, "root", ".cache"))).To(BeTrue())
 				Expect(file.Exists(filepath.Join(tmpdir, "bin", "sh"))).To(BeFalse())
 				Expect(file.Exists(filepath.Join(tmpdir, "usr", "local", "go"))).To(BeTrue())

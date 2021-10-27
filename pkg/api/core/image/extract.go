@@ -67,10 +67,17 @@ func ExtractDeltaAdditionsFiles(
 		if err != nil {
 			return nil, err
 		}
-		filesSrc.Set(hdr.Name, "")
+
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			filesSrc.Set(filepath.Dir(hdr.Name), "")
+		default:
+			filesSrc.Set(hdr.Name, "")
+		}
 	}
 
 	return func(h *tar.Header) (bool, error) {
+
 		fileName := filepath.Join(string(os.PathSeparator), h.Name)
 		_, exists := filesSrc.Get(h.Name)
 		if exists {
