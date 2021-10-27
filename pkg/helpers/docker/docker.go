@@ -18,7 +18,6 @@ package docker
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"os"
 
 	"github.com/containerd/containerd/images"
@@ -30,11 +29,9 @@ import (
 	"github.com/docker/cli/cli/trust"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/registry"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/opencontainers/go-digest"
@@ -127,42 +124,6 @@ func (s staticAuth) Authorization() (*authn.AuthConfig, error) {
 type UnpackEventData struct {
 	Image string
 	Dest  string
-}
-
-// UnarchiveLayers extract layers with archive.Untar from docker instead of containerd
-func UnarchiveLayers(temp string, img v1.Image, image, dest string, auth *types.AuthConfig, verify bool) (int64, error) {
-	layers, err := img.Layers()
-	if err != nil {
-		return 0, fmt.Errorf("reading layers from '%s' image failed: %v", image, err)
-	}
-	bus.Manager.Publish(bus.EventImagePreUnPack, UnpackEventData{Image: image, Dest: dest})
-
-	var size int64
-	for _, l := range layers {
-		s, err := l.Size()
-		if err != nil {
-			return 0, fmt.Errorf("reading layer size from '%s' image failed: %v", image, err)
-		}
-		size += s
-
-		layerReader, err := l.Uncompressed()
-		if err != nil {
-			return 0, fmt.Errorf("reading uncompressed layer from '%s' image failed: %v", image, err)
-		}
-		defer layerReader.Close()
-
-		// Unpack the tarfile to the rootfs path.
-		// FROM: https://godoc.org/github.com/moby/moby/pkg/archive#TarOptions
-		if err := archive.Untar(layerReader, dest, &archive.TarOptions{
-			NoLchown:        false,
-			ExcludePatterns: []string{"dev/"}, // prevent 'operation not permitted'
-		}); err != nil {
-			return 0, fmt.Errorf("extracting '%s' image to directory %s failed: %v", image, dest, err)
-		}
-	}
-	bus.Manager.Publish(bus.EventImagePostUnPack, UnpackEventData{Image: image, Dest: dest})
-
-	return size, nil
 }
 
 // DownloadAndExtractDockerImage extracts a container image natively. It supports privileged/unprivileged mode
