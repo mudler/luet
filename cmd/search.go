@@ -334,7 +334,7 @@ Search can also return results in the terminal in different ways: as terminal ou
 
 		out, _ := cmd.Flags().GetString("output")
 		if out != "terminal" {
-			util.DefaultContext.Config.GetLogging().SetLogLevel("error")
+			util.DefaultContext.Config.GetLogging().SetLogLevel(types.FatalLevel)
 		}
 
 		l := &util.ListWriter{}
@@ -353,12 +353,6 @@ Search can also return results in the terminal in different ways: as terminal ou
 			results = searchLocally(args[0], l, t, searchWithLabel, searchWithLabelMatch, revdeps, hidden)
 		}
 
-		if tableMode {
-			t.Render()
-		} else {
-			l.Render()
-		}
-
 		y, err := yaml.Marshal(results)
 		if err != nil {
 			fmt.Printf("err: %v\n", err)
@@ -374,8 +368,13 @@ Search can also return results in the terminal in different ways: as terminal ou
 				return
 			}
 			fmt.Println(string(j2))
+		default:
+			if tableMode {
+				t.Render()
+			} else {
+				l.Render()
+			}
 		}
-
 	},
 }
 
