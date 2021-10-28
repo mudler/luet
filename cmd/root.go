@@ -103,7 +103,7 @@ To build a package, from a tree definition:
 		if len(bus.Manager.Plugins) != 0 {
 			util.DefaultContext.Info(":lollipop:Enabled plugins:")
 			for _, p := range bus.Manager.Plugins {
-				util.DefaultContext.Info("\t:arrow_right:", p.Name)
+				util.DefaultContext.Info(fmt.Sprintf("\t:arrow_right: %s (at %s)", p.Name, p.Executable))
 			}
 		}
 	},
