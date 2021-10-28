@@ -99,6 +99,12 @@ func (b *Bus) Initialize(ctx *types.Context, plugin ...string) {
 			if r.Errored() {
 				err := fmt.Sprintf("Plugin %s at %s had an error: %s", p.Name, p.Executable, r.Error)
 				ctx.Fatal(err)
+			} else {
+				if r.State != "" {
+					message := fmt.Sprintf(":lollipop: Plugin %s at %s succeded, state reported:", p.Name, p.Executable)
+					ctx.Success(message)
+					ctx.Info(r.State)
+				}
 			}
 		})
 	}
