@@ -146,9 +146,8 @@ RUN echo bar > /test2`))
 			err = a.Compress(tmpdir, 1)
 			Expect(err).ToNot(HaveOccurred())
 			resultingImage := imageprefix + "foo--1.0"
-			opts, err := a.GenerateFinalImage(ctx, resultingImage, b, false)
+			err = a.GenerateFinalImage(ctx, resultingImage, b, false)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(opts.ImageName).To(Equal(resultingImage))
 
 			Expect(b.ImageExists(resultingImage)).To(BeTrue())
 
@@ -196,9 +195,8 @@ RUN echo bar > /test2`))
 			err = a.Compress(tmpdir, 1)
 			Expect(err).ToNot(HaveOccurred())
 			resultingImage := imageprefix + "foo--1.0"
-			opts, err := a.GenerateFinalImage(ctx, resultingImage, b, false)
+			err = a.GenerateFinalImage(ctx, resultingImage, b, false)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(opts.ImageName).To(Equal(resultingImage))
 
 			Expect(b.ImageExists(resultingImage)).To(BeTrue())
 
@@ -217,11 +215,7 @@ RUN echo bar > /test2`))
 			)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(fileHelper.DirectoryIsEmpty(result)).To(BeFalse())
-			content, err := ioutil.ReadFile(filepath.Join(result, ".virtual"))
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(string(content)).To(Equal(""))
+			Expect(fileHelper.DirectoryIsEmpty(result)).To(BeTrue())
 		})
 
 		It("Retrieves uncompressed name", func() {

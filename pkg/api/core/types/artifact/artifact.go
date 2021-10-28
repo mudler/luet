@@ -174,12 +174,6 @@ func (a *PackageArtifact) GetFileName() string {
 	return path.Base(a.Path)
 }
 
-func (a *PackageArtifact) genDockerfile() string {
-	return `
-FROM scratch
-COPY . /`
-}
-
 // CreateArtifactForFile creates a new artifact from the given file
 func CreateArtifactForFile(ctx *types.Context, s string, opts ...func(*PackageArtifact)) (*PackageArtifact, error) {
 	if _, err := os.Stat(s); os.IsNotExist(err) {
@@ -211,52 +205,36 @@ func CreateArtifactForFile(ctx *types.Context, s string, opts ...func(*PackageAr
 
 type ImageBuilder interface {
 	BuildImage(backend.Options) error
+	LoadImage(path string) error
 }
 
 // GenerateFinalImage takes an artifact and builds a Docker image with its content
-func (a *PackageArtifact) GenerateFinalImage(ctx *types.Context, imageName string, b ImageBuilder, keepPerms bool) (backend.Options, error) {
-	builderOpts := backend.Options{}
-	archive, err := ctx.Config.GetSystem().TempDir("archive")
+func (a *PackageArtifact) GenerateFinalImage(ctx *types.Context, imageName string, b ImageBuilder, keepPerms bool) error {
+	archiveFile, err := os.Open(a.Path)
 	if err != nil {
-		return builderOpts, errors.Wrap(err, "error met while creating tempdir for "+a.Path)
+		return errors.Wrap(err, "Cannot open "+a.Path)
 	}
-	defer os.RemoveAll(archive) // clean up
+	defer archiveFile.Close()
 
-	uncompressedFiles := filepath.Join(archive, "files")
-	dockerFile := filepath.Join(archive, "Dockerfile")
-
-	if err := os.MkdirAll(uncompressedFiles, os.ModePerm); err != nil {
-		return builderOpts, errors.Wrap(err, "error met while creating tempdir for "+a.Path)
-	}
-
-	if err := a.Unpack(ctx, uncompressedFiles, keepPerms); err != nil {
-		return builderOpts, errors.Wrap(err, "error met while uncompressing artifact "+a.Path)
-	}
-
-	empty, err := fileHelper.DirectoryIsEmpty(uncompressedFiles)
+	decompressed, err := containerdCompression.DecompressStream(archiveFile)
 	if err != nil {
-		return builderOpts, errors.Wrap(err, "error met while checking if directory is empty "+uncompressedFiles)
+		return errors.Wrap(err, "Cannot open "+a.Path)
 	}
 
-	// See https://github.com/moby/moby/issues/38039.
-	// We can't generate FROM scratch empty images. Docker will refuse to export them
-	// workaround: Inject a .virtual empty file
-	if empty {
-		fileHelper.Touch(filepath.Join(uncompressedFiles, ".virtual"))
+	tempimage, err := ctx.Config.GetSystem().TempFile("tempimage")
+	if err != nil {
+		return errors.Wrap(err, "error met while creating tempdir for "+a.Path)
+	}
+	defer os.RemoveAll(tempimage.Name()) // clean up
+
+	if err := image.CreateTarReader(decompressed, tempimage.Name(), imageName); err != nil {
+		return errors.Wrap(err, "could not create image from tar")
 	}
 
-	data := a.genDockerfile()
-	if err := ioutil.WriteFile(dockerFile, []byte(data), 0644); err != nil {
-		return builderOpts, errors.Wrap(err, "error met while rendering artifact dockerfile "+a.Path)
+	if err := b.LoadImage(tempimage.Name()); err != nil {
+		return errors.Wrap(err, "while loading image")
 	}
-
-	builderOpts = backend.Options{
-		ImageName:      imageName,
-		SourcePath:     archive,
-		DockerFileName: dockerFile,
-		Context:        uncompressedFiles,
-	}
-	return builderOpts, b.BuildImage(builderOpts)
+	return nil
 }
 
 // Compress is responsible to archive and compress to the artifact Path.

@@ -32,11 +32,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Extract dir:
-// -> First extract delta considering the dir
-// Afterward create artifact pointing to the dir
-
-// ExtractDeltaFiles returns an handler to extract files in a list
+// ExtractDeltaAdditionsFromImages is a filter that takes two images
+// an includes and an excludes list. It computes the delta between the images
+// considering the added files only, and applies a filter on them based on the regexes
+// in the lists.
 func ExtractDeltaAdditionsFiles(
 	ctx *types.Context,
 	srcimg v1.Image,
@@ -127,6 +126,9 @@ func ExtractDeltaAdditionsFiles(
 	}, nil
 }
 
+// ExtractFiles returns a filter that extracts files from the given path (if not empty)
+// It then filters files by an include and exclude list.
+// The list can be regexes
 func ExtractFiles(
 	ctx *types.Context,
 	prefixPath string,
@@ -190,6 +192,9 @@ func ExtractFiles(
 	}
 }
 
+// ExtractReader perform the extracting action over the io.ReadCloser
+// it extracts the files over output. Accepts a filter as an option
+// and additional containerd Options
 func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, keepPerms bool, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
 	defer reader.Close()
 
@@ -259,6 +264,7 @@ func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, keep
 	return c, output, nil
 }
 
+// Extract is just syntax sugar around ExtractReader. It extracts an image into a dir
 func Extract(ctx *types.Context, img v1.Image, keepPerms bool, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
 	tmpdiffs, err := ctx.Config.GetSystem().TempDir("extraction")
 	if err != nil {
@@ -267,6 +273,7 @@ func Extract(ctx *types.Context, img v1.Image, keepPerms bool, filter func(h *ta
 	return ExtractReader(ctx, mutate.Extract(img), tmpdiffs, keepPerms, filter, opts...)
 }
 
+// ExtractTo is just syntax sugar around ExtractReader
 func ExtractTo(ctx *types.Context, img v1.Image, output string, keepPerms bool, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
 	return ExtractReader(ctx, mutate.Extract(img), output, keepPerms, filter, opts...)
 }

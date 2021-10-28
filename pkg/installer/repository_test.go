@@ -619,11 +619,8 @@ urls:
 
 			Expect(a.Unpack(ctx, extracted, false)).ToNot(HaveOccurred())
 
-			Expect(fileHelper.DirectoryIsEmpty(extracted)).To(BeFalse())
-			content, err := ioutil.ReadFile(filepath.Join(extracted, ".virtual"))
-			Expect(err).ToNot(HaveOccurred())
+			Expect(fileHelper.DirectoryIsEmpty(extracted)).To(BeTrue())
 
-			Expect(string(content)).To(Equal(""))
 		})
 
 		It("Searches files", func() {

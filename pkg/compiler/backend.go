@@ -26,6 +26,7 @@ func NewBackend(ctx *types.Context, s string) (CompilerBackend, error) {
 type CompilerBackend interface {
 	BuildImage(backend.Options) error
 	ExportImage(backend.Options) error
+	LoadImage(string) error
 	RemoveImage(backend.Options) error
 	ImageDefinitionToTar(backend.Options) error
 

@@ -962,14 +962,14 @@ func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool
 
 	joinImageName := fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, overallFp)
 	cs.Options.Context.Info(joinTag, ":droplet: generating image from artifact", joinImageName)
-	opts, err := a.GenerateFinalImage(cs.Options.Context, joinImageName, cs.Backend, keepPermissions)
+	err = a.GenerateFinalImage(cs.Options.Context, joinImageName, cs.Backend, keepPermissions)
 	if err != nil {
 		return errors.Wrap(err, "could not create final image")
 	}
 	if cs.Options.Push {
 		cs.Options.Context.Info(joinTag, ":droplet: pushing image from artifact", joinImageName)
-		if err = cs.Backend.Push(opts); err != nil {
-			return errors.Wrapf(err, "Could not push image: %s %s", image, opts.DockerFileName)
+		if err = cs.Backend.Push(backend.Options{ImageName: joinImageName}); err != nil {
+			return errors.Wrapf(err, "Could not push image: %s", joinImageName)
 		}
 	}
 	cs.Options.Context.Info(joinTag, ":droplet: Consuming image", joinImageName)

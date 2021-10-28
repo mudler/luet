@@ -35,6 +35,10 @@ func NewSimpleImgBackend(ctx *types.Context) *SimpleImg {
 	return &SimpleImg{ctx: ctx}
 }
 
+func (s *SimpleImg) LoadImage(string) error {
+	return errors.New("Not supported")
+}
+
 // TODO: Missing still: labels, and build args expansion
 func (s *SimpleImg) BuildImage(opts Options) error {
 	name := opts.ImageName

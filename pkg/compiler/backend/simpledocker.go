@@ -71,6 +71,17 @@ func (s *SimpleDocker) CopyImage(src, dst string) error {
 	return nil
 }
 
+func (s *SimpleDocker) LoadImage(path string) error {
+	s.ctx.Debug(":whale: Loading image:", path)
+	cmd := exec.Command("docker", "load", "-i", path)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed loading image: "+string(out))
+	}
+	s.ctx.Success(":whale: Loaded image:", path)
+	return nil
+}
+
 func (s *SimpleDocker) DownloadImage(opts Options) error {
 	name := opts.ImageName
 	bus.Manager.Publish(bus.EventImagePrePull, opts)

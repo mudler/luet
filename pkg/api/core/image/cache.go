@@ -17,7 +17,6 @@ package image
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 
@@ -156,10 +155,7 @@ func (c *Cache) All(fn func(CacheResult)) {
 	}
 
 	for key := range c.store.Keys(nil) {
-		val, err := c.store.Read(key)
-		if err != nil {
-			panic(fmt.Sprintf("key %s had no value", key))
-		}
+		val, _ := c.store.Read(key)
 		fn(CacheResult{key: key, value: string(val)})
 	}
 }

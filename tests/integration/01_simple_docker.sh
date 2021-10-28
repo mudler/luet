@@ -49,8 +49,10 @@ testRepo() {
     --meta-compression zstd \
     --type docker --push-images --force-push)
 
+    echo "$createres"
+
     createst=$?
-    assertEquals 'create repo successfully' "$createst" "0"
+    assertEquals 'create repo successfully' "0" "$createst"
     assertContains 'contains image push' "$createres" 'Pushed image: quay.io/mocaccinoos/integration-test:z-test-1.0-2'
 }
 

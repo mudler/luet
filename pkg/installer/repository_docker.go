@@ -92,8 +92,8 @@ func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDataba
 		} else {
 			l.context.Info("Generating final image", packageImage,
 				"for package ", a.CompileSpec.GetPackage().HumanReadableString())
-			if opts, err := a.GenerateFinalImage(l.context, packageImage, l.b, true); err != nil {
-				return errors.Wrap(err, "Failed generating metadata tree"+opts.ImageName)
+			if err := a.GenerateFinalImage(l.context, packageImage, l.b, true); err != nil {
+				return errors.Wrap(err, "Failed generating metadata tree"+packageImage)
 			}
 		}
 		if l.imagePush {
@@ -125,8 +125,8 @@ func pushImage(ctx *types.Context, b compiler.CompilerBackend, image string, for
 
 func (d *dockerRepositoryGenerator) pushFileFromArtifact(a *artifact.PackageArtifact, imageTree string) error {
 	d.context.Debug("Generating image", imageTree)
-	if opts, err := a.GenerateFinalImage(d.context, imageTree, d.b, false); err != nil {
-		return errors.Wrap(err, "Failed generating metadata tree "+opts.ImageName)
+	if err := a.GenerateFinalImage(d.context, imageTree, d.b, false); err != nil {
+		return errors.Wrap(err, "Failed generating metadata tree "+imageTree)
 	}
 	if d.imagePush {
 		if err := pushImage(d.context, d.b, imageTree, true); err != nil {
