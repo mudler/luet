@@ -652,7 +652,7 @@ func (r *LuetSystemRepository) AddRepositoryFile(src, fileKey, repositoryRoot st
 		return a, errors.Wrap(err, "Error met while creating package archive")
 	}
 
-	err = a.Hash()
+	err = a.Hash(artifact.FileHashing...)
 	if err != nil {
 		return a, errors.Wrap(err, "Failed generating checksums for tree")
 	}
@@ -784,7 +784,7 @@ func (r *LuetSystemRepository) getRepoFile(c Client, key string) (*artifact.Pack
 	treeFileArtifact.Checksums = treeFile.GetChecksums()
 	treeFileArtifact.CompressionType = treeFile.GetCompressionType()
 
-	err = treeFileArtifact.Verify()
+	err = treeFileArtifact.Verify(artifact.FileHashing...)
 	if err != nil {
 		return nil, errors.Wrap(err, "file integrity check failure")
 	}

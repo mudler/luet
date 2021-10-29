@@ -104,13 +104,13 @@ func NewPackageArtifactFromYaml(data []byte) (*PackageArtifact, error) {
 	return p, err
 }
 
-func (a *PackageArtifact) Hash() error {
-	return a.Checksums.Generate(a)
+func (a *PackageArtifact) Hash(t ...HashImplementation) error {
+	return a.Checksums.Generate(a, t...)
 }
 
-func (a *PackageArtifact) Verify() error {
+func (a *PackageArtifact) Verify(t ...HashImplementation) error {
 	sum := Checksums{}
-	if err := sum.Generate(a); err != nil {
+	if err := sum.Generate(a, t...); err != nil {
 		return err
 	}
 
@@ -123,7 +123,7 @@ func (a *PackageArtifact) Verify() error {
 
 func (a *PackageArtifact) WriteYAML(dst string) error {
 	// First compute checksum of artifact. When we write the yaml we want to write up-to-date informations.
-	err := a.Hash()
+	err := a.Hash(TarHashing...)
 	if err != nil {
 		return errors.Wrap(err, "Failed generating checksums for artifact")
 	}

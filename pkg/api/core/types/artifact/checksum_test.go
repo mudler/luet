@@ -18,6 +18,7 @@ package artifact_test
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	. "github.com/mudler/luet/pkg/api/core/types/artifact"
 
@@ -40,21 +41,56 @@ var _ = Describe("Checksum", func() {
 			Expect(len(definitionsum)).To(Equal(0))
 			Expect(len(definitionsum2)).To(Equal(0))
 
-			err = buildsum.Generate(NewPackageArtifact("../../../../../tests/fixtures/layers/alpine/build.yaml"))
+			err = buildsum.Generate(NewPackageArtifact("../../../../../tests/fixtures/layers/alpine/build.yaml"), SHA256)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = definitionsum.Generate(NewPackageArtifact("../../../../../tests/fixtures/layers/alpine/definition.yaml"))
+			err = definitionsum.Generate(NewPackageArtifact("../../../../../tests/fixtures/layers/alpine/definition.yaml"), SHA256)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = definitionsum2.Generate(NewPackageArtifact("../../../../../tests/fixtures/layers/alpine/definition.yaml"))
+			err = definitionsum2.Generate(NewPackageArtifact("../../../../../tests/fixtures/layers/alpine/definition.yaml"), SHA256)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(len(buildsum)).To(Equal(1))
 			Expect(len(definitionsum)).To(Equal(1))
 			Expect(len(definitionsum2)).To(Equal(1))
 
+			//	Expect(buildsum.List()).To(Equal(""))
+
 			Expect(definitionsum.Compare(buildsum)).To(HaveOccurred())
 			Expect(definitionsum.Compare(definitionsum2)).ToNot(HaveOccurred())
+		})
+
+		It("Compares successfully", func() {
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+			buildsum := Checksums{}
+			definitionsum := Checksums{}
+			definitionsum2 := Checksums{}
+
+			Expect(len(buildsum)).To(Equal(0))
+			Expect(len(definitionsum)).To(Equal(0))
+			Expect(len(definitionsum2)).To(Equal(0))
+
+			art := NewPackageArtifact(filepath.Join(tmpdir, "file.tar"))
+			art.Compress("../../../../../tests/fixtures/layers/alpine/", 1)
+
+			art2 := NewPackageArtifact(filepath.Join(tmpdir, "file2.tar"))
+			art2.Compress("../../../../../tests/fixtures/layers/", 1)
+
+			err = buildsum.Generate(art, MTREE)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = definitionsum.Generate(art2, MTREE)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(buildsum)).To(Equal(1))
+			Expect(len(definitionsum)).To(Equal(1))
+
+			//	Expect(buildsum.List()).To(Equal(""))
+			Expect(definitionsum.Compare(definitionsum)).ToNot(HaveOccurred())
+
+			Expect(definitionsum.Compare(buildsum)).To(HaveOccurred())
 		})
 	})
 

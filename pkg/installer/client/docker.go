@@ -77,15 +77,15 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 	// is done in such cases (see repository.go)
 
 	// We discard checksum, that are checked while during pull and unpack by containerd
-	resultingArtifact.Checksums = artifact.Checksums{}
+	resultingArtifact.Checksums = resultingArtifact.Checksums.Only(artifact.MTREE)
 
 	// Check if file is already in cache
 	fileName, err := c.Cache.Get(resultingArtifact)
 	// Check if file is already in cache
 	if err == nil {
-		resultingArtifact = a
+		resultingArtifact = a.ShallowCopy()
 		resultingArtifact.Path = fileName
-		resultingArtifact.Checksums = artifact.Checksums{}
+		resultingArtifact.Checksums = resultingArtifact.Checksums.Only(artifact.MTREE)
 		c.context.Debug("Use artifact", artifactName, "from cache.")
 	} else {
 
