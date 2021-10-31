@@ -27,6 +27,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 
 	"github.com/docker/docker/pkg/pools"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -227,7 +228,7 @@ func (a *PackageArtifact) GenerateFinalImage(ctx *types.Context, imageName strin
 	}
 	defer os.RemoveAll(tempimage.Name()) // clean up
 
-	if err := image.CreateTarReader(decompressed, tempimage.Name(), imageName); err != nil {
+	if err := image.CreateTarReader(decompressed, tempimage.Name(), imageName, runtime.GOARCH, runtime.GOOS); err != nil {
 		return errors.Wrap(err, "could not create image from tar")
 	}
 

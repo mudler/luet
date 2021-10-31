@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func imageFromTar(imagename string, r io.Reader) (name.Reference, v1.Image, error) {
+func imageFromTar(imagename, architecture, OS string, r io.Reader) (name.Reference, v1.Image, error) {
 	newRef, err := name.ParseReference(imagename)
 	if err != nil {
 		return nil, nil, err
@@ -38,7 +38,20 @@ func imageFromTar(imagename string, r io.Reader) (name.Reference, v1.Image, erro
 		return nil, nil, err
 	}
 
-	img, err := mutate.Append(empty.Image, mutate.Addendum{
+	baseImage := empty.Image
+	cfg, err := baseImage.ConfigFile()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cfg.Architecture = architecture
+	cfg.OS = OS
+
+	baseImage, err = mutate.ConfigFile(baseImage, cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	img, err := mutate.Append(baseImage, mutate.Addendum{
 		Layer: layer,
 		History: v1.History{
 			CreatedBy: "luet",
@@ -53,25 +66,25 @@ func imageFromTar(imagename string, r io.Reader) (name.Reference, v1.Image, erro
 }
 
 // CreateTar a imagetarball from a standard tarball
-func CreateTar(srctar, dstimageTar, imagename string) error {
+func CreateTar(srctar, dstimageTar, imagename, architecture, OS string) error {
 	f, err := os.Open(srctar)
 	if err != nil {
 		return errors.Wrap(err, "Cannot open "+srctar)
 	}
 	defer f.Close()
 
-	return CreateTarReader(f, dstimageTar, imagename)
+	return CreateTarReader(f, dstimageTar, imagename, architecture, OS)
 }
 
 // CreateTarReader a imagetarball from a standard tarball
-func CreateTarReader(r io.Reader, dstimageTar, imagename string) error {
+func CreateTarReader(r io.Reader, dstimageTar, imagename, architecture, OS string) error {
 	dstFile, err := os.Create(dstimageTar)
 	if err != nil {
 		return errors.Wrap(err, "Cannot create "+dstimageTar)
 	}
 	defer dstFile.Close()
 
-	newRef, img, err := imageFromTar(imagename, r)
+	newRef, img, err := imageFromTar(imagename, architecture, OS, r)
 	if err != nil {
 		return err
 	}

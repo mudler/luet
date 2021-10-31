@@ -18,6 +18,7 @@ package image_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 
 	. "github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/api/core/types"
@@ -58,7 +59,7 @@ var _ = Describe("Create", func() {
 			a.Compress(dir, 1)
 
 			// Unfortunately there is no other easy way to test this
-			err = CreateTar(srcTar.Name(), dst.Name(), "testimage")
+			err = CreateTar(srcTar.Name(), dst.Name(), "testimage", runtime.GOARCH, runtime.GOOS)
 			Expect(err).ToNot(HaveOccurred())
 
 			b.LoadImage(dst.Name())
