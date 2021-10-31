@@ -118,11 +118,7 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 		// Initialize a progressbar only if we have one in the current context
 		var pb *pterm.ProgressbarPrinter
 		if c.context.ProgressBar != nil {
-			pb = pterm.DefaultProgressbar.WithTotal(int(resp.Size()))
-			if c.context.AreaPrinter != nil {
-				pb = pb.WithPrintTogether(c.context.AreaPrinter)
-			}
-			pb, _ = pb.WithTitle(filepath.Base(resp.Request.HTTPRequest.URL.RequestURI())).Start()
+			pb, _ = c.context.ProgressBar.WithTotal(int(resp.Size())).WithTitle(filepath.Base(resp.Request.HTTPRequest.URL.RequestURI())).Start()
 		}
 		// start download loop
 		t := time.NewTicker(500 * time.Millisecond)

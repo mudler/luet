@@ -576,19 +576,19 @@ func (l *LuetInstaller) download(syncedRepos Repositories, toDownload map[string
 	// Check if the terminal is big enough to display a progress bar
 	// https://github.com/pterm/pterm/blob/4c725e56bfd9eb38e1c7b9dec187b50b93baa8bd/progressbar_printer.go#L190
 	w, _, err := ctx.GetTerminalSize()
+
+	var pb *pterm.ProgressbarPrinter
 	if ctx.IsTerminal && err == nil && w > 100 {
 		area, _ := pterm.DefaultArea.Start()
-		p, _ := pterm.DefaultProgressbar.WithPrintTogether(area).WithTotal(len(toDownload)).WithTitle("Downloading packages").Start()
-
-		ctx.AreaPrinter = area
-		ctx.ProgressBar = p
+		ctx.ProgressBar = pterm.DefaultProgressbar.WithPrintTogether(area).WithTotal(len(toDownload)).WithTitle("Downloading packages")
+		pb, _ = ctx.ProgressBar.Start()
 		defer area.Stop()
 	}
 
 	// Download
 	for i := 0; i < l.Options.Concurrency; i++ {
 		wg.Add(1)
-		go l.downloadWorker(i, wg, all, ctx)
+		go l.downloadWorker(i, wg, pb, all, ctx)
 	}
 	for _, c := range toDownload {
 		all <- c
@@ -920,7 +920,7 @@ func (l *LuetInstaller) installPackage(m ArtifactMatch, s *System) error {
 	return s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: m.Package.GetFingerPrint(), Files: files})
 }
 
-func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, c <-chan ArtifactMatch, ctx *types.Context) error {
+func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, pb *pterm.ProgressbarPrinter, c <-chan ArtifactMatch, ctx *types.Context) error {
 	defer wg.Done()
 
 	for p := range c {
@@ -932,8 +932,8 @@ func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, c <-chan Artif
 		} else {
 			l.Options.Context.Success(":package: Package ", p.Package.HumanReadableString(), "downloaded")
 		}
-		if ctx.ProgressBar != nil {
-			ctx.ProgressBar.Increment()
+		if pb != nil {
+			pb.Increment()
 		}
 	}
 

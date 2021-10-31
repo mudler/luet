@@ -52,7 +52,6 @@ type Context struct {
 	s           *pterm.SpinnerPrinter
 	spinnerLock *sync.Mutex
 	z           *zap.Logger
-	AreaPrinter *pterm.AreaPrinter
 	ProgressBar *pterm.ProgressbarPrinter
 }
 
