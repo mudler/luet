@@ -1,0 +1,18 @@
+image: "alpine"
+unpack: true
+includes:
+  - /foo
+  - /foo/bar
+  - /foo/bar/suid
+  - /foo/bar/sticky
+  - /foo/bar/sgid
+steps:
+- mkdir -p /foo/bar
+- touch /foo/bar/suid
+- touch /foo/bar/sgid
+- touch /foo/bar/sticky
+- chown 100:100 /foo/bar
+- chown 101:101 /foo/bar/suid
+- chmod u+s /foo/bar/suid
+- chmod u-s,g+s /foo/bar/sgid
+- chmod +t /foo/bar/sticky

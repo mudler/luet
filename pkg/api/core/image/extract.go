@@ -19,6 +19,7 @@ import (
 	"archive/tar"
 	"context"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -208,6 +209,7 @@ func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, keep
 		PAX, Xattrs map[string]string
 		Uid, Gid    int
 		Name        string
+		FileMode    fs.FileMode
 	}
 
 	permstore, err := ctx.Config.System.TempDir("permstore")
@@ -222,8 +224,9 @@ func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, keep
 			perms.SetValue(h.Name, permData{
 				PAX: h.PAXRecords,
 				Uid: h.Uid, Gid: h.Gid,
-				Xattrs: h.Xattrs,
-				Name:   h.Name,
+				Xattrs:   h.Xattrs,
+				Name:     h.Name,
+				FileMode: h.FileInfo().Mode(),
 			})
 			//perms = append(perms, })
 		}
@@ -248,6 +251,10 @@ func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, keep
 			if _, err := os.Lstat(ff); err == nil {
 				if err := os.Lchown(ff, p.Uid, p.Gid); err != nil {
 					ctx.Warning(err, "failed chowning file")
+				}
+				ctx.Debug("Set", p.Name, p.FileMode)
+				if err := os.Chmod(ff, p.FileMode); err != nil {
+					ctx.Warning(err, "failed chmod file")
 				}
 			}
 			for _, attrs := range []map[string]string{p.Xattrs, p.PAX} {
