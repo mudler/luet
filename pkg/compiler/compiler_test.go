@@ -16,10 +16,15 @@
 package compiler_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
+	helpers "github.com/mudler/luet/tests/helpers"
+
+	"github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	. "github.com/mudler/luet/pkg/compiler"
@@ -852,6 +857,67 @@ var _ = Describe("Compiler", func() {
 			Expect(artifact.NewPackageArtifact(filepath.Join(tmpdir, "runtime-layer-0.1.package.tar")).Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 			Expect(fileHelper.Exists(spec.Rel("bin/busybox"))).To(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("var"))).ToNot(BeTrue())
+		})
+
+		It("Pushes final images along", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			randString := strings.ToLower(helpers.String(10))
+			imageName := fmt.Sprintf("ttl.sh/%s", randString)
+			b := sd.NewSimpleDockerBackend(ctx)
+
+			err := generalRecipe.Load("../../tests/fixtures/packagelayers")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
+
+			compiler := NewLuetCompiler(b, generalRecipe.GetDatabase(),
+				options.EnablePushFinalImages, options.ForcePushFinalImages, options.WithFinalRepository(imageName))
+
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "runtime", Category: "layer", Version: "0.1"})
+			Expect(err).ToNot(HaveOccurred())
+			spec2, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "build", Category: "layer", Version: "0.1"})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			spec.SetOutputPath(tmpdir)
+
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(2))
+			//Expect(len(artifacts[0].Dependencies)).To(Equal(1))
+
+			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", imageName, artifacts[0].Runtime.ImageID()))).To(BeTrue())
+			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", imageName, artifacts[0].Runtime.GetMetadataFilePath()))).To(BeTrue())
+
+			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", imageName, artifacts[1].Runtime.ImageID()))).To(BeTrue())
+			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", imageName, artifacts[1].Runtime.GetMetadataFilePath()))).To(BeTrue())
+
+			img, err := b.ImageReference(fmt.Sprintf("%s:%s", imageName, artifacts[0].Runtime.ImageID()), true)
+			Expect(err).ToNot(HaveOccurred())
+			_, path, err := image.Extract(ctx, img, false, nil)
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(path) // clean up
+
+			Expect(fileHelper.Exists(filepath.Join(path, "bin/busybox"))).To(BeTrue())
+
+			img, err = b.ImageReference(fmt.Sprintf("%s:%s", imageName, artifacts[1].Runtime.GetMetadataFilePath()), true)
+			Expect(err).ToNot(HaveOccurred())
+			_, path, err = image.Extract(ctx, img, false, nil)
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(path) // clean up
+
+			meta := filepath.Join(path, artifacts[1].Runtime.GetMetadataFilePath())
+			Expect(fileHelper.Exists(meta)).To(BeTrue())
+
+			d, err := ioutil.ReadFile(meta)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(string(d)).To(ContainSubstring(artifacts[1].CompileSpec.GetPackage().GetName()))
 		})
 	})
 

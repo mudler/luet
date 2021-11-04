@@ -47,6 +47,12 @@ type Compiler struct {
 	// TemplatesFolder. should default to tree/templates
 	TemplatesFolder []string
 
+	// Tells wether to push final container images after building
+	PushFinalImages      bool
+	PushFinalImagesForce bool
+	// Image repository to push to
+	PushFinalImagesRepository string
+
 	Context *types.Context
 }
 
@@ -85,6 +91,25 @@ func WithOptions(opt *Compiler) func(cfg *Compiler) error {
 	}
 }
 
+// WithFinalRepository Sets the final repository where to push
+// images of built artifacts
+func WithFinalRepository(r string) func(cfg *Compiler) error {
+	return func(cfg *Compiler) error {
+		cfg.PushFinalImagesRepository = r
+		return nil
+	}
+}
+
+func EnablePushFinalImages(cfg *Compiler) error {
+	cfg.PushFinalImages = true
+	return nil
+}
+
+func ForcePushFinalImages(cfg *Compiler) error {
+	cfg.PushFinalImagesForce = true
+	return nil
+}
+
 func WithBackendType(r string) func(cfg *Compiler) error {
 	return func(cfg *Compiler) error {
 		cfg.BackendType = r
@@ -113,6 +138,8 @@ func WithPullRepositories(r []string) func(cfg *Compiler) error {
 	}
 }
 
+// WithPushRepository Sets the image reference where to push
+// cache images
 func WithPushRepository(r string) func(cfg *Compiler) error {
 	return func(cfg *Compiler) error {
 		if len(cfg.PullImageRepository) == 0 {

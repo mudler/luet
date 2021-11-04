@@ -488,12 +488,14 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 
 		a.CompileSpec = p
 		a.CompileSpec.GetPackage().SetBuildTimestamp(time.Now().String())
-
 		err = a.WriteYAML(p.GetOutputPath())
 		if err != nil {
 			return a, errors.Wrap(err, "Failed while writing metadata file")
 		}
 		cs.Options.Context.Success(pkgTag, "   :white_check_mark: done (empty virtual package)")
+		if cs.Options.PushFinalImages {
+			cs.pushFinalArtifact(a, p, keepPermissions)
+		}
 		return a, nil
 	}
 
@@ -523,9 +525,51 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 	if err != nil {
 		return a, errors.Wrap(err, "Failed while writing metadata file")
 	}
-	cs.Options.Context.Success(pkgTag, "   :white_check_mark: Done")
+	cs.Options.Context.Success(pkgTag, "   :white_check_mark: Done building")
+
+	if cs.Options.PushFinalImages {
+		cs.pushFinalArtifact(a, p, keepPermissions)
+	}
 
 	return a, nil
+}
+
+// TODO: A small readaptation of repository_docker.go pushImageFromArtifact()
+//       Move this to a common place
+func (cs *LuetCompiler) pushFinalArtifact(a *artifact.PackageArtifact, p *compilerspec.LuetCompilationSpec, keepPermissions bool) error {
+	cs.Options.Context.Info("Pushing final image for", a.CompileSpec.Package.HumanReadableString())
+	imageID := fmt.Sprintf("%s:%s", cs.Options.PushFinalImagesRepository, a.CompileSpec.Package.ImageID())
+
+	// First push the package image
+	if !cs.Backend.ImageAvailable(imageID) || cs.Options.PushFinalImagesForce {
+		cs.Options.Context.Info("Generating and pushing final image for", a.CompileSpec.Package.HumanReadableString(), "as", imageID)
+
+		if err := a.GenerateFinalImage(cs.Options.Context, imageID, cs.GetBackend(), true); err != nil {
+			return errors.Wrap(err, "while creating final image")
+		}
+		if err := cs.Backend.Push(backend.Options{ImageName: imageID}); err != nil {
+			return errors.Wrapf(err, "Could not push image: %s", imageID)
+		}
+	}
+
+	// Then the image ID
+	metadataImageID := fmt.Sprintf("%s:%s", cs.Options.PushFinalImagesRepository, a.CompileSpec.GetPackage().GetMetadataFilePath())
+	if !cs.Backend.ImageAvailable(metadataImageID) || cs.Options.PushFinalImagesForce {
+		cs.Options.Context.Info("Generating metadata image for", a.CompileSpec.Package.HumanReadableString(), metadataImageID)
+
+		a := artifact.NewPackageArtifact(filepath.Join(p.GetOutputPath(), a.CompileSpec.GetPackage().GetMetadataFilePath()))
+		metadataArchive, err := artifact.CreateArtifactForFile(cs.Options.Context, a.Path)
+		if err != nil {
+			return errors.Wrap(err, "failed generating checksums for tree")
+		}
+		if err := metadataArchive.GenerateFinalImage(cs.Options.Context, metadataImageID, cs.Backend, keepPermissions); err != nil {
+			return errors.Wrap(err, "Failed generating metadata tree "+metadataImageID)
+		}
+		if err = cs.Backend.Push(backend.Options{ImageName: metadataImageID}); err != nil {
+			return errors.Wrapf(err, "Could not push image: %s", metadataImageID)
+		}
+	}
+	return nil
 }
 
 func (cs *LuetCompiler) waitForImages(images []string) {

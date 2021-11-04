@@ -110,6 +110,9 @@ Build packages specifying multiple definition trees:
 		onlyTarget, _ := cmd.Flags().GetBool("only-target-package")
 		full, _ := cmd.Flags().GetBool("full")
 		rebuild, _ := cmd.Flags().GetBool("rebuild")
+		pushFinalImages, _ := cmd.Flags().GetBool("push-final-images")
+		pushFinalImagesRepository, _ := cmd.Flags().GetString("push-final-images-repository")
+		pushFinalImagesForce, _ := cmd.Flags().GetBool("push-final-images-force")
 
 		var results Results
 		backendArgs := viper.GetStringSlice("backend-args")
@@ -159,8 +162,7 @@ Build packages specifying multiple definition trees:
 
 		opts.Options = solver.Options{Type: solver.SingleCoreSimple, Concurrency: concurrency}
 
-		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(),
-			options.NoDeps(nodeps),
+		compileropts := []options.Option{options.NoDeps(nodeps),
 			options.WithBackendType(backendType),
 			options.PushImages(push),
 			options.WithBuildValues(values),
@@ -177,8 +179,21 @@ Build packages specifying multiple definition trees:
 			options.WithContext(util.DefaultContext),
 			options.BackendArgs(backendArgs),
 			options.Concurrency(concurrency),
-			options.WithCompressionType(compression.Implementation(compressionType)),
-		)
+			options.WithCompressionType(compression.Implementation(compressionType))}
+
+		if pushFinalImages {
+			compileropts = append(compileropts, options.EnablePushFinalImages)
+			if pushFinalImagesForce {
+				compileropts = append(compileropts, options.ForcePushFinalImages)
+			}
+			if pushFinalImagesRepository != "" {
+				compileropts = append(compileropts, options.WithFinalRepository(pushFinalImagesRepository))
+			} else if imageRepository != "" {
+				compileropts = append(compileropts, options.WithFinalRepository(imageRepository))
+			}
+		}
+
+		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), compileropts...)
 
 		if full {
 			specs, err := luetCompiler.FromDatabase(generalRecipe.GetDatabase(), true, dst)
@@ -302,6 +317,11 @@ func init() {
 	buildCmd.Flags().Bool("privileged", true, "Privileged (Keep permissions)")
 	buildCmd.Flags().Bool("revdeps", false, "Build with revdeps")
 	buildCmd.Flags().Bool("all", false, "Build all specfiles in the tree")
+
+	buildCmd.Flags().Bool("push-final-images", false, "Push final images while building")
+	buildCmd.Flags().Bool("push-final-images-force", false, "Override existing images")
+	buildCmd.Flags().String("push-final-images-repository", "", "Repository where to push final images to")
+
 	buildCmd.Flags().Bool("full", false, "Build all packages (optimized)")
 	buildCmd.Flags().StringSlice("values", []string{}, "Build values file to interpolate with each package")
 	buildCmd.Flags().StringSliceP("backend-args", "a", []string{}, "Backend args")
