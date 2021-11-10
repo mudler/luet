@@ -204,7 +204,6 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 			d.context,
 			img,
 			repoTemp,
-			d.context.Config.GetGeneral().SameOwner,
 			nil,
 		)
 		if err != nil {

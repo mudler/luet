@@ -74,7 +74,6 @@ var _ = Describe("Delta", func() {
 				_, tmpdir, err := Extract(
 					ctx,
 					img2,
-					true,
 					f,
 				)
 				Expect(err).ToNot(HaveOccurred())
@@ -94,7 +93,6 @@ var _ = Describe("Delta", func() {
 				_, tmpdir, err := Extract(
 					ctx,
 					img2,
-					true,
 					f,
 				)
 				Expect(err).ToNot(HaveOccurred())
@@ -109,7 +107,6 @@ var _ = Describe("Delta", func() {
 				_, tmpdir, err := Extract(
 					ctx,
 					img2,
-					true,
 					f,
 				)
 				Expect(err).ToNot(HaveOccurred())
@@ -124,7 +121,6 @@ var _ = Describe("Delta", func() {
 				_, tmpdir, err := Extract(
 					ctx,
 					img2,
-					true,
 					f,
 				)
 				Expect(err).ToNot(HaveOccurred())

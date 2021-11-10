@@ -899,7 +899,7 @@ var _ = Describe("Compiler", func() {
 
 			img, err := b.ImageReference(fmt.Sprintf("%s:%s", imageName, artifacts[0].Runtime.ImageID()), true)
 			Expect(err).ToNot(HaveOccurred())
-			_, path, err := image.Extract(ctx, img, false, nil)
+			_, path, err := image.Extract(ctx, img, nil)
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(path) // clean up
 
@@ -907,7 +907,7 @@ var _ = Describe("Compiler", func() {
 
 			img, err = b.ImageReference(fmt.Sprintf("%s:%s", imageName, artifacts[1].Runtime.GetMetadataFilePath()), true)
 			Expect(err).ToNot(HaveOccurred())
-			_, path, err = image.Extract(ctx, img, false, nil)
+			_, path, err = image.Extract(ctx, img, nil)
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(path) // clean up
 

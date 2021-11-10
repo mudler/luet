@@ -70,8 +70,8 @@ type PackageArtifact struct {
 	Runtime           *pkg.DefaultPackage               `json:"runtime,omitempty"`
 }
 
-func ImageToArtifact(ctx *types.Context, img v1.Image, t compression.Implementation, output string, keepPerms bool, filter func(h *tar.Header) (bool, error)) (*PackageArtifact, error) {
-	_, tmpdiffs, err := image.Extract(ctx, img, keepPerms, filter)
+func ImageToArtifact(ctx *types.Context, img v1.Image, t compression.Implementation, output string, filter func(h *tar.Header) (bool, error)) (*PackageArtifact, error) {
+	_, tmpdiffs, err := image.Extract(ctx, img, filter)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
 	}
@@ -570,7 +570,7 @@ func (a *PackageArtifact) Unpack(ctx *types.Context, dst string, keepPerms bool)
 	// 	//	tarModifier.Modifier()
 	// 	return true, nil
 	// },
-	_, _, err = image.ExtractReader(ctx, replacerArchive, dst, ctx.Config.GetGeneral().SameOwner, nil)
+	_, _, err = image.ExtractReader(ctx, replacerArchive, dst, nil)
 	return err
 }
 

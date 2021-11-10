@@ -19,14 +19,11 @@ import (
 	"archive/tar"
 	"context"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	containerdarchive "github.com/containerd/containerd/archive"
-	"github.com/docker/docker/pkg/system"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/mudler/luet/pkg/api/core/types"
@@ -196,7 +193,7 @@ func ExtractFiles(
 // ExtractReader perform the extracting action over the io.ReadCloser
 // it extracts the files over output. Accepts a filter as an option
 // and additional containerd Options
-func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, keepPerms bool, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
+func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
 	defer reader.Close()
 
 	// If no filter is specified, grab all.
@@ -204,36 +201,7 @@ func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, keep
 		filter = func(h *tar.Header) (bool, error) { return true, nil }
 	}
 
-	// Keep records of permissions as we walk the tar
-	type permData struct {
-		PAX, Xattrs map[string]string
-		Uid, Gid    int
-		Name        string
-		FileMode    fs.FileMode
-	}
-
-	permstore, err := ctx.Config.System.TempDir("permstore")
-	if err != nil {
-		return 0, "", err
-	}
-	perms := NewCache(permstore, 50*1024*1024, 10000)
-
-	f := func(h *tar.Header) (bool, error) {
-		res, err := filter(h)
-		if res {
-			perms.SetValue(h.Name, permData{
-				PAX: h.PAXRecords,
-				Uid: h.Uid, Gid: h.Gid,
-				Xattrs:   h.Xattrs,
-				Name:     h.Name,
-				FileMode: h.FileInfo().Mode(),
-			})
-			//perms = append(perms, })
-		}
-		return res, err
-	}
-
-	opts = append(opts, containerdarchive.WithFilter(f))
+	opts = append(opts, containerdarchive.WithFilter(filter))
 
 	// Handle the extraction
 	c, err := containerdarchive.Apply(context.Background(), output, reader, opts...)
@@ -241,46 +209,19 @@ func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, keep
 		return 0, "", err
 	}
 
-	// Reconstruct permissions
-	if keepPerms {
-		ctx.Debug("Reconstructing permissions")
-		perms.All(func(cr CacheResult) {
-			p := &permData{}
-			cr.Unmarshal(p)
-			ff := filepath.Join(output, p.Name)
-			if _, err := os.Lstat(ff); err == nil {
-				if err := os.Lchown(ff, p.Uid, p.Gid); err != nil {
-					ctx.Warning(err, "failed chowning file")
-				}
-				ctx.Debug("Set", p.Name, p.FileMode)
-				if err := os.Chmod(ff, p.FileMode); err != nil {
-					ctx.Warning(err, "failed chmod file")
-				}
-			}
-			for _, attrs := range []map[string]string{p.Xattrs, p.PAX} {
-				for k, attr := range attrs {
-					if err := system.Lsetxattr(ff, k, []byte(attr), 0); err != nil {
-						if errors.Is(err, syscall.ENOTSUP) {
-							ctx.Debug("ignored xattr %s in archive", ff)
-						}
-					}
-				}
-			}
-		})
-	}
 	return c, output, nil
 }
 
 // Extract is just syntax sugar around ExtractReader. It extracts an image into a dir
-func Extract(ctx *types.Context, img v1.Image, keepPerms bool, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
+func Extract(ctx *types.Context, img v1.Image, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
 	tmpdiffs, err := ctx.Config.GetSystem().TempDir("extraction")
 	if err != nil {
 		return 0, "", errors.Wrap(err, "Error met while creating tempdir for rootfs")
 	}
-	return ExtractReader(ctx, mutate.Extract(img), tmpdiffs, keepPerms, filter, opts...)
+	return ExtractReader(ctx, mutate.Extract(img), tmpdiffs, filter, opts...)
 }
 
 // ExtractTo is just syntax sugar around ExtractReader
-func ExtractTo(ctx *types.Context, img v1.Image, output string, keepPerms bool, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
-	return ExtractReader(ctx, mutate.Extract(img), output, keepPerms, filter, opts...)
+func ExtractTo(ctx *types.Context, img v1.Image, output string, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
+	return ExtractReader(ctx, mutate.Extract(img), output, filter, opts...)
 }

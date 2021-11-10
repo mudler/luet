@@ -174,7 +174,6 @@ func DownloadAndExtractDockerImage(ctx *luettypes.Context, image, dest string, a
 		ctx,
 		img,
 		dest,
-		true,
 		nil,
 	)
 	if err != nil {

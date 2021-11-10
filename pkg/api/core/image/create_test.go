@@ -47,7 +47,7 @@ var _ = Describe("Create", func() {
 			img, err := b.ImageReference("alpine", false)
 			Expect(err).ToNot(HaveOccurred())
 
-			_, dir, err := Extract(ctx, img, false, nil)
+			_, dir, err := Extract(ctx, img, nil)
 			Expect(err).ToNot(HaveOccurred())
 
 			defer os.RemoveAll(dir)
@@ -69,7 +69,7 @@ var _ = Describe("Create", func() {
 			img, err = b.ImageReference("testimage", false)
 			Expect(err).ToNot(HaveOccurred())
 
-			_, dir, err = Extract(ctx, img, false, nil)
+			_, dir, err = Extract(ctx, img, nil)
 			Expect(err).ToNot(HaveOccurred())
 
 			defer os.RemoveAll(dir)
