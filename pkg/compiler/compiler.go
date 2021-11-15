@@ -492,7 +492,9 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 		}
 		cs.Options.Context.Success(pkgTag, "   :white_check_mark: done (empty virtual package)")
 		if cs.Options.PushFinalImages {
-			cs.pushFinalArtifact(a, p, keepPermissions)
+			if err := cs.pushFinalArtifact(a, p, keepPermissions); err != nil {
+				return nil, err
+			}
 		}
 		return a, nil
 	}
@@ -526,7 +528,9 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 	cs.Options.Context.Success(pkgTag, "   :white_check_mark: Done building")
 
 	if cs.Options.PushFinalImages {
-		cs.pushFinalArtifact(a, p, keepPermissions)
+		if err := cs.pushFinalArtifact(a, p, keepPermissions); err != nil {
+			return nil, err
+		}
 	}
 
 	return a, nil
@@ -551,7 +555,7 @@ func (cs *LuetCompiler) pushFinalArtifact(a *artifact.PackageArtifact, p *compil
 	}
 
 	// Then the image ID
-	metadataImageID := fmt.Sprintf("%s:%s", cs.Options.PushFinalImagesRepository, a.CompileSpec.GetPackage().GetMetadataFilePath())
+	metadataImageID := fmt.Sprintf("%s:%s", cs.Options.PushFinalImagesRepository, helpers.SanitizeImageString(a.CompileSpec.GetPackage().GetMetadataFilePath()))
 	if !cs.Backend.ImageAvailable(metadataImageID) || cs.Options.PushFinalImagesForce {
 		cs.Options.Context.Info("Generating metadata image for", a.CompileSpec.Package.HumanReadableString(), metadataImageID)
 
