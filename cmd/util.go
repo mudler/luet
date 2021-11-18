@@ -19,15 +19,80 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/go-units"
+	"github.com/mudler/luet/pkg/api/core/image"
+	luettypes "github.com/mudler/luet/pkg/api/core/types"
+	fileHelper "github.com/mudler/luet/pkg/helpers/file"
+	"github.com/pkg/errors"
 
+	containerdCompression "github.com/containerd/containerd/archive/compression"
 	"github.com/mudler/luet/cmd/util"
 	"github.com/mudler/luet/pkg/helpers/docker"
 
 	"github.com/spf13/cobra"
 )
+
+func pack(ctx *luettypes.Context, p, dst, imageName, arch, OS string) error {
+	archiveFile, err := os.Open(p)
+	if err != nil {
+		return errors.Wrap(err, "Cannot open "+p)
+	}
+	defer archiveFile.Close()
+
+	decompressed, err := containerdCompression.DecompressStream(archiveFile)
+	if err != nil {
+		return errors.Wrap(err, "Cannot open "+p)
+	}
+
+	tempimage, err := ctx.Config.GetSystem().TempFile("tempimage")
+	if err != nil {
+		return errors.Wrap(err, "error met while creating tempdir for "+p)
+	}
+	defer os.RemoveAll(tempimage.Name()) // clean up
+
+	if err := image.CreateTarReader(decompressed, tempimage.Name(), imageName, arch, OS); err != nil {
+		return errors.Wrap(err, "could not create image from tar")
+	}
+
+	return fileHelper.CopyFile(tempimage.Name(), dst)
+}
+
+func NewPackCommand() *cobra.Command {
+
+	c := &cobra.Command{
+		Use:   "pack image src.tar dst.tar",
+		Short: "Pack a standard tar archive as a container image",
+		Long: `Pack creates a tar which can be loaded as an image from a standard flat tar archive, for e.g. with docker load. 
+It doesn't need the docker daemon to run, and allows to override default os/arch:
+		
+	luet util pack --os arm64 image:tag src.tar dst.tar
+`,
+		Args: cobra.MinimumNArgs(3),
+		Run: func(cmd *cobra.Command, args []string) {
+
+			image := args[0]
+			src := args[1]
+			dst := args[2]
+
+			arch, _ := cmd.Flags().GetString("arch")
+			os, _ := cmd.Flags().GetString("os")
+
+			err := pack(util.DefaultContext, src, dst, image, arch, os)
+			if err != nil {
+				util.DefaultContext.Fatal(err.Error())
+			}
+			util.DefaultContext.Info("Image packed as", image)
+		},
+	}
+
+	c.Flags().String("arch", runtime.GOARCH, "Image architecture")
+	c.Flags().String("os", runtime.GOOS, "Image OS")
+
+	return c
+}
 
 func NewUnpackCommand() *cobra.Command {
 
@@ -102,5 +167,6 @@ func init() {
 
 	utilGroup.AddCommand(
 		NewUnpackCommand(),
+		NewPackCommand(),
 	)
 }
