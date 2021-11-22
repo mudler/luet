@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 
+	containerdCompression "github.com/containerd/containerd/archive/compression"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -27,13 +28,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-func imageFromTar(imagename, architecture, OS string, r io.Reader) (name.Reference, v1.Image, error) {
+func imageFromTar(imagename, architecture, OS string, opener func() (io.ReadCloser, error)) (name.Reference, v1.Image, error) {
 	newRef, err := name.ParseReference(imagename)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	layer, err := tarball.LayerFromReader(r)
+	layer, err := tarball.LayerFromOpener(opener)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -67,28 +68,30 @@ func imageFromTar(imagename, architecture, OS string, r io.Reader) (name.Referen
 
 // CreateTar a imagetarball from a standard tarball
 func CreateTar(srctar, dstimageTar, imagename, architecture, OS string) error {
-	f, err := os.Open(srctar)
-	if err != nil {
-		return errors.Wrap(err, "Cannot open "+srctar)
-	}
-	defer f.Close()
 
-	return CreateTarReader(f, dstimageTar, imagename, architecture, OS)
-}
-
-// CreateTarReader a imagetarball from a standard tarball
-func CreateTarReader(r io.Reader, dstimageTar, imagename, architecture, OS string) error {
 	dstFile, err := os.Create(dstimageTar)
 	if err != nil {
 		return errors.Wrap(err, "Cannot create "+dstimageTar)
 	}
 	defer dstFile.Close()
 
-	newRef, img, err := imageFromTar(imagename, architecture, OS, r)
+	newRef, img, err := imageFromTar(imagename, architecture, OS, func() (io.ReadCloser, error) {
+		f, err := os.Open(srctar)
+		if err != nil {
+			return nil, errors.Wrap(err, "Cannot open "+srctar)
+		}
+		decompressed, err := containerdCompression.DecompressStream(f)
+		if err != nil {
+			return nil, errors.Wrap(err, "Cannot open "+srctar)
+		}
+
+		return decompressed, nil
+	})
 	if err != nil {
 		return err
 	}
 
 	// NOTE: We might also stream that back to the daemon with daemon.Write(tag, img)
 	return tarball.Write(newRef, img, dstFile)
+
 }

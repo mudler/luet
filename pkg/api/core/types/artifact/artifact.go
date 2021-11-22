@@ -211,16 +211,6 @@ type ImageBuilder interface {
 
 // GenerateFinalImage takes an artifact and builds a Docker image with its content
 func (a *PackageArtifact) GenerateFinalImage(ctx *types.Context, imageName string, b ImageBuilder, keepPerms bool) error {
-	archiveFile, err := os.Open(a.Path)
-	if err != nil {
-		return errors.Wrap(err, "Cannot open "+a.Path)
-	}
-	defer archiveFile.Close()
-
-	decompressed, err := containerdCompression.DecompressStream(archiveFile)
-	if err != nil {
-		return errors.Wrap(err, "Cannot open "+a.Path)
-	}
 
 	tempimage, err := ctx.Config.GetSystem().TempFile("tempimage")
 	if err != nil {
@@ -228,7 +218,7 @@ func (a *PackageArtifact) GenerateFinalImage(ctx *types.Context, imageName strin
 	}
 	defer os.RemoveAll(tempimage.Name()) // clean up
 
-	if err := image.CreateTarReader(decompressed, tempimage.Name(), imageName, runtime.GOARCH, runtime.GOOS); err != nil {
+	if err := image.CreateTar(a.Path, tempimage.Name(), imageName, runtime.GOARCH, runtime.GOOS); err != nil {
 		return errors.Wrap(err, "could not create image from tar")
 	}
 

@@ -28,7 +28,6 @@ import (
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/pkg/errors"
 
-	containerdCompression "github.com/containerd/containerd/archive/compression"
 	"github.com/mudler/luet/cmd/util"
 	"github.com/mudler/luet/pkg/helpers/docker"
 
@@ -36,16 +35,6 @@ import (
 )
 
 func pack(ctx *luettypes.Context, p, dst, imageName, arch, OS string) error {
-	archiveFile, err := os.Open(p)
-	if err != nil {
-		return errors.Wrap(err, "Cannot open "+p)
-	}
-	defer archiveFile.Close()
-
-	decompressed, err := containerdCompression.DecompressStream(archiveFile)
-	if err != nil {
-		return errors.Wrap(err, "Cannot open "+p)
-	}
 
 	tempimage, err := ctx.Config.GetSystem().TempFile("tempimage")
 	if err != nil {
@@ -53,7 +42,7 @@ func pack(ctx *luettypes.Context, p, dst, imageName, arch, OS string) error {
 	}
 	defer os.RemoveAll(tempimage.Name()) // clean up
 
-	if err := image.CreateTarReader(decompressed, tempimage.Name(), imageName, arch, OS); err != nil {
+	if err := image.CreateTar(p, tempimage.Name(), imageName, arch, OS); err != nil {
 		return errors.Wrap(err, "could not create image from tar")
 	}
 
