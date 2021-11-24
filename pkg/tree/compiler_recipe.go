@@ -174,6 +174,7 @@ func (r *CompilerRecipe) Load(path string) error {
 								filepath.Dir(currentpath))
 					}
 					pack.Requires(packbuild.GetRequires())
+
 					pack.Conflicts(packbuild.GetConflicts())
 				}
 

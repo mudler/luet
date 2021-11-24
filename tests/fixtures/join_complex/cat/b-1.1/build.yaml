@@ -6,6 +6,7 @@ requires:
 prelude:
   - echo foo > /test
   - echo bar > /test2
+  - cp -rf generate.sh /usr/bin/
 steps:
   - echo artifact5 > /newc
   - echo artifact6 > /newnewc

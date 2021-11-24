@@ -7,3 +7,7 @@ requires:
     version: ">=0"
 
 requires_final_images: true
+
+steps:
+- | 
+   /bin/sh -c "if [ -e /usr/bin/generate.sh ]; then ls -liah /usr/bin && exit 1; fi"

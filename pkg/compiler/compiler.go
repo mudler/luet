@@ -239,19 +239,6 @@ func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *compi
 		return nil, err
 	}
 
-	// artifact.ImageToArtifact(
-	// 	cs.Options.Context,
-	// 	img,
-	// 	cs.Options.CompressionType,
-	// 	p.Rel(p.GetPackage().GetFingerPrint()+".package.tar"),
-	// 	image.ExtractFiles(
-	// 		cs.Options.Context,
-	// 		strings.TrimLeft(p.GetPackageDir(), "/"),
-	// 		p.GetIncludes(),
-	// 		p.GetExcludes(),
-	// 	),
-	// )
-	// TODO: Trim includes/excludes from "/" ?
 	_, rootfs, err := image.Extract(
 		cs.Options.Context,
 		img,
@@ -1090,7 +1077,31 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 
 	ht := NewHashTree(cs.Database)
 
-	packageHashTree, err := ht.Query(cs, p)
+	// When computing the hash tree, we need to take into consideration
+	// that packages that require final images have to be seen as packages without deps
+	// This is because we don't really want to calculate the deptree of them as
+	// as it is handled already when we are creating the images in resolveFinalImages().
+	c := *cs
+	copy := &c
+	memDB := pkg.NewInMemoryDatabase(false)
+	// Create a copy to avoid races
+	dbCopy := pkg.NewInMemoryDatabase(false)
+	err := cs.Database.Clone(dbCopy)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed cloning db")
+	}
+	for _, p := range dbCopy.World() {
+		copy := p.Clone()
+		spec, _ := cs.FromPackage(p)
+		if spec.RequiresFinalImages {
+			copy.Requires([]*pkg.DefaultPackage{})
+		}
+
+		memDB.CreatePackage(copy)
+	}
+	copy.Database = memDB
+
+	packageHashTree, err := ht.Query(copy, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed querying hashtree")
 	}
@@ -1148,6 +1159,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 	buildTarget := !cs.Options.OnlyDeps
 
 	if buildDeps {
+
 		cs.Options.Context.Info(":deciduous_tree: Build dependencies for " + p.GetPackage().HumanReadableString())
 		for _, assertion := range dependencies { //highly dependent on the order
 			depsN++
@@ -1163,6 +1175,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 				return nil, errors.Wrap(err, "Error while generating compilespec for "+assertion.Package.GetName())
 			}
 			compileSpec.BuildOptions.PullImageRepository = append(compileSpec.BuildOptions.PullImageRepository, p.BuildOptions.PullImageRepository...)
+
 			cs.Options.Context.Debug("PullImage repos:", compileSpec.BuildOptions.PullImageRepository)
 
 			compileSpec.SetOutputPath(p.GetOutputPath())
