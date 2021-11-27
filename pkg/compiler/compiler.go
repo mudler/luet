@@ -1092,7 +1092,10 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 	}
 	for _, p := range dbCopy.World() {
 		copy := p.Clone()
-		spec, _ := cs.FromPackage(p)
+		spec, err := cs.FromPackage(p)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed getting compile spec for package "+p.HumanReadableString())
+		}
 		if spec.RequiresFinalImages {
 			copy.Requires([]*pkg.DefaultPackage{})
 		}
