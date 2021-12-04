@@ -48,6 +48,7 @@ type Context struct {
 	Config     *LuetConfig
 	IsTerminal bool
 	NoSpinner  bool
+	name       string
 
 	s           *pterm.SpinnerPrinter
 	spinnerLock *sync.Mutex
@@ -70,6 +71,12 @@ func NewContext() *Context {
 		},
 		s: pterm.DefaultSpinner.WithShowTimer(false).WithRemoveWhenDone(true),
 	}
+}
+
+func (c *Context) WithName(name string) *Context {
+	newc := c.Copy()
+	newc.name = name
+	return newc
 }
 
 func (c *Context) Copy() *Context {
@@ -309,6 +316,10 @@ func (c *Context) Msg(level LogLevel, ln bool, msg ...interface{}) {
 	} else {
 		re := regexp.MustCompile(`[:][\w]+[:]`)
 		levelMsg = re.ReplaceAllString(levelMsg, "")
+	}
+
+	if c.name != "" {
+		levelMsg = fmt.Sprintf("[%s] %s", c.name, levelMsg)
 	}
 
 	if c.z != nil {
