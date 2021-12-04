@@ -17,7 +17,7 @@ Join us in [slack](https://luet.slack.com/join/shared_invite/enQtOTQxMjcyNDQ0MDU
 ## All Code Changes Happen Through Pull Requests
 Pull requests are the best way to propose changes to the codebase. We actively welcome your pull requests:
 
-1. Fork the repo you want to contribute to and create your branch from `develop`.
+1. Fork the repo you want to contribute to and create your branch from `master`.
 2. If you've added code that should be tested, add tests.
 3. If you've changed APIs, update the [documentation](https://github.com/Luet-lab/docs).
 4. Ensure the test suite passes.
