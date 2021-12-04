@@ -273,11 +273,11 @@ func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *compi
 
 func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec, builderOpts, runnerOpts backend.Options) (*artifact.PackageArtifact, error) {
 
-	rootfs, err := ioutil.TempDir(p.GetOutputPath(), "rootfs")
+	rootfs, err := cs.Options.Context.Config.System.TempDir("rootfs")
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not create tempdir")
 	}
-	defer os.RemoveAll(rootfs) // clean up
+	defer os.RemoveAll(rootfs)
 
 	pkgTag := ":package: " + p.GetPackage().HumanReadableString()
 	if cs.Options.PullFirst {
@@ -458,11 +458,11 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 	if p.EmptyPackage() {
 		fakePackage := p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar")
 
-		rootfs, err = ioutil.TempDir(p.GetOutputPath(), "rootfs")
+		rootfs, err = cs.Options.Context.Config.System.TempDir("rootfs")
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not create tempdir")
 		}
-		defer os.RemoveAll(rootfs) // clean up
+		defer os.RemoveAll(rootfs)
 
 		a := artifact.NewPackageArtifact(fakePackage)
 		a.CompressionType = cs.Options.CompressionType
@@ -939,11 +939,11 @@ func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool
 	}
 
 	// otherwise, generate it and push it aside
-	joinDir, err := ioutil.TempDir(p.GetOutputPath(), "join")
+	joinDir, err := cs.Options.Context.Config.System.TempDir("join")
 	if err != nil {
 		return errors.Wrap(err, "could not create tempdir for joining images")
 	}
-	defer os.RemoveAll(joinDir) // clean up
+	defer os.RemoveAll(joinDir)
 
 	for _, p := range fromPackages {
 		cs.Options.Context.Info(joinTag, ":arrow_right_hook:", p.HumanReadableString(), ":leaves:")
@@ -978,11 +978,11 @@ func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool
 		}
 	}
 
-	artifactDir, err := ioutil.TempDir(p.GetOutputPath(), "artifact")
+	artifactDir, err := cs.Options.Context.Config.System.TempDir("join")
 	if err != nil {
 		return errors.Wrap(err, "could not create tempdir for final artifact")
 	}
-	defer os.RemoveAll(joinDir) // clean up
+	defer os.RemoveAll(artifactDir)
 
 	cs.Options.Context.Info(joinTag, ":droplet: generating artifact for source image of", p.GetPackage().HumanReadableString())
 
@@ -1335,11 +1335,12 @@ func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack pkg.
 	} else {
 		bv := cs.Options.BuildValuesFile
 		if len(vals) > 0 {
-			valuesdir, err := ioutil.TempDir("", "genvalues")
+			valuesdir, err := cs.Options.Context.Config.System.TempDir("genvalues")
 			if err != nil {
 				return nil, errors.Wrap(err, "Could not create tempdir")
 			}
-			defer os.RemoveAll(valuesdir) // clean up
+			defer os.RemoveAll(valuesdir)
+
 			for _, b := range vals {
 				out, err := yaml.Marshal(b)
 				if err != nil {
