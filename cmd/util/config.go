@@ -120,6 +120,7 @@ func setDefaults(viper *viper.Viper) {
 
 	viper.SetDefault("general.concurrency", runtime.NumCPU())
 	viper.SetDefault("general.debug", false)
+	viper.SetDefault("general.quiet", false)
 	viper.SetDefault("general.show_build_output", false)
 	viper.SetDefault("general.fatal_warnings", false)
 	viper.SetDefault("general.http_timeout", 360)
@@ -159,7 +160,8 @@ func InitViper(ctx *types.Context, RootCmd *cobra.Command) {
 	cobra.OnInitialize(initConfig)
 	pflags := RootCmd.PersistentFlags()
 	pflags.StringVar(&cfgFile, "config", "", "config file (default is $HOME/.luet.yaml)")
-	pflags.BoolP("debug", "d", false, "verbose output")
+	pflags.BoolP("debug", "d", false, "debug output")
+	pflags.BoolP("quiet", "q", false, "quiet output")
 	pflags.Bool("fatal", false, "Enables Warnings to exit")
 	pflags.Bool("enable-logfile", false, "Enable log to file")
 	pflags.Bool("no-spinner", false, "Disable spinner.")
@@ -188,6 +190,7 @@ func InitViper(ctx *types.Context, RootCmd *cobra.Command) {
 
 	viper.BindPFlag("general.concurrency", pflags.Lookup("concurrency"))
 	viper.BindPFlag("general.debug", pflags.Lookup("debug"))
+	viper.BindPFlag("general.quiet", pflags.Lookup("quiet"))
 	viper.BindPFlag("general.fatal_warnings", pflags.Lookup("fatal"))
 	viper.BindPFlag("general.same_owner", pflags.Lookup("same-owner"))
 	viper.BindPFlag("plugin", pflags.Lookup("plugin"))

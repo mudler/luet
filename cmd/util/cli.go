@@ -156,11 +156,15 @@ func DisplayVersionBanner(c *types.Context, banner func(), version func() string
 		}
 	}
 	if display {
-		banner()
-		pterm.DefaultCenter.Print(version())
-		for _, l := range license {
-			pterm.DefaultCenter.Print(l)
-
+		if c.Config.General.Quiet {
+			pterm.Info.Printf("Luet %s\n", version())
+			pterm.Info.Println(strings.Join(license, "\n"))
+		} else {
+			banner()
+			pterm.DefaultCenter.Print(version())
+			for _, l := range license {
+				pterm.DefaultCenter.Print(l)
+			}
 		}
 	}
 }

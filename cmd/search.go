@@ -371,6 +371,10 @@ Search can also return results in the terminal in different ways: as terminal ou
 		default:
 			if tableMode {
 				t.Render()
+			} else if util.DefaultContext.Config.General.Quiet {
+				for _, tt := range results.Packages {
+					fmt.Printf("%s/%s-%s\n", tt.Category, tt.Name, tt.Version)
+				}
 			} else {
 				l.Render()
 			}

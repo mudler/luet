@@ -61,6 +61,7 @@ type LuetGeneralConfig struct {
 	ShowBuildOutput bool `yaml:"show_build_output,omitempty" mapstructure:"show_build_output"`
 	FatalWarns      bool `yaml:"fatal_warnings,omitempty" mapstructure:"fatal_warnings"`
 	HTTPTimeout     int  `yaml:"http_timeout,omitempty" mapstructure:"http_timeout"`
+	Quiet           bool `yaml:"quiet" mapstructure:"quiet"`
 }
 
 type LuetSolverOptions struct {

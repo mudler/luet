@@ -112,6 +112,11 @@ func (c *Context) Init() (err error) {
 		c.NoColor()
 	}
 
+	if c.Config.General.Quiet {
+		c.NoColor()
+		pterm.DisableStyling()
+	}
+
 	c.Debug("Colors", c.Config.GetLogging().Color)
 	c.Debug("Logging level", c.Config.GetLogging().Level)
 	c.Debug("Debug mode", c.Config.GetGeneral().Debug)
