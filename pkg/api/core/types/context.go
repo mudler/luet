@@ -45,6 +45,7 @@ const (
 
 type Context struct {
 	context.Context
+	gc         *GarbageCollector
 	Config     *LuetConfig
 	IsTerminal bool
 	NoSpinner  bool
@@ -57,20 +58,32 @@ type Context struct {
 }
 
 func NewContext() *Context {
+	tmp := filepath.Join(os.TempDir(), "tmpluet")
+	gc, _ := NewGC(tmp)
 	return &Context{
 		spinnerLock: &sync.Mutex{},
 		IsTerminal:  terminal.IsTerminal(os.Stdout),
+		gc:          gc,
 		Config: &LuetConfig{
 			ConfigFromHost: true,
 			Logging:        LuetLoggingConfig{},
 			General:        LuetGeneralConfig{},
 			System: LuetSystemConfig{
 				DatabasePath: filepath.Join("var", "db", "packages"),
-				TmpDirBase:   filepath.Join(os.TempDir(), "tmpluet")},
+				TmpDirBase:   tmp},
 			Solver: LuetSolverOptions{},
 		},
 		s: pterm.DefaultSpinner.WithShowTimer(false).WithRemoveWhenDone(true),
 	}
+}
+
+func (c *Context) WithGC(dir string) error {
+	gc, err := NewGC(dir)
+	if err != nil {
+		return err
+	}
+	c.gc = gc
+	return nil
 }
 
 func (c *Context) WithName(name string) *Context {
