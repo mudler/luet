@@ -1,6 +1,8 @@
 package installer
 
 import (
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/hashicorp/go-multierror"
@@ -20,6 +22,19 @@ type System struct {
 
 func (s *System) World() (pkg.Packages, error) {
 	return s.Database.World(), nil
+}
+
+func (s *System) OSCheck() (notFound pkg.Packages) {
+	s.buildFileIndex()
+	s.Lock()
+	defer s.Unlock()
+	for f, p := range s.fileIndex {
+		if _, err := os.Lstat(filepath.Join(s.Target, f)); err != nil {
+			notFound = append(notFound, p)
+		}
+	}
+	notFound = notFound.Unique()
+	return
 }
 
 func (s *System) ExecuteFinalizers(ctx *types.Context, packs []pkg.Package) error {
@@ -56,6 +71,7 @@ func (s *System) ExecuteFinalizers(ctx *types.Context, packs []pkg.Package) erro
 }
 
 func (s *System) buildFileIndex() {
+	// XXX: Replace with cache
 	s.Lock()
 	defer s.Unlock()
 	// Check if cache is empty or if it got modified
