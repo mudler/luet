@@ -371,7 +371,7 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	}
 
 	// First we create the builder image
-	if err := p.WriteBuildImageDefinition(filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+"-builder.dockerfile")); err != nil {
+	if err := p.WriteBuildImageDefinition(filepath.Join(buildDir, p.GetPackage().ImageID()+"-builder.dockerfile")); err != nil {
 		return builderOpts, runnerOpts, errors.Wrap(err, "Could not generate image definition")
 	}
 
@@ -386,21 +386,21 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	// steps in prelude are == 0 those are equivalent.
 
 	// Then we write the step image, which uses the builder one
-	if err := p.WriteStepImageDefinition(buildertaggedImage, filepath.Join(buildDir, p.GetPackage().GetFingerPrint()+".dockerfile")); err != nil {
+	if err := p.WriteStepImageDefinition(buildertaggedImage, filepath.Join(buildDir, p.GetPackage().ImageID()+".dockerfile")); err != nil {
 		return builderOpts, runnerOpts, errors.Wrap(err, "Could not generate image definition")
 	}
 
 	builderOpts = backend.Options{
 		ImageName:      buildertaggedImage,
 		SourcePath:     buildDir,
-		DockerFileName: p.GetPackage().GetFingerPrint() + "-builder.dockerfile",
+		DockerFileName: p.GetPackage().ImageID() + "-builder.dockerfile",
 		Destination:    p.Rel(p.GetPackage().GetFingerPrint() + "-builder.image.tar"),
 		BackendArgs:    cs.Options.BackendArgs,
 	}
 	runnerOpts = backend.Options{
 		ImageName:      packageImage,
 		SourcePath:     buildDir,
-		DockerFileName: p.GetPackage().GetFingerPrint() + ".dockerfile",
+		DockerFileName: p.GetPackage().ImageID() + ".dockerfile",
 		Destination:    p.Rel(p.GetPackage().GetFingerPrint() + ".image.tar"),
 		BackendArgs:    cs.Options.BackendArgs,
 	}
