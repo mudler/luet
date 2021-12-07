@@ -52,17 +52,9 @@ var reinstallCmd = &cobra.Command{
 		yes := viper.GetBool("yes")
 
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
+		installed, _ := cmd.Flags().GetBool("installed")
 
 		util.SetSystemConfig(util.DefaultContext)
-
-		for _, a := range args {
-			pack, err := helpers.ParsePackageStr(a)
-			if err != nil {
-				util.DefaultContext.Fatal("Invalid package string ", a, ": ", err.Error())
-			}
-			toUninstall = append(toUninstall, pack)
-			toAdd = append(toAdd, pack)
-		}
 
 		util.SetSolverConfig(util.DefaultContext)
 
@@ -87,6 +79,25 @@ var reinstallCmd = &cobra.Command{
 		})
 
 		system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.GetSystem().Rootfs}
+
+		if installed {
+			for _, p := range system.Database.World() {
+				toUninstall = append(toUninstall, p)
+				c := p.Clone()
+				c.SetVersion(">=0")
+				toAdd = append(toAdd, c)
+			}
+		} else {
+			for _, a := range args {
+				pack, err := helpers.ParsePackageStr(a)
+				if err != nil {
+					util.DefaultContext.Fatal("Invalid package string ", a, ": ", err.Error())
+				}
+				toUninstall = append(toUninstall, pack)
+				toAdd = append(toAdd, pack)
+			}
+		}
+
 		err := inst.Swap(toUninstall, toAdd, system)
 		if err != nil {
 			util.DefaultContext.Fatal("Error: " + err.Error())
@@ -107,6 +118,7 @@ func init() {
 	reinstallCmd.Flags().Bool("onlydeps", false, "Consider **only** package dependencies")
 	reinstallCmd.Flags().Bool("force", false, "Skip errors and keep going (potentially harmful)")
 	reinstallCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
+	reinstallCmd.Flags().Bool("installed", false, "Reinstall installed packages")
 	reinstallCmd.Flags().BoolP("yes", "y", false, "Don't ask questions")
 	reinstallCmd.Flags().Bool("download-only", false, "Download only")
 
