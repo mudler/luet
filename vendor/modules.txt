@@ -139,7 +139,6 @@ github.com/docker/docker/api/types/versions
 github.com/docker/docker/api/types/volume
 github.com/docker/docker/client
 github.com/docker/docker/errdefs
-github.com/docker/docker/pkg/archive
 github.com/docker/docker/pkg/fileutils
 github.com/docker/docker/pkg/homedir
 github.com/docker/docker/pkg/idtools
@@ -341,7 +340,7 @@ github.com/morikuni/aec
 # github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
 ## explicit
 github.com/mudler/cobra-extensions
-# github.com/mudler/go-pluggable v0.0.0-20211022125509-94dbf124830d
+# github.com/mudler/go-pluggable v0.0.0-20211206135551-9263b05c562e
 ## explicit
 github.com/mudler/go-pluggable
 # github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290

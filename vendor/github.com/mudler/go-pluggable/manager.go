@@ -99,7 +99,9 @@ func relativeToCwd(p string) (string, error) {
 
 func (m *Manager) insertPlugin(p Plugin) {
 	for _, i := range m.Plugins {
-		if i.Executable == p.Executable {
+		// We don't want any ambiguity here.
+		// Binary plugins must be unique in PATH and Name
+		if i.Executable == p.Executable || i.Name == p.Name {
 			return
 		}
 	}
