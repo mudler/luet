@@ -2,6 +2,7 @@ package bus
 
 import (
 	"fmt"
+
 	"github.com/mudler/go-pluggable"
 	"github.com/mudler/luet/pkg/api/core/types"
 )
@@ -13,6 +14,10 @@ var (
 	EventPackageInstall pluggable.EventType = "package.install"
 	// EventPackageUnInstall is the event fired when a new package is being uninstalled
 	EventPackageUnInstall pluggable.EventType = "package.uninstall"
+	// EventPreUpgrade is the event fired before an upgrade is attempted
+	EventPreUpgrade pluggable.EventType = "package.pre.upgrade"
+	// EventPostUpgrade is the event fired after an upgrade is done
+	EventPostUpgrade pluggable.EventType = "package.post.upgrade"
 
 	// Package build
 
@@ -62,6 +67,8 @@ var Manager *Bus = &Bus{
 			EventPackageInstall,
 			EventPackageUnInstall,
 			EventPackagePreBuild,
+			EventPreUpgrade,
+			EventPostUpgrade,
 			EventPackagePreBuildArtifact,
 			EventPackagePostBuildArtifact,
 			EventPackagePostBuild,

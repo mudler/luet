@@ -446,12 +446,10 @@ func (l *LuetInstaller) getOpsWithOptions(
 }
 
 func (l *LuetInstaller) checkAndUpgrade(r Repositories, s *System) error {
-	//	Spinner(32)
 	uninstall, toInstall, err := l.computeUpgrade(r, s)
 	if err != nil {
 		return errors.Wrap(err, "failed computing upgrade")
 	}
-	//	SpinnerStop()
 
 	if len(toInstall) == 0 && len(uninstall) == 0 {
 		l.Options.Context.Info("Nothing to upgrade")
@@ -487,7 +485,16 @@ func (l *LuetInstaller) checkAndUpgrade(r Repositories, s *System) error {
 		}
 	}
 
-	return l.swap(o, r, uninstall, toInstall, s)
+	bus.Manager.Publish(bus.EventPreUpgrade, struct{ Uninstall, Install pkg.Packages }{Uninstall: uninstall, Install: toInstall})
+
+	err = l.swap(o, r, uninstall, toInstall, s)
+
+	bus.Manager.Publish(bus.EventPostUpgrade, struct {
+		Error              error
+		Uninstall, Install pkg.Packages
+	}{Uninstall: uninstall, Install: toInstall, Error: err})
+
+	return err
 }
 
 func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
