@@ -43,6 +43,8 @@ var upgradeCmd = &cobra.Command{
 		universe, _ := cmd.Flags().GetBool("universe")
 		clean, _ := cmd.Flags().GetBool("clean")
 		sync, _ := cmd.Flags().GetBool("sync")
+		osCheck, _ := cmd.Flags().GetBool("oscheck")
+
 		yes := viper.GetBool("yes")
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
 
@@ -67,6 +69,7 @@ var upgradeCmd = &cobra.Command{
 			UpgradeNewRevisions:         sync,
 			PreserveSystemEssentialData: true,
 			Ask:                         !yes,
+			AutoOSCheck:                 osCheck,
 			DownloadOnly:                downloadOnly,
 			PackageRepositories:         util.DefaultContext.Config.SystemRepositories,
 			Context:                     util.DefaultContext,
@@ -97,6 +100,7 @@ func init() {
 	upgradeCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
 	upgradeCmd.Flags().BoolP("yes", "y", false, "Don't ask questions")
 	upgradeCmd.Flags().Bool("download-only", false, "Download only")
+	upgradeCmd.Flags().Bool("oscheck", false, "Perform automatically oschecks after upgrades")
 
 	RootCmd.AddCommand(upgradeCmd)
 }

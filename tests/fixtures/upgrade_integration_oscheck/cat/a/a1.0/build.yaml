@@ -1,0 +1,11 @@
+image: "alpine"
+prelude:
+  - echo foo > /test
+  - echo bar > /test2
+steps:
+  - echo artifact3 > /testaa
+  - echo artifact4 > /testaa2
+requires:
+- category: "test"
+  name: "b"
+  version: "1.0"

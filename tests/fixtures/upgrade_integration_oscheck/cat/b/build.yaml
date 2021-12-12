@@ -1,0 +1,9 @@
+image: "alpine"
+prelude:
+  - echo foo > /test
+  - echo bar > /test2
+steps:
+  - echo artifact5 > /test5
+  - echo artifact6 > /test6
+  - chmod +x generate.sh
+  - ./generate.sh

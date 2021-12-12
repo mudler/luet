@@ -53,6 +53,7 @@ type LuetInstallerOptions struct {
 	DownloadOnly                                                   bool
 	Relaxed                                                        bool
 	PackageRepositories                                            types.LuetRepositories
+	AutoOSCheck                                                    bool
 
 	Context *types.Context
 }
@@ -493,6 +494,17 @@ func (l *LuetInstaller) checkAndUpgrade(r Repositories, s *System) error {
 		Error              error
 		Uninstall, Install pkg.Packages
 	}{Uninstall: uninstall, Install: toInstall, Error: err})
+
+	if err != nil {
+		return err
+	}
+
+	if l.Options.AutoOSCheck {
+		packs := s.OSCheck()
+		if len(packs) > 0 {
+			return l.swap(o, r, packs, packs, s)
+		}
+	}
 
 	return err
 }

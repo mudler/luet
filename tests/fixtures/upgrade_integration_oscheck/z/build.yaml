@@ -1,0 +1,9 @@
+prelude:
+  - echo foo > /test
+  - echo bar > /test2
+steps:
+  - echo z > /z
+requires:
+- category: "test"
+  name: "a"
+  version: ">=1.0"
