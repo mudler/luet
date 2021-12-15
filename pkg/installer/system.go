@@ -14,9 +14,10 @@ import (
 )
 
 type System struct {
-	Database  pkg.PackageDatabase
-	Target    string
-	fileIndex map[string]pkg.Package
+	Database          pkg.PackageDatabase
+	Target            string
+	fileIndex         map[string]pkg.Package
+	fileIndexPackages map[string]pkg.Package
 	sync.Mutex
 }
 
@@ -74,13 +75,25 @@ func (s *System) buildFileIndex() {
 	// XXX: Replace with cache
 	s.Lock()
 	defer s.Unlock()
-	// Check if cache is empty or if it got modified
-	if s.fileIndex == nil { //|| len(s.Database.GetPackages()) != len(s.fileIndex) {
+
+	if s.fileIndex == nil {
 		s.fileIndex = make(map[string]pkg.Package)
+	}
+
+	if s.fileIndexPackages == nil {
+		s.fileIndexPackages = make(map[string]pkg.Package)
+	}
+
+	// Check if cache is empty or if it got modified
+	if len(s.Database.GetPackages()) != len(s.fileIndexPackages) {
+		s.fileIndexPackages = make(map[string]pkg.Package)
 		for _, p := range s.Database.World() {
-			files, _ := s.Database.GetPackageFiles(p)
-			for _, f := range files {
-				s.fileIndex[f] = p
+			if _, ok := s.fileIndexPackages[p.GetPackageName()]; !ok {
+				files, _ := s.Database.GetPackageFiles(p)
+				for _, f := range files {
+					s.fileIndex[f] = p
+				}
+				s.fileIndexPackages[p.GetPackageName()] = p
 			}
 		}
 	}

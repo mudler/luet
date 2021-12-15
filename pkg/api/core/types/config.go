@@ -138,7 +138,7 @@ func (sc *LuetSystemConfig) GetSystemRepoDatabaseDirPath() string {
 	return dbpath
 }
 
-func (sc *LuetSystemConfig) GetSystemPkgsCacheDirPath() (ans string) {
+func (sc *LuetSystemConfig) GetSystemPkgsCacheDirPath() (p string) {
 	var cachepath string
 	if sc.PkgsCachePath != "" {
 		cachepath = sc.PkgsCachePath
@@ -148,10 +148,12 @@ func (sc *LuetSystemConfig) GetSystemPkgsCacheDirPath() (ans string) {
 	}
 
 	if filepath.IsAbs(cachepath) {
-		ans = cachepath
+		p = cachepath
 	} else {
-		ans = filepath.Join(sc.GetSystemRepoDatabaseDirPath(), cachepath)
+		p = filepath.Join(sc.GetSystemRepoDatabaseDirPath(), cachepath)
 	}
+
+	sc.PkgsCachePath = cachepath // Be consistent with the path we set
 
 	return
 }

@@ -23,6 +23,7 @@ import (
 type Client interface {
 	DownloadArtifact(*artifact.PackageArtifact) (*artifact.PackageArtifact, error)
 	DownloadFile(string) (string, error)
+	CacheGet(*artifact.PackageArtifact) (*artifact.PackageArtifact, error)
 }
 
 type Repositories []*LuetSystemRepository

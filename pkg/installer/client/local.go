@@ -44,32 +44,32 @@ func (c *LocalClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.P
 	var err error
 
 	artifactName := path.Base(a.Path)
-	newart := a.ShallowCopy()
 
-	fileName, err := c.Cache.Get(a)
+	newart, err := c.CacheGet(a)
 	// Check if file is already in cache
 	if err == nil {
-		newart.Path = fileName
-		c.context.Debug("Use artifact", artifactName, "from cache.")
-	} else {
-		d, err := c.DownloadFile(artifactName)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed downloading %s", artifactName)
-		}
-		defer os.RemoveAll(d)
-
-		newart.Path = d
-		c.Cache.Put(newart)
-
-		fileName, err := c.Cache.Get(newart)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed getting file from cache %v", newart)
-		}
-
-		newart.Path = fileName
+		return newart, nil
 	}
 
-	return newart, nil
+	d, err := c.DownloadFile(artifactName)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed downloading %s", artifactName)
+	}
+	defer os.RemoveAll(d)
+
+	newart.Path = d
+	c.Cache.Put(newart)
+
+	return c.CacheGet(newart)
+}
+
+func (c *LocalClient) CacheGet(a *artifact.PackageArtifact) (*artifact.PackageArtifact, error) {
+	newart := a.ShallowCopy()
+	fileName, err := c.Cache.Get(a)
+
+	newart.Path = fileName
+
+	return newart, err
 }
 
 func (c *LocalClient) DownloadFile(name string) (string, error) {

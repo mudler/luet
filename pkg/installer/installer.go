@@ -268,13 +268,16 @@ func (l *LuetInstaller) swap(o Option, syncedRepos Repositories, toRemove pkg.Pa
 		return nil
 	}
 
-	ops := l.getOpsWithOptions(toRemove, match, Option{
+	ops, err := l.getOpsWithOptions(toRemove, match, Option{
 		Force:              o.Force,
 		NoDeps:             false,
 		OnlyDeps:           o.OnlyDeps,
 		RunFinalizers:      false,
 		CheckFileConflicts: false,
-	}, o, syncedRepos, packages, assertions, allRepos)
+	}, o, syncedRepos, packages, assertions, allRepos, s)
+	if err != nil {
+		return errors.Wrap(err, "failed computing installer options")
+	}
 
 	err = l.runOps(ops, s)
 	if err != nil {
@@ -318,8 +321,8 @@ type installOperation struct {
 // installerOp is the operation that is sent to the
 // upgradeWorker's channel (todo)
 type installerOp struct {
-	Uninstall operation
-	Install   installOperation
+	Uninstall []operation
+	Install   []installOperation
 }
 
 func (l *LuetInstaller) runOps(ops []installerOp, s *System) error {
@@ -350,13 +353,12 @@ func (l *LuetInstaller) installerOpWorker(i int, wg *sync.WaitGroup, systemLock 
 
 	for p := range c {
 
-		if p.Uninstall.Package != nil {
+		for _, pp := range p.Uninstall {
 			l.Options.Context.Debug("Replacing package inplace")
-			toUninstall, uninstall, err := l.generateUninstallFn(p.Uninstall.Option, s, p.Uninstall.Package)
+			toUninstall, uninstall, err := l.generateUninstallFn(pp.Option, s, pp.Package)
 			if err != nil {
 				l.Options.Context.Error("Failed to generate Uninstall function for" + err.Error())
 				continue
-				//return errors.Wrap(err, "while computing uninstall")
 			}
 			systemLock.Lock()
 			err = uninstall()
@@ -365,22 +367,21 @@ func (l *LuetInstaller) installerOpWorker(i int, wg *sync.WaitGroup, systemLock 
 			if err != nil {
 				l.Options.Context.Error("Failed uninstall for ", packsToList(toUninstall))
 				continue
-				//return errors.Wrap(err, "uninstalling "+packsToList(toUninstall))
 			}
 		}
-		if p.Install.Package != nil {
-			artMatch := p.Install.Matches[p.Install.Package.GetFingerPrint()]
-			ass := p.Install.Assertions.Search(p.Install.Package.GetFingerPrint())
-			packageToInstall, _ := p.Install.Packages.Find(p.Install.Package.GetPackageName())
+		for _, pp := range p.Install {
+			artMatch := pp.Matches[pp.Package.GetFingerPrint()]
+			ass := pp.Assertions.Search(pp.Package.GetFingerPrint())
+			packageToInstall, _ := pp.Packages.Find(pp.Package.GetPackageName())
 
 			systemLock.Lock()
 			err := l.install(
-				p.Install.Option,
-				p.Install.Reposiories,
-				map[string]ArtifactMatch{p.Install.Package.GetFingerPrint(): artMatch},
+				pp.Option,
+				pp.Reposiories,
+				map[string]ArtifactMatch{pp.Package.GetFingerPrint(): artMatch},
 				pkg.Packages{packageToInstall},
 				solver.PackagesAssertions{*ass},
-				p.Install.Database,
+				pp.Database,
 				s,
 			)
 			systemLock.Unlock()
@@ -396,35 +397,75 @@ func (l *LuetInstaller) installerOpWorker(i int, wg *sync.WaitGroup, systemLock 
 // checks wheter we can uninstall and install in place and compose installer worker ops
 func (l *LuetInstaller) getOpsWithOptions(
 	toUninstall pkg.Packages, installMatch map[string]ArtifactMatch, installOpt, uninstallOpt Option,
-	syncedRepos Repositories, toInstall pkg.Packages, solution solver.PackagesAssertions, allRepos pkg.PackageDatabase) []installerOp {
+	syncedRepos Repositories, toInstall pkg.Packages, solution solver.PackagesAssertions, allRepos pkg.PackageDatabase, s *System) ([]installerOp, error) {
+
+	l.Options.Context.Info("Computing installation order")
 	resOps := []installerOp{}
+
+	insertPackage := func(install pkg.Package, uninstall ...pkg.Package) {
+		uOpts := []operation{}
+		for _, u := range uninstall {
+			uOpts = append(uOpts, operation{Package: u, Option: uninstallOpt})
+		}
+		resOps = append(resOps, installerOp{
+			Uninstall: uOpts,
+			Install: []installOperation{{
+				operation: operation{
+					Package: install,
+					Option:  installOpt,
+				},
+				Matches:     installMatch,
+				Packages:    toInstall,
+				Reposiories: syncedRepos,
+				Assertions:  solution,
+				Database:    allRepos,
+			}},
+		})
+	}
+
+	removals := make(map[string]interface{})
 	for _, match := range installMatch {
-		if pack, err := toUninstall.Find(match.Package.GetPackageName()); err == nil {
-			resOps = append(resOps, installerOp{
-				Uninstall: operation{Package: pack, Option: uninstallOpt},
-				Install: installOperation{
-					operation: operation{
-						Package: match.Package,
-						Option:  installOpt,
-					},
-					Matches:     installMatch,
-					Packages:    toInstall,
-					Reposiories: syncedRepos,
-					Assertions:  solution,
-					Database:    allRepos,
-				},
-			})
+		a, err := l.getPackage(match, l.Options.Context)
+		if err != nil && !l.Options.Force {
+			return nil, errors.Wrap(err, "Failed downloading package")
+		}
+		files, err := a.FileList()
+		if err != nil && !l.Options.Force {
+			return nil, errors.Wrapf(err, "Could not get filelist for %s", a.CompileSpec.Package.HumanReadableString())
+		}
+
+		var foundPackages []pkg.Package
+		for _, f := range files {
+			if exists, p, _ := s.ExistsPackageFile(f); exists {
+				_, err := toUninstall.Find(p.GetPackageName())
+				if err == nil {
+					// Packages that is being installed have a file that
+					// is going to be removed by another package
+					foundPackages = append(foundPackages, p)
+				}
+			}
+		}
+
+		foundPackages = pkg.Packages(foundPackages).Unique()
+		if len(foundPackages) > 0 {
+			if pack, err := toUninstall.Find(match.Package.GetPackageName()); err == nil {
+				foundPackages = append(foundPackages, pack)
+			}
+
+			toRemove := []pkg.Package{}
+			for _, p := range foundPackages {
+				if _, ok := removals[p.GetPackageName()]; !ok {
+					toRemove = append(toRemove, p)
+				}
+				removals[p.GetPackageName()] = nil
+			}
+			insertPackage(match.Package, toRemove...)
+		} else if pack, err := toUninstall.Find(match.Package.GetPackageName()); err == nil {
+			if _, ok := removals[pack.GetPackageName()]; !ok {
+				insertPackage(match.Package, pack)
+			}
 		} else {
-			resOps = append(resOps, installerOp{
-				Install: installOperation{
-					operation:   operation{Package: match.Package, Option: installOpt},
-					Matches:     installMatch,
-					Reposiories: syncedRepos,
-					Packages:    toInstall,
-					Assertions:  solution,
-					Database:    allRepos,
-				},
-			})
+			insertPackage(match.Package)
 		}
 	}
 
@@ -435,15 +476,14 @@ func (l *LuetInstaller) getOpsWithOptions(
 			if match.Package.GetPackageName() == p.GetPackageName() {
 				found = true
 			}
-
 		}
 		if !found {
 			resOps = append(resOps, installerOp{
-				Uninstall: operation{Package: p, Option: uninstallOpt},
+				Uninstall: []operation{{Package: p, Option: uninstallOpt}},
 			})
 		}
 	}
-	return resOps
+	return resOps, nil
 }
 
 func (l *LuetInstaller) checkAndUpgrade(r Repositories, s *System) error {
@@ -585,6 +625,21 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 
 func (l *LuetInstaller) download(syncedRepos Repositories, toDownload map[string]ArtifactMatch) error {
 
+	// Don't attempt to download stuff that is already in cache
+	missArtifacts := false
+	for _, m := range toDownload {
+		c := m.Repository.Client(l.Options.Context)
+		_, err := c.CacheGet(m.Artifact)
+		if err != nil {
+			missArtifacts = true
+		}
+	}
+
+	if !missArtifacts {
+		l.Options.Context.Debug("Packages already in cache, skipping download")
+		return nil
+	}
+
 	// Download packages into cache in parallel.
 	all := make(chan ArtifactMatch)
 
@@ -614,7 +669,6 @@ func (l *LuetInstaller) download(syncedRepos Repositories, toDownload map[string
 	}
 	close(all)
 	wg.Wait()
-
 	return nil
 }
 
@@ -805,7 +859,7 @@ func (l *LuetInstaller) checkFileconflicts(toInstall map[string]ArtifactMatch, c
 
 	filesToInstall := []string{}
 	for _, m := range toInstall {
-		a, err := l.downloadPackage(m, l.Options.Context)
+		a, err := l.getPackage(m, l.Options.Context)
 		if err != nil && !l.Options.Force {
 			return errors.Wrap(err, "Failed downloading package")
 		}
@@ -901,11 +955,11 @@ func (l *LuetInstaller) install(o Option, syncedRepos Repositories, toInstall ma
 	return s.ExecuteFinalizers(l.Options.Context, toFinalize)
 }
 
-func (l *LuetInstaller) downloadPackage(a ArtifactMatch, ctx *types.Context) (*artifact.PackageArtifact, error) {
+func (l *LuetInstaller) getPackage(a ArtifactMatch, ctx *types.Context) (artifact *artifact.PackageArtifact, err error) {
 
 	cli := a.Repository.Client(ctx)
 
-	artifact, err := cli.DownloadArtifact(a.Artifact)
+	artifact, err = cli.DownloadArtifact(a.Artifact)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error on download artifact")
 	}
@@ -919,7 +973,7 @@ func (l *LuetInstaller) downloadPackage(a ArtifactMatch, ctx *types.Context) (*a
 
 func (l *LuetInstaller) installPackage(m ArtifactMatch, s *System) error {
 
-	a, err := l.downloadPackage(m, l.Options.Context)
+	a, err := l.getPackage(m, l.Options.Context)
 	if err != nil && !l.Options.Force {
 		return errors.Wrap(err, "Failed downloading package")
 	}
@@ -944,7 +998,7 @@ func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, pb *pterm.Prog
 
 	for p := range c {
 		// TODO: Keep trace of what was added from the tar, and save it into system
-		_, err := l.downloadPackage(p, ctx)
+		_, err := l.getPackage(p, ctx)
 		if err != nil {
 			l.Options.Context.Error("Failed downloading package "+p.Package.GetName(), err.Error())
 			return errors.Wrap(err, "Failed downloading package "+p.Package.GetName())

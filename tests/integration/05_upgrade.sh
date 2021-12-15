@@ -85,17 +85,17 @@ EOF
 }
 
 testInstall() {
-    luet install -y --config $tmpdir/luet.yaml test/b@1.0
+    luet install -y --relax --config $tmpdir/luet.yaml test/b@1.0
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package installed B' "[ -e '$tmpdir/testrootfs/test5' ]"
 
-    luet install -y --config $tmpdir/luet.yaml test/a@1.0
+    luet install -y --relax --config $tmpdir/luet.yaml test/a@1.0
     assertTrue 'package installed A' "[ -e '$tmpdir/testrootfs/testaa' ]"
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
 
-    luet install -y --config $tmpdir/luet.yaml test/c@1.0
+    luet install -y --relax --config $tmpdir/luet.yaml test/c@1.0
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package installed C' "[ -e '$tmpdir/testrootfs/c' ]"

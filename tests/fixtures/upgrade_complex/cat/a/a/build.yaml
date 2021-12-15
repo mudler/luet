@@ -1,0 +1,4 @@
+image: "alpine"
+steps:
+  - echo artifact3 > /test3
+  - echo artifact4 > /test4
