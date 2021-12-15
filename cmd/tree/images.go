@@ -102,7 +102,12 @@ func NewTreeImageCommand() *cobra.Command {
 			}
 
 			ht := compiler.NewHashTree(reciper.GetDatabase())
-			hashtree, err := ht.Query(luetCompiler, spec)
+
+			copy, err := compiler.CompilerFinalImages(luetCompiler)
+			if err != nil {
+				util.DefaultContext.Fatal("Error: " + err.Error())
+			}
+			hashtree, err := ht.Query(copy, spec)
 			if err != nil {
 				util.DefaultContext.Fatal("Error: " + err.Error())
 			}

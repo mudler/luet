@@ -1053,30 +1053,7 @@ func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions
 	return nil
 }
 
-func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateFinalArtifact *bool, generateDependenciesFinalArtifact *bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
-	cs.Options.Context.Info(":package: Compiling", p.GetPackage().HumanReadableString(), ".... :coffee:")
-
-	//Before multistage : join - same as multistage, but keep artifacts, join them, create a new one and generate a final image.
-	// When the image is there, use it as a source here, in place of GetImage().
-	if err := cs.resolveFinalImages(concurrency, keepPermissions, p); err != nil {
-		return nil, errors.Wrap(err, "while resolving join images")
-	}
-
-	if err := cs.resolveMultiStageImages(concurrency, keepPermissions, p); err != nil {
-		return nil, errors.Wrap(err, "while resolving multi-stage images")
-	}
-
-	cs.Options.Context.Debug(fmt.Sprintf("%s: has images %t, empty package: %t", p.GetPackage().HumanReadableString(), p.HasImageSource(), p.EmptyPackage()))
-	if !p.HasImageSource() && !p.EmptyPackage() {
-		return nil,
-			fmt.Errorf(
-				"%s is invalid: package has no dependencies and no seed image supplied while it has steps defined",
-				p.GetPackage().GetFingerPrint(),
-			)
-	}
-
-	ht := NewHashTree(cs.Database)
-
+func CompilerFinalImages(cs *LuetCompiler) (*LuetCompiler, error) {
 	// When computing the hash tree, we need to take into consideration
 	// that packages that require final images have to be seen as packages without deps
 	// This is because we don't really want to calculate the deptree of them as
@@ -1103,7 +1080,36 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 		memDB.CreatePackage(copy)
 	}
 	copy.Database = memDB
+	return copy, nil
+}
 
+func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateFinalArtifact *bool, generateDependenciesFinalArtifact *bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
+	cs.Options.Context.Info(":package: Compiling", p.GetPackage().HumanReadableString(), ".... :coffee:")
+
+	//Before multistage : join - same as multistage, but keep artifacts, join them, create a new one and generate a final image.
+	// When the image is there, use it as a source here, in place of GetImage().
+	if err := cs.resolveFinalImages(concurrency, keepPermissions, p); err != nil {
+		return nil, errors.Wrap(err, "while resolving join images")
+	}
+
+	if err := cs.resolveMultiStageImages(concurrency, keepPermissions, p); err != nil {
+		return nil, errors.Wrap(err, "while resolving multi-stage images")
+	}
+
+	cs.Options.Context.Debug(fmt.Sprintf("%s: has images %t, empty package: %t", p.GetPackage().HumanReadableString(), p.HasImageSource(), p.EmptyPackage()))
+	if !p.HasImageSource() && !p.EmptyPackage() {
+		return nil,
+			fmt.Errorf(
+				"%s is invalid: package has no dependencies and no seed image supplied while it has steps defined",
+				p.GetPackage().GetFingerPrint(),
+			)
+	}
+
+	ht := NewHashTree(cs.Database)
+	copy, err := CompilerFinalImages(cs)
+	if err != nil {
+		return nil, err
+	}
 	packageHashTree, err := ht.Query(copy, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed querying hashtree")
