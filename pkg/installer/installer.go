@@ -357,7 +357,7 @@ func (l *LuetInstaller) installerOpWorker(i int, wg *sync.WaitGroup, systemLock 
 			l.Options.Context.Debug("Replacing package inplace")
 			toUninstall, uninstall, err := l.generateUninstallFn(pp.Option, s, pp.Package)
 			if err != nil {
-				l.Options.Context.Error("Failed to generate Uninstall function for" + err.Error())
+				l.Options.Context.Debug("Skipping uninstall, fail to generate uninstall function, error: " + err.Error())
 				continue
 			}
 			systemLock.Lock()
@@ -399,7 +399,7 @@ func (l *LuetInstaller) getOpsWithOptions(
 	toUninstall pkg.Packages, installMatch map[string]ArtifactMatch, installOpt, uninstallOpt Option,
 	syncedRepos Repositories, toInstall pkg.Packages, solution solver.PackagesAssertions, allRepos pkg.PackageDatabase, s *System) ([]installerOp, error) {
 
-	l.Options.Context.Info("Computing installation order")
+	l.Options.Context.Debug("Computing installation order")
 	resOps := []installerOp{}
 
 	insertPackage := func(install pkg.Package, uninstall ...pkg.Package) {
@@ -456,13 +456,14 @@ func (l *LuetInstaller) getOpsWithOptions(
 			for _, p := range foundPackages {
 				if _, ok := removals[p.GetPackageName()]; !ok {
 					toRemove = append(toRemove, p)
+					removals[p.GetPackageName()] = nil
 				}
-				removals[p.GetPackageName()] = nil
 			}
 			insertPackage(match.Package, toRemove...)
 		} else if pack, err := toUninstall.Find(match.Package.GetPackageName()); err == nil {
 			if _, ok := removals[pack.GetPackageName()]; !ok {
 				insertPackage(match.Package, pack)
+				removals[pack.GetPackageName()] = nil
 			}
 		} else {
 			insertPackage(match.Package)
@@ -478,9 +479,12 @@ func (l *LuetInstaller) getOpsWithOptions(
 			}
 		}
 		if !found {
-			resOps = append(resOps, installerOp{
-				Uninstall: []operation{{Package: p, Option: uninstallOpt}},
-			})
+			if _, ok := removals[p.GetPackageName()]; !ok {
+				resOps = append(resOps, installerOp{
+					Uninstall: []operation{{Package: p, Option: uninstallOpt}},
+				})
+				removals[p.GetPackageName()] = nil
+			}
 		}
 	}
 	return resOps, nil
@@ -540,10 +544,17 @@ func (l *LuetInstaller) checkAndUpgrade(r Repositories, s *System) error {
 	}
 
 	if l.Options.AutoOSCheck {
+		l.Options.Context.Info("Performing automatic oscheck")
 		packs := s.OSCheck()
 		if len(packs) > 0 {
+			p := ""
+			for _, r := range packs {
+				p += " " + r.HumanReadableString()
+			}
+			l.Options.Context.Info("Following packages requires reinstallation: " + p)
 			return l.swap(o, r, packs, packs, s)
 		}
+		l.Options.Context.Info("OSCheck done")
 	}
 
 	return err

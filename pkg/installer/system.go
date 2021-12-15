@@ -31,7 +31,9 @@ func (s *System) OSCheck() (notFound pkg.Packages) {
 	defer s.Unlock()
 	for f, p := range s.fileIndex {
 		if _, err := os.Lstat(filepath.Join(s.Target, f)); err != nil {
-			notFound = append(notFound, p)
+			if _, err := s.Database.FindPackage(p); err == nil {
+				notFound = append(notFound, p)
+			}
 		}
 	}
 	notFound = notFound.Unique()
