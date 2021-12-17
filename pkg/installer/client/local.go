@@ -29,12 +29,12 @@ import (
 type LocalClient struct {
 	RepoData RepoData
 	Cache    *artifact.ArtifactCache
-	context  *types.Context
+	context  types.Context
 }
 
-func NewLocalClient(r RepoData, ctx *types.Context) *LocalClient {
+func NewLocalClient(r RepoData, ctx types.Context) *LocalClient {
 	return &LocalClient{
-		Cache:    artifact.NewCache(ctx.Config.GetSystem().GetSystemPkgsCacheDirPath()),
+		Cache:    artifact.NewCache(ctx.GetConfig().System.PkgsCachePath),
 		RepoData: r,
 		context:  ctx,
 	}
@@ -78,11 +78,8 @@ func (c *LocalClient) DownloadFile(name string) (string, error) {
 
 	rootfs := ""
 
-	if !c.context.Config.ConfigFromHost {
-		rootfs, err = c.context.Config.GetSystem().GetRootFsAbs()
-		if err != nil {
-			return "", err
-		}
+	if !c.context.GetConfig().ConfigFromHost {
+		rootfs = c.context.GetConfig().System.Rootfs
 	}
 
 	ok := false
@@ -91,7 +88,7 @@ func (c *LocalClient) DownloadFile(name string) (string, error) {
 		uri = filepath.Join(rootfs, uri)
 
 		c.context.Info("Copying file", name, "from", uri)
-		file, err = c.context.Config.GetSystem().TempFile("localclient")
+		file, err = c.context.TempFile("localclient")
 		if err != nil {
 			continue
 		}

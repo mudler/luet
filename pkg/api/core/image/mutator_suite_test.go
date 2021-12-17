@@ -18,7 +18,7 @@ package image_test
 import (
 	"testing"
 
-	"github.com/mudler/luet/pkg/api/core/types"
+	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,7 +26,7 @@ import (
 
 func TestMutator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	b := backend.NewSimpleDockerBackend(types.NewContext())
+	b := backend.NewSimpleDockerBackend(context.NewContext())
 	b.DownloadImage(backend.Options{ImageName: "alpine"})
 	b.DownloadImage(backend.Options{ImageName: "golang:alpine"})
 

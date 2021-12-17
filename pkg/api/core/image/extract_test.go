@@ -23,8 +23,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	daemon "github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/mudler/luet/pkg/api/core/image"
-	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -34,14 +34,14 @@ var _ = Describe("Extract", func() {
 
 	Context("extract files from images", func() {
 		Context("ExtractFiles", func() {
-			ctx := types.NewContext()
+			ctx := context.NewContext()
 			var tmpfile *os.File
 			var ref name.Reference
 			var img v1.Image
 			var err error
 
 			BeforeEach(func() {
-				ctx = types.NewContext()
+				ctx = context.NewContext()
 
 				tmpfile, err = ioutil.TempFile("", "extract")
 				Expect(err).ToNot(HaveOccurred())

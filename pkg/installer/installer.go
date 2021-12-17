@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"github.com/mudler/luet/pkg/api/core/config"
+	"github.com/mudler/luet/pkg/api/core/logger"
 
 	"github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/mudler/luet/pkg/api/core/types"
@@ -54,7 +55,7 @@ type LuetInstallerOptions struct {
 	PackageRepositories                                            types.LuetRepositories
 	AutoOSCheck                                                    bool
 
-	Context *types.Context
+	Context types.Context
 }
 
 type LuetInstaller struct {
@@ -737,13 +738,15 @@ func (l *LuetInstaller) download(syncedRepos Repositories, toDownload map[string
 
 	// Check if the terminal is big enough to display a progress bar
 	// https://github.com/pterm/pterm/blob/4c725e56bfd9eb38e1c7b9dec187b50b93baa8bd/progressbar_printer.go#L190
-	w, _, err := ctx.GetTerminalSize()
+	w, _, err := logger.GetTerminalSize()
 
 	var pb *pterm.ProgressbarPrinter
-	if ctx.IsTerminal && err == nil && w > 100 {
+	if logger.IsTerminal() && err == nil && w > 100 {
 		area, _ := pterm.DefaultArea.Start()
-		ctx.ProgressBar = pterm.DefaultProgressbar.WithPrintTogether(area).WithTotal(len(toDownload)).WithTitle("Downloading packages")
-		pb, _ = ctx.ProgressBar.Start()
+		pb = pterm.DefaultProgressbar.WithPrintTogether(area).WithTotal(len(toDownload)).WithTitle("Downloading packages")
+		pb, _ = pb.Start()
+		ctx.SetAnnotation("progressbar", pb)
+
 		defer area.Stop()
 	}
 
@@ -1046,7 +1049,7 @@ func (l *LuetInstaller) install(o Option, syncedRepos Repositories, toInstall ma
 	return s.ExecuteFinalizers(l.Options.Context, toFinalize)
 }
 
-func (l *LuetInstaller) getPackage(a ArtifactMatch, ctx *types.Context) (artifact *artifact.PackageArtifact, err error) {
+func (l *LuetInstaller) getPackage(a ArtifactMatch, ctx types.Context) (artifact *artifact.PackageArtifact, err error) {
 
 	cli := a.Repository.Client(ctx)
 
@@ -1084,7 +1087,7 @@ func (l *LuetInstaller) installPackage(m ArtifactMatch, s *System) error {
 	return s.Database.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: m.Package.GetFingerPrint(), Files: files})
 }
 
-func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, pb *pterm.ProgressbarPrinter, c <-chan ArtifactMatch, ctx *types.Context) error {
+func (l *LuetInstaller) downloadWorker(i int, wg *sync.WaitGroup, pb *pterm.ProgressbarPrinter, c <-chan ArtifactMatch, ctx types.Context) error {
 	defer wg.Done()
 
 	for p := range c {
@@ -1114,7 +1117,7 @@ func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, installLock *
 		installLock.Unlock()
 		if err != nil && !l.Options.Force {
 			//TODO: Uninstall, rollback.
-			l.Options.Context.Fatal("Failed installing package "+p.Package.GetName(), err.Error())
+			l.Options.Context.Error("Failed installing package "+p.Package.GetName(), err.Error())
 			return errors.Wrap(err, "Failed installing package "+p.Package.GetName())
 		}
 		if err == nil {
@@ -1127,7 +1130,7 @@ func (l *LuetInstaller) installerWorker(i int, wg *sync.WaitGroup, installLock *
 	return nil
 }
 
-func checkAndPrunePath(ctx *types.Context, target, path string) {
+func checkAndPrunePath(ctx types.Context, target, path string) {
 	// check if now the target path is empty
 	targetPath := filepath.Dir(path)
 
@@ -1159,7 +1162,7 @@ func checkAndPrunePath(ctx *types.Context, target, path string) {
 }
 
 // We will try to cleanup every path from the file, if the folders left behind are empty
-func pruneEmptyFilePath(ctx *types.Context, target string, path string) {
+func pruneEmptyFilePath(ctx types.Context, target string, path string) {
 	checkAndPrunePath(ctx, target, path)
 
 	// A path is for e.g. /usr/bin/bar
@@ -1193,7 +1196,7 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 		return errors.Wrap(err, "Failed getting installed files")
 	}
 
-	if !l.Options.Context.Config.ConfigProtectSkip {
+	if !l.Options.Context.GetConfig().ConfigProtectSkip {
 
 		if p.HasAnnotation(string(pkg.ConfigProtectAnnnotation)) {
 			dir, ok := p.GetAnnotations()[string(pkg.ConfigProtectAnnnotation)]
@@ -1203,7 +1206,7 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 		}
 
 		cp = config.NewConfigProtect(annotationDir)
-		cp.Map(files, l.Options.Context.Config.GetConfigProtectConfFiles())
+		cp.Map(files, l.Options.Context.GetConfig().ConfigProtectConfFiles)
 	}
 
 	toRemove, notPresent := fileHelper.OrderFiles(s.Target, files)
@@ -1212,15 +1215,15 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 	for _, f := range toRemove {
 		target := filepath.Join(s.Target, f)
 
-		if !l.Options.Context.Config.ConfigProtectSkip && cp.Protected(f) {
+		if !l.Options.Context.GetConfig().ConfigProtectSkip && cp.Protected(f) {
 			l.Options.Context.Debug("Preserving protected file:", f)
 			continue
 		}
 
 		l.Options.Context.Debug("Removing", target)
 		if l.Options.PreserveSystemEssentialData &&
-			strings.HasPrefix(f, l.Options.Context.Config.GetSystem().GetSystemPkgsCacheDirPath()) ||
-			strings.HasPrefix(f, l.Options.Context.Config.GetSystem().GetSystemRepoDatabaseDirPath()) {
+			strings.HasPrefix(f, l.Options.Context.GetConfig().System.PkgsCachePath) ||
+			strings.HasPrefix(f, l.Options.Context.GetConfig().System.DatabasePath) {
 			l.Options.Context.Warning("Preserve ", f, " which is required by luet ( you have to delete it manually if you really need to)")
 			continue
 		}
@@ -1254,7 +1257,7 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 	for _, f := range notPresent {
 		target := filepath.Join(s.Target, f)
 
-		if !l.Options.Context.Config.ConfigProtectSkip && cp.Protected(f) {
+		if !l.Options.Context.GetConfig().ConfigProtectSkip && cp.Protected(f) {
 			l.Options.Context.Debug("Preserving protected file:", f)
 			continue
 		}

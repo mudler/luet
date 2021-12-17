@@ -52,7 +52,7 @@ Afterwards, you can use the content generated and associate it with a tree and a
 
 		dst := viper.GetString("destination")
 		compressionType := viper.GetString("compression")
-		concurrency := util.DefaultContext.Config.GetGeneral().Concurrency
+		concurrency := util.DefaultContext.Config.General.Concurrency
 
 		if len(args) != 1 {
 			util.DefaultContext.Fatal("You must specify a package name")

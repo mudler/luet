@@ -38,7 +38,11 @@ import (
 func NewTreeImageCommand() *cobra.Command {
 
 	var ans = &cobra.Command{
-		Use:   "images [OPTIONS]",
+		Use: "images [OPTIONS]",
+		// Skip processing output
+		Annotations: map[string]string{
+			util.CommandProcessOutput: "",
+		},
 		Short: "List of the images of a package",
 		PreRun: func(cmd *cobra.Command, args []string) {
 			t, _ := cmd.Flags().GetStringArray("tree")
@@ -60,12 +64,7 @@ func NewTreeImageCommand() *cobra.Command {
 			imageRepository := viper.GetString("image-repository")
 			pullRepo, _ := cmd.Flags().GetStringArray("pull-repository")
 			values := util.ValuesFlags()
-
 			out, _ := cmd.Flags().GetString("output")
-			if out != "terminal" {
-				util.DefaultContext.Config.GetLogging().SetLogLevel("error")
-			}
-
 			reciper := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 
 			for _, t := range treePath {
@@ -76,7 +75,7 @@ func NewTreeImageCommand() *cobra.Command {
 			}
 			compilerBackend := backend.NewSimpleDockerBackend(util.DefaultContext)
 
-			opts := *util.DefaultContext.Config.GetSolverOptions()
+			opts := util.DefaultContext.Config.Solver
 			opts.Options = solver.Options{Type: solver.SingleCoreSimple, Concurrency: 1}
 			luetCompiler := compiler.NewLuetCompiler(
 				compilerBackend,

@@ -24,9 +24,9 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/go-units"
+	luettypes "github.com/mudler/luet/pkg/api/core/types"
 	"github.com/pkg/errors"
 
-	luetTypes "github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/helpers"
 
@@ -42,17 +42,17 @@ type DockerClient struct {
 	RepoData RepoData
 	auth     *types.AuthConfig
 	Cache    *artifact.ArtifactCache
-	context  *luetTypes.Context
+	context  luettypes.Context
 }
 
-func NewDockerClient(r RepoData, ctx *luetTypes.Context) *DockerClient {
+func NewDockerClient(r RepoData, ctx luettypes.Context) *DockerClient {
 	auth := &types.AuthConfig{}
 
 	dat, _ := json.Marshal(r.Authentication)
 	json.Unmarshal(dat, auth)
 
 	return &DockerClient{RepoData: r, auth: auth,
-		Cache:   artifact.NewCache(ctx.Config.GetSystem().GetSystemPkgsCacheDirPath()),
+		Cache:   artifact.NewCache(ctx.GetConfig().System.PkgsCachePath),
 		context: ctx,
 	}
 }
@@ -81,13 +81,13 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 	// We discard checksum, that are checked while during pull and unpack by containerd
 	resultingArtifact.Checksums = artifact.Checksums{}
 
-	temp, err := c.context.Config.GetSystem().TempDir("image")
+	temp, err := c.context.TempDir("image")
 	if err != nil {
 		return nil, err
 	}
 	defer os.RemoveAll(temp)
 
-	tempArtifact, err := c.context.Config.GetSystem().TempFile("artifact")
+	tempArtifact, err := c.context.TempFile("artifact")
 	if err != nil {
 		return nil, err
 	}
@@ -144,13 +144,13 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 	// Files should be in URI/repository:<file>
 	ok := false
 
-	temp, err = c.context.Config.GetSystem().TempDir("tree")
+	temp, err = c.context.TempDir("tree")
 	if err != nil {
 		return "", err
 	}
 
 	for _, uri := range c.RepoData.Urls {
-		file, err = c.context.Config.GetSystem().TempFile("DockerClient")
+		file, err = c.context.TempFile("DockerClient")
 		if err != nil {
 			continue
 		}

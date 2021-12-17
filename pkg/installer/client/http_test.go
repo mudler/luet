@@ -22,7 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mudler/luet/pkg/api/core/types"
+	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/installer/client"
@@ -32,7 +32,7 @@ import (
 
 var _ = Describe("Http client", func() {
 	Context("With repository", func() {
-		ctx := types.NewContext()
+		ctx := context.NewContext()
 
 		It("Downloads single files", func() {
 			// setup small staticfile webserver with content

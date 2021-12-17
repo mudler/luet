@@ -18,9 +18,8 @@ package backend
 import (
 	"os/exec"
 
-	"github.com/mudler/luet/pkg/api/core/types"
-
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/pkg/errors"
 )
 
@@ -43,9 +42,9 @@ type Options struct {
 	BackendArgs    []string
 }
 
-func runCommand(ctx *types.Context, cmd *exec.Cmd) error {
+func runCommand(ctx types.Context, cmd *exec.Cmd) error {
 	output := ""
-	buffered := !ctx.Config.GetGeneral().ShowBuildOutput
+	buffered := !ctx.GetConfig().General.ShowBuildOutput
 	writer := NewBackendWriter(buffered, ctx)
 
 	cmd.Stdout = writer

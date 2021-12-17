@@ -26,7 +26,6 @@ var reclaimCmd = &cobra.Command{
 	Use:   "reclaim",
 	Short: "Reclaim packages to Luet database from available repositories",
 	PreRun: func(cmd *cobra.Command, args []string) {
-		util.BindSystemFlags(cmd)
 		viper.BindPFlag("force", cmd.Flags().Lookup("force"))
 	},
 	Long: `Reclaim tries to find association between packages in the online repositories and the system one.
@@ -36,21 +35,23 @@ var reclaimCmd = &cobra.Command{
 It scans the target file system, and if finds a match with a package available in the repositories, it marks as installed in the system database.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		util.SetSystemConfig(util.DefaultContext)
 
 		force := viper.GetBool("force")
 
-		util.DefaultContext.Debug("Solver", util.DefaultContext.Config.GetSolverOptions().CompactString())
+		util.DefaultContext.Debug("Solver", util.DefaultContext.Config.Solver.CompactString())
 
 		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-			Concurrency:                 util.DefaultContext.Config.GetGeneral().Concurrency,
+			Concurrency:                 util.DefaultContext.Config.General.Concurrency,
 			Force:                       force,
 			PreserveSystemEssentialData: true,
 			PackageRepositories:         util.DefaultContext.Config.SystemRepositories,
 			Context:                     util.DefaultContext,
 		})
 
-		system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.GetSystem().Rootfs}
+		system := &installer.System{
+			Database: util.DefaultContext.Config.GetSystemDB(),
+			Target:   util.DefaultContext.Config.System.Rootfs,
+		}
 		err := inst.Reclaim(system)
 		if err != nil {
 			util.DefaultContext.Fatal("Error: " + err.Error())
@@ -59,10 +60,6 @@ It scans the target file system, and if finds a match with a package available i
 }
 
 func init() {
-
-	reclaimCmd.Flags().String("system-dbpath", "", "System db path")
-	reclaimCmd.Flags().String("system-target", "", "System rootpath")
-	reclaimCmd.Flags().String("system-engine", "", "System DB engine")
 
 	reclaimCmd.Flags().Bool("force", false, "Skip errors and keep going (potentially harmful)")
 

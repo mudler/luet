@@ -81,19 +81,15 @@ To build a package, from a tree definition:
 `,
 	Version: version(),
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		err := util.InitContext(util.DefaultContext)
+		ctx, err := util.InitContext(cmd)
 		if err != nil {
-			util.DefaultContext.Error("failed to load configuration:", err.Error())
+			fmt.Println("failed to load configuration:", err.Error())
+			os.Exit(1)
 		}
-		util.DisplayVersionBanner(util.DefaultContext, util.IntroScreen, version, license)
 
-		// Initialize tmpdir prefix. TODO: Move this with LoadConfig
-		// directly on sub command to ensure the creation only when it's
-		// needed.
-		err = util.DefaultContext.Config.GetSystem().InitTmpDir()
-		if err != nil {
-			util.DefaultContext.Fatal("failed on init tmp basedir:", err.Error())
-		}
+		util.DefaultContext = ctx
+
+		util.DisplayVersionBanner(util.DefaultContext, util.IntroScreen, version, license)
 
 		viper.BindPFlag("plugin", cmd.Flags().Lookup("plugin"))
 
@@ -109,7 +105,7 @@ To build a package, from a tree definition:
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		// Cleanup all tmp directories used by luet
-		err := util.DefaultContext.Config.GetSystem().CleanupTmpDir()
+		err := util.DefaultContext.Clean()
 		if err != nil {
 			util.DefaultContext.Warning("failed on cleanup tmpdir:", err.Error())
 		}
@@ -129,5 +125,5 @@ func Execute() {
 }
 
 func init() {
-	util.InitViper(util.DefaultContext, RootCmd)
+	util.InitViper(RootCmd)
 }

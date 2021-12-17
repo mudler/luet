@@ -20,7 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
-	types "github.com/mudler/luet/pkg/api/core/types"
+	"github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/mudler/luet/pkg/api/core/types/artifact"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
@@ -59,7 +59,7 @@ var _ = Describe("Cache", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			b := NewPackageArtifact(path)
-			ctx := types.NewContext()
+			ctx := context.NewContext()
 			err = b.Unpack(ctx, tmpdir, false)
 			Expect(err).ToNot(HaveOccurred())
 

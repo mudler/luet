@@ -35,7 +35,7 @@ import (
 // considering the added files only, and applies a filter on them based on the regexes
 // in the lists.
 func ExtractDeltaAdditionsFiles(
-	ctx *types.Context,
+	ctx types.Context,
 	srcimg v1.Image,
 	includes []string, excludes []string,
 ) (func(h *tar.Header) (bool, error), error) {
@@ -43,7 +43,7 @@ func ExtractDeltaAdditionsFiles(
 	includeRegexp := compileRegexes(includes)
 	excludeRegexp := compileRegexes(excludes)
 
-	srcfilesd, err := ctx.Config.System.TempDir("srcfiles")
+	srcfilesd, err := ctx.TempDir("srcfiles")
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func ExtractDeltaAdditionsFiles(
 // It then filters files by an include and exclude list.
 // The list can be regexes
 func ExtractFiles(
-	ctx *types.Context,
+	ctx types.Context,
 	prefixPath string,
 	includes []string, excludes []string,
 ) func(h *tar.Header) (bool, error) {
@@ -193,7 +193,7 @@ func ExtractFiles(
 // ExtractReader perform the extracting action over the io.ReadCloser
 // it extracts the files over output. Accepts a filter as an option
 // and additional containerd Options
-func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
+func ExtractReader(ctx types.Context, reader io.ReadCloser, output string, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
 	defer reader.Close()
 
 	// If no filter is specified, grab all.
@@ -213,8 +213,8 @@ func ExtractReader(ctx *types.Context, reader io.ReadCloser, output string, filt
 }
 
 // Extract is just syntax sugar around ExtractReader. It extracts an image into a dir
-func Extract(ctx *types.Context, img v1.Image, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
-	tmpdiffs, err := ctx.Config.GetSystem().TempDir("extraction")
+func Extract(ctx types.Context, img v1.Image, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
+	tmpdiffs, err := ctx.TempDir("extraction")
 	if err != nil {
 		return 0, "", errors.Wrap(err, "Error met while creating tempdir for rootfs")
 	}
@@ -222,6 +222,6 @@ func Extract(ctx *types.Context, img v1.Image, filter func(h *tar.Header) (bool,
 }
 
 // ExtractTo is just syntax sugar around ExtractReader
-func ExtractTo(ctx *types.Context, img v1.Image, output string, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
+func ExtractTo(ctx types.Context, img v1.Image, output string, filter func(h *tar.Header) (bool, error), opts ...containerdarchive.ApplyOpt) (int64, string, error) {
 	return ExtractReader(ctx, mutate.Extract(img), output, filter, opts...)
 }

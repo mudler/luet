@@ -20,10 +20,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/image"
-	"github.com/mudler/luet/pkg/api/core/types"
 	. "github.com/mudler/luet/pkg/api/core/types/artifact"
-	. "github.com/mudler/luet/pkg/compiler/backend"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	compression "github.com/mudler/luet/pkg/compiler/types/compression"
 	"github.com/mudler/luet/pkg/compiler/types/options"
@@ -39,7 +38,7 @@ import (
 
 var _ = Describe("Artifact", func() {
 	Context("Simple package build definition", func() {
-		ctx := types.NewContext()
+		ctx := context.NewContext()
 		It("Generates a verified delta", func() {
 
 			generalRecipe := tree.NewGeneralRecipe(pkg.NewInMemoryDatabase(false))
@@ -49,7 +48,7 @@ var _ = Describe("Artifact", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			cc := NewLuetCompiler(nil, generalRecipe.GetDatabase(), options.WithContext(types.NewContext()))
+			cc := NewLuetCompiler(nil, generalRecipe.GetDatabase(), options.WithContext(context.NewContext()))
 			lspec, err := cc.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
 
@@ -83,7 +82,7 @@ WORKDIR /luetbuild
 ENV PACKAGE_NAME=enman
 ENV PACKAGE_VERSION=1.4.0
 ENV PACKAGE_CATEGORY=app-admin`))
-			b := NewSimpleDockerBackend(ctx)
+			b := backend.NewSimpleDockerBackend(ctx)
 			opts := backend.Options{
 				ImageName:      "luet/base",
 				SourcePath:     tmpdir,
@@ -120,7 +119,7 @@ RUN echo bar > /test2`))
 		})
 
 		It("Generates packages images", func() {
-			b := NewSimpleDockerBackend(ctx)
+			b := backend.NewSimpleDockerBackend(ctx)
 			imageprefix := "foo/"
 			testString := []byte(`funky test data`)
 
@@ -177,7 +176,7 @@ RUN echo bar > /test2`))
 		})
 
 		It("Generates empty packages images", func() {
-			b := NewSimpleDockerBackend(ctx)
+			b := backend.NewSimpleDockerBackend(ctx)
 			imageprefix := "foo/"
 
 			tmpdir, err := ioutil.TempDir(os.TempDir(), "artifact")

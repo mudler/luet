@@ -18,7 +18,7 @@ package config_test
 
 import (
 	config "github.com/mudler/luet/pkg/api/core/config"
-	"github.com/mudler/luet/pkg/api/core/types"
+	"github.com/mudler/luet/pkg/api/core/context"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -29,7 +29,7 @@ var _ = Describe("Config", func() {
 	Context("Test config protect", func() {
 
 		It("Protect1", func() {
-			ctx := types.NewContext()
+			ctx := context.NewContext()
 			files := []string{
 				"etc/foo/my.conf",
 				"usr/bin/foo",
@@ -59,7 +59,7 @@ var _ = Describe("Config", func() {
 		})
 
 		It("Protect2", func() {
-			ctx := types.NewContext()
+			ctx := context.NewContext()
 
 			files := []string{
 				"etc/foo/my.conf",
@@ -86,7 +86,7 @@ var _ = Describe("Config", func() {
 		})
 
 		It("Protect3: Annotation dir without initial slash", func() {
-			ctx := types.NewContext()
+			ctx := context.NewContext()
 
 			files := []string{
 				"etc/foo/my.conf",

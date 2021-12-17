@@ -19,10 +19,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mudler/luet/pkg/api/core/types"
 	installer "github.com/mudler/luet/pkg/installer"
 	pkg "github.com/mudler/luet/pkg/package"
-	"github.com/mudler/luet/pkg/solver"
 
 	"github.com/mudler/luet/cmd/util"
 
@@ -43,8 +41,6 @@ To reinstall packages in the list:
 `,
 	Aliases: []string{"i"},
 	PreRun: func(cmd *cobra.Command, args []string) {
-		util.BindSystemFlags(cmd)
-		util.BindSolverFlags(cmd)
 		viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
 		viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
 		viper.BindPFlag("force", cmd.Flags().Lookup("force"))
@@ -57,9 +53,11 @@ To reinstall packages in the list:
 		yes := viper.GetBool("yes")
 
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
-		util.SetSystemConfig(util.DefaultContext)
 
-		system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.GetSystem().Rootfs}
+		system := &installer.System{
+			Database: util.DefaultContext.Config.GetSystemDB(),
+			Target:   util.DefaultContext.Config.System.Rootfs,
+		}
 		packs := system.OSCheck()
 		if !util.DefaultContext.Config.General.Quiet {
 			if len(packs) == 0 {
@@ -90,18 +88,11 @@ To reinstall packages in the list:
 				toInstall = append(toInstall, new)
 			}
 
-			util.SetSolverConfig(util.DefaultContext)
-
-			util.DefaultContext.Config.GetSolverOptions().Implementation = solver.SingleCoreSimple
-
-			util.DefaultContext.Debug("Solver", util.DefaultContext.Config.GetSolverOptions().CompactString())
-
-			// Load config protect configs
-			util.DefaultContext.Config.LoadConfigProtect(util.DefaultContext)
+			util.DefaultContext.Debug("Solver", util.DefaultContext.Config.Solver.CompactString())
 
 			inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-				Concurrency:                 util.DefaultContext.Config.GetGeneral().Concurrency,
-				SolverOptions:               *util.DefaultContext.Config.GetSolverOptions(),
+				Concurrency:                 util.DefaultContext.Config.General.Concurrency,
+				SolverOptions:               util.DefaultContext.Config.Solver,
 				NoDeps:                      true,
 				Force:                       force,
 				OnlyDeps:                    onlydeps,
@@ -121,18 +112,11 @@ To reinstall packages in the list:
 }
 
 func init() {
-	osCheckCmd.Flags().String("system-dbpath", "", "System db path")
-	osCheckCmd.Flags().String("system-target", "", "System rootpath")
-	osCheckCmd.Flags().String("system-engine", "", "System DB engine")
+
 	osCheckCmd.Flags().Bool("reinstall", false, "reinstall")
 
-	osCheckCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+types.AvailableResolvers+" )")
-	osCheckCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
-	osCheckCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
-	osCheckCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	osCheckCmd.Flags().Bool("onlydeps", false, "Consider **only** package dependencies")
 	osCheckCmd.Flags().Bool("force", false, "Skip errors and keep going (potentially harmful)")
-	osCheckCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
 	osCheckCmd.Flags().BoolP("yes", "y", false, "Don't ask questions")
 	osCheckCmd.Flags().Bool("download-only", false, "Download only")
 

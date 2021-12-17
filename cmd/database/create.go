@@ -27,7 +27,7 @@ import (
 )
 
 func NewDatabaseCreateCommand() *cobra.Command {
-	var ans = &cobra.Command{
+	return &cobra.Command{
 		Use:   "create <artifact_metadata1.yaml> <artifact_metadata1.yaml>",
 		Short: "Insert a package in the system DB",
 		Long: `Inserts a package in the system database:
@@ -42,12 +42,8 @@ The yaml must contain the package definition, and the file list at least.
 
 For reference, inspect a "metadata.yaml" file generated while running "luet build"`,
 		Args: cobra.OnlyValidArgs,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			util.BindSystemFlags(cmd)
-		},
 		Run: func(cmd *cobra.Command, args []string) {
 
-			util.SetSystemConfig(util.DefaultContext)
 			systemDB := util.DefaultContext.Config.GetSystemDB()
 
 			for _, a := range args {
@@ -81,9 +77,4 @@ For reference, inspect a "metadata.yaml" file generated while running "luet buil
 		},
 	}
 
-	ans.Flags().String("system-dbpath", "", "System db path")
-	ans.Flags().String("system-target", "", "System rootpath")
-	ans.Flags().String("system-engine", "", "System DB engine")
-
-	return ans
 }

@@ -17,53 +17,86 @@
 package types_test
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
-	types "github.com/mudler/luet/pkg/api/core/types"
+	"github.com/mudler/luet/pkg/api/core/context"
+	"github.com/mudler/luet/pkg/api/core/types"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Config", func() {
-	Context("Load Repository1", func() {
-		ctx := types.NewContext()
 
-		ctx.Config.RepositoriesConfDir = []string{
-			"../../../../tests/fixtures/repos.conf.d",
-		}
-		err := ctx.Config.LoadRepositories(ctx)
+	Context("Inits paths", func() {
+		t, _ := ioutil.TempDir("", "tests")
+		defer os.RemoveAll(t)
+		c := &types.LuetConfig{
+			System: types.LuetSystemConfig{
+				Rootfs:        t,
+				PkgsCachePath: "foo",
+				DatabasePath:  "baz",
+			}}
+		It("sets default", func() {
+			err := c.Init()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(c.System.Rootfs).To(Equal(t))
+			Expect(c.System.PkgsCachePath).To(Equal(filepath.Join(t, "baz", "foo")))
+			Expect(c.System.DatabasePath).To(Equal(filepath.Join(t, "baz")))
+		})
+	})
+
+	Context("Load Repository1", func() {
+		var ctx *context.Context
+		BeforeEach(func() {
+			ctx = context.NewContext(context.WithConfig(&types.LuetConfig{
+				RepositoriesConfDir: []string{
+					"../../../../tests/fixtures/repos.conf.d",
+				},
+			}))
+			ctx.Config.Init()
+		})
 
 		It("Check Load Repository 1", func() {
-			Expect(err).Should(BeNil())
-			Expect(len(ctx.Config.SystemRepositories)).Should(Equal(2))
-			Expect(ctx.Config.SystemRepositories[0].Name).Should(Equal("test1"))
-			Expect(ctx.Config.SystemRepositories[0].Priority).Should(Equal(999))
-			Expect(ctx.Config.SystemRepositories[0].Type).Should(Equal("disk"))
-			Expect(len(ctx.Config.SystemRepositories[0].Urls)).Should(Equal(1))
-			Expect(ctx.Config.SystemRepositories[0].Urls[0]).Should(Equal("tests/repos/test1"))
+			Expect(len(ctx.GetConfig().SystemRepositories)).Should(Equal(2))
+			Expect(ctx.GetConfig().SystemRepositories[0].Name).Should(Equal("test1"))
+			Expect(ctx.GetConfig().SystemRepositories[0].Priority).Should(Equal(999))
+			Expect(ctx.GetConfig().SystemRepositories[0].Type).Should(Equal("disk"))
+			Expect(len(ctx.GetConfig().SystemRepositories[0].Urls)).Should(Equal(1))
+			Expect(ctx.GetConfig().SystemRepositories[0].Urls[0]).Should(Equal("tests/repos/test1"))
 		})
 
 		It("Chec Load Repository 2", func() {
-			Expect(err).Should(BeNil())
-			Expect(len(ctx.Config.SystemRepositories)).Should(Equal(2))
-			Expect(ctx.Config.SystemRepositories[1].Name).Should(Equal("test2"))
-			Expect(ctx.Config.SystemRepositories[1].Priority).Should(Equal(1000))
-			Expect(ctx.Config.SystemRepositories[1].Type).Should(Equal("disk"))
-			Expect(len(ctx.Config.SystemRepositories[1].Urls)).Should(Equal(1))
-			Expect(ctx.Config.SystemRepositories[1].Urls[0]).Should(Equal("tests/repos/test2"))
+			Expect(len(ctx.GetConfig().SystemRepositories)).Should(Equal(2))
+			Expect(ctx.GetConfig().SystemRepositories[1].Name).Should(Equal("test2"))
+			Expect(ctx.GetConfig().SystemRepositories[1].Priority).Should(Equal(1000))
+			Expect(ctx.GetConfig().SystemRepositories[1].Type).Should(Equal("disk"))
+			Expect(len(ctx.GetConfig().SystemRepositories[1].Urls)).Should(Equal(1))
+			Expect(ctx.GetConfig().SystemRepositories[1].Urls[0]).Should(Equal("tests/repos/test2"))
 		})
 	})
+
 	Context("Simple temporary directory creation", func() {
+		ctx := context.NewContext(context.WithConfig(&types.LuetConfig{
+			System: types.LuetSystemConfig{
+				TmpDirBase: os.TempDir() + "/tmpluet",
+			},
+		}))
+
+		BeforeEach(func() {
+			ctx = context.NewContext(context.WithConfig(&types.LuetConfig{
+				System: types.LuetSystemConfig{
+					TmpDirBase: os.TempDir() + "/tmpluet",
+				},
+			}))
+
+		})
 
 		It("Create Temporary directory", func() {
-			ctx := types.NewContext()
-
-			ctx.Config.GetSystem().TmpDirBase = os.TempDir() + "/tmpluet"
-
-			tmpDir, err := ctx.Config.GetSystem().TempDir("test1")
+			tmpDir, err := ctx.TempDir("test1")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(strings.HasPrefix(tmpDir, filepath.Join(os.TempDir(), "tmpluet"))).To(BeTrue())
 			Expect(fileHelper.Exists(tmpDir)).To(BeTrue())
@@ -72,11 +105,7 @@ var _ = Describe("Config", func() {
 		})
 
 		It("Create Temporary file", func() {
-			ctx := types.NewContext()
-
-			ctx.Config.GetSystem().TmpDirBase = os.TempDir() + "/tmpluet"
-
-			tmpFile, err := ctx.Config.GetSystem().TempFile("testfile1")
+			tmpFile, err := ctx.TempFile("testfile1")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(strings.HasPrefix(tmpFile.Name(), filepath.Join(os.TempDir(), "tmpluet"))).To(BeTrue())
 			Expect(fileHelper.Exists(tmpFile.Name())).To(BeTrue())

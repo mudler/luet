@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package types_test
+package logger_test
 
 import (
 	"io"
@@ -21,7 +21,8 @@ import (
 	"os"
 
 	"github.com/gookit/color"
-	types "github.com/mudler/luet/pkg/api/core/types"
+	"github.com/mudler/luet/pkg/api/core/logger"
+	. "github.com/mudler/luet/pkg/api/core/logger"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -44,30 +45,11 @@ func captureStdout(f func(w io.Writer)) string {
 }
 
 var _ = Describe("Context and logging", func() {
-	ctx := types.NewContext()
-
-	BeforeEach(func() {
-		ctx = types.NewContext()
-	})
-
-	Context("LogLevel", func() {
-		It("converts it correctly to number and zaplog", func() {
-			Expect(types.ErrorLevel.ToNumber()).To(Equal(0))
-			Expect(types.InfoLevel.ToNumber()).To(Equal(2))
-			Expect(types.WarningLevel.ToNumber()).To(Equal(1))
-			Expect(types.LogLevel("foo").ToNumber()).To(Equal(3))
-			Expect(types.WarningLevel.ZapLevel().String()).To(Equal("warn"))
-			Expect(types.InfoLevel.ZapLevel().String()).To(Equal("info"))
-			Expect(types.ErrorLevel.ZapLevel().String()).To(Equal("error"))
-			Expect(types.FatalLevel.ZapLevel().String()).To(Equal("fatal"))
-			Expect(types.LogLevel("foo").ZapLevel().String()).To(Equal("debug"))
-		})
-	})
 
 	Context("Context", func() {
 		It("detect if is a terminal", func() {
 			Expect(captureStdout(func(w io.Writer) {
-				_, _, err := ctx.GetTerminalSize()
+				_, _, err := GetTerminalSize()
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("size not detectable"))
 				os.Stdout.Write([]byte(err.Error()))
@@ -75,47 +57,71 @@ var _ = Describe("Context and logging", func() {
 		})
 
 		It("respects loglevel", func() {
-			ctx.Config.GetGeneral().Debug = false
+
+			l, err := New(WithLevel("info"))
+			Expect(err).ToNot(HaveOccurred())
+
 			Expect(captureStdout(func(w io.Writer) {
-				ctx.Debug("")
+				l.Debug("")
 			})).To(Equal(""))
 
-			ctx.Config.GetGeneral().Debug = true
+			l, err = New(WithLevel("debug"))
+			Expect(err).ToNot(HaveOccurred())
+
 			Expect(captureStdout(func(w io.Writer) {
-				ctx.Debug("foo")
+				l.Debug("foo")
 			})).To(ContainSubstring("foo"))
 		})
 
+		It("logs with context", func() {
+			l, err := New(WithLevel("debug"), WithContext("foo"))
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(captureStdout(func(w io.Writer) {
+				l.Debug("bar")
+			})).To(ContainSubstring("(foo)  bar"))
+		})
+
+		It("returns copies with logged context", func() {
+			l, err := New(WithLevel("debug"))
+			l, _ = l.Copy(logger.WithContext("bazzz"))
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(captureStdout(func(w io.Writer) {
+				l.Debug("bar")
+			})).To(ContainSubstring("(bazzz)  bar"))
+		})
+
 		It("logs to file", func() {
-			ctx.NoColor()
 
 			t, err := ioutil.TempFile("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(t.Name()) // clean up
-			ctx.Config.GetLogging().EnableLogFile = true
-			ctx.Config.GetLogging().Path = t.Name()
 
-			ctx.Init()
+			l, err := New(WithLevel("debug"), WithFileLogging(t.Name(), ""))
+			Expect(err).ToNot(HaveOccurred())
+
+			//	ctx.Init()
 
 			Expect(captureStdout(func(w io.Writer) {
-				ctx.Info("foot")
+				l.Info("foot")
 			})).To(And(ContainSubstring("INFO"), ContainSubstring("foot")))
 
 			Expect(captureStdout(func(w io.Writer) {
-				ctx.Success("test")
+				l.Success("test")
 			})).To(And(ContainSubstring("SUCCESS"), ContainSubstring("test")))
 
 			Expect(captureStdout(func(w io.Writer) {
-				ctx.Error("foobar")
+				l.Error("foobar")
 			})).To(And(ContainSubstring("ERROR"), ContainSubstring("foobar")))
 
 			Expect(captureStdout(func(w io.Writer) {
-				ctx.Warning("foowarn")
+				l.Warning("foowarn")
 			})).To(And(ContainSubstring("WARNING"), ContainSubstring("foowarn")))
 
-			l, err := ioutil.ReadFile(t.Name())
+			ll, err := ioutil.ReadFile(t.Name())
 			Expect(err).ToNot(HaveOccurred())
-			logs := string(l)
+			logs := string(ll)
 			Expect(logs).To(ContainSubstring("foot"))
 			Expect(logs).To(ContainSubstring("test"))
 			Expect(logs).To(ContainSubstring("foowarn"))

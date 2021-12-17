@@ -25,10 +25,10 @@ import (
 type BackendWriter struct {
 	BufferedOutput bool
 	Buffer         *bytes.Buffer
-	ctx            *types.Context
+	ctx            types.Context
 }
 
-func NewBackendWriter(buffered bool, ctx *types.Context) *BackendWriter {
+func NewBackendWriter(buffered bool, ctx types.Context) *BackendWriter {
 	return &BackendWriter{
 		BufferedOutput: buffered,
 		Buffer:         &bytes.Buffer{},
@@ -41,7 +41,7 @@ func (b *BackendWriter) Write(p []byte) (int, error) {
 		return b.Buffer.Write(p)
 	}
 
-	b.ctx.Msg("info", false, (string(p)))
+	b.ctx.Info((string(p)))
 
 	return len(p), nil
 }

@@ -67,6 +67,10 @@ func NewTreePkglistCommand() *cobra.Command {
 	var matches []string
 
 	var ans = &cobra.Command{
+		// Skip processing output
+		Annotations: map[string]string{
+			util.CommandProcessOutput: "",
+		},
 		Use:   "pkglist [OPTIONS]",
 		Short: "List of the packages found in tree.",
 		Args:  cobra.NoArgs,
@@ -95,9 +99,6 @@ func NewTreePkglistCommand() *cobra.Command {
 			deps, _ := cmd.Flags().GetBool("deps")
 
 			out, _ := cmd.Flags().GetString("output")
-			if out != "terminal" {
-				util.DefaultContext.Config.GetLogging().SetLogLevel("error")
-			}
 
 			var reciper tree.Builder
 			if buildtime {

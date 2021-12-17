@@ -33,7 +33,7 @@ import (
 )
 
 type localRepositoryGenerator struct {
-	context    *types.Context
+	context    types.Context
 	snapshotID string
 }
 
@@ -41,7 +41,7 @@ func (l *localRepositoryGenerator) Initialize(path string, db pkg.PackageDatabas
 	return buildPackageIndex(l.context, path, db)
 }
 
-func buildPackageIndex(ctx *types.Context, path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
+func buildPackageIndex(ctx types.Context, path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
 
 	var art []*artifact.PackageArtifact
 	var ff = func(currentpath string, info os.FileInfo, err error) error {

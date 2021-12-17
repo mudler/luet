@@ -32,10 +32,10 @@ import (
 )
 
 type SimpleDocker struct {
-	ctx *types.Context
+	ctx types.Context
 }
 
-func NewSimpleDockerBackend(ctx *types.Context) *SimpleDocker {
+func NewSimpleDockerBackend(ctx types.Context) *SimpleDocker {
 	return &SimpleDocker{ctx: ctx}
 }
 
@@ -190,7 +190,7 @@ func (s *SimpleDocker) imageFromCLIPipe(a string) (v1.Image, error) {
 }
 
 func (s *SimpleDocker) imageFromDisk(a string) (v1.Image, error) {
-	f, err := s.ctx.Config.GetSystem().TempFile("snapshot")
+	f, err := s.ctx.TempFile("snapshot")
 	if err != nil {
 		return nil, err
 	}

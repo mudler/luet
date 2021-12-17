@@ -90,7 +90,7 @@ type Bus struct {
 	*pluggable.Manager
 }
 
-func (b *Bus) Initialize(ctx *types.Context, plugin ...string) {
+func (b *Bus) Initialize(ctx types.Context, plugin ...string) {
 	b.Manager.Load(plugin...).Register()
 
 	for _, e := range b.Manager.Events {

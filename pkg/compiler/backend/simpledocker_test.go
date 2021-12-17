@@ -16,7 +16,7 @@
 package backend_test
 
 import (
-	"github.com/mudler/luet/pkg/api/core/types"
+	"github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	. "github.com/mudler/luet/pkg/compiler/backend"
@@ -34,7 +34,7 @@ import (
 
 var _ = Describe("Docker backend", func() {
 	Context("Simple Docker backend satisfies main interface functionalities", func() {
-		ctx := types.NewContext()
+		ctx := context.NewContext()
 		It("Builds and generate tars", func() {
 			generalRecipe := tree.NewGeneralRecipe(pkg.NewInMemoryDatabase(false))
 

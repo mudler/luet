@@ -16,6 +16,7 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -23,8 +24,15 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/ipfs/go-log/v2"
 	extensions "github.com/mudler/cobra-extensions"
+	"github.com/mudler/luet/pkg/api/core/context"
+	gc "github.com/mudler/luet/pkg/api/core/garbagecollector"
+	"github.com/mudler/luet/pkg/api/core/logger"
 	"github.com/mudler/luet/pkg/api/core/types"
+	"github.com/mudler/luet/pkg/solver"
+	"github.com/pterm/pterm"
+	"go.uber.org/zap/zapcore"
 
 	helpers "github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
@@ -87,26 +95,117 @@ func initConfig() {
 
 }
 
+var DefaultContext *context.Context
+
 // InitContext inits the context by parsing the configurations from viper
 // this is meant to be run before each command to be able to parse any override from
 // the CLI/ENV
-func InitContext(ctx *types.Context) (err error) {
+func InitContext(cmd *cobra.Command) (ctx *context.Context, err error) {
 
-	err = viper.Unmarshal(&ctx.Config)
+	c := &types.LuetConfig{}
+	err = viper.Unmarshal(c)
 	if err != nil {
 		return
 	}
+
+	// Converts user-defined config into paths
+	// and creates the required directory on the system if necessary
+	c.Init()
+
+	finalizerEnvs, _ := cmd.Flags().GetStringArray("finalizer-env")
+	setCliFinalizerEnvs(c, finalizerEnvs)
+
+	c.Solver.Options = solver.Options{Type: solver.SingleCoreSimple, Concurrency: c.General.Concurrency}
+
+	ctx = context.NewContext(
+		context.WithConfig(c),
+		context.WithGarbageCollector(gc.GarbageCollector(c.System.TmpDirBase)),
+	)
 
 	// Inits the context with the configurations loaded
 	// It reads system repositories, sets logging, and all the
 	// context which is required to perform luet actions
-	err = ctx.Init()
-	if err != nil {
-		return
+	return ctx, initContext(cmd, ctx)
+}
+
+func setCliFinalizerEnvs(c *types.LuetConfig, finalizerEnvs []string) error {
+	if len(finalizerEnvs) > 0 {
+		for _, v := range finalizerEnvs {
+			idx := strings.Index(v, "=")
+			if idx < 0 {
+				return errors.New("Found invalid runtime finalizer environment: " + v)
+			}
+
+			c.SetFinalizerEnv(v[0:idx], v[idx+1:])
+		}
 	}
 
-	// no_spinner is not mapped in our configs
-	ctx.NoSpinner = viper.GetBool("no_spinner")
+	return nil
+}
+
+const (
+	CommandProcessOutput = "command.process.output"
+)
+
+func initContext(cmd *cobra.Command, c *context.Context) (err error) {
+	if logger.IsTerminal() {
+		if !c.Config.Logging.Color {
+			pterm.DisableColor()
+		}
+	} else {
+		pterm.DisableColor()
+		c.Debug("Not a terminal, colors disabled")
+	}
+
+	if c.Config.General.Quiet {
+		pterm.DisableColor()
+		pterm.DisableStyling()
+	}
+
+	level := c.Config.Logging.Level
+	if c.Config.General.Debug {
+		level = "debug"
+	}
+
+	if _, ok := cmd.Annotations[CommandProcessOutput]; ok {
+		// Note: create-repo output is different, so we annotate in the cmd of create-repo CommandNoProcess
+		// to avoid
+		out, _ := cmd.Flags().GetString("output")
+		if out != "terminal" {
+			level = zapcore.Level(log.LevelFatal).String()
+		}
+	}
+
+	// Init logging
+	opts := []logger.LoggerOptions{
+		logger.WithLevel(level),
+	}
+
+	if c.Config.Logging.NoSpinner {
+		opts = append(opts, logger.NoSpinner)
+	}
+
+	if c.Config.Logging.EnableLogFile && c.Config.Logging.Path != "" {
+		f := "console"
+		if c.Config.Logging.JsonFormat {
+			f = "json"
+		}
+		opts = append(opts, logger.WithFileLogging(c.Config.Logging.Path, f))
+	}
+
+	if c.Config.Logging.EnableEmoji {
+		opts = append(opts, logger.EnableEmoji())
+	}
+
+	l, err := logger.New(opts...)
+
+	c.Logger = l
+
+	c.Debug("System rootfs:", c.Config.System.Rootfs)
+	c.Debug("Colors", c.Config.Logging.Color)
+	c.Debug("Logging level", c.Config.Logging.Level)
+	c.Debug("Debug mode", c.Config.General.Debug)
+
 	return
 }
 
@@ -156,7 +255,7 @@ func setDefaults(viper *viper.Viper) {
 
 // InitViper inits a new viper
 // this is meant to be run just once at beginning to setup the root command
-func InitViper(ctx *types.Context, RootCmd *cobra.Command) {
+func InitViper(RootCmd *cobra.Command) {
 	cobra.OnInitialize(initConfig)
 	pflags := RootCmd.PersistentFlags()
 	pflags.StringVar(&cfgFile, "config", "", "config file (default is $HOME/.luet.yaml)")
@@ -165,29 +264,38 @@ func InitViper(ctx *types.Context, RootCmd *cobra.Command) {
 	pflags.Bool("fatal", false, "Enables Warnings to exit")
 	pflags.Bool("enable-logfile", false, "Enable log to file")
 	pflags.Bool("no-spinner", false, "Disable spinner.")
-	pflags.Bool("color", ctx.Config.GetLogging().Color, "Enable/Disable color.")
-	pflags.Bool("emoji", ctx.Config.GetLogging().EnableEmoji, "Enable/Disable emoji.")
-	pflags.Bool("skip-config-protect", ctx.Config.ConfigProtectSkip,
-		"Disable config protect analysis.")
-	pflags.StringP("logfile", "l", ctx.Config.GetLogging().Path,
-		"Logfile path. Empty value disable log to file.")
+	pflags.Bool("color", true, "Enable/Disable color.")
+	pflags.Bool("emoji", true, "Enable/Disable emoji.")
+	pflags.Bool("skip-config-protect", true, "Disable config protect analysis.")
+	pflags.StringP("logfile", "l", "", "Logfile path. Empty value disable log to file.")
 	pflags.StringSlice("plugin", []string{}, "A list of runtime plugins to load")
 
-	// os/user doesn't work in from scratch environments.
-	// Check if i can retrieve user informations.
-	_, err := user.Current()
-	if err != nil {
-		ctx.Warning("failed to retrieve user identity:", err.Error())
-	}
-	pflags.Bool("same-owner", ctx.Config.GetGeneral().SameOwner, "Maintain same owner on uncompress.")
+	pflags.String("system-dbpath", "", "System db path")
+	pflags.String("system-target", "", "System rootpath")
+	pflags.String("system-engine", "", "System DB engine")
+
+	pflags.String("solver-type", "", "Solver strategy ( Defaults none, available: "+types.AvailableResolvers+" )")
+	pflags.Float32("solver-rate", 0.7, "Solver learning rate")
+	pflags.Float32("solver-discount", 1.0, "Solver discount rate")
+	pflags.Int("solver-attempts", 9000, "Solver maximum attempts")
+
+	pflags.Bool("same-owner", true, "Maintain same owner on uncompress.")
 	pflags.Int("concurrency", runtime.NumCPU(), "Concurrency")
-	pflags.Int("http-timeout", ctx.Config.General.HTTPTimeout, "Default timeout for http(s) requests")
+	pflags.Int("http-timeout", 360, "Default timeout for http(s) requests")
+
+	viper.BindPFlag("system.database_path", pflags.Lookup("system-dbpath"))
+	viper.BindPFlag("system.rootfs", pflags.Lookup("system-target"))
+	viper.BindPFlag("system.database_engine", pflags.Lookup("system-engine"))
+	viper.BindPFlag("solver.type", pflags.Lookup("solver-type"))
+	viper.BindPFlag("solver.discount", pflags.Lookup("solver-discount"))
+	viper.BindPFlag("solver.rate", pflags.Lookup("solver-rate"))
+	viper.BindPFlag("solver.max_attempts", pflags.Lookup("solver-attempts"))
 
 	viper.BindPFlag("logging.color", pflags.Lookup("color"))
 	viper.BindPFlag("logging.enable_emoji", pflags.Lookup("emoji"))
 	viper.BindPFlag("logging.enable_logfile", pflags.Lookup("enable-logfile"))
 	viper.BindPFlag("logging.path", pflags.Lookup("logfile"))
-
+	viper.BindPFlag("logging.no_spinner", pflags.Lookup("no-spinner"))
 	viper.BindPFlag("general.concurrency", pflags.Lookup("concurrency"))
 	viper.BindPFlag("general.debug", pflags.Lookup("debug"))
 	viper.BindPFlag("general.quiet", pflags.Lookup("quiet"))

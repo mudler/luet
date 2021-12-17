@@ -15,9 +15,7 @@
 package cmd
 
 import (
-	"github.com/mudler/luet/pkg/api/core/types"
 	installer "github.com/mudler/luet/pkg/installer"
-	"github.com/mudler/luet/pkg/solver"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
@@ -48,8 +46,6 @@ To force install a package:
 `,
 	Aliases: []string{"i"},
 	PreRun: func(cmd *cobra.Command, args []string) {
-		util.BindSystemFlags(cmd)
-		util.BindSolverFlags(cmd)
 		viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
 		viper.BindPFlag("nodeps", cmd.Flags().Lookup("nodeps"))
 		viper.BindPFlag("force", cmd.Flags().Lookup("force"))
@@ -71,28 +67,13 @@ To force install a package:
 		onlydeps := viper.GetBool("onlydeps")
 		yes := viper.GetBool("yes")
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
-		finalizerEnvs, _ := cmd.Flags().GetStringArray("finalizer-env")
 		relax, _ := cmd.Flags().GetBool("relax")
 
-		util.SetSystemConfig(util.DefaultContext)
-		util.SetSolverConfig(util.DefaultContext)
-
-		util.DefaultContext.Config.GetSolverOptions().Implementation = solver.SingleCoreSimple
-
-		util.DefaultContext.Debug("Solver", util.DefaultContext.Config.GetSolverOptions().CompactString())
-
-		// Load config protect configs
-		util.DefaultContext.Config.LoadConfigProtect(util.DefaultContext)
-
-		// Load finalizer runtime environments
-		err := util.SetCliFinalizerEnvs(util.DefaultContext, finalizerEnvs)
-		if err != nil {
-			util.DefaultContext.Fatal(err.Error())
-		}
+		util.DefaultContext.Debug("Solver", util.DefaultContext.Config.Solver.CompactString())
 
 		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-			Concurrency:                 util.DefaultContext.Config.GetGeneral().Concurrency,
-			SolverOptions:               *util.DefaultContext.Config.GetSolverOptions(),
+			Concurrency:                 util.DefaultContext.Config.General.Concurrency,
+			SolverOptions:               util.DefaultContext.Config.Solver,
 			NoDeps:                      nodeps,
 			Force:                       force,
 			OnlyDeps:                    onlydeps,
@@ -104,8 +85,11 @@ To force install a package:
 			Context:                     util.DefaultContext,
 		})
 
-		system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.GetSystem().Rootfs}
-		err = inst.Install(toInstall, system)
+		system := &installer.System{
+			Database: util.DefaultContext.Config.GetSystemDB(),
+			Target:   util.DefaultContext.Config.System.Rootfs,
+		}
+		err := inst.Install(toInstall, system)
 		if err != nil {
 			util.DefaultContext.Fatal("Error: " + err.Error())
 		}
@@ -113,14 +97,7 @@ To force install a package:
 }
 
 func init() {
-	installCmd.Flags().String("system-dbpath", "", "System db path")
-	installCmd.Flags().String("system-target", "", "System rootpath")
-	installCmd.Flags().String("system-engine", "", "System DB engine")
 
-	installCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+types.AvailableResolvers+" )")
-	installCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
-	installCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
-	installCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	installCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful!)")
 	installCmd.Flags().Bool("relax", false, "Relax installation constraints")
 

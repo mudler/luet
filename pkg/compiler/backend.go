@@ -2,13 +2,13 @@ package compiler
 
 import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/mudler/luet/pkg/api/core/types"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/pkg/errors"
 )
 
-func NewBackend(ctx *types.Context, s string) (CompilerBackend, error) {
+func NewBackend(ctx types.Context, s string) (CompilerBackend, error) {
 	var compilerBackend CompilerBackend
 
 	switch s {

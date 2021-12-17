@@ -20,7 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mudler/luet/pkg/api/core/types"
+	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
@@ -38,7 +38,7 @@ import (
 // mount/unmount layers.
 var _ = Describe("Docker client", func() {
 	Context("With repository", func() {
-		ctx := types.NewContext()
+		ctx := context.NewContext()
 
 		repoImage := os.Getenv("UNIT_TEST_DOCKER_IMAGE")
 		var repoURL []string

@@ -36,12 +36,9 @@ func NewDatabaseGetCommand() *cobra.Command {
 To return also files:
 		$ luet database get --files system/foo`,
 		Args: cobra.OnlyValidArgs,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			util.BindSystemFlags(cmd)
-		},
+
 		Run: func(cmd *cobra.Command, args []string) {
 			showFiles, _ := cmd.Flags().GetBool("files")
-			util.SetSystemConfig(util.DefaultContext)
 
 			systemDB := util.DefaultContext.Config.GetSystemDB()
 
@@ -77,9 +74,6 @@ To return also files:
 		},
 	}
 	c.Flags().Bool("files", false, "Show package files.")
-	c.Flags().String("system-dbpath", "", "System db path")
-	c.Flags().String("system-target", "", "System rootpath")
-	c.Flags().String("system-engine", "", "System DB engine")
 
 	return c
 }

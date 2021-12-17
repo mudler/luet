@@ -68,7 +68,7 @@ func NewRepoListCommand() *cobra.Command {
 						repoText = pterm.LightYellow(repo.Urls[0])
 					}
 
-					repobasedir := util.DefaultContext.Config.GetSystem().GetRepoDatabaseDirPath(repo.Name)
+					repobasedir := util.DefaultContext.Config.System.GetRepoDatabaseDirPath(repo.Name)
 					if repo.Cached {
 
 						r := installer.NewSystemRepository(repo)

@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler"
@@ -49,16 +50,16 @@ func dockerStubRepo(tmpdir, tree, image string, push, force bool) (*LuetSystemRe
 		WithSource(tmpdir),
 		WithTree(tree),
 		WithDatabase(pkg.NewInMemoryDatabase(false)),
-		WithCompilerBackend(backend.NewSimpleDockerBackend(types.NewContext())),
+		WithCompilerBackend(backend.NewSimpleDockerBackend(context.NewContext())),
 		WithImagePrefix(image),
 		WithPushImages(push),
-		WithContext(types.NewContext()),
+		WithContext(context.NewContext()),
 		WithForce(force))
 }
 
 var _ = Describe("Repository", func() {
 	Context("Generation", func() {
-		ctx := types.NewContext()
+		ctx := context.NewContext()
 		It("Generate repository metadata", func() {
 
 			tmpdir, err := ioutil.TempDir("", "tree")
@@ -139,11 +140,11 @@ var _ = Describe("Repository", func() {
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(1))
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), options.WithContext(types.NewContext()))
+			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), options.WithContext(context.NewContext()))
 			spec2, err := compiler2.FromPackage(&pkg.DefaultPackage{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(types.NewContext()))
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(context.NewContext()))
 
 			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -466,12 +467,12 @@ urls:
 	})
 	Context("Docker repository", func() {
 		repoImage := os.Getenv("UNIT_TEST_DOCKER_IMAGE_REPOSITORY")
-		ctx := types.NewContext()
+		ctx := context.NewContext()
 		BeforeEach(func() {
 			if repoImage == "" {
 				Skip("UNIT_TEST_DOCKER_IMAGE_REPOSITORY not specified")
 			}
-			ctx = types.NewContext()
+			ctx = context.NewContext()
 		})
 
 		It("generates images", func() {

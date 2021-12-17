@@ -28,10 +28,10 @@ import (
 )
 
 type SimpleImg struct {
-	ctx *types.Context
+	ctx types.Context
 }
 
-func NewSimpleImgBackend(ctx *types.Context) *SimpleImg {
+func NewSimpleImgBackend(ctx types.Context) *SimpleImg {
 	return &SimpleImg{ctx: ctx}
 }
 
@@ -77,7 +77,7 @@ func (s *SimpleImg) RemoveImage(opts Options) error {
 
 func (s *SimpleImg) ImageReference(a string, ondisk bool) (v1.Image, error) {
 
-	f, err := s.ctx.Config.GetSystem().TempFile("snapshot")
+	f, err := s.ctx.TempFile("snapshot")
 	if err != nil {
 		return nil, err
 	}

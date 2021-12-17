@@ -40,7 +40,7 @@ func (s *System) OSCheck() (notFound pkg.Packages) {
 	return
 }
 
-func (s *System) ExecuteFinalizers(ctx *types.Context, packs []pkg.Package) error {
+func (s *System) ExecuteFinalizers(ctx types.Context, packs []pkg.Package) error {
 	var errs error
 	executedFinalizer := map[string]bool{}
 	for _, p := range packs {

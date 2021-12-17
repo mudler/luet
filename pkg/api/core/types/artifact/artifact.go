@@ -41,7 +41,7 @@ import (
 	bus "github.com/mudler/luet/pkg/api/core/bus"
 	config "github.com/mudler/luet/pkg/api/core/config"
 	"github.com/mudler/luet/pkg/api/core/image"
-	types "github.com/mudler/luet/pkg/api/core/types"
+	"github.com/mudler/luet/pkg/api/core/types"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	compression "github.com/mudler/luet/pkg/compiler/types/compression"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
@@ -70,7 +70,7 @@ type PackageArtifact struct {
 	Runtime           *pkg.DefaultPackage               `json:"runtime,omitempty"`
 }
 
-func ImageToArtifact(ctx *types.Context, img v1.Image, t compression.Implementation, output string, filter func(h *tar.Header) (bool, error)) (*PackageArtifact, error) {
+func ImageToArtifact(ctx types.Context, img v1.Image, t compression.Implementation, output string, filter func(h *tar.Header) (bool, error)) (*PackageArtifact, error) {
 	_, tmpdiffs, err := image.Extract(ctx, img, filter)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
@@ -176,12 +176,12 @@ func (a *PackageArtifact) GetFileName() string {
 }
 
 // CreateArtifactForFile creates a new artifact from the given file
-func CreateArtifactForFile(ctx *types.Context, s string, opts ...func(*PackageArtifact)) (*PackageArtifact, error) {
+func CreateArtifactForFile(ctx types.Context, s string, opts ...func(*PackageArtifact)) (*PackageArtifact, error) {
 	if _, err := os.Stat(s); os.IsNotExist(err) {
 		return nil, errors.Wrap(err, "artifact path doesn't exist")
 	}
 	fileName := path.Base(s)
-	archive, err := ctx.Config.GetSystem().TempDir("archive")
+	archive, err := ctx.TempDir("archive")
 	if err != nil {
 		return nil, errors.Wrap(err, "error met while creating tempdir for "+s)
 	}
@@ -191,7 +191,7 @@ func CreateArtifactForFile(ctx *types.Context, s string, opts ...func(*PackageAr
 		return nil, errors.Wrapf(err, "error while copying %s to %s", s, dst)
 	}
 
-	artifact, err := ctx.Config.GetSystem().TempDir("artifact")
+	artifact, err := ctx.TempDir("artifact")
 	if err != nil {
 		return nil, errors.Wrap(err, "error met while creating tempdir for "+s)
 	}
@@ -210,9 +210,9 @@ type ImageBuilder interface {
 }
 
 // GenerateFinalImage takes an artifact and builds a Docker image with its content
-func (a *PackageArtifact) GenerateFinalImage(ctx *types.Context, imageName string, b ImageBuilder, keepPerms bool) error {
+func (a *PackageArtifact) GenerateFinalImage(ctx types.Context, imageName string, b ImageBuilder, keepPerms bool) error {
 
-	tempimage, err := ctx.Config.GetSystem().TempFile("tempimage")
+	tempimage, err := ctx.TempFile("tempimage")
 	if err != nil {
 		return errors.Wrap(err, "error met while creating tempdir for "+a.Path)
 	}
@@ -428,7 +428,7 @@ func replaceFileTarWrapper(dst string, inputTarStream io.ReadCloser, mods []stri
 	return pipeReader
 }
 
-func tarModifierWrapperFunc(ctx *types.Context) func(dst, path string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
+func tarModifierWrapperFunc(ctx types.Context) func(dst, path string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
 	return func(dst, path string, header *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
 		// If the destination path already exists I rename target file name with postfix.
 		var destPath string
@@ -495,10 +495,10 @@ func tarModifierWrapperFunc(ctx *types.Context) func(dst, path string, header *t
 	}
 }
 
-func (a *PackageArtifact) GetProtectFiles(ctx *types.Context) (res []string) {
+func (a *PackageArtifact) GetProtectFiles(ctx types.Context) (res []string) {
 	annotationDir := ""
 
-	if !ctx.Config.ConfigProtectSkip {
+	if !ctx.GetConfig().ConfigProtectSkip {
 
 		// a.CompileSpec could be nil when artifact.Unpack is used for tree tarball
 		if a.CompileSpec != nil &&
@@ -511,7 +511,7 @@ func (a *PackageArtifact) GetProtectFiles(ctx *types.Context) (res []string) {
 		// TODO: check if skip this if we have a.CompileSpec nil
 
 		cp := config.NewConfigProtect(annotationDir)
-		cp.Map(a.Files, ctx.Config.GetConfigProtectConfFiles())
+		cp.Map(a.Files, ctx.GetConfig().ConfigProtectConfFiles)
 
 		// NOTE: for unpack we need files path without initial /
 		res = cp.GetProtectFiles(false)
@@ -521,7 +521,7 @@ func (a *PackageArtifact) GetProtectFiles(ctx *types.Context) (res []string) {
 }
 
 // Unpack Untar and decompress (TODO) to the given path
-func (a *PackageArtifact) Unpack(ctx *types.Context, dst string, keepPerms bool) error {
+func (a *PackageArtifact) Unpack(ctx types.Context, dst string, keepPerms bool) error {
 
 	if !strings.HasPrefix(dst, string(os.PathSeparator)) {
 		return errors.New("destination must be an absolute path")

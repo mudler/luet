@@ -31,7 +31,6 @@ import (
 	"github.com/mudler/luet/pkg/compiler/types/options"
 	fileHelpers "github.com/mudler/luet/pkg/helpers/file"
 	pkg "github.com/mudler/luet/pkg/package"
-	"github.com/mudler/luet/pkg/solver"
 	tree "github.com/mudler/luet/pkg/tree"
 
 	"github.com/spf13/cobra"
@@ -39,6 +38,10 @@ import (
 )
 
 var buildCmd = &cobra.Command{
+	// Skip processing output
+	Annotations: map[string]string{
+		util.CommandProcessOutput: "",
+	},
 	Use:   "build <package name> <package name> <package name> ...",
 	Short: "build a package or a tree",
 	Long: `Builds one or more packages from a tree (current directory is implied):
@@ -83,8 +86,6 @@ Build packages specifying multiple definition trees:
 		viper.BindPFlag("wait", cmd.Flags().Lookup("wait"))
 		viper.BindPFlag("keep-images", cmd.Flags().Lookup("keep-images"))
 
-		util.BindSolverFlags(cmd)
-
 		viper.BindPFlag("general.show_build_output", cmd.Flags().Lookup("live-output"))
 		viper.BindPFlag("backend-args", cmd.Flags().Lookup("backend-args"))
 
@@ -93,7 +94,7 @@ Build packages specifying multiple definition trees:
 
 		treePaths := viper.GetStringSlice("tree")
 		dst := viper.GetString("destination")
-		concurrency := util.DefaultContext.Config.GetGeneral().Concurrency
+		concurrency := util.DefaultContext.Config.General.Concurrency
 		backendType := viper.GetString("backend")
 		privileged := viper.GetBool("privileged")
 		revdeps := viper.GetBool("revdeps")
@@ -116,11 +117,7 @@ Build packages specifying multiple definition trees:
 
 		var results Results
 		backendArgs := viper.GetStringSlice("backend-args")
-
 		out, _ := cmd.Flags().GetString("output")
-		if out != "terminal" {
-			util.DefaultContext.Config.GetLogging().SetLogLevel("error")
-		}
 		pretend, _ := cmd.Flags().GetBool("pretend")
 		fromRepo, _ := cmd.Flags().GetBool("from-repositories")
 
@@ -153,14 +150,10 @@ Build packages specifying multiple definition trees:
 			util.DefaultContext.Debug("Creating destination folder", dst)
 		}
 
-		opts := util.SetSolverConfig(util.DefaultContext)
+		opts := util.DefaultContext.GetConfig().Solver
 		pullRepo, _ := cmd.Flags().GetStringArray("pull-repository")
 
-		util.DefaultContext.Config.GetGeneral().ShowBuildOutput = viper.GetBool("general.show_build_output")
-
 		util.DefaultContext.Debug("Solver", opts.CompactString())
-
-		opts.Options = solver.Options{Type: solver.SingleCoreSimple, Concurrency: concurrency}
 
 		compileropts := []options.Option{options.NoDeps(nodeps),
 			options.WithBackendType(backendType),
@@ -170,7 +163,7 @@ Build packages specifying multiple definition trees:
 			options.WithPushRepository(imageRepository),
 			options.Rebuild(rebuild),
 			options.WithTemplateFolder(util.TemplateFolders(util.DefaultContext, fromRepo, treePaths)),
-			options.WithSolverOptions(*opts),
+			options.WithSolverOptions(opts),
 			options.Wait(wait),
 			options.OnlyTarget(onlyTarget),
 			options.PullFirst(pull),
@@ -341,7 +334,7 @@ func init() {
 	buildCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	buildCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	buildCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
-	buildCmd.Flags().Bool("live-output", util.DefaultContext.Config.GetGeneral().ShowBuildOutput, "Enable live output of the build phase.")
+	buildCmd.Flags().Bool("live-output", true, "Enable live output of the build phase.")
 	buildCmd.Flags().Bool("from-repositories", false, "Consume the user-defined repositories to pull specfiles from")
 	buildCmd.Flags().Bool("rebuild", false, "To combine with --pull. Allows to rebuild the target package even if an image is available, against a local values file")
 	buildCmd.Flags().Bool("pretend", false, "Just print what packages will be compiled")

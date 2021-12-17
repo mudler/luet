@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"github.com/mudler/luet/cmd/util"
-	"github.com/mudler/luet/pkg/api/core/types"
 	installer "github.com/mudler/luet/pkg/installer"
 	"github.com/mudler/luet/pkg/solver"
 
@@ -29,8 +28,7 @@ var upgradeCmd = &cobra.Command{
 	Short:   "Upgrades the system",
 	Aliases: []string{"u"},
 	PreRun: func(cmd *cobra.Command, args []string) {
-		util.BindSystemFlags(cmd)
-		util.BindSolverFlags(cmd)
+
 		viper.BindPFlag("force", cmd.Flags().Lookup("force"))
 		viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
 	},
@@ -48,19 +46,13 @@ var upgradeCmd = &cobra.Command{
 		yes := viper.GetBool("yes")
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
 
-		util.SetSystemConfig(util.DefaultContext)
-		opts := util.SetSolverConfig(util.DefaultContext)
+		util.DefaultContext.Config.Solver.Implementation = solver.SingleCoreSimple
 
-		util.DefaultContext.Config.GetSolverOptions().Implementation = solver.SingleCoreSimple
-
-		util.DefaultContext.Debug("Solver", opts.CompactString())
-
-		// Load config protect configs
-		util.DefaultContext.Config.LoadConfigProtect(util.DefaultContext)
+		util.DefaultContext.Debug("Solver", util.DefaultContext.GetConfig().Solver)
 
 		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-			Concurrency:                 util.DefaultContext.Config.GetGeneral().Concurrency,
-			SolverOptions:               *util.DefaultContext.Config.GetSolverOptions(),
+			Concurrency:                 util.DefaultContext.Config.General.Concurrency,
+			SolverOptions:               util.DefaultContext.Config.Solver,
 			Force:                       force,
 			FullUninstall:               full,
 			NoDeps:                      nodeps,
@@ -75,7 +67,7 @@ var upgradeCmd = &cobra.Command{
 			Context:                     util.DefaultContext,
 		})
 
-		system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.GetSystem().Rootfs}
+		system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.System.Rootfs}
 		if err := inst.Upgrade(system); err != nil {
 			util.DefaultContext.Fatal("Error: " + err.Error())
 		}
@@ -83,14 +75,6 @@ var upgradeCmd = &cobra.Command{
 }
 
 func init() {
-	upgradeCmd.Flags().String("system-dbpath", "", "System db path")
-	upgradeCmd.Flags().String("system-target", "", "System rootpath")
-	upgradeCmd.Flags().String("system-engine", "", "System DB engine")
-
-	upgradeCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+types.AvailableResolvers+" )")
-	upgradeCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
-	upgradeCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
-	upgradeCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	upgradeCmd.Flags().Bool("force", false, "Force upgrade by ignoring errors")
 	upgradeCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful! overrides checkconflicts and full!)")
 	upgradeCmd.Flags().Bool("full", false, "Attempts to remove as much packages as possible which aren't required (slow)")

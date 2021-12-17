@@ -127,7 +127,7 @@ type UnpackEventData struct {
 }
 
 // DownloadAndExtractDockerImage extracts a container image natively. It supports privileged/unprivileged mode
-func DownloadAndExtractDockerImage(ctx *luettypes.Context, image, dest string, auth *types.AuthConfig, verify bool) (*images.Image, error) {
+func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, auth *types.AuthConfig, verify bool) (*images.Image, error) {
 	if verify {
 		img, err := verifyImage(image, auth)
 		if err != nil {

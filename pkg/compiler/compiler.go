@@ -30,8 +30,8 @@ import (
 	"time"
 
 	bus "github.com/mudler/luet/pkg/api/core/bus"
+	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/image"
-	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/compiler/types/options"
@@ -82,7 +82,7 @@ func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase, compilerOp
 
 	c := NewCompiler(compilerOpts...)
 	if c.Options.Context == nil {
-		c.Options.Context = types.NewContext()
+		c.Options.Context = context.NewContext()
 	}
 	//	c.Options.BackendType
 	c.Backend = backend
@@ -239,8 +239,10 @@ func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *compi
 		return nil, err
 	}
 
+	ctx := cs.Options.Context.WithLoggingContext(fmt.Sprintf("extract %s", runnerOpts.ImageName))
+
 	_, rootfs, err := image.Extract(
-		cs.Options.Context,
+		ctx,
 		img,
 		image.ExtractFiles(
 			cs.Options.Context,
@@ -273,7 +275,7 @@ func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *compi
 
 func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec, builderOpts, runnerOpts backend.Options) (*artifact.PackageArtifact, error) {
 
-	rootfs, err := cs.Options.Context.Config.System.TempDir("rootfs")
+	rootfs, err := cs.Options.Context.TempDir("rootfs")
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not create tempdir")
 	}
@@ -350,7 +352,7 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	p.SetSeedImage(image) // In this case, we ignore the build deps as we suppose that the image has them - otherwise we recompose the tree with a solver,
 	// and we build all the images first.
 
-	buildDir, err := cs.Options.Context.Config.System.TempDir("build")
+	buildDir, err := cs.Options.Context.TempDir("build")
 	if err != nil {
 		return builderOpts, runnerOpts, err
 	}
@@ -458,7 +460,7 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 	if p.EmptyPackage() {
 		fakePackage := p.Rel(p.GetPackage().GetFingerPrint() + ".package.tar")
 
-		rootfs, err = cs.Options.Context.Config.System.TempDir("rootfs")
+		rootfs, err = cs.Options.Context.TempDir("rootfs")
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not create tempdir")
 		}
@@ -939,7 +941,7 @@ func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool
 	}
 
 	// otherwise, generate it and push it aside
-	joinDir, err := cs.Options.Context.Config.System.TempDir("join")
+	joinDir, err := cs.Options.Context.TempDir("join")
 	if err != nil {
 		return errors.Wrap(err, "could not create tempdir for joining images")
 	}
@@ -978,7 +980,7 @@ func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool
 		}
 	}
 
-	artifactDir, err := cs.Options.Context.Config.System.TempDir("join")
+	artifactDir, err := cs.Options.Context.TempDir("join")
 	if err != nil {
 		return errors.Wrap(err, "could not create tempdir for final artifact")
 	}
@@ -1341,7 +1343,7 @@ func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack pkg.
 	} else {
 		bv := cs.Options.BuildValuesFile
 		if len(vals) > 0 {
-			valuesdir, err := cs.Options.Context.Config.System.TempDir("genvalues")
+			valuesdir, err := cs.Options.Context.TempDir("genvalues")
 			if err != nil {
 				return nil, errors.Wrap(err, "Could not create tempdir")
 			}

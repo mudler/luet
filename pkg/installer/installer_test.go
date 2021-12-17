@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	//	. "github.com/mudler/luet/pkg/installer"
+	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/types"
 	compiler "github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
@@ -45,16 +46,16 @@ func stubRepo(tmpdir, tree string) (*LuetSystemRepository, error) {
 		WithPriority(1),
 		WithSource(tmpdir),
 		WithTree(tree),
-		WithContext(types.NewContext()),
+		WithContext(context.NewContext()),
 		WithDatabase(pkg.NewInMemoryDatabase(false)),
 	)
 }
 
 var _ = Describe("Installer", func() {
-	ctx := types.NewContext()
+	ctx := context.NewContext()
 
 	BeforeEach(func() {
-		ctx = types.NewContext()
+		ctx = context.NewContext()
 	})
 
 	Context("Writes a repository definition", func() {

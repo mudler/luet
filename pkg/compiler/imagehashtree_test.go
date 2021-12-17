@@ -16,7 +16,7 @@
 package compiler_test
 
 import (
-	"github.com/mudler/luet/pkg/api/core/types"
+	"github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/mudler/luet/pkg/compiler"
 	sd "github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/compiler/types/options"
@@ -27,7 +27,7 @@ import (
 )
 
 var _ = Describe("ImageHashTree", func() {
-	ctx := types.NewContext()
+	ctx := context.NewContext()
 	generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
 	compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2))
 	hashtree := NewHashTree(generalRecipe.GetDatabase())

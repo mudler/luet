@@ -1,6 +1,4 @@
-// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
-//                  Daniele Rondina <geaaru@sabayonlinux.org>
-//             2021 Ettore Di Giacinto <mudler@mocaccino.org>
+// Copyright © 2019-2021 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -39,19 +37,22 @@ var AvailableResolvers = strings.Join([]string{solver.QLearningResolverType}, " 
 
 type LuetLoggingConfig struct {
 	// Path of the logfile
-	Path string `mapstructure:"path"`
+	Path string `yaml:"path" mapstructure:"path"`
 	// Enable/Disable logging to file
-	EnableLogFile bool `mapstructure:"enable_logfile"`
+	EnableLogFile bool `yaml:"enable_logfile" mapstructure:"enable_logfile"`
 	// Enable JSON format logging in file
-	JsonFormat bool `mapstructure:"json_format"`
+	JsonFormat bool `yaml:"json_format" mapstructure:"json_format"`
 
 	// Log level
-	Level LogLevel `mapstructure:"level"`
+	Level string `yaml:"level" mapstructure:"level"`
 
 	// Enable emoji
-	EnableEmoji bool `mapstructure:"enable_emoji"`
+	EnableEmoji bool `yaml:"enable_emoji" mapstructure:"enable_emoji"`
 	// Enable/Disable color in logging
-	Color bool `mapstructure:"color"`
+	Color bool `yaml:"color" mapstructure:"color"`
+
+	// NoSpinner disable spinner
+	NoSpinner bool `yaml:"no_spinner" mapstructure:"no_spinner"`
 }
 
 type LuetGeneralConfig struct {
@@ -108,8 +109,42 @@ type LuetSystemConfig struct {
 	TmpDirBase     string `yaml:"tmpdir_base" mapstructure:"tmpdir_base"`
 }
 
-func (s *LuetSystemConfig) SetRootFS(path string) error {
-	p, err := fileHelper.Rel2Abs(path)
+// Init reads the config and replace user-defined paths with
+// absolute paths where necessary, and construct the paths for the cache
+// and database on the real system
+func (c *LuetConfig) Init() error {
+	if err := c.System.init(); err != nil {
+		return err
+	}
+
+	if err := c.loadConfigProtect(); err != nil {
+		return err
+	}
+
+	// Load repositories
+	if err := c.loadRepositories(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *LuetSystemConfig) init() error {
+	if err := s.setRootfs(); err != nil {
+		return err
+	}
+
+	if err := s.setDBPath(); err != nil {
+		return err
+	}
+
+	s.setCachePath()
+
+	return nil
+}
+
+func (s *LuetSystemConfig) setRootfs() error {
+	p, err := fileHelper.Rel2Abs(s.Rootfs)
 	if err != nil {
 		return err
 	}
@@ -118,9 +153,8 @@ func (s *LuetSystemConfig) SetRootFS(path string) error {
 	return nil
 }
 
-func (sc *LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
-	dbpath := filepath.Join(sc.Rootfs, sc.DatabasePath)
-	dbpath = filepath.Join(dbpath, "repos/"+name)
+func (sc LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
+	dbpath := filepath.Join(sc.DatabasePath, "repos/"+name)
 	err := os.MkdirAll(dbpath, os.ModePerm)
 	if err != nil {
 		panic(err)
@@ -128,43 +162,46 @@ func (sc *LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
 	return dbpath
 }
 
-func (sc *LuetSystemConfig) GetSystemRepoDatabaseDirPath() string {
+func (sc *LuetSystemConfig) setDBPath() error {
 	dbpath := filepath.Join(sc.Rootfs,
 		sc.DatabasePath)
 	err := os.MkdirAll(dbpath, os.ModePerm)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	return dbpath
+	sc.DatabasePath = dbpath
+	return nil
 }
 
-func (sc *LuetSystemConfig) GetSystemPkgsCacheDirPath() (p string) {
+func (sc *LuetSystemConfig) setCachePath() {
 	var cachepath string
 	if sc.PkgsCachePath != "" {
-		cachepath = sc.PkgsCachePath
+		if !filepath.IsAbs(cachepath) {
+			cachepath = filepath.Join(sc.DatabasePath, sc.PkgsCachePath)
+			os.MkdirAll(cachepath, os.ModePerm)
+		} else {
+			cachepath = sc.PkgsCachePath
+		}
 	} else {
 		// Create dynamic cache for test suites
 		cachepath, _ = ioutil.TempDir(os.TempDir(), "cachepkgs")
 	}
 
-	if filepath.IsAbs(cachepath) {
-		p = cachepath
-	} else {
-		p = filepath.Join(sc.GetSystemRepoDatabaseDirPath(), cachepath)
-	}
-
 	sc.PkgsCachePath = cachepath // Be consistent with the path we set
-
-	return
 }
 
-func (sc *LuetSystemConfig) GetRootFsAbs() (string, error) {
-	return filepath.Abs(sc.Rootfs)
-}
-
-type LuetKV struct {
+type FinalizerEnv struct {
 	Key   string `json:"key" yaml:"key" mapstructure:"key"`
 	Value string `json:"value" yaml:"value" mapstructure:"value"`
+}
+
+type Finalizers []FinalizerEnv
+
+func (f Finalizers) Slice() (sl []string) {
+	for _, kv := range f {
+		sl = append(sl, fmt.Sprintf("%s=%s", kv.Key, kv.Value))
+	}
+	return
 }
 
 type LuetConfig struct {
@@ -179,16 +216,16 @@ type LuetConfig struct {
 	ConfigFromHost       bool             `yaml:"config_from_host,omitempty" mapstructure:"config_from_host"`
 	SystemRepositories   LuetRepositories `yaml:"repositories,omitempty" mapstructure:"repositories"`
 
-	FinalizerEnvs []LuetKV `json:"finalizer_envs,omitempty" yaml:"finalizer_envs,omitempty" mapstructure:"finalizer_envs,omitempty"`
+	FinalizerEnvs Finalizers `json:"finalizer_envs,omitempty" yaml:"finalizer_envs,omitempty" mapstructure:"finalizer_envs,omitempty"`
 
 	ConfigProtectConfFiles []config.ConfigProtectConfFile `yaml:"-" mapstructure:"-"`
 }
 
 func (c *LuetConfig) GetSystemDB() pkg.PackageDatabase {
-	switch c.GetSystem().DatabaseEngine {
+	switch c.System.DatabaseEngine {
 	case "boltdb":
 		return pkg.NewBoltDatabase(
-			filepath.Join(c.GetSystem().GetSystemRepoDatabaseDirPath(), "luet.db"))
+			filepath.Join(c.System.DatabasePath, "luet.db"))
 	default:
 		return pkg.NewInMemoryDatabase(true)
 	}
@@ -198,83 +235,30 @@ func (c *LuetConfig) AddSystemRepository(r LuetRepository) {
 	c.SystemRepositories = append(c.SystemRepositories, r)
 }
 
-func (c *LuetConfig) GetFinalizerEnvsMap() map[string]string {
-	ans := make(map[string]string)
-
-	for _, kv := range c.FinalizerEnvs {
-		ans[kv.Key] = kv.Value
-	}
-	return ans
-}
-
 func (c *LuetConfig) SetFinalizerEnv(k, v string) {
 	keyPresent := false
-	envs := []LuetKV{}
+	envs := []FinalizerEnv{}
 
 	for _, kv := range c.FinalizerEnvs {
 		if kv.Key == k {
 			keyPresent = true
-			envs = append(envs, LuetKV{Key: kv.Key, Value: v})
+			envs = append(envs, FinalizerEnv{Key: kv.Key, Value: v})
 		} else {
 			envs = append(envs, kv)
 		}
 	}
 	if !keyPresent {
-		envs = append(envs, LuetKV{Key: k, Value: v})
+		envs = append(envs, FinalizerEnv{Key: k, Value: v})
 	}
 
 	c.FinalizerEnvs = envs
-}
-
-func (c *LuetConfig) GetFinalizerEnvs() []string {
-	ans := []string{}
-	for _, kv := range c.FinalizerEnvs {
-		ans = append(ans, fmt.Sprintf("%s=%s", kv.Key, kv.Value))
-	}
-	return ans
-}
-
-func (c *LuetConfig) GetFinalizerEnv(k string) (string, error) {
-	keyNotPresent := true
-	ans := ""
-	for _, kv := range c.FinalizerEnvs {
-		if kv.Key == k {
-			keyNotPresent = false
-			ans = kv.Value
-		}
-	}
-
-	if keyNotPresent {
-		return "", errors.New("Finalizer key " + k + " not found")
-	}
-	return ans, nil
-}
-
-func (c *LuetConfig) GetLogging() *LuetLoggingConfig {
-	return &c.Logging
-}
-
-func (c *LuetConfig) GetGeneral() *LuetGeneralConfig {
-	return &c.General
-}
-
-func (c *LuetConfig) GetSystem() *LuetSystemConfig {
-	return &c.System
-}
-
-func (c *LuetConfig) GetSolverOptions() *LuetSolverOptions {
-	return &c.Solver
 }
 
 func (c *LuetConfig) YAML() ([]byte, error) {
 	return yaml.Marshal(c)
 }
 
-func (c *LuetConfig) GetConfigProtectConfFiles() []config.ConfigProtectConfFile {
-	return c.ConfigProtectConfFiles
-}
-
-func (c *LuetConfig) AddConfigProtectConfFile(file *config.ConfigProtectConfFile) {
+func (c *LuetConfig) addProtectFile(file *config.ConfigProtectConfFile) {
 	if c.ConfigProtectConfFiles == nil {
 		c.ConfigProtectConfFiles = []config.ConfigProtectConfFile{*file}
 	} else {
@@ -282,28 +266,21 @@ func (c *LuetConfig) AddConfigProtectConfFile(file *config.ConfigProtectConfFile
 	}
 }
 
-func (c *LuetConfig) LoadRepositories(ctx *Context) error {
+func (c *LuetConfig) loadRepositories() error {
 	var regexRepo = regexp.MustCompile(`.yml$|.yaml$`)
-	var err error
 	rootfs := ""
 
 	// Respect the rootfs param on read repositories
 	if !c.ConfigFromHost {
-		rootfs, err = c.GetSystem().GetRootFsAbs()
-		if err != nil {
-			return err
-		}
+		rootfs = c.System.Rootfs
 	}
 
 	for _, rdir := range c.RepositoriesConfDir {
 
 		rdir = filepath.Join(rootfs, rdir)
 
-		ctx.Debug("Parsing Repository Directory", rdir, "...")
-
 		files, err := ioutil.ReadDir(rdir)
 		if err != nil {
-			ctx.Debug("Skip dir", rdir, ":", err.Error())
 			continue
 		}
 
@@ -313,27 +290,20 @@ func (c *LuetConfig) LoadRepositories(ctx *Context) error {
 			}
 
 			if !regexRepo.MatchString(file.Name()) {
-				ctx.Debug("File", file.Name(), "skipped.")
 				continue
 			}
 
 			content, err := ioutil.ReadFile(path.Join(rdir, file.Name()))
 			if err != nil {
-				ctx.Warning("On read file", file.Name(), ":", err.Error())
-				ctx.Warning("File", file.Name(), "skipped.")
 				continue
 			}
 
 			r, err := LoadRepository(content)
 			if err != nil {
-				ctx.Warning("On parse file", file.Name(), ":", err.Error())
-				ctx.Warning("File", file.Name(), "skipped.")
 				continue
 			}
 
 			if r.Name == "" || len(r.Urls) == 0 || r.Type == "" {
-				ctx.Warning("Invalid repository ", file.Name())
-				ctx.Warning("File", file.Name(), "skipped.")
 				continue
 			}
 
@@ -359,28 +329,20 @@ func (c *LuetConfig) GetSystemRepository(name string) (*LuetRepository, error) {
 	return ans, nil
 }
 
-func (c *LuetConfig) LoadConfigProtect(ctx *Context) error {
+func (c *LuetConfig) loadConfigProtect() error {
 	var regexConfs = regexp.MustCompile(`.yml$`)
-	var err error
-
 	rootfs := ""
 
 	// Respect the rootfs param on read repositories
 	if !c.ConfigFromHost {
-		rootfs, err = c.GetSystem().GetRootFsAbs()
-		if err != nil {
-			return err
-		}
+		rootfs = c.System.Rootfs
 	}
 
 	for _, cdir := range c.ConfigProtectConfDir {
 		cdir = filepath.Join(rootfs, cdir)
 
-		ctx.Debug("Parsing Config Protect Directory", cdir, "...")
-
 		files, err := ioutil.ReadDir(cdir)
 		if err != nil {
-			ctx.Debug("Skip dir", cdir, ":", err.Error())
 			continue
 		}
 
@@ -390,86 +352,35 @@ func (c *LuetConfig) LoadConfigProtect(ctx *Context) error {
 			}
 
 			if !regexConfs.MatchString(file.Name()) {
-				ctx.Debug("File", file.Name(), "skipped.")
 				continue
 			}
 
 			content, err := ioutil.ReadFile(path.Join(cdir, file.Name()))
 			if err != nil {
-				ctx.Warning("On read file", file.Name(), ":", err.Error())
-				ctx.Warning("File", file.Name(), "skipped.")
 				continue
 			}
 
-			r, err := loadConfigProtectConFile(file.Name(), content)
+			r, err := loadConfigProtectConfFile(file.Name(), content)
 			if err != nil {
-				ctx.Warning("On parse file", file.Name(), ":", err.Error())
-				ctx.Warning("File", file.Name(), "skipped.")
 				continue
 			}
 
 			if r.Name == "" || len(r.Directories) == 0 {
-				ctx.Warning("Invalid config protect file", file.Name())
-				ctx.Warning("File", file.Name(), "skipped.")
 				continue
 			}
 
-			c.AddConfigProtectConfFile(r)
+			c.addProtectFile(r)
 		}
 	}
 	return nil
 
 }
 
-func loadConfigProtectConFile(filename string, data []byte) (*config.ConfigProtectConfFile, error) {
+func loadConfigProtectConfFile(filename string, data []byte) (*config.ConfigProtectConfFile, error) {
 	ans := config.NewConfigProtectConfFile(filename)
 	err := yaml.Unmarshal(data, &ans)
 	if err != nil {
 		return nil, err
 	}
 	return ans, nil
-}
-
-func (c *LuetLoggingConfig) SetLogLevel(s LogLevel) {
-	c.Level = s
-}
-
-func (c *LuetSystemConfig) InitTmpDir() error {
-	if !filepath.IsAbs(c.TmpDirBase) {
-		abs, err := fileHelper.Rel2Abs(c.TmpDirBase)
-		if err != nil {
-			return errors.Wrap(err, "while converting relative path to absolute path")
-		}
-		c.TmpDirBase = abs
-	}
-
-	if _, err := os.Stat(c.TmpDirBase); err != nil {
-		if os.IsNotExist(err) {
-			err = os.MkdirAll(c.TmpDirBase, os.ModePerm)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (c *LuetSystemConfig) CleanupTmpDir() error {
-	return os.RemoveAll(c.TmpDirBase)
-}
-
-func (c *LuetSystemConfig) TempDir(pattern string) (string, error) {
-	err := c.InitTmpDir()
-	if err != nil {
-		return "", err
-	}
-	return ioutil.TempDir(c.TmpDirBase, pattern)
-}
-
-func (c *LuetSystemConfig) TempFile(pattern string) (*os.File, error) {
-	err := c.InitTmpDir()
-	if err != nil {
-		return nil, err
-	}
-	return ioutil.TempFile(c.TmpDirBase, pattern)
 }

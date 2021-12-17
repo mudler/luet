@@ -53,7 +53,7 @@ type Compiler struct {
 	// Image repository to push to
 	PushFinalImagesRepository string
 
-	Context *types.Context
+	Context types.Context
 }
 
 func NewDefaultCompiler() *Compiler {
@@ -237,7 +237,7 @@ func WithSolverOptions(c types.LuetSolverOptions) func(cfg *Compiler) error {
 	}
 }
 
-func WithContext(c *types.Context) func(cfg *Compiler) error {
+func WithContext(c types.Context) func(cfg *Compiler) error {
 	return func(cfg *Compiler) error {
 		cfg.Context = c
 		return nil

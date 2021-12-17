@@ -18,8 +18,8 @@ package image_test
 import (
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/mudler/luet/pkg/api/core/image"
-	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,16 +27,16 @@ import (
 
 var _ = Describe("Cache", func() {
 
-	ctx := types.NewContext()
+	ctx := context.NewContext()
 	Context("used as k/v store", func() {
 
 		cache := &Cache{}
 		var dir string
 
 		BeforeEach(func() {
-			ctx = types.NewContext()
+			ctx = context.NewContext()
 			var err error
-			dir, err = ctx.Config.System.TempDir("foo")
+			dir, err = ctx.TempDir("foo")
 			Expect(err).ToNot(HaveOccurred())
 			cache = NewCache(dir, 10*1024*1024, 1) // 10MB Cache when upgrading to files. Max volatile memory of 1 row.
 		})

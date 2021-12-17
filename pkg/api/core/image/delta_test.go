@@ -23,8 +23,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	daemon "github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/mudler/luet/pkg/api/core/image"
-	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -47,7 +47,7 @@ var _ = Describe("Delta", func() {
 		})
 
 		Context("ExtractDeltaFiles", func() {
-			ctx := types.NewContext()
+			ctx := context.NewContext()
 			var tmpfile *os.File
 			var ref, ref2 name.Reference
 			var img, img2 v1.Image
@@ -59,7 +59,7 @@ var _ = Describe("Delta", func() {
 			img2, _ = daemon.Image(ref2)
 
 			BeforeEach(func() {
-				ctx = types.NewContext()
+				ctx = context.NewContext()
 
 				tmpfile, err = ioutil.TempFile("", "delta")
 				Expect(err).ToNot(HaveOccurred())

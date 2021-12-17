@@ -36,13 +36,13 @@ import (
 type HttpClient struct {
 	RepoData RepoData
 	Cache    *artifact.ArtifactCache
-	context  *types.Context
+	context  types.Context
 }
 
-func NewHttpClient(r RepoData, ctx *types.Context) *HttpClient {
+func NewHttpClient(r RepoData, ctx types.Context) *HttpClient {
 	return &HttpClient{
 		RepoData: r,
-		Cache:    artifact.NewCache(ctx.Config.GetSystem().GetSystemPkgsCacheDirPath()),
+		Cache:    artifact.NewCache(ctx.GetConfig().System.PkgsCachePath),
 		context:  ctx,
 	}
 }
@@ -85,16 +85,16 @@ func Round(input float64) float64 {
 func (c *HttpClient) DownloadFile(p string) (string, error) {
 	var file *os.File = nil
 	var downloaded bool
-	temp, err := c.context.Config.GetSystem().TempDir("download")
+	temp, err := c.context.TempDir("download")
 	if err != nil {
 		return "", err
 	}
 	defer os.RemoveAll(temp)
 
-	client := NewGrabClient(c.context.Config.General.HTTPTimeout)
+	client := NewGrabClient(c.context.GetConfig().General.HTTPTimeout)
 
 	for _, uri := range c.RepoData.Urls {
-		file, err = c.context.Config.GetSystem().TempFile("HttpClient")
+		file, err = c.context.TempFile("HttpClient")
 		if err != nil {
 			c.context.Debug("Failed downloading", p, "from", uri)
 
@@ -117,9 +117,12 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 
 		// Initialize a progressbar only if we have one in the current context
 		var pb *pterm.ProgressbarPrinter
-		if c.context.ProgressBar != nil {
-			pb, _ = c.context.ProgressBar.WithTotal(int(resp.Size())).WithTitle(filepath.Base(resp.Request.HTTPRequest.URL.RequestURI())).Start()
+		pbb := c.context.GetAnnotation("progressbar")
+		switch v := pbb.(type) {
+		case *pterm.ProgressbarPrinter:
+			pb, _ = v.WithTotal(int(resp.Size())).WithTitle(filepath.Base(resp.Request.HTTPRequest.URL.RequestURI())).Start()
 		}
+
 		// start download loop
 		t := time.NewTicker(500 * time.Millisecond)
 		defer t.Stop()

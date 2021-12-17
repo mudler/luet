@@ -115,11 +115,11 @@ func SystemRepositories(t types.LuetRepositories) Repositories {
 }
 
 // LoadBuildTree loads to the tree the compilation specs from the system repositories
-func LoadBuildTree(t tree.Builder, db pkg.PackageDatabase, ctx *types.Context) error {
+func LoadBuildTree(t tree.Builder, db pkg.PackageDatabase, ctx types.Context) error {
 	var reserr error
-	repos := SystemRepositories(ctx.Config.SystemRepositories)
+	repos := SystemRepositories(ctx.GetConfig().SystemRepositories)
 	for _, r := range repos {
-		repodir, err := ctx.Config.GetSystem().TempDir(r.Name)
+		repodir, err := ctx.TempDir(r.Name)
 		if err != nil {
 			reserr = multierr.Append(reserr, err)
 		}
@@ -378,7 +378,7 @@ func (r *LuetSystemRepository) SetPriority(n int) {
 	r.LuetRepository.Priority = n
 }
 
-func (r *LuetSystemRepository) initialize(ctx *types.Context, src string) error {
+func (r *LuetSystemRepository) initialize(ctx types.Context, src string) error {
 	generator, err := r.getGenerator(ctx, r.snapshotID)
 	if err != nil {
 		return errors.Wrap(err, "while constructing repository generator")
@@ -526,12 +526,12 @@ func (r *LuetSystemRepository) BumpRevision(repospec string, resetRevision bool)
 
 // AddMetadata adds the repository serialized content into the metadata key of the repository
 // It writes the serialized content to repospec, and writes the repository.meta.yaml file into dst
-func (r *LuetSystemRepository) AddMetadata(ctx *types.Context, repospec, dst string) (*artifact.PackageArtifact, error) {
+func (r *LuetSystemRepository) AddMetadata(ctx types.Context, repospec, dst string) (*artifact.PackageArtifact, error) {
 	// Create Metadata struct and serialized repository
 	meta, serialized := r.Serialize()
 
 	// Create metadata file and repository file
-	metaTmpDir, err := ctx.Config.GetSystem().TempDir("metadata")
+	metaTmpDir, err := ctx.TempDir("metadata")
 	defer os.RemoveAll(metaTmpDir) // clean up
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating tempdir for metadata")
@@ -564,9 +564,9 @@ func (r *LuetSystemRepository) AddMetadata(ctx *types.Context, repospec, dst str
 // AddTree adds a tree.Builder with the given key to the repository.
 // It will generate an artifact which will be then embedded in the repository manifest
 // It returns the generated artifacts and an error
-func (r *LuetSystemRepository) AddTree(ctx *types.Context, t tree.Builder, dst, key string, defaults LuetRepositoryFile) (*artifact.PackageArtifact, error) {
+func (r *LuetSystemRepository) AddTree(ctx types.Context, t tree.Builder, dst, key string, defaults LuetRepositoryFile) (*artifact.PackageArtifact, error) {
 	// Create tree and repository file
-	archive, err := ctx.Config.GetSystem().TempDir("archive")
+	archive, err := ctx.TempDir("archive")
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating tempdir for archive")
 	}
@@ -710,7 +710,7 @@ type RepositoryGenerator interface {
 	Initialize(string, pkg.PackageDatabase) ([]*artifact.PackageArtifact, error)
 }
 
-func (r *LuetSystemRepository) getGenerator(ctx *types.Context, snapshotID string) (RepositoryGenerator, error) {
+func (r *LuetSystemRepository) getGenerator(ctx types.Context, snapshotID string) (RepositoryGenerator, error) {
 	if snapshotID == "" {
 		snapshotID = time.Now().Format("20060102150405")
 	}
@@ -735,7 +735,7 @@ func (r *LuetSystemRepository) getGenerator(ctx *types.Context, snapshotID strin
 }
 
 // Write writes the repository metadata to the supplied destination
-func (r *LuetSystemRepository) Write(ctx *types.Context, dst string, resetRevision, force bool) error {
+func (r *LuetSystemRepository) Write(ctx types.Context, dst string, resetRevision, force bool) error {
 	rg, err := r.getGenerator(ctx, r.snapshotID)
 	if err != nil {
 		return err
@@ -744,7 +744,7 @@ func (r *LuetSystemRepository) Write(ctx *types.Context, dst string, resetRevisi
 	return rg.Generate(r, dst, resetRevision)
 }
 
-func (r *LuetSystemRepository) Client(ctx *types.Context) Client {
+func (r *LuetSystemRepository) Client(ctx types.Context) Client {
 	switch r.GetType() {
 	case DiskRepositoryType:
 		return client.NewLocalClient(client.RepoData{Urls: r.GetUrls()}, ctx)
@@ -803,7 +803,7 @@ func (r *LuetSystemRepository) getRepoFile(c Client, key string) (*artifact.Pack
 
 }
 
-func (r *LuetSystemRepository) SyncBuildMetadata(ctx *types.Context, path string) error {
+func (r *LuetSystemRepository) SyncBuildMetadata(ctx types.Context, path string) error {
 
 	repo, err := r.Sync(ctx, false)
 	if err != nil {
@@ -852,11 +852,11 @@ func (r *LuetSystemRepository) referenceID() string {
 	return repositoryReferenceID
 }
 
-func (r *LuetSystemRepository) Sync(ctx *types.Context, force bool) (*LuetSystemRepository, error) {
+func (r *LuetSystemRepository) Sync(ctx types.Context, force bool) (*LuetSystemRepository, error) {
 	var repoUpdated bool = false
 	var treefs, metafs string
 
-	repobasedir := ctx.Config.GetSystem().GetRepoDatabaseDirPath(r.GetName())
+	repobasedir := ctx.GetConfig().System.GetRepoDatabaseDirPath(r.GetName())
 
 	toTimeSync := false
 	dat, err := ioutil.ReadFile(filepath.Join(repobasedir, "SYNCTIME"))
@@ -923,11 +923,11 @@ func (r *LuetSystemRepository) Sync(ctx *types.Context, force bool) (*LuetSystem
 		}
 
 	} else {
-		treefs, err = ctx.Config.GetSystem().TempDir("treefs")
+		treefs, err = ctx.TempDir("treefs")
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
 		}
-		metafs, err = ctx.Config.GetSystem().TempDir("metafs")
+		metafs, err = ctx.TempDir("metafs")
 		if err != nil {
 			return nil, errors.Wrap(err, "Error met whilte creating tempdir for metafs")
 		}

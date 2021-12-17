@@ -45,7 +45,7 @@ type HashOptions struct {
 
 func (c Checksums) List() (res [][]string) {
 	keys := make([]string, 0)
-	for k, _ := range c {
+	for k := range c {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)

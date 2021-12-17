@@ -24,19 +24,19 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/go-units"
 	"github.com/mudler/luet/pkg/api/core/image"
-	luettypes "github.com/mudler/luet/pkg/api/core/types"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/pkg/errors"
 
 	"github.com/mudler/luet/cmd/util"
+	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/helpers/docker"
 
 	"github.com/spf13/cobra"
 )
 
-func pack(ctx *luettypes.Context, p, dst, imageName, arch, OS string) error {
+func pack(ctx *context.Context, p, dst, imageName, arch, OS string) error {
 
-	tempimage, err := ctx.Config.GetSystem().TempFile("tempimage")
+	tempimage, err := ctx.TempFile("tempimage")
 	if err != nil {
 		return errors.Wrap(err, "error met while creating tempdir for "+p)
 	}

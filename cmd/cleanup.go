@@ -31,16 +31,13 @@ var cleanupCmd = &cobra.Command{
 	Use:   "cleanup",
 	Short: "Clean packages cache.",
 	Long:  `remove downloaded packages tarballs and clean cache directory`,
-	PreRun: func(cmd *cobra.Command, args []string) {
-		util.BindSystemFlags(cmd)
-	},
+
 	Run: func(cmd *cobra.Command, args []string) {
 		var cleaned int = 0
-		util.SetSystemConfig(util.DefaultContext)
 		// Check if cache dir exists
-		if fileHelper.Exists(util.DefaultContext.Config.GetSystem().GetSystemPkgsCacheDirPath()) {
+		if fileHelper.Exists(util.DefaultContext.Config.System.PkgsCachePath) {
 
-			files, err := ioutil.ReadDir(util.DefaultContext.Config.GetSystem().GetSystemPkgsCacheDirPath())
+			files, err := ioutil.ReadDir(util.DefaultContext.Config.System.PkgsCachePath)
 			if err != nil {
 				util.DefaultContext.Fatal("Error on read cachedir ", err.Error())
 			}
@@ -50,7 +47,7 @@ var cleanupCmd = &cobra.Command{
 				util.DefaultContext.Debug("Removing ", file.Name())
 
 				err := os.RemoveAll(
-					filepath.Join(util.DefaultContext.Config.GetSystem().GetSystemPkgsCacheDirPath(), file.Name()))
+					filepath.Join(util.DefaultContext.Config.System.PkgsCachePath, file.Name()))
 				if err != nil {
 					util.DefaultContext.Fatal("Error on removing", file.Name())
 				}
@@ -58,14 +55,11 @@ var cleanupCmd = &cobra.Command{
 			}
 		}
 
-		util.DefaultContext.Info(fmt.Sprintf("Cleaned: %d files from %s", cleaned, util.DefaultContext.Config.GetSystem().GetSystemPkgsCacheDirPath()))
+		util.DefaultContext.Info(fmt.Sprintf("Cleaned: %d files from %s", cleaned, util.DefaultContext.Config.System.PkgsCachePath))
 
 	},
 }
 
 func init() {
-	cleanupCmd.Flags().String("system-dbpath", "", "System db path")
-	cleanupCmd.Flags().String("system-target", "", "System rootpath")
-	cleanupCmd.Flags().String("system-engine", "", "System DB engine")
 	RootCmd.AddCommand(cleanupCmd)
 }

@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/mudler/luet/pkg/api/core/image"
-	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/helpers/file"
@@ -32,12 +32,12 @@ import (
 var _ = Describe("Create", func() {
 	Context("Creates an OCI image from a standard tar", func() {
 		It("creates an image which is loadable", func() {
-			ctx := types.NewContext()
+			ctx := context.NewContext()
 
-			dst, err := ctx.Config.System.TempFile("dst")
+			dst, err := ctx.TempFile("dst")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(dst.Name())
-			srcTar, err := ctx.Config.System.TempFile("srcTar")
+			srcTar, err := ctx.TempFile("srcTar")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(srcTar.Name())
 

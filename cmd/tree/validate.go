@@ -255,7 +255,7 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 								r.GetCategory(), r.GetName(), r.GetVersion(),
 							))
 
-						if util.DefaultContext.Config.GetGeneral().Debug {
+						if util.DefaultContext.Config.General.Debug {
 							for idx, pa := range solution {
 								fmt.Println(fmt.Sprintf("[%9s] %s/%s-%s: solution %d: %s",
 									checkType,
@@ -426,7 +426,7 @@ func NewTreeValidateCommand() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			var reciper tree.Builder
 
-			concurrency := util.DefaultContext.Config.GetGeneral().Concurrency
+			concurrency := util.DefaultContext.Config.General.Concurrency
 
 			withSolver, _ := cmd.Flags().GetBool("with-solver")
 			onlyRuntime, _ := cmd.Flags().GetBool("only-runtime")

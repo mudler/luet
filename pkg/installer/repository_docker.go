@@ -40,7 +40,7 @@ type dockerRepositoryGenerator struct {
 	b                       compiler.CompilerBackend
 	imagePrefix, snapshotID string
 	imagePush, force        bool
-	context                 *types.Context
+	context                 types.Context
 }
 
 func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
@@ -115,7 +115,7 @@ func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDataba
 	return art, nil
 }
 
-func pushImage(ctx *types.Context, b compiler.CompilerBackend, image string, force bool) error {
+func pushImage(ctx types.Context, b compiler.CompilerBackend, image string, force bool) error {
 	if b.ImageAvailable(image) && !force {
 		ctx.Debug("Image", image, "already present, skipping")
 		return nil
@@ -138,7 +138,7 @@ func (d *dockerRepositoryGenerator) pushFileFromArtifact(a *artifact.PackageArti
 
 func (d *dockerRepositoryGenerator) pushRepoMetadata(repospec, tag string, r *LuetSystemRepository) error {
 	// create temp dir for metafile
-	metaDir, err := d.context.Config.GetSystem().TempDir("metadata")
+	metaDir, err := d.context.TempDir("metadata")
 	if err != nil {
 		return errors.Wrap(err, "Error met while creating tempdir for metadata")
 	}
@@ -184,7 +184,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 
 	r.LastUpdate = strconv.FormatInt(time.Now().Unix(), 10)
 
-	repoTemp, err := d.context.Config.GetSystem().TempDir("repo")
+	repoTemp, err := d.context.TempDir("repo")
 	if err != nil {
 		return errors.Wrap(err, "error met while creating tempdir for repository")
 	}

@@ -15,9 +15,7 @@
 package cmd
 
 import (
-	"github.com/mudler/luet/pkg/api/core/types"
 	installer "github.com/mudler/luet/pkg/installer"
-	"github.com/mudler/luet/pkg/solver"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
@@ -35,8 +33,6 @@ var reinstallCmd = &cobra.Command{
 	$ luet reinstall -y system/busybox shells/bash system/coreutils ...
 `,
 	PreRun: func(cmd *cobra.Command, args []string) {
-		util.BindSystemFlags(cmd)
-		util.BindSolverFlags(cmd)
 		viper.BindPFlag("onlydeps", cmd.Flags().Lookup("onlydeps"))
 		viper.BindPFlag("force", cmd.Flags().Lookup("force"))
 		viper.BindPFlag("for", cmd.Flags().Lookup("for"))
@@ -54,20 +50,11 @@ var reinstallCmd = &cobra.Command{
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
 		installed, _ := cmd.Flags().GetBool("installed")
 
-		util.SetSystemConfig(util.DefaultContext)
-
-		util.SetSolverConfig(util.DefaultContext)
-
-		util.DefaultContext.Config.GetSolverOptions().Implementation = solver.SingleCoreSimple
-
-		util.DefaultContext.Debug("Solver", util.DefaultContext.Config.GetSolverOptions().CompactString())
-
-		// Load config protect configs
-		util.DefaultContext.Config.LoadConfigProtect(util.DefaultContext)
+		util.DefaultContext.Debug("Solver", util.DefaultContext.Config.Solver.CompactString())
 
 		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-			Concurrency:                 util.DefaultContext.Config.GetGeneral().Concurrency,
-			SolverOptions:               *util.DefaultContext.Config.GetSolverOptions(),
+			Concurrency:                 util.DefaultContext.Config.General.Concurrency,
+			SolverOptions:               util.DefaultContext.Config.Solver,
 			NoDeps:                      true,
 			Force:                       force,
 			OnlyDeps:                    onlydeps,
@@ -78,7 +65,7 @@ var reinstallCmd = &cobra.Command{
 			PackageRepositories:         util.DefaultContext.Config.SystemRepositories,
 		})
 
-		system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.GetSystem().Rootfs}
+		system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.System.Rootfs}
 
 		if installed {
 			for _, p := range system.Database.World() {
@@ -106,18 +93,8 @@ var reinstallCmd = &cobra.Command{
 }
 
 func init() {
-
-	reinstallCmd.Flags().String("system-dbpath", "", "System db path")
-	reinstallCmd.Flags().String("system-target", "", "System rootpath")
-	reinstallCmd.Flags().String("system-engine", "", "System DB engine")
-
-	reinstallCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+types.AvailableResolvers+" )")
-	reinstallCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
-	reinstallCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
-	reinstallCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	reinstallCmd.Flags().Bool("onlydeps", false, "Consider **only** package dependencies")
 	reinstallCmd.Flags().Bool("force", false, "Skip errors and keep going (potentially harmful)")
-	reinstallCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
 	reinstallCmd.Flags().Bool("installed", false, "Reinstall installed packages")
 	reinstallCmd.Flags().BoolP("yes", "y", false, "Don't ask questions")
 	reinstallCmd.Flags().Bool("download-only", false, "Download only")

@@ -33,7 +33,7 @@ type RepositoryConfig struct {
 	CompilerBackend         compiler.CompilerBackend
 	ImagePrefix             string
 
-	context                                         *types.Context
+	context                                         types.Context
 	PushImages, Force, FromRepository, FromMetadata bool
 }
 
@@ -51,7 +51,7 @@ func (cfg *RepositoryConfig) Apply(opts ...RepositoryOption) error {
 	return nil
 }
 
-func WithContext(c *types.Context) func(cfg *RepositoryConfig) error {
+func WithContext(c types.Context) func(cfg *RepositoryConfig) error {
 	return func(cfg *RepositoryConfig) error {
 		cfg.context = c
 		return nil

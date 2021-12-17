@@ -32,7 +32,7 @@ type LuetFinalizer struct {
 	Uninstall []string `json:"uninstall"` // TODO: Where to store?
 }
 
-func (f *LuetFinalizer) RunInstall(ctx *types.Context, s *System) error {
+func (f *LuetFinalizer) RunInstall(ctx types.Context, s *System) error {
 	var cmd string
 	var args []string
 	if len(f.Shell) == 0 {
@@ -51,14 +51,14 @@ func (f *LuetFinalizer) RunInstall(ctx *types.Context, s *System) error {
 		ctx.Info(":shell: Executing finalizer on ", s.Target, cmd, toRun)
 		if s.Target == string(os.PathSeparator) {
 			cmd := exec.Command(cmd, toRun...)
-			cmd.Env = ctx.Config.GetFinalizerEnvs()
+			cmd.Env = ctx.GetConfig().FinalizerEnvs.Slice()
 			stdoutStderr, err := cmd.CombinedOutput()
 			if err != nil {
 				return errors.Wrap(err, "Failed running command: "+string(stdoutStderr))
 			}
 			ctx.Info(string(stdoutStderr))
 		} else {
-			b := box.NewBox(cmd, toRun, []string{}, ctx.Config.GetFinalizerEnvs(), s.Target, false, true, true)
+			b := box.NewBox(cmd, toRun, []string{}, ctx.GetConfig().FinalizerEnvs.Slice(), s.Target, false, true, true)
 			err := b.Run()
 			if err != nil {
 				return errors.Wrap(err, "Failed running command ")
@@ -69,7 +69,7 @@ func (f *LuetFinalizer) RunInstall(ctx *types.Context, s *System) error {
 }
 
 // TODO: We don't store uninstall finalizers ?!
-func (f *LuetFinalizer) RunUnInstall(ctx *types.Context) error {
+func (f *LuetFinalizer) RunUnInstall(ctx types.Context) error {
 	for _, c := range f.Uninstall {
 		ctx.Debug("finalizer:", "sh", "-c", c)
 		cmd := exec.Command("sh", "-c", c)

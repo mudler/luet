@@ -23,7 +23,7 @@ import (
 )
 
 func NewDatabaseRemoveCommand() *cobra.Command {
-	var ans = &cobra.Command{
+	return &cobra.Command{
 		Use:   "remove [package1] [package2] ...",
 		Short: "Remove a package from the system DB (forcefully - you normally don't want to do that)",
 		Long: `Removes a package in the system database without actually uninstalling it:
@@ -33,11 +33,8 @@ func NewDatabaseRemoveCommand() *cobra.Command {
 This commands takes multiple packages as arguments and prunes their entries from the system database.
 `,
 		Args: cobra.OnlyValidArgs,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			util.BindSystemFlags(cmd)
-		},
+
 		Run: func(cmd *cobra.Command, args []string) {
-			util.SetSystemConfig(util.DefaultContext)
 
 			systemDB := util.DefaultContext.Config.GetSystemDB()
 
@@ -58,9 +55,5 @@ This commands takes multiple packages as arguments and prunes their entries from
 
 		},
 	}
-	ans.Flags().String("system-dbpath", "", "System db path")
-	ans.Flags().String("system-target", "", "System rootpath")
-	ans.Flags().String("system-engine", "", "System DB engine")
 
-	return ans
 }

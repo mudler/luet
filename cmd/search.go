@@ -20,7 +20,6 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/mudler/luet/cmd/util"
-	"github.com/mudler/luet/pkg/api/core/types"
 	installer "github.com/mudler/luet/pkg/installer"
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/pterm/pterm"
@@ -86,7 +85,7 @@ func packageToList(l *util.ListWriter, repo string, p pkg.Package) {
 func searchLocally(term string, l *util.ListWriter, t *util.TableWriter, label, labelMatch, revdeps, hidden bool) Results {
 	var results Results
 
-	system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.GetSystem().Rootfs}
+	system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.System.Rootfs}
 
 	var err error
 	iMatches := pkg.Packages{}
@@ -148,8 +147,8 @@ func searchOnline(term string, l *util.ListWriter, t *util.TableWriter, label, l
 
 	inst := installer.NewLuetInstaller(
 		installer.LuetInstallerOptions{
-			Concurrency:         util.DefaultContext.Config.GetGeneral().Concurrency,
-			SolverOptions:       *util.DefaultContext.Config.GetSolverOptions(),
+			Concurrency:         util.DefaultContext.Config.General.Concurrency,
+			SolverOptions:       util.DefaultContext.Config.Solver,
 			PackageRepositories: util.DefaultContext.Config.SystemRepositories,
 			Context:             util.DefaultContext,
 		},
@@ -238,8 +237,8 @@ func searchFiles(term string, l *util.ListWriter, t *util.TableWriter) Results {
 
 	inst := installer.NewLuetInstaller(
 		installer.LuetInstallerOptions{
-			Concurrency:         util.DefaultContext.Config.GetGeneral().Concurrency,
-			SolverOptions:       *util.DefaultContext.Config.GetSolverOptions(),
+			Concurrency:         util.DefaultContext.Config.General.Concurrency,
+			SolverOptions:       util.DefaultContext.Config.Solver,
 			PackageRepositories: util.DefaultContext.Config.SystemRepositories,
 			Context:             util.DefaultContext,
 		},
@@ -272,7 +271,11 @@ func searchFiles(term string, l *util.ListWriter, t *util.TableWriter) Results {
 }
 
 var searchCmd = &cobra.Command{
-	Use:   "search <term>",
+	Use: "search <term>",
+	// Skip processing output
+	Annotations: map[string]string{
+		util.CommandProcessOutput: "",
+	},
 	Short: "Search packages",
 	Long: `Search for installed and available packages
 	
@@ -309,8 +312,7 @@ Search can also return results in the terminal in different ways: as terminal ou
 `,
 	Aliases: []string{"s"},
 	PreRun: func(cmd *cobra.Command, args []string) {
-		util.BindSystemFlags(cmd)
-		util.BindSolverFlags(cmd)
+
 		viper.BindPFlag("installed", cmd.Flags().Lookup("installed"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -329,18 +331,11 @@ Search can also return results in the terminal in different ways: as terminal ou
 		tableMode, _ := cmd.Flags().GetBool("table")
 		files, _ := cmd.Flags().GetBool("files")
 
-		util.SetSystemConfig(util.DefaultContext)
-		util.SetSolverConfig(util.DefaultContext)
-
 		out, _ := cmd.Flags().GetString("output")
-		if out != "terminal" {
-			util.DefaultContext.Config.GetLogging().SetLogLevel(types.FatalLevel)
-		}
-
 		l := &util.ListWriter{}
 		t := &util.TableWriter{}
 		t.AppendRow(rows)
-		util.DefaultContext.Debug("Solver", util.DefaultContext.Config.GetSolverOptions().CompactString())
+		util.DefaultContext.Debug("Solver", util.DefaultContext.Config.Solver.CompactString())
 
 		switch {
 		case files && installed:
@@ -383,16 +378,9 @@ Search can also return results in the terminal in different ways: as terminal ou
 }
 
 func init() {
-	searchCmd.Flags().String("system-dbpath", "", "System db path")
-	searchCmd.Flags().String("system-target", "", "System rootpath")
-	searchCmd.Flags().String("system-engine", "", "System DB engine")
 
 	searchCmd.Flags().Bool("installed", false, "Search between system packages")
-	searchCmd.Flags().String("solver-type", "", "Solver strategy ( Defaults none, available: "+types.AvailableResolvers+" )")
 	searchCmd.Flags().StringP("output", "o", "terminal", "Output format ( Defaults: terminal, available: json,yaml )")
-	searchCmd.Flags().Float32("solver-rate", 0.7, "Solver learning rate")
-	searchCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
-	searchCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	searchCmd.Flags().Bool("by-label", false, "Search packages through label")
 	searchCmd.Flags().Bool("by-label-regex", false, "Search packages through label regex")
 	searchCmd.Flags().Bool("revdeps", false, "Search package reverse dependencies")
