@@ -100,6 +100,7 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		helpers.CheckErr(err)
 		force := viper.GetBool("force-push")
 		imagePush := viper.GetBool("push-images")
+		snapshotID, _ := cmd.Flags().GetString("snapshot-id")
 
 		opts := []installer.RepositoryOption{
 			installer.WithSource(viper.GetString("packages")),
@@ -163,7 +164,7 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		if metaName != "" {
 			metaFile.SetFileName(metaName)
 		}
-
+		repo.SetSnapshotID(snapshotID)
 		repo.SetRepositoryFile(installer.REPOFILE_TREE_KEY, treeFile)
 		repo.SetRepositoryFile(installer.REPOFILE_META_KEY, metaFile)
 
@@ -197,6 +198,7 @@ func init() {
 	createrepoCmd.Flags().String("meta-compression", "none", "Compression alg: none, gzip, zstd")
 	createrepoCmd.Flags().String("meta-filename", installer.REPOSITORY_METAFILE+".tar", "Repository metadata filename")
 	createrepoCmd.Flags().Bool("from-repositories", false, "Consume the user-defined repositories to pull specfiles from")
+	createrepoCmd.Flags().String("snapshot-id", "", "Unique ID to use when creating repository snapshots")
 
 	RootCmd.AddCommand(createrepoCmd)
 }

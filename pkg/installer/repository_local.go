@@ -32,7 +32,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-type localRepositoryGenerator struct{ context *types.Context }
+type localRepositoryGenerator struct {
+	context    *types.Context
+	snapshotID string
+}
 
 func (l *localRepositoryGenerator) Initialize(path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
 	return buildPackageIndex(l.context, path, db)
@@ -124,7 +127,7 @@ func (g *localRepositoryGenerator) Generate(r *LuetSystemRepository, dst string,
 	// Create named snapshot.
 	// It edits the metadata pointing at the repository files associated with the snapshot
 	// And copies the new files
-	if _, _, err := r.Snapshot(time.Now().Format("20060102150405"), dst); err != nil {
+	if _, _, err := r.Snapshot(g.snapshotID, dst); err != nil {
 		return errors.Wrap(err, "while creating snapshot")
 	}
 

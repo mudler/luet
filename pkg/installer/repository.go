@@ -74,7 +74,7 @@ type LuetSystemRepository struct {
 	PushImages      bool                          `json:"-"`
 	ForcePush       bool                          `json:"-"`
 
-	imagePrefix string
+	imagePrefix, snapshotID string
 }
 
 type LuetSystemRepositoryMetadata struct {
@@ -379,7 +379,7 @@ func (r *LuetSystemRepository) SetPriority(n int) {
 }
 
 func (r *LuetSystemRepository) initialize(ctx *types.Context, src string) error {
-	generator, err := r.getGenerator(ctx)
+	generator, err := r.getGenerator(ctx, r.snapshotID)
 	if err != nil {
 		return errors.Wrap(err, "while constructing repository generator")
 	}
@@ -428,6 +428,11 @@ func (r *LuetSystemRepository) GetType() string {
 
 func (r *LuetSystemRepository) SetType(p string) {
 	r.LuetRepository.Type = p
+}
+
+// Sets snapshot ID
+func (r *LuetSystemRepository) SetSnapshotID(i string) {
+	r.snapshotID = i
 }
 
 func (r *LuetSystemRepository) GetVerify() bool {
@@ -705,11 +710,15 @@ type RepositoryGenerator interface {
 	Initialize(string, pkg.PackageDatabase) ([]*artifact.PackageArtifact, error)
 }
 
-func (r *LuetSystemRepository) getGenerator(ctx *types.Context) (RepositoryGenerator, error) {
+func (r *LuetSystemRepository) getGenerator(ctx *types.Context, snapshotID string) (RepositoryGenerator, error) {
+	if snapshotID == "" {
+		snapshotID = time.Now().Format("20060102150405")
+	}
+
 	var rg RepositoryGenerator
 	switch r.GetType() {
 	case DiskRepositoryType, HttpRepositoryType:
-		rg = &localRepositoryGenerator{context: ctx}
+		rg = &localRepositoryGenerator{context: ctx, snapshotID: snapshotID}
 	case DockerRepositoryType:
 		rg = &dockerRepositoryGenerator{
 			b:           r.Backend,
@@ -717,6 +726,7 @@ func (r *LuetSystemRepository) getGenerator(ctx *types.Context) (RepositoryGener
 			imagePush:   r.PushImages,
 			force:       r.ForcePush,
 			context:     ctx,
+			snapshotID:  snapshotID,
 		}
 	default:
 		return nil, errors.New("invalid repository type")
@@ -726,7 +736,7 @@ func (r *LuetSystemRepository) getGenerator(ctx *types.Context) (RepositoryGener
 
 // Write writes the repository metadata to the supplied destination
 func (r *LuetSystemRepository) Write(ctx *types.Context, dst string, resetRevision, force bool) error {
-	rg, err := r.getGenerator(ctx)
+	rg, err := r.getGenerator(ctx, r.snapshotID)
 	if err != nil {
 		return err
 	}

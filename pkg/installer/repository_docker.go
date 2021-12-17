@@ -37,10 +37,10 @@ import (
 )
 
 type dockerRepositoryGenerator struct {
-	b                compiler.CompilerBackend
-	imagePrefix      string
-	imagePush, force bool
-	context          *types.Context
+	b                       compiler.CompilerBackend
+	imagePrefix, snapshotID string
+	imagePush, force        bool
+	context                 *types.Context
 }
 
 func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
@@ -270,8 +270,7 @@ func (d *dockerRepositoryGenerator) Generate(r *LuetSystemRepository, imagePrefi
 	// Create a named snapshot and push it.
 	// It edits the metadata pointing at the repository files associated with the snapshot
 	// And copies the new files
-	id := time.Now().Format("20060102150405")
-	artifacts, snapshotRepoFile, err := r.Snapshot(id, repoTemp)
+	artifacts, snapshotRepoFile, err := r.Snapshot(d.snapshotID, repoTemp)
 	if err != nil {
 		return errors.Wrap(err, "while creating snapshot")
 	}
