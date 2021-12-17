@@ -90,13 +90,11 @@ func (s *System) buildFileIndex() {
 	if len(s.Database.GetPackages()) != len(s.fileIndexPackages) {
 		s.fileIndexPackages = make(map[string]pkg.Package)
 		for _, p := range s.Database.World() {
-			if _, ok := s.fileIndexPackages[p.GetPackageName()]; !ok {
-				files, _ := s.Database.GetPackageFiles(p)
-				for _, f := range files {
-					s.fileIndex[f] = p
-				}
-				s.fileIndexPackages[p.GetPackageName()] = p
+			files, _ := s.Database.GetPackageFiles(p)
+			for _, f := range files {
+				s.fileIndex[f] = p
 			}
+			s.fileIndexPackages[p.GetPackageName()] = p
 		}
 	}
 }
@@ -105,6 +103,13 @@ func (s *System) Clean() {
 	s.Lock()
 	defer s.Unlock()
 	s.fileIndex = nil
+}
+
+func (s *System) FileIndex() map[string]pkg.Package {
+	s.buildFileIndex()
+	s.Lock()
+	defer s.Unlock()
+	return s.fileIndex
 }
 
 func (s *System) ExistsPackageFile(file string) (bool, pkg.Package, error) {

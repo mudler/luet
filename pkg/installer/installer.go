@@ -29,7 +29,6 @@ import (
 	"github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
-	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/mudler/luet/pkg/helpers/match"
 	pkg "github.com/mudler/luet/pkg/package"
@@ -279,6 +278,22 @@ func (l *LuetInstaller) swap(o Option, syncedRepos Repositories, toRemove pkg.Pa
 		return errors.Wrap(err, "failed computing installer options")
 	}
 
+	l.Options.Context.Info("Computed operations")
+	for _, o := range ops {
+
+		toUninstall := ""
+		toInstall := ""
+		for _, u := range o.Uninstall {
+			toUninstall += u.Package.HumanReadableString()
+		}
+		for _, u := range o.Install {
+			toInstall += u.Package.HumanReadableString()
+		}
+
+		l.Options.Context.Info(fmt.Sprintf("%s -> %s", toUninstall, toInstall))
+
+	}
+
 	err = l.runOps(ops, s)
 	if err != nil {
 		return errors.Wrap(err, "failed running installer options")
@@ -424,6 +439,9 @@ func (l *LuetInstaller) getOpsWithOptions(
 	}
 
 	removals := make(map[string]interface{})
+
+	fileIndex := s.FileIndex()
+
 	for _, match := range installMatch {
 		a, err := l.getPackage(match, l.Options.Context)
 		if err != nil && !l.Options.Force {
@@ -434,22 +452,30 @@ func (l *LuetInstaller) getOpsWithOptions(
 			return nil, errors.Wrapf(err, "Could not get filelist for %s", a.CompileSpec.Package.HumanReadableString())
 		}
 
-		var foundPackages []pkg.Package
+		l.Options.Context.Debug(match.Package.HumanReadableString(), "files", len(files))
+
+		foundPackages := make(map[string]pkg.Package)
+	FILES:
 		for _, f := range files {
-			if exists, p, _ := s.ExistsPackageFile(f); exists {
+			if p, exists := fileIndex[f]; exists {
+				if _, exists := foundPackages[p.HumanReadableString()]; exists {
+					continue FILES
+				}
+
 				_, err := toUninstall.Find(p.GetPackageName())
 				if err == nil {
+					l.Options.Context.Debug(p.HumanReadableString(), "files", f, "matches")
+
 					// Packages that is being installed have a file that
 					// is going to be removed by another package
-					foundPackages = append(foundPackages, p)
+					foundPackages[p.HumanReadableString()] = p
 				}
 			}
 		}
-
-		foundPackages = pkg.Packages(foundPackages).Unique()
+		l.Options.Context.Debug(match.Package.HumanReadableString(), "found", len(foundPackages), "packages")
 		if len(foundPackages) > 0 {
 			if pack, err := toUninstall.Find(match.Package.GetPackageName()); err == nil {
-				foundPackages = append(foundPackages, pack)
+				foundPackages[pack.HumanReadableString()] = pack
 			}
 
 			toRemove := []pkg.Package{}
@@ -868,8 +894,10 @@ func (l *LuetInstaller) checkFileconflicts(toInstall map[string]ArtifactMatch, c
 	l.Options.Context.Info("Checking for file conflicts..")
 	defer s.Clean() // Release memory
 
-	filesToInstall := []string{}
+	filesToInstall := map[string]interface{}{}
 	for _, m := range toInstall {
+		l.Options.Context.Debug("Checking file conflicts for", m.Package.HumanReadableString())
+
 		a, err := l.getPackage(m, l.Options.Context)
 		if err != nil && !l.Options.Force {
 			return errors.Wrap(err, "Failed downloading package")
@@ -880,7 +908,7 @@ func (l *LuetInstaller) checkFileconflicts(toInstall map[string]ArtifactMatch, c
 		}
 
 		for _, f := range files {
-			if helpers.Contains(filesToInstall, f) {
+			if _, ok := filesToInstall[f]; ok {
 				return fmt.Errorf(
 					"file conflict between packages to be installed",
 				)
@@ -899,9 +927,10 @@ func (l *LuetInstaller) checkFileconflicts(toInstall map[string]ArtifactMatch, c
 					)
 				}
 			}
+			filesToInstall[f] = nil
 		}
-		filesToInstall = append(filesToInstall, files...)
 	}
+	l.Options.Context.Info("Done checking for file conflicts..")
 
 	return nil
 }
