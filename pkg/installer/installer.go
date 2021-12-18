@@ -279,19 +279,17 @@ func (l *LuetInstaller) swap(o Option, syncedRepos Repositories, toRemove pkg.Pa
 	}
 
 	l.Options.Context.Info("Computed operations")
-	for _, o := range ops {
 
+	for _, o := range ops {
 		toUninstall := ""
 		toInstall := ""
 		for _, u := range o.Uninstall {
-			toUninstall += u.Package.HumanReadableString()
+			toUninstall += fmt.Sprintf(" %s", u.Package.HumanReadableString())
 		}
 		for _, u := range o.Install {
-			toInstall += u.Package.HumanReadableString()
+			toInstall += fmt.Sprintf(" %s", u.Package.HumanReadableString())
 		}
-
 		l.Options.Context.Info(fmt.Sprintf("%s -> %s", toUninstall, toInstall))
-
 	}
 
 	err = l.runOps(ops, s)
@@ -417,16 +415,19 @@ func (l *LuetInstaller) getOpsWithOptions(
 	l.Options.Context.Debug("Computing installation order")
 	resOps := []installerOp{}
 
-	insertPackage := func(install pkg.Package, uninstall ...pkg.Package) {
+	insertPackage := func(install []pkg.Package, uninstall ...pkg.Package) {
+		if len(install) == 0 && len(uninstall) == 0 {
+			return
+		}
 		uOpts := []operation{}
 		for _, u := range uninstall {
 			uOpts = append(uOpts, operation{Package: u, Option: uninstallOpt})
 		}
-		resOps = append(resOps, installerOp{
-			Uninstall: uOpts,
-			Install: []installOperation{{
+		iOpts := []installOperation{}
+		for _, u := range install {
+			iOpts = append(iOpts, installOperation{
 				operation: operation{
-					Package: install,
+					Package: u,
 					Option:  installOpt,
 				},
 				Matches:     installMatch,
@@ -434,11 +435,43 @@ func (l *LuetInstaller) getOpsWithOptions(
 				Reposiories: syncedRepos,
 				Assertions:  solution,
 				Database:    allRepos,
-			}},
+			})
+		}
+		resOps = append(resOps, installerOp{
+			Uninstall: uOpts,
+			Install:   iOpts,
 		})
 	}
 
 	removals := make(map[string]interface{})
+	additions := make(map[string]interface{})
+
+	remove := func(p pkg.Package) {
+		removals[p.GetPackageName()] = nil
+	}
+
+	add := func(p pkg.Package) {
+		additions[p.GetPackageName()] = nil
+	}
+
+	added := func(p pkg.Package) bool {
+		_, exists := additions[p.GetPackageName()]
+		return exists
+	}
+
+	removed := func(p pkg.Package) bool {
+		_, exists := removals[p.GetPackageName()]
+		return exists
+	}
+
+	findToBeInstalled := func(p pkg.Package) pkg.Package {
+		for _, m := range installMatch {
+			if m.Package.GetPackageName() == p.GetPackageName() {
+				return m.Package
+			}
+		}
+		return nil
+	}
 
 	fileIndex := s.FileIndex()
 
@@ -478,21 +511,39 @@ func (l *LuetInstaller) getOpsWithOptions(
 				foundPackages[pack.HumanReadableString()] = pack
 			}
 
+			toInstall := []pkg.Package{}
+			if !added(match.Package) {
+				toInstall = append(toInstall, match.Package)
+				add(match.Package)
+			}
 			toRemove := []pkg.Package{}
 			for _, p := range foundPackages {
-				if _, ok := removals[p.GetPackageName()]; !ok {
+				if !removed(p) {
 					toRemove = append(toRemove, p)
-					removals[p.GetPackageName()] = nil
+					if pp := findToBeInstalled(p); pp != nil && !added(pp) {
+						toInstall = append(toInstall, pp)
+						add(pp)
+					}
+					remove(p)
 				}
 			}
-			insertPackage(match.Package, toRemove...)
+			// toInstall needs to have:
+			// equivalent of what was found in foundPackages AND
+			// was not already added to installation
+			insertPackage(toInstall, toRemove...)
 		} else if pack, err := toUninstall.Find(match.Package.GetPackageName()); err == nil {
-			if _, ok := removals[pack.GetPackageName()]; !ok {
-				insertPackage(match.Package, pack)
-				removals[pack.GetPackageName()] = nil
+			if !removed(pack) {
+				toInstall := []pkg.Package{}
+				if !added(match.Package) {
+					toInstall = append(toInstall, match.Package)
+					add(match.Package)
+				}
+				insertPackage(toInstall, pack)
+				remove(pack)
 			}
-		} else {
-			insertPackage(match.Package)
+		} else if !added(match.Package) {
+			insertPackage([]pkg.Package{match.Package})
+			add(match.Package)
 		}
 	}
 
