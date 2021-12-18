@@ -1,5 +1,6 @@
 // Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
 //                  Daniele Rondina <geaaru@sabayonlinux.org>
+// Copyright © 2021 Ettore Di Giacinto <mudler@mocaccino.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -24,7 +25,7 @@ import (
 )
 
 func NewRepoUpdateCommand() *cobra.Command {
-	var ans = &cobra.Command{
+	var repoUpdate = &cobra.Command{
 		Use:   "update [repo1] [repo2] [OPTIONS]",
 		Short: "Update a specific cached repository or all cached repositories.",
 		Example: `
@@ -72,8 +73,8 @@ $> luet repo update repo1 repo2
 		},
 	}
 
-	ans.Flags().BoolP("ignore-errors", "i", false, "Ignore errors on sync repositories.")
-	ans.Flags().BoolP("force", "f", false, "Force resync.")
+	repoUpdate.Flags().BoolP("ignore-errors", "i", false, "Ignore errors on sync repositories.")
+	repoUpdate.Flags().BoolP("force", "f", true, "Force resync.")
 
-	return ans
+	return repoUpdate
 }

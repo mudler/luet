@@ -856,7 +856,20 @@ func (r *LuetSystemRepository) Sync(ctx *types.Context, force bool) (*LuetSystem
 	var repoUpdated bool = false
 	var treefs, metafs string
 
+	repobasedir := ctx.Config.GetSystem().GetRepoDatabaseDirPath(r.GetName())
+
+	toTimeSync := false
+	dat, err := ioutil.ReadFile(filepath.Join(repobasedir, "SYNCTIME"))
+	if err == nil {
+		parsed, _ := time.Parse(time.RFC3339, string(dat))
+		if time.Now().After(parsed.Add(24 * time.Hour)) {
+			toTimeSync = true
+			ctx.Debug(r.Name, "is old, refresh is suggested")
+		}
+	}
+
 	ctx.Debug("Sync of the repository", r.Name, "in progress...")
+
 	c := r.Client(ctx)
 	if c == nil {
 		return nil, errors.New("no client could be generated from repository")
@@ -864,20 +877,29 @@ func (r *LuetSystemRepository) Sync(ctx *types.Context, force bool) (*LuetSystem
 
 	repositoryReferenceID := r.referenceID()
 
-	// Retrieve remote repository.yaml for retrieve revision and date
-	file, err := c.DownloadFile(repositoryReferenceID)
-	if err != nil {
-		return nil, errors.Wrap(err, "while downloading "+repositoryReferenceID)
-	}
+	var downloadedRepoMeta *LuetSystemRepository
+	var file string
+	repoFile := filepath.Join(repobasedir, repositoryReferenceID)
 
-	repobasedir := ctx.Config.GetSystem().GetRepoDatabaseDirPath(r.GetName())
-	downloadedRepoMeta, err := r.ReadSpecFile(file)
-	if err != nil {
-		return nil, err
+	_, repoExistsErr := os.Stat(repoFile)
+	if toTimeSync || force || os.IsNotExist(repoExistsErr) {
+		// Retrieve remote repository.yaml for retrieve revision and date
+		file, err = c.DownloadFile(repositoryReferenceID)
+		if err != nil {
+			return nil, errors.Wrap(err, "while downloading "+repositoryReferenceID)
+		}
+		downloadedRepoMeta, err = r.ReadSpecFile(file)
+		if err != nil {
+			return nil, err
+		}
+		defer os.RemoveAll(file)
+	} else {
+		downloadedRepoMeta, err = r.ReadSpecFile(repoFile)
+		if err != nil {
+			return nil, err
+		}
+		repoUpdated = true
 	}
-	// Remove temporary file that contains repository.yaml
-	// Example: /tmp/HttpClient236052003
-	defer os.RemoveAll(file)
 
 	if r.Cached {
 		if !force {
@@ -968,8 +990,8 @@ func (r *LuetSystemRepository) Sync(ctx *types.Context, force bool) (*LuetSystem
 				downloadedRepoMeta.GetRevision(),
 				time.Unix(tsec, 0).String()))
 
-	} else {
-		ctx.Info("Repository", downloadedRepoMeta.GetName(), "is already up to date.")
+		now := time.Now().Format(time.RFC3339)
+		ioutil.WriteFile(filepath.Join(repobasedir, "SYNCTIME"), []byte(now), os.ModePerm)
 	}
 
 	meta, err := NewLuetSystemRepositoryMetadata(
@@ -993,11 +1015,14 @@ func (r *LuetSystemRepository) Sync(ctx *types.Context, force bool) (*LuetSystem
 	// e.g. locally we can override the type (disk), or priority
 	// while remotely it could be advertized differently
 	r.fill(downloadedRepoMeta)
-	ctx.Info(
-		fmt.Sprintf(":information_source: Repository: %s Priority: %d Type: %s",
-			downloadedRepoMeta.GetName(),
-			downloadedRepoMeta.GetPriority(),
-			downloadedRepoMeta.GetType()))
+
+	if !repoUpdated {
+		ctx.Info(
+			fmt.Sprintf(":information_source: Repository: %s Priority: %d Type: %s",
+				downloadedRepoMeta.GetName(),
+				downloadedRepoMeta.GetPriority(),
+				downloadedRepoMeta.GetType()))
+	}
 	return downloadedRepoMeta, nil
 }
 
