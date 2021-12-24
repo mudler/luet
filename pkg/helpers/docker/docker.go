@@ -33,6 +33,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
@@ -200,6 +201,31 @@ func ExtractDockerImage(ctx luettypes.Context, local, dest string)(*images.Image
 		}
 	}
 
+	ref, err := name.ParseReference(local)
+	if err != nil {
+		return nil, err
+	}
+
+	img, err := daemon.Image(ref)
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := img.Manifest()
+	if err != nil {
+		return nil, err
+	}
+
+	mt, err := img.MediaType()
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := img.Digest()
+	if err != nil {
+		return nil, err
+	}
+
 	var c int64
 	c, _, err = luetimages.ExtractTo(
 		ctx,
@@ -212,10 +238,10 @@ func ExtractDockerImage(ctx luettypes.Context, local, dest string)(*images.Image
 		return nil, err
 	}
 
-	bus.Manager.Publish(bus.EventImagePostUnPack, UnpackEventData{Image: image, Dest: dest})
+	bus.Manager.Publish(bus.EventImagePostUnPack, UnpackEventData{Image: local, Dest: dest})
 
 	return &images.Image{
-		Name:   image,
+		Name:   local,
 		Labels: m.Annotations,
 		Target: specs.Descriptor{
 			MediaType: string(mt),
