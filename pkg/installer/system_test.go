@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/mudler/luet/pkg/installer"
 	pkg "github.com/mudler/luet/pkg/package"
 
@@ -35,6 +36,7 @@ var _ = Describe("System", func() {
 		var s *System
 		var db pkg.PackageDatabase
 		var a, b *pkg.DefaultPackage
+		ctx := context.NewContext()
 
 		BeforeEach(func() {
 			db = pkg.NewInMemoryDatabase(false)
@@ -76,11 +78,11 @@ var _ = Describe("System", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(dir)
 			s.Target = dir
-			notfound := s.OSCheck()
+			notfound := s.OSCheck(ctx)
 			Expect(len(notfound)).To(Equal(2))
 			ioutil.WriteFile(filepath.Join(dir, "f"), []byte{}, os.ModePerm)
 			ioutil.WriteFile(filepath.Join(dir, "foo"), []byte{}, os.ModePerm)
-			notfound = s.OSCheck()
+			notfound = s.OSCheck(ctx)
 			Expect(len(notfound)).To(Equal(1))
 		})
 	})

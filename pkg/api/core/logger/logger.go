@@ -185,9 +185,9 @@ func (l *Logger) send(ll log.LogLevel, f string, args ...interface{}) {
 			l.fileLogger.Debug(joinMsg(prefixCodeLine(sanitizedArgs)...))
 		}
 	case log.LevelDebug == ll && formatDefined:
-		pterm.Debug.Printfln(sanitizedF, prefixCodeLine(args...)...)
+		pterm.Debug.Printfln(joinMsg(prefixCodeLine(sanitizedF)...), args...)
 		if l.logToFile {
-			l.fileLogger.Sugar().Debugf(sanitizedF, prefixCodeLine(args...)...)
+			l.fileLogger.Sugar().Debugf(joinMsg(prefixCodeLine(sanitizedF)...), args...)
 		}
 	case log.LevelError == ll && !formatDefined:
 		pterm.Error.Println(pterm.LightRed(sanitizedArgs))

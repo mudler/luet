@@ -58,7 +58,7 @@ To reinstall packages in the list:
 			Database: util.DefaultContext.Config.GetSystemDB(),
 			Target:   util.DefaultContext.Config.System.Rootfs,
 		}
-		packs := system.OSCheck()
+		packs := system.OSCheck(util.DefaultContext)
 		if !util.DefaultContext.Config.General.Quiet {
 			if len(packs) == 0 {
 				util.DefaultContext.Success("All good!")

@@ -500,7 +500,7 @@ func (l *LuetInstaller) checkAndUpgrade(r Repositories, s *System) error {
 
 	if l.Options.AutoOSCheck {
 		l.Options.Context.Info("Performing automatic oscheck")
-		packs := s.OSCheck()
+		packs := s.OSCheck(l.Options.Context)
 		if len(packs) > 0 {
 			p := ""
 			for _, r := range packs {
