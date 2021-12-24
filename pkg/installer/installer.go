@@ -65,7 +65,7 @@ type LuetInstaller struct {
 type ArtifactMatch struct {
 	Package    pkg.Package
 	Artifact   *artifact.PackageArtifact
-	Repository *LuetSystemRepository
+	Repository Repository
 }
 
 func NewLuetInstaller(opts LuetInstallerOptions) *LuetInstaller {
@@ -268,7 +268,7 @@ func (l *LuetInstaller) swap(o Option, syncedRepos Repositories, toRemove pkg.Pa
 		return nil
 	}
 
-	ops, err := l.getOpsWithOptions(toRemove, match, Option{
+	ops, err := l.generateRunOps(toRemove, match, Option{
 		Force:              o.Force,
 		NoDeps:             false,
 		OnlyDeps:           o.OnlyDeps,
@@ -277,20 +277,6 @@ func (l *LuetInstaller) swap(o Option, syncedRepos Repositories, toRemove pkg.Pa
 	}, o, syncedRepos, packages, assertions, allRepos, s)
 	if err != nil {
 		return errors.Wrap(err, "failed computing installer options")
-	}
-
-	l.Options.Context.Info("Computed operations")
-
-	for _, o := range ops {
-		toUninstall := ""
-		toInstall := ""
-		for _, u := range o.Uninstall {
-			toUninstall += fmt.Sprintf(" %s", u.Package.HumanReadableString())
-		}
-		for _, u := range o.Install {
-			toInstall += fmt.Sprintf(" %s", u.Package.HumanReadableString())
-		}
-		l.Options.Context.Info(fmt.Sprintf("%s -> %s", toUninstall, toInstall))
 	}
 
 	err = l.runOps(ops, s)
@@ -367,9 +353,29 @@ func (l *LuetInstaller) installerOpWorker(i int, wg *sync.WaitGroup, systemLock 
 
 	for p := range c {
 
+		installedFiles := map[string]interface{}{}
+		for _, pp := range p.Install {
+			artMatch := pp.Matches[pp.Package.GetFingerPrint()]
+			art, err := l.getPackage(artMatch, l.Options.Context)
+			if err != nil {
+				installedFiles = map[string]interface{}{}
+				break
+			}
+
+			l, err := art.FileList()
+			if err != nil {
+				installedFiles = map[string]interface{}{}
+				break
+			}
+			for _, f := range l {
+				installedFiles[f] = nil
+			}
+		}
+
 		for _, pp := range p.Uninstall {
+
 			l.Options.Context.Debug("Replacing package inplace")
-			toUninstall, uninstall, err := l.generateUninstallFn(pp.Option, s, pp.Package)
+			toUninstall, uninstall, err := l.generateUninstallFn(pp.Option, s, installedFiles, pp.Package)
 			if err != nil {
 				l.Options.Context.Debug("Skipping uninstall, fail to generate uninstall function, error: " + err.Error())
 				continue
@@ -409,162 +415,33 @@ func (l *LuetInstaller) installerOpWorker(i int, wg *sync.WaitGroup, systemLock 
 }
 
 // checks wheter we can uninstall and install in place and compose installer worker ops
-func (l *LuetInstaller) getOpsWithOptions(
+func (l *LuetInstaller) generateRunOps(
 	toUninstall pkg.Packages, installMatch map[string]ArtifactMatch, installOpt, uninstallOpt Option,
-	syncedRepos Repositories, toInstall pkg.Packages, solution solver.PackagesAssertions, allRepos pkg.PackageDatabase, s *System) ([]installerOp, error) {
+	syncedRepos Repositories, toInstall pkg.Packages, solution solver.PackagesAssertions, allRepos pkg.PackageDatabase, s *System) (resOps []installerOp, err error) {
 
-	l.Options.Context.Debug("Computing installation order")
-	resOps := []installerOp{}
-
-	insertPackage := func(install []pkg.Package, uninstall ...pkg.Package) {
-		if len(install) == 0 && len(uninstall) == 0 {
-			return
-		}
-		uOpts := []operation{}
-		for _, u := range uninstall {
-			uOpts = append(uOpts, operation{Package: u, Option: uninstallOpt})
-		}
-		iOpts := []installOperation{}
-		for _, u := range install {
-			iOpts = append(iOpts, installOperation{
-				operation: operation{
-					Package: u,
-					Option:  installOpt,
-				},
-				Matches:     installMatch,
-				Packages:    toInstall,
-				Reposiories: syncedRepos,
-				Assertions:  solution,
-				Database:    allRepos,
-			})
-		}
-		resOps = append(resOps, installerOp{
-			Uninstall: uOpts,
-			Install:   iOpts,
+	uOpts := []operation{}
+	for _, u := range toUninstall {
+		uOpts = append(uOpts, operation{Package: u, Option: uninstallOpt})
+	}
+	iOpts := []installOperation{}
+	for _, u := range installMatch {
+		iOpts = append(iOpts, installOperation{
+			operation: operation{
+				Package: u.Package,
+				Option:  installOpt,
+			},
+			Matches:     installMatch,
+			Packages:    toInstall,
+			Reposiories: syncedRepos,
+			Assertions:  solution,
+			Database:    allRepos,
 		})
 	}
+	resOps = append(resOps, installerOp{
+		Uninstall: uOpts,
+		Install:   iOpts,
+	})
 
-	removals := make(map[string]interface{})
-	additions := make(map[string]interface{})
-
-	remove := func(p pkg.Package) {
-		removals[p.GetPackageName()] = nil
-	}
-
-	add := func(p pkg.Package) {
-		additions[p.GetPackageName()] = nil
-	}
-
-	added := func(p pkg.Package) bool {
-		_, exists := additions[p.GetPackageName()]
-		return exists
-	}
-
-	removed := func(p pkg.Package) bool {
-		_, exists := removals[p.GetPackageName()]
-		return exists
-	}
-
-	findToBeInstalled := func(p pkg.Package) pkg.Package {
-		for _, m := range installMatch {
-			if m.Package.GetPackageName() == p.GetPackageName() {
-				return m.Package
-			}
-		}
-		return nil
-	}
-
-	fileIndex := s.FileIndex()
-
-	for _, match := range installMatch {
-		a, err := l.getPackage(match, l.Options.Context)
-		if err != nil && !l.Options.Force {
-			return nil, errors.Wrap(err, "Failed downloading package")
-		}
-		files, err := a.FileList()
-		if err != nil && !l.Options.Force {
-			return nil, errors.Wrapf(err, "Could not get filelist for %s", a.CompileSpec.Package.HumanReadableString())
-		}
-
-		l.Options.Context.Debug(match.Package.HumanReadableString(), "files", len(files))
-
-		foundPackages := make(map[string]pkg.Package)
-	FILES:
-		for _, f := range files {
-			if p, exists := fileIndex[f]; exists {
-				if _, exists := foundPackages[p.HumanReadableString()]; exists {
-					continue FILES
-				}
-
-				_, err := toUninstall.Find(p.GetPackageName())
-				if err == nil {
-					l.Options.Context.Debug(p.HumanReadableString(), "files", f, "matches")
-
-					// Packages that is being installed have a file that
-					// is going to be removed by another package
-					foundPackages[p.HumanReadableString()] = p
-				}
-			}
-		}
-		l.Options.Context.Debug(match.Package.HumanReadableString(), "found", len(foundPackages), "packages")
-		if len(foundPackages) > 0 {
-			if pack, err := toUninstall.Find(match.Package.GetPackageName()); err == nil {
-				foundPackages[pack.HumanReadableString()] = pack
-			}
-
-			toInstall := []pkg.Package{}
-			if !added(match.Package) {
-				toInstall = append(toInstall, match.Package)
-				add(match.Package)
-			}
-			toRemove := []pkg.Package{}
-			for _, p := range foundPackages {
-				if !removed(p) {
-					toRemove = append(toRemove, p)
-					if pp := findToBeInstalled(p); pp != nil && !added(pp) {
-						toInstall = append(toInstall, pp)
-						add(pp)
-					}
-					remove(p)
-				}
-			}
-			// toInstall needs to have:
-			// equivalent of what was found in foundPackages AND
-			// was not already added to installation
-			insertPackage(toInstall, toRemove...)
-		} else if pack, err := toUninstall.Find(match.Package.GetPackageName()); err == nil {
-			if !removed(pack) {
-				toInstall := []pkg.Package{}
-				if !added(match.Package) {
-					toInstall = append(toInstall, match.Package)
-					add(match.Package)
-				}
-				insertPackage(toInstall, pack)
-				remove(pack)
-			}
-		} else if !added(match.Package) {
-			insertPackage([]pkg.Package{match.Package})
-			add(match.Package)
-		}
-	}
-
-	for _, p := range toUninstall {
-		found := false
-
-		for _, match := range installMatch {
-			if match.Package.GetPackageName() == p.GetPackageName() {
-				found = true
-			}
-		}
-		if !found {
-			if _, ok := removals[p.GetPackageName()]; !ok {
-				resOps = append(resOps, installerOp{
-					Uninstall: []operation{{Package: p, Option: uninstallOpt}},
-				})
-				removals[p.GetPackageName()] = nil
-			}
-		}
-	}
 	return resOps, nil
 }
 
@@ -1050,7 +927,6 @@ func (l *LuetInstaller) install(o Option, syncedRepos Repositories, toInstall ma
 }
 
 func (l *LuetInstaller) getPackage(a ArtifactMatch, ctx types.Context) (artifact *artifact.PackageArtifact, err error) {
-
 	cli := a.Repository.Client(ctx)
 
 	artifact, err = cli.DownloadArtifact(a.Artifact)
@@ -1187,14 +1063,52 @@ func pruneEmptyFilePath(ctx types.Context, target string, path string) {
 	}
 }
 
-func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
+func (l *LuetInstaller) pruneFile(f string, s *System, cp *config.ConfigProtect) {
+	target := filepath.Join(s.Target, f)
+
+	if !l.Options.Context.GetConfig().ConfigProtectSkip && cp.Protected(f) {
+		l.Options.Context.Debug("Preserving protected file:", f)
+		return
+	}
+
+	l.Options.Context.Debug("Removing", target)
+	if l.Options.PreserveSystemEssentialData &&
+		strings.HasPrefix(f, l.Options.Context.GetConfig().System.PkgsCachePath) ||
+		strings.HasPrefix(f, l.Options.Context.GetConfig().System.DatabasePath) {
+		l.Options.Context.Warning("Preserve ", f, " which is required by luet ( you have to delete it manually if you really need to)")
+		return
+	}
+
+	fi, err := os.Lstat(target)
+	if err != nil {
+		l.Options.Context.Debug("File not found (it was before?) ", err.Error())
+		return
+	}
+	switch mode := fi.Mode(); {
+	case mode.IsDir():
+		files, err := ioutil.ReadDir(target)
+		if err != nil {
+			l.Options.Context.Debug("Failed reading folder", target, err.Error())
+		}
+		if len(files) != 0 {
+			l.Options.Context.Debug("Preserving not-empty folder", target)
+			return
+		}
+	}
+
+	if err = os.Remove(target); err != nil {
+		l.Options.Context.Debug("Failed removing file (maybe not present in the system target anymore ?)", target, err.Error())
+	} else {
+		l.Options.Context.Debug("Removed", target)
+	}
+
+	pruneEmptyFilePath(l.Options.Context, s.Target, target)
+}
+
+func (l *LuetInstaller) configProtectForPackage(p pkg.Package, s *System, files []string) *config.ConfigProtect {
+
 	var cp *config.ConfigProtect
 	annotationDir := ""
-
-	files, err := s.Database.GetPackageFiles(p)
-	if err != nil {
-		return errors.Wrap(err, "Failed getting installed files")
-	}
 
 	if !l.Options.Context.GetConfig().ConfigProtectSkip {
 
@@ -1209,69 +1123,40 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 		cp.Map(files, l.Options.Context.GetConfig().ConfigProtectConfFiles)
 	}
 
+	return cp
+}
+
+func (l *LuetInstaller) pruneFiles(files []string, cp *config.ConfigProtect, s *System) {
+
 	toRemove, notPresent := fileHelper.OrderFiles(s.Target, files)
 
 	// Remove from target
-	for _, f := range toRemove {
-		target := filepath.Join(s.Target, f)
+	for _, f := range append(toRemove, notPresent...) {
+		l.pruneFile(f, s, cp)
+	}
+}
 
-		if !l.Options.Context.GetConfig().ConfigProtectSkip && cp.Protected(f) {
-			l.Options.Context.Debug("Preserving protected file:", f)
-			continue
-		}
-
-		l.Options.Context.Debug("Removing", target)
-		if l.Options.PreserveSystemEssentialData &&
-			strings.HasPrefix(f, l.Options.Context.GetConfig().System.PkgsCachePath) ||
-			strings.HasPrefix(f, l.Options.Context.GetConfig().System.DatabasePath) {
-			l.Options.Context.Warning("Preserve ", f, " which is required by luet ( you have to delete it manually if you really need to)")
-			continue
-		}
-
-		fi, err := os.Lstat(target)
-		if err != nil {
-			l.Options.Context.Warning("File not found (it was before?) ", err.Error())
-			continue
-		}
-		switch mode := fi.Mode(); {
-		case mode.IsDir():
-			files, err := ioutil.ReadDir(target)
-			if err != nil {
-				l.Options.Context.Warning("Failed reading folder", target, err.Error())
-			}
-			if len(files) != 0 {
-				l.Options.Context.Debug("Preserving not-empty folder", target)
-				continue
-			}
-		}
-
-		if err = os.Remove(target); err != nil {
-			l.Options.Context.Warning("Failed removing file (maybe not present in the system target anymore ?)", target, err.Error())
-		} else {
-			l.Options.Context.Debug("Removed", target)
-		}
-
-		pruneEmptyFilePath(l.Options.Context, s.Target, target)
+func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
+	files, err := s.Database.GetPackageFiles(p)
+	if err != nil {
+		return errors.Wrap(err, "Failed getting installed files")
 	}
 
-	for _, f := range notPresent {
-		target := filepath.Join(s.Target, f)
+	cp := l.configProtectForPackage(p, s, files)
 
-		if !l.Options.Context.GetConfig().ConfigProtectSkip && cp.Protected(f) {
-			l.Options.Context.Debug("Preserving protected file:", f)
-			continue
-		}
+	l.pruneFiles(files, cp, s)
 
-		if err = os.Remove(target); err != nil {
-			l.Options.Context.Debug("Failed removing file (not present in the system target)", target, err.Error())
-		} else {
-			l.Options.Context.Debug("Removed", target)
-		}
-
-		pruneEmptyFilePath(l.Options.Context, s.Target, target)
+	err = l.removePackage(p, s)
+	if err != nil {
+		return errors.Wrap(err, "Failed removing package files from database")
 	}
 
-	err = s.Database.RemovePackageFiles(p)
+	l.Options.Context.Info(":recycle: ", p.HumanReadableString(), "Removed :heavy_check_mark:")
+	return nil
+}
+
+func (l *LuetInstaller) removePackage(p pkg.Package, s *System) error {
+	err := s.Database.RemovePackageFiles(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed removing package files from database")
 	}
@@ -1281,8 +1166,6 @@ func (l *LuetInstaller) uninstall(p pkg.Package, s *System) error {
 	}
 
 	bus.Manager.Publish(bus.EventPackageUnInstall, p)
-
-	l.Options.Context.Info(":recycle: ", p.HumanReadableString(), "Removed :heavy_check_mark:")
 	return nil
 }
 
@@ -1330,7 +1213,7 @@ func (l *LuetInstaller) computeUninstall(o Option, s *System, packs ...pkg.Packa
 	return toUninstall, nil
 }
 
-func (l *LuetInstaller) generateUninstallFn(o Option, s *System, packs ...pkg.Package) (pkg.Packages, func() error, error) {
+func (l *LuetInstaller) generateUninstallFn(o Option, s *System, filesToInstall map[string]interface{}, packs ...pkg.Package) (pkg.Packages, func() error, error) {
 	for _, p := range packs {
 		if packs, _ := s.Database.FindPackages(p); len(packs) == 0 {
 			return nil, nil, errors.New(fmt.Sprintf("Package %s not found in the system", p.HumanReadableString()))
@@ -1344,9 +1227,34 @@ func (l *LuetInstaller) generateUninstallFn(o Option, s *System, packs ...pkg.Pa
 
 	uninstall := func() error {
 		for _, p := range toUninstall {
-			err := l.uninstall(p, s)
-			if err != nil && !o.Force {
-				return errors.Wrap(err, "Uninstall failed")
+			if len(filesToInstall) == 0 {
+				err := l.uninstall(p, s)
+				if err != nil && !o.Force {
+					return errors.Wrap(err, "Uninstall failed")
+				}
+
+			} else {
+				files, err := s.Database.GetPackageFiles(p)
+				if err != nil && !o.Force {
+					return errors.Wrap(err, "Failed getting installed files")
+				}
+
+				cp := l.configProtectForPackage(p, s, files)
+
+				toPrune := []string{}
+				for _, f := range files {
+					if _, exists := filesToInstall[f]; !exists {
+						toPrune = append(toPrune, f)
+					}
+				}
+				l.Options.Context.Debug("calculated files for removal", toPrune)
+				l.pruneFiles(toPrune, cp, s)
+
+				err = l.removePackage(p, s)
+				if err != nil && !o.Force {
+					return errors.Wrap(err, "Failed removing package")
+				}
+
 			}
 		}
 		return nil
@@ -1365,7 +1273,7 @@ func (l *LuetInstaller) Uninstall(s *System, packs ...pkg.Package) error {
 		CheckConflicts:     l.Options.CheckConflicts,
 		FullCleanUninstall: l.Options.FullCleanUninstall,
 	}
-	toUninstall, uninstall, err := l.generateUninstallFn(o, s, packs...)
+	toUninstall, uninstall, err := l.generateUninstallFn(o, s, map[string]interface{}{}, packs...)
 	if err != nil {
 		return errors.Wrap(err, "while computing uninstall")
 	}
