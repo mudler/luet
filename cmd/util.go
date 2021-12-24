@@ -89,7 +89,7 @@ func NewUnpackCommand() *cobra.Command {
 		Use:   "unpack image path",
 		Short: "Unpack a docker image natively",
 		Long: `unpack doesn't need the docker daemon to run, and unpacks a docker image in the specified directory:
-		
+
 	luet util unpack golang:alpine /alpine
 `,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -107,7 +107,7 @@ func NewUnpackCommand() *cobra.Command {
 				util.DefaultContext.Error("Invalid path %s", destination)
 				os.Exit(1)
 			}
-
+			local, _ := cmd.Flags().GetString("local")
 			verify, _ := cmd.Flags().GetBool("verify")
 			user, _ := cmd.Flags().GetString("auth-username")
 			pass, _ := cmd.Flags().GetString("auth-password")
@@ -126,16 +126,19 @@ func NewUnpackCommand() *cobra.Command {
 				RegistryToken: registryToken,
 			}
 
-			info, err := docker.DownloadAndExtractDockerImage(util.DefaultContext, image, destination, auth, verify)
-			if err != nil {
-				util.DefaultContext.Error(err.Error())
-				os.Exit(1)
+			if local == "" {
+				info, err := docker.DownloadAndExtractDockerImage(util.DefaultContext, image, destination, auth, verify)
+				if err != nil {
+					util.DefaultContext.Error(err.Error())
+					os.Exit(1)
+				}
+				util.DefaultContext.Info(fmt.Sprintf("Pulled: %s %s", info.Target.Digest, info.Name))
+				util.DefaultContext.Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
 			}
-			util.DefaultContext.Info(fmt.Sprintf("Pulled: %s %s", info.Target.Digest, info.Name))
-			util.DefaultContext.Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
 		},
 	}
 
+	c.Flags().String("local", "", "Unpack local image")
 	c.Flags().String("auth-username", "", "Username to authenticate to registry/notary")
 	c.Flags().String("auth-password", "", "Password to authenticate to registry")
 	c.Flags().String("auth-type", "", "Auth type")

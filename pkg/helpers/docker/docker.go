@@ -192,3 +192,36 @@ func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, au
 		},
 	}, nil
 }
+
+func ExtractDockerImage(ctx luettypes.Context, local, dest string)(*images.Image, error) {
+	if !fileHelper.Exists(dest) {
+		if err := os.MkdirAll(dest, os.ModePerm); err != nil {
+			return nil, errors.Wrapf(err, "cannot create destination directory")
+		}
+	}
+
+	var c int64
+	c, _, err = luetimages.ExtractTo(
+		ctx,
+		img,
+		dest,
+		nil,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	bus.Manager.Publish(bus.EventImagePostUnPack, UnpackEventData{Image: image, Dest: dest})
+
+	return &images.Image{
+		Name:   image,
+		Labels: m.Annotations,
+		Target: specs.Descriptor{
+			MediaType: string(mt),
+			Digest:    digest.Digest(d.String()),
+			Size:      c,
+		},
+	}, nil
+
+}
