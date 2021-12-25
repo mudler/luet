@@ -107,7 +107,7 @@ func NewUnpackCommand() *cobra.Command {
 				util.DefaultContext.Error("Invalid path %s", destination)
 				os.Exit(1)
 			}
-			local, _ := cmd.Flags().GetString("local")
+			local, _ := cmd.Flags().GetBool("local")
 			verify, _ := cmd.Flags().GetBool("verify")
 			user, _ := cmd.Flags().GetString("auth-username")
 			pass, _ := cmd.Flags().GetString("auth-password")
@@ -126,7 +126,7 @@ func NewUnpackCommand() *cobra.Command {
 				RegistryToken: registryToken,
 			}
 
-			if local == "" {
+			if !local {
 				info, err := docker.DownloadAndExtractDockerImage(util.DefaultContext, image, destination, auth, verify)
 				if err != nil {
 					util.DefaultContext.Error(err.Error())
@@ -134,11 +134,17 @@ func NewUnpackCommand() *cobra.Command {
 				}
 				util.DefaultContext.Info(fmt.Sprintf("Pulled: %s %s", info.Target.Digest, info.Name))
 				util.DefaultContext.Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
+			} else {
+				info, err := docker.ExtractDockerImage(util.DefaultContext, image, destination)
+				if err != nil {
+					util.DefaultContext.Error(err.Error())
+					os.Exit(1)
+				}
+				util.DefaultContext.Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
 			}
 		},
 	}
 
-	c.Flags().String("local", "", "Unpack local image")
 	c.Flags().String("auth-username", "", "Username to authenticate to registry/notary")
 	c.Flags().String("auth-password", "", "Password to authenticate to registry")
 	c.Flags().String("auth-type", "", "Auth type")
@@ -146,6 +152,7 @@ func NewUnpackCommand() *cobra.Command {
 	c.Flags().String("auth-identity-token", "", "Authentication identity token")
 	c.Flags().String("auth-registry-token", "", "Authentication registry token")
 	c.Flags().Bool("verify", false, "Verify signed images to notary before to pull")
+	c.Flags().Bool("local", false, "Unpack local image")
 	return c
 }
 

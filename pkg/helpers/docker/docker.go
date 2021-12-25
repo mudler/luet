@@ -249,5 +249,4 @@ func ExtractDockerImage(ctx luettypes.Context, local, dest string)(*images.Image
 			Size:      c,
 		},
 	}, nil
-
 }
