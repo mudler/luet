@@ -16,7 +16,9 @@
 package installer
 
 import (
+	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
+	"github.com/mudler/luet/pkg/tree"
 	//"github.com/mudler/luet/pkg/solver"
 )
 
@@ -27,3 +29,9 @@ type Client interface {
 }
 
 type Repositories []*LuetSystemRepository
+
+type Repository interface {
+	GetTree() tree.Builder
+	Client(types.Context) Client
+	GetName() string
+}

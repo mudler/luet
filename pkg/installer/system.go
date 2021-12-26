@@ -25,13 +25,15 @@ func (s *System) World() (pkg.Packages, error) {
 	return s.Database.World(), nil
 }
 
-func (s *System) OSCheck() (notFound pkg.Packages) {
+func (s *System) OSCheck(ctx types.Context) (notFound pkg.Packages) {
 	s.buildFileIndex()
 	s.Lock()
 	defer s.Unlock()
 	for f, p := range s.fileIndex {
-		if _, err := os.Lstat(filepath.Join(s.Target, f)); err != nil {
+		targetFile := filepath.Join(s.Target, f)
+		if _, err := os.Lstat(targetFile); err != nil {
 			if _, err := s.Database.FindPackage(p); err == nil {
+				ctx.Debugf("Missing file '%s' from '%s'", targetFile, p.HumanReadableString())
 				notFound = append(notFound, p)
 			}
 		}
