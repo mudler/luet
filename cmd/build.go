@@ -86,7 +86,6 @@ Build packages specifying multiple definition trees:
 		viper.BindPFlag("wait", cmd.Flags().Lookup("wait"))
 		viper.BindPFlag("keep-images", cmd.Flags().Lookup("keep-images"))
 
-		viper.BindPFlag("general.show_build_output", cmd.Flags().Lookup("live-output"))
 		viper.BindPFlag("backend-args", cmd.Flags().Lookup("backend-args"))
 
 	},
@@ -334,7 +333,6 @@ func init() {
 	buildCmd.Flags().Float32("solver-discount", 1.0, "Solver discount rate")
 	buildCmd.Flags().Int("solver-attempts", 9000, "Solver maximum attempts")
 	buildCmd.Flags().Bool("solver-concurrent", false, "Use concurrent solver (experimental)")
-	buildCmd.Flags().Bool("live-output", true, "Enable live output of the build phase.")
 	buildCmd.Flags().Bool("from-repositories", false, "Consume the user-defined repositories to pull specfiles from")
 	buildCmd.Flags().Bool("rebuild", false, "To combine with --pull. Allows to rebuild the target package even if an image is available, against a local values file")
 	buildCmd.Flags().Bool("pretend", false, "Just print what packages will be compiled")

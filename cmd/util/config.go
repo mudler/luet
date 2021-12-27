@@ -220,7 +220,7 @@ func setDefaults(viper *viper.Viper) {
 	viper.SetDefault("general.concurrency", runtime.NumCPU())
 	viper.SetDefault("general.debug", false)
 	viper.SetDefault("general.quiet", false)
-	viper.SetDefault("general.show_build_output", false)
+	viper.SetDefault("general.show_build_output", true)
 	viper.SetDefault("general.fatal_warnings", false)
 	viper.SetDefault("general.http_timeout", 360)
 
@@ -278,6 +278,7 @@ func InitViper(RootCmd *cobra.Command) {
 	pflags.Float32("solver-rate", 0.7, "Solver learning rate")
 	pflags.Float32("solver-discount", 1.0, "Solver discount rate")
 	pflags.Int("solver-attempts", 9000, "Solver maximum attempts")
+	pflags.Bool("live-output", true, "Show live output during build")
 
 	pflags.Bool("same-owner", true, "Maintain same owner on uncompress.")
 	pflags.Int("concurrency", runtime.NumCPU(), "Concurrency")
@@ -303,6 +304,7 @@ func InitViper(RootCmd *cobra.Command) {
 	viper.BindPFlag("general.same_owner", pflags.Lookup("same-owner"))
 	viper.BindPFlag("plugin", pflags.Lookup("plugin"))
 	viper.BindPFlag("general.http_timeout", pflags.Lookup("http-timeout"))
+	viper.BindPFlag("general.show_build_output", pflags.Lookup("live-output"))
 
 	// Currently I maintain this only from cli.
 	viper.BindPFlag("no_spinner", pflags.Lookup("no-spinner"))
