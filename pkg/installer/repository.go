@@ -866,6 +866,8 @@ func (r *LuetSystemRepository) Sync(ctx types.Context, force bool) (*LuetSystemR
 			toTimeSync = true
 			ctx.Debug(r.Name, "is old, refresh is suggested")
 		}
+	} else {
+		toTimeSync = true
 	}
 
 	ctx.Debug("Sync of the repository", r.Name, "in progress...")
@@ -893,6 +895,10 @@ func (r *LuetSystemRepository) Sync(ctx types.Context, force bool) (*LuetSystemR
 			return nil, err
 		}
 		defer os.RemoveAll(file)
+		defer func() {
+			now := time.Now().Format(time.RFC3339)
+			ioutil.WriteFile(filepath.Join(repobasedir, "SYNCTIME"), []byte(now), os.ModePerm)
+		}()
 	} else {
 		downloadedRepoMeta, err = r.ReadSpecFile(repoFile)
 		if err != nil {
@@ -990,8 +996,6 @@ func (r *LuetSystemRepository) Sync(ctx types.Context, force bool) (*LuetSystemR
 				downloadedRepoMeta.GetRevision(),
 				time.Unix(tsec, 0).String()))
 
-		now := time.Now().Format(time.RFC3339)
-		ioutil.WriteFile(filepath.Join(repobasedir, "SYNCTIME"), []byte(now), os.ModePerm)
 	}
 
 	meta, err := NewLuetSystemRepositoryMetadata(
