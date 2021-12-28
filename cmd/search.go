@@ -35,6 +35,7 @@ type PackageResult struct {
 	Target     string   `json:"target"`
 	Hidden     bool     `json:"hidden"`
 	Files      []string `json:"files"`
+	Installed  bool     `json:"installed"`
 }
 
 type Results struct {
@@ -45,13 +46,13 @@ func (r PackageResult) String() string {
 	return fmt.Sprintf("%s/%s-%s required for %s", r.Category, r.Name, r.Version, r.Target)
 }
 
-var rows []string = []string{"Package", "Category", "Name", "Version", "Repository", "License"}
+var rows []string = []string{"Package", "Category", "Name", "Version", "Repository", "License", "Installed"}
 
-func packageToRow(repo string, p pkg.Package) []string {
-	return []string{p.HumanReadableString(), p.GetCategory(), p.GetName(), p.GetVersion(), repo, p.GetLicense()}
+func packageToRow(repo string, p pkg.Package, installed bool) []string {
+	return []string{p.HumanReadableString(), p.GetCategory(), p.GetName(), p.GetVersion(), repo, p.GetLicense(), fmt.Sprintf("%t", installed)}
 }
 
-func packageToList(l *util.ListWriter, repo string, p pkg.Package) {
+func packageToList(l *util.ListWriter, repo string, p pkg.Package, installed bool) {
 	l.AppendItem(pterm.BulletListItem{
 		Level: 0, Text: p.HumanReadableString(),
 		TextStyle: pterm.NewStyle(pterm.FgCyan), Bullet: ">", BulletStyle: pterm.NewStyle(pterm.FgYellow),
@@ -80,12 +81,32 @@ func packageToList(l *util.ListWriter, repo string, p pkg.Package) {
 		Level: 1, Text: fmt.Sprintf("Uri: %s ", strings.Join(p.GetURI(), " ")),
 		Bullet: "->", BulletStyle: pterm.NewStyle(pterm.FgDarkGray),
 	})
+	l.AppendItem(pterm.BulletListItem{
+		Level: 1, Text: fmt.Sprintf("Installed: %t ", installed),
+		Bullet: "->", BulletStyle: pterm.NewStyle(pterm.FgDarkGray),
+	})
+}
+
+var s *installer.System
+
+func sys() *installer.System {
+	if s != nil {
+		return s
+	}
+	s = &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.System.Rootfs}
+	return s
+}
+
+func installed(p pkg.Package) bool {
+	s := sys()
+	_, err := s.Database.FindPackage(p)
+	return err == nil
 }
 
 func searchLocally(term string, l *util.ListWriter, t *util.TableWriter, label, labelMatch, revdeps, hidden bool) Results {
 	var results Results
 
-	system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.System.Rootfs}
+	system := sys()
 
 	var err error
 	iMatches := pkg.Packages{}
@@ -104,9 +125,8 @@ func searchLocally(term string, l *util.ListWriter, t *util.TableWriter, label, 
 	for _, pack := range iMatches {
 		if !revdeps {
 			if !pack.IsHidden() || pack.IsHidden() && hidden {
-
-				t.AppendRow(packageToRow("system", pack))
-				packageToList(l, "system", pack)
+				t.AppendRow(packageToRow("system", pack, true))
+				packageToList(l, "system", pack, true)
 				f, _ := system.Database.GetPackageFiles(pack)
 				results.Packages = append(results.Packages,
 					PackageResult{
@@ -116,6 +136,7 @@ func searchLocally(term string, l *util.ListWriter, t *util.TableWriter, label, 
 						Repository: "system",
 						Hidden:     pack.IsHidden(),
 						Files:      f,
+						Installed:  true,
 					})
 			}
 		} else {
@@ -123,8 +144,9 @@ func searchLocally(term string, l *util.ListWriter, t *util.TableWriter, label, 
 			packs, _ := system.Database.GetRevdeps(pack)
 			for _, revdep := range packs {
 				if !revdep.IsHidden() || revdep.IsHidden() && hidden {
-					t.AppendRow(packageToRow("system", pack))
-					packageToList(l, "system", pack)
+					i := installed(pack)
+					t.AppendRow(packageToRow("system", pack, i))
+					packageToList(l, "system", pack, i)
 					f, _ := system.Database.GetPackageFiles(revdep)
 					results.Packages = append(results.Packages,
 						PackageResult{
@@ -134,6 +156,7 @@ func searchLocally(term string, l *util.ListWriter, t *util.TableWriter, label, 
 							Repository: "system",
 							Hidden:     revdep.IsHidden(),
 							Files:      f,
+							Installed:  i,
 						})
 				}
 			}
@@ -172,14 +195,16 @@ func searchOnline(term string, l *util.ListWriter, t *util.TableWriter, label, l
 	for _, m := range matches {
 		if !revdeps {
 			if !m.Package.IsHidden() || m.Package.IsHidden() && hidden {
-				t.AppendRow(packageToRow(m.Repo.GetName(), m.Package))
-				packageToList(l, m.Repo.GetName(), m.Package)
+				i := installed(m.Package)
+				t.AppendRow(packageToRow(m.Repo.GetName(), m.Package, i))
+				packageToList(l, m.Repo.GetName(), m.Package, i)
 				r := &PackageResult{
 					Name:       m.Package.GetName(),
 					Version:    m.Package.GetVersion(),
 					Category:   m.Package.GetCategory(),
 					Repository: m.Repo.GetName(),
 					Hidden:     m.Package.IsHidden(),
+					Installed:  i,
 				}
 				if m.Artifact != nil {
 					r.Files = m.Artifact.Files
@@ -190,10 +215,12 @@ func searchOnline(term string, l *util.ListWriter, t *util.TableWriter, label, l
 			packs, _ := m.Repo.GetTree().GetDatabase().GetRevdeps(m.Package)
 			for _, revdep := range packs {
 				if !revdep.IsHidden() || revdep.IsHidden() && hidden {
-					t.AppendRow(packageToRow(m.Repo.GetName(), revdep))
-					packageToList(l, m.Repo.GetName(), revdep)
+					i := installed(revdep)
+					t.AppendRow(packageToRow(m.Repo.GetName(), revdep, i))
+					packageToList(l, m.Repo.GetName(), revdep, i)
 					r := &PackageResult{
 						Name:       revdep.GetName(),
+						Installed:  i,
 						Version:    revdep.GetVersion(),
 						Category:   revdep.GetCategory(),
 						Repository: m.Repo.GetName(),
@@ -215,8 +242,9 @@ func searchLocalFiles(term string, l *util.ListWriter, t *util.TableWriter) Resu
 
 	matches, _ := util.DefaultContext.Config.GetSystemDB().FindPackageByFile(term)
 	for _, pack := range matches {
-		t.AppendRow(packageToRow("system", pack))
-		packageToList(l, "system", pack)
+		i := installed(pack)
+		t.AppendRow(packageToRow("system", pack, i))
+		packageToList(l, "system", pack, i)
 		f, _ := util.DefaultContext.Config.GetSystemDB().GetPackageFiles(pack)
 		results.Packages = append(results.Packages,
 			PackageResult{
@@ -226,6 +254,7 @@ func searchLocalFiles(term string, l *util.ListWriter, t *util.TableWriter) Resu
 				Repository: "system",
 				Hidden:     pack.IsHidden(),
 				Files:      f,
+				Installed:  i,
 			})
 	}
 
@@ -255,8 +284,9 @@ func searchFiles(term string, l *util.ListWriter, t *util.TableWriter) Results {
 	matches = synced.SearchPackages(term, installer.FileSearch)
 
 	for _, m := range matches {
-		t.AppendRow(packageToRow(m.Repo.GetName(), m.Package))
-		packageToList(l, m.Repo.GetName(), m.Package)
+		i := installed(m.Package)
+		t.AppendRow(packageToRow(m.Repo.GetName(), m.Package, i))
+		packageToList(l, m.Repo.GetName(), m.Package, i)
 		results.Packages = append(results.Packages,
 			PackageResult{
 				Name:       m.Package.GetName(),
@@ -265,6 +295,7 @@ func searchFiles(term string, l *util.ListWriter, t *util.TableWriter) Results {
 				Repository: m.Repo.GetName(),
 				Hidden:     m.Package.IsHidden(),
 				Files:      m.Artifact.Files,
+				Installed:  i,
 			})
 	}
 	return results
