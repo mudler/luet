@@ -36,7 +36,7 @@ func TreePackages(treedir string) (searchResult SearchResult, err error) {
 }
 
 func imageAvailable(image string) bool {
-	_, err := crane.Digest(image)
+	_, err := crane.Digest(image, crane.Insecure)
 	return err == nil
 }
 
