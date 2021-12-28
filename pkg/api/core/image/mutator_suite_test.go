@@ -24,11 +24,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestMutator(t *testing.T) {
+func TestImageApi(t *testing.T) {
 	RegisterFailHandler(Fail)
 	b := backend.NewSimpleDockerBackend(context.NewContext())
 	b.DownloadImage(backend.Options{ImageName: "alpine"})
 	b.DownloadImage(backend.Options{ImageName: "golang:alpine"})
 
-	RunSpecs(t, "Mutator API Suite")
+	RunSpecs(t, "Image API Suite")
 }
