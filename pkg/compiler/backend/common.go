@@ -18,7 +18,6 @@ package backend
 import (
 	"os/exec"
 
-	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/pkg/errors"
 )
@@ -27,13 +26,6 @@ const (
 	ImgBackend    = "img"
 	DockerBackend = "docker"
 )
-
-func imageAvailable(image string) bool {
-	// We use crane.insecure as we just check if the image is available
-	// It's the daemon duty to use it or not based on the host settings
-	_, err := crane.Digest(image, crane.Insecure)
-	return err == nil
-}
 
 type Options struct {
 	ImageName      string

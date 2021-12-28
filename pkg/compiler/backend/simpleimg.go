@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	bus "github.com/mudler/luet/pkg/api/core/bus"
+	"github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/api/core/types"
 
 	"github.com/pkg/errors"
@@ -135,7 +136,7 @@ func (s *SimpleImg) CopyImage(src, dst string) error {
 }
 
 func (s *SimpleImg) ImageAvailable(imagename string) bool {
-	return imageAvailable(imagename)
+	return image.Available(imagename)
 }
 
 // ImageExists check if the given image is available locally

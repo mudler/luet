@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	bus "github.com/mudler/luet/pkg/api/core/bus"
+	"github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/api/core/types"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -118,7 +119,7 @@ func (s *SimpleDocker) ImageExists(imagename string) bool {
 }
 
 func (*SimpleDocker) ImageAvailable(imagename string) bool {
-	return imageAvailable(imagename)
+	return image.Available(imagename)
 }
 
 func (s *SimpleDocker) RemoveImage(opts Options) error {

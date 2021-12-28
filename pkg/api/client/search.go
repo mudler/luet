@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mudler/luet/pkg/api/client/utils"
+	image "github.com/mudler/luet/pkg/api/core/image"
 )
 
 func TreePackages(treedir string) (searchResult SearchResult, err error) {
@@ -33,11 +33,6 @@ func TreePackages(treedir string) (searchResult SearchResult, err error) {
 	}
 	json.Unmarshal(res, &searchResult)
 	return
-}
-
-func imageAvailable(image string) bool {
-	_, err := crane.Digest(image, crane.Insecure)
-	return err == nil
 }
 
 type SearchResult struct {
@@ -66,7 +61,7 @@ func (p Package) ImageMetadata(repository string) string {
 }
 
 func (p Package) ImageAvailable(repository string) bool {
-	return imageAvailable(p.Image(repository))
+	return image.Available(p.Image(repository))
 }
 
 func (p Package) Equal(pp Package) bool {

@@ -156,6 +156,31 @@ func NewUnpackCommand() *cobra.Command {
 	return c
 }
 
+func NewExistCommand() *cobra.Command {
+
+	c := &cobra.Command{
+		Use:   "image-exist image path",
+		Short: "Check if an image exist",
+		Long:  `Exits 0 if the image exist, otherwise exits with 1`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+
+			if len(args) != 1 {
+				util.DefaultContext.Fatal("Expects an image")
+			}
+
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			if image.Available(args[0]) {
+				os.Exit(0)
+			} else {
+				os.Exit(1)
+			}
+		},
+	}
+
+	return c
+}
+
 var utilGroup = &cobra.Command{
 	Use:   "util [command] [OPTIONS]",
 	Short: "General luet internal utilities exposed",
@@ -167,5 +192,6 @@ func init() {
 	utilGroup.AddCommand(
 		NewUnpackCommand(),
 		NewPackCommand(),
+		NewExistCommand(),
 	)
 }
