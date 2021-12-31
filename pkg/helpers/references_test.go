@@ -18,7 +18,7 @@ package helpers_test
 
 import (
 	. "github.com/mudler/luet/pkg/helpers"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

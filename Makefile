@@ -17,9 +17,10 @@ fmt:
 
 .PHONY: test
 test:
-	GO111MODULE=off go get github.com/onsi/ginkgo/ginkgo
+	GO111MODULE=off go get github.com/onsi/ginkgo/v2
+	go install github.com/onsi/ginkgo/v2/ginkgo
 	GO111MODULE=off go get github.com/onsi/gomega/...
-	ginkgo -r -flakeAttempts 3 ./...
+	ginkgo -r --flake-attempts=3 ./...
 
 .PHONY: test-integration
 test-integration:

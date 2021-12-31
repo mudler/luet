@@ -20,7 +20,7 @@ import (
 	config "github.com/mudler/luet/pkg/api/core/config"
 	"github.com/mudler/luet/pkg/api/core/context"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
