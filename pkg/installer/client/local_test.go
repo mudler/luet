@@ -24,7 +24,7 @@ import (
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/installer/client"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

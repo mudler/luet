@@ -87,7 +87,11 @@ jobs:
                 env "TEST_DOCKER_IMAGE=${{ secrets.DOCKER_TESTING_IMAGE }}" \
                 env "UNIT_TEST_DOCKER_IMAGE=${{ secrets.DOCKER_TESTING_IMAGE }}" \
                 env "UNIT_TEST_DOCKER_IMAGE_REPOSITORY=${{ secrets.DOCKER_TESTING_UNIT_TEST_IMAGE }}" \
-                make test-coverage
+                make coverage
+      - name: Codecov
+        uses: codecov/codecov-action@v2.1.0
+        with:
+          file: coverage.txt
 
   release:
     name: Release

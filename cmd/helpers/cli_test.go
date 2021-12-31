@@ -18,7 +18,7 @@ package cmd_helpers_test
 import (
 	. "github.com/mudler/luet/cmd/helpers"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

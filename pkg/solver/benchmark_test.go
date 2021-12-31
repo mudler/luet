@@ -23,7 +23,7 @@ import (
 
 	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/tests/helpers"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	. "github.com/mudler/luet/pkg/solver"
@@ -255,7 +255,7 @@ var _ = Describe("Solver Benchmarks", func() {
 			Ω(runtime.Seconds()).Should(BeNumerically("<", 120), "Install() shouldn't take too long.")
 		}, 1)
 
-		PMeasure("it should be fast in resolution from a 50000 dataset with upgrade universe", func(b Benchmarker) {
+		Measure("it should be fast in resolution from a 50000 dataset with upgrade universe", func(b Benchmarker) {
 			runtime := b.Time("runtime", func() {
 				for i := 0; i < 2; i++ {
 					C := pkg.NewPackage("C", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})

@@ -74,4 +74,8 @@ jobs:
     - name: Build
       run: sudo -E env "PATH=$PATH" make multiarch-build-small
     - name: Tests
-      run: sudo -E env "PATH=$PATH" make test-coverage
+      run: sudo -E env "PATH=$PATH" make coverage
+    - name: Codecov
+      uses: codecov/codecov-action@v2.1.0
+      with:
+        file: coverage.txt
