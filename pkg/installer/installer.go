@@ -522,13 +522,6 @@ func (l *LuetInstaller) Install(cp pkg.Packages, s *System) error {
 		return err
 	}
 
-	if len(s.Database.World()) > 0 && !l.Options.Relaxed {
-		l.Options.Context.Info(":thinking: Checking for available upgrades")
-		if err := l.checkAndUpgrade(syncedRepos, s); err != nil {
-			return errors.Wrap(err, "while checking upgrades before install")
-		}
-	}
-
 	o := Option{
 		NoDeps:             l.Options.NoDeps,
 		Force:              l.Options.Force,
