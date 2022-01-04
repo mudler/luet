@@ -78,6 +78,9 @@ var _ = Describe("Delta", func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
+
+				// No extra dirs are present
+				Expect(file.Exists(filepath.Join(tmpdir, "home"))).To(BeFalse())
 				// Cache from go
 				Expect(file.Exists(filepath.Join(tmpdir, "root", ".cache"))).To(BeTrue())
 				// sh is present from alpine, hence not in the result
