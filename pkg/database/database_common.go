@@ -13,15 +13,16 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package pkg
+package database
 
 import (
 	"regexp"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/pkg/errors"
 )
 
-func clone(src, dst PackageDatabase) error {
+func clone(src, dst types.PackageDatabase) error {
 	for _, i := range src.World() {
 		_, err := dst.CreatePackage(i)
 		if err != nil {
@@ -31,7 +32,7 @@ func clone(src, dst PackageDatabase) error {
 	return nil
 }
 
-func copy(src PackageDatabase) (PackageDatabase, error) {
+func copy(src types.PackageDatabase) (types.PackageDatabase, error) {
 	dst := NewInMemoryDatabase(false)
 
 	if err := clone(src, dst); err != nil {
@@ -41,9 +42,9 @@ func copy(src PackageDatabase) (PackageDatabase, error) {
 	return dst, nil
 }
 
-func findPackageByFile(db PackageDatabase, pattern string) (Packages, error) {
+func findPackageByFile(db types.PackageDatabase, pattern string) (types.Packages, error) {
 
-	var ans []Package
+	var ans []*types.Package
 
 	re, err := regexp.Compile(pattern)
 	if err != nil {
@@ -63,6 +64,6 @@ PACKAGE:
 		}
 	}
 
-	return Packages(ans), nil
+	return types.Packages(ans), nil
 
 }

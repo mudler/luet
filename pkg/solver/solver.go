@@ -19,68 +19,52 @@ import (
 
 	//. "github.com/mudler/luet/pkg/logger"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 
 	"github.com/crillab/gophersat/bf"
-	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/api/core/types"
+	pkg "github.com/mudler/luet/pkg/database"
 )
 
-type SolverType int
-
-const (
-	SingleCoreSimple = 0
-)
-
-// PackageSolver is an interface to a generic package solving algorithm
-type PackageSolver interface {
-	SetDefinitionDatabase(pkg.PackageDatabase)
-	Install(p pkg.Packages) (PackagesAssertions, error)
-	RelaxedInstall(p pkg.Packages) (PackagesAssertions, error)
-
-	Uninstall(checkconflicts, full bool, candidate ...pkg.Package) (pkg.Packages, error)
-	ConflictsWithInstalled(p pkg.Package) (bool, error)
-	ConflictsWith(p pkg.Package, ls pkg.Packages) (bool, error)
-	Conflicts(pack pkg.Package, lsp pkg.Packages) (bool, error)
-
-	World() pkg.Packages
-	Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error)
-
-	UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssertions, error)
-	UninstallUniverse(toremove pkg.Packages) (pkg.Packages, error)
-
-	SetResolver(PackageResolver)
-
-	Solve() (PackagesAssertions, error)
-	//	BestInstall(c pkg.Packages) (PackagesAssertions, error)
-}
+var AvailableResolvers = strings.Join([]string{QLearningResolverType}, " ")
 
 // Solver is the default solver for luet
 type Solver struct {
-	DefinitionDatabase pkg.PackageDatabase
-	SolverDatabase     pkg.PackageDatabase
-	Wanted             pkg.Packages
-	InstalledDatabase  pkg.PackageDatabase
+	DefinitionDatabase types.PackageDatabase
+	SolverDatabase     types.PackageDatabase
+	Wanted             types.Packages
+	InstalledDatabase  types.PackageDatabase
 
-	Resolver PackageResolver
-}
-
-type Options struct {
-	Type        SolverType `yaml:"type,omitempty"`
-	Concurrency int        `yaml:"concurrency,omitempty"`
+	Resolver types.PackageResolver
 }
 
 // NewSolver accepts as argument two lists of packages, the first is the initial set,
 // the second represent all the known packages.
-func NewSolver(t Options, installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, solverdb pkg.PackageDatabase) PackageSolver {
+func NewSolver(t types.SolverOptions, installed types.PackageDatabase, definitiondb types.PackageDatabase, solverdb types.PackageDatabase) types.PackageSolver {
 	return NewResolver(t, installed, definitiondb, solverdb, &Explainer{})
+}
+
+func NewSolverFromOptions(t types.LuetSolverOptions) types.PackageResolver {
+	switch t.Type {
+	case QLearningResolverType:
+		if t.LearnRate != 0.0 {
+			return NewQLearningResolver(t.LearnRate, t.Discount, t.MaxAttempts, 999999)
+
+		}
+		return SimpleQLearningSolver()
+	}
+
+	return &Explainer{}
+
 }
 
 // NewResolver accepts as argument two lists of packages, the first is the initial set,
 // the second represent all the known packages.
 // Using constructors as in the future we foresee warmups for hot-restore solver cache
-func NewResolver(t Options, installed pkg.PackageDatabase, definitiondb pkg.PackageDatabase, solverdb pkg.PackageDatabase, re PackageResolver) PackageSolver {
-	var s PackageSolver
+func NewResolver(t types.SolverOptions, installed types.PackageDatabase, definitiondb types.PackageDatabase, solverdb types.PackageDatabase, re types.PackageResolver) types.PackageSolver {
+	var s types.PackageSolver
 	switch t.Type {
 	default:
 		s = &Solver{InstalledDatabase: installed, DefinitionDatabase: definitiondb, SolverDatabase: solverdb, Resolver: re}
@@ -91,20 +75,20 @@ func NewResolver(t Options, installed pkg.PackageDatabase, definitiondb pkg.Pack
 
 // SetDefinitionDatabase is a setter for the definition Database
 
-func (s *Solver) SetDefinitionDatabase(db pkg.PackageDatabase) {
+func (s *Solver) SetDefinitionDatabase(db types.PackageDatabase) {
 	s.DefinitionDatabase = db
 }
 
 // SetResolver is a setter for the unsat resolver backend
-func (s *Solver) SetResolver(r PackageResolver) {
+func (s *Solver) SetResolver(r types.PackageResolver) {
 	s.Resolver = r
 }
 
-func (s *Solver) World() pkg.Packages {
+func (s *Solver) World() types.Packages {
 	return s.DefinitionDatabase.World()
 }
 
-func (s *Solver) Installed() pkg.Packages {
+func (s *Solver) Installed() types.Packages {
 
 	return s.InstalledDatabase.World()
 }
@@ -131,7 +115,7 @@ func (s *Solver) noRulesInstalled() bool {
 
 func (s *Solver) BuildInstalled() (bf.Formula, error) {
 	var formulas []bf.Formula
-	var packages pkg.Packages
+	var packages types.Packages
 	for _, p := range s.Installed() {
 		packages = append(packages, p)
 		for _, dep := range p.Related(s.InstalledDatabase) {
@@ -190,7 +174,7 @@ func (s *Solver) BuildPartialWorld(includeInstalled bool) (bf.Formula, error) {
 		formulas = append(formulas, solvable)
 	}
 
-	var packages pkg.Packages
+	var packages types.Packages
 	for _, p := range s.Wanted {
 		//	packages = append(packages, p)
 		for _, dep := range p.Related(s.DefinitionDatabase) {
@@ -214,8 +198,8 @@ func (s *Solver) BuildPartialWorld(includeInstalled bool) (bf.Formula, error) {
 	return bf.True, nil
 }
 
-func (s *Solver) getList(db pkg.PackageDatabase, lsp pkg.Packages) (pkg.Packages, error) {
-	var ls pkg.Packages
+func (s *Solver) getList(db types.PackageDatabase, lsp types.Packages) (types.Packages, error) {
+	var ls types.Packages
 
 	for _, pp := range lsp {
 		cp, err := db.FindPackage(pp)
@@ -235,7 +219,7 @@ func (s *Solver) getList(db pkg.PackageDatabase, lsp pkg.Packages) (pkg.Packages
 
 // Conflicts acts like ConflictsWith, but uses package's reverse dependencies to
 // determine if it conflicts with the given set
-func (s *Solver) Conflicts(pack pkg.Package, lsp pkg.Packages) (bool, error) {
+func (s *Solver) Conflicts(pack *types.Package, lsp types.Packages) (bool, error) {
 	p, err := s.DefinitionDatabase.FindPackage(pack)
 	if err != nil {
 		p = pack
@@ -273,7 +257,7 @@ func (s *Solver) Conflicts(pack pkg.Package, lsp pkg.Packages) (bool, error) {
 
 // ConflictsWith return true if a package is part of the requirement set of a list of package
 // return false otherwise (and thus it is NOT relevant to the given list)
-func (s *Solver) ConflictsWith(pack pkg.Package, lsp pkg.Packages) (bool, error) {
+func (s *Solver) ConflictsWith(pack *types.Package, lsp types.Packages) (bool, error) {
 	p, err := s.DefinitionDatabase.FindPackage(pack)
 	if err != nil {
 		p = pack //Relax search, otherwise we cannot compute solutions for packages not in definitions
@@ -329,7 +313,7 @@ func (s *Solver) ConflictsWith(pack pkg.Package, lsp pkg.Packages) (bool, error)
 
 }
 
-func (s *Solver) ConflictsWithInstalled(p pkg.Package) (bool, error) {
+func (s *Solver) ConflictsWithInstalled(p *types.Package) (bool, error) {
 	return s.ConflictsWith(p, s.Installed())
 }
 
@@ -339,7 +323,7 @@ func (s *Solver) ConflictsWithInstalled(p pkg.Package) (bool, error) {
 // It can be compared to the counterpart Uninstall as this method acts like a uninstall --full
 // it removes all the packages and its deps. taking also in consideration other packages that might have
 // revdeps
-func (s *Solver) UninstallUniverse(toremove pkg.Packages) (pkg.Packages, error) {
+func (s *Solver) UninstallUniverse(toremove types.Packages) (types.Packages, error) {
 
 	if s.noRulesInstalled() {
 		return s.getList(s.InstalledDatabase, toremove)
@@ -367,7 +351,7 @@ func (s *Solver) UninstallUniverse(toremove pkg.Packages) (pkg.Packages, error) 
 		formulas = append(formulas, bf.And(bf.Not(P), r))
 	}
 
-	markedForRemoval := pkg.Packages{}
+	markedForRemoval := types.Packages{}
 	model := bf.Solve(bf.And(formulas...))
 	if model == nil {
 		return nil, errors.New("Failed finding a solution")
@@ -390,14 +374,14 @@ func (s *Solver) UninstallUniverse(toremove pkg.Packages) (pkg.Packages, error) 
 // UpgradeUniverse mark packages for removal and returns a solution. It considers
 // the Universe db as authoritative
 // See also on the subject: https://arxiv.org/pdf/1007.1021.pdf
-func (s *Solver) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssertions, error) {
+func (s *Solver) UpgradeUniverse(dropremoved bool) (types.Packages, types.PackagesAssertions, error) {
 	// we first figure out which aren't up-to-date
 	// which has to be removed
 	// and which needs to be upgraded
-	notUptodate := pkg.Packages{}
-	removed := pkg.Packages{}
-	toUpgrade := pkg.Packages{}
-	replacements := map[pkg.Package]pkg.Package{}
+	notUptodate := types.Packages{}
+	removed := types.Packages{}
+	toUpgrade := types.Packages{}
+	replacements := map[*types.Package]*types.Package{}
 
 	// TODO: this is memory expensive, we need to optimize this
 	universe, err := s.DefinitionDatabase.Copy()
@@ -467,10 +451,10 @@ func (s *Solver) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssert
 
 	//formulas = append(formulas, r)
 
-	markedForRemoval := pkg.Packages{}
+	markedForRemoval := types.Packages{}
 
 	if len(formulas) == 0 {
-		return pkg.Packages{}, PackagesAssertions{}, nil
+		return types.Packages{}, types.PackagesAssertions{}, nil
 	}
 	model := bf.Solve(bf.And(formulas...))
 	if model == nil {
@@ -493,7 +477,7 @@ func (s *Solver) UpgradeUniverse(dropremoved bool) (pkg.Packages, PackagesAssert
 	return markedForRemoval, assertion, nil
 }
 
-func inPackage(list []pkg.Package, p pkg.Package) bool {
+func inPackage(list []*types.Package, p *types.Package) bool {
 	for _, l := range list {
 		if l.AtomMatches(p) {
 			return true
@@ -503,10 +487,10 @@ func inPackage(list []pkg.Package, p pkg.Package) bool {
 }
 
 // Compute upgrade between packages if specified, or all if none is specified
-func (s *Solver) computeUpgrade(ppsToUpgrade, ppsToNotUpgrade []pkg.Package) func(defDB pkg.PackageDatabase, installDB pkg.PackageDatabase) (pkg.Packages, pkg.Packages, pkg.PackageDatabase, []pkg.Package) {
-	return func(defDB pkg.PackageDatabase, installDB pkg.PackageDatabase) (pkg.Packages, pkg.Packages, pkg.PackageDatabase, []pkg.Package) {
-		toUninstall := pkg.Packages{}
-		toInstall := pkg.Packages{}
+func (s *Solver) computeUpgrade(ppsToUpgrade, ppsToNotUpgrade []*types.Package) func(defDB types.PackageDatabase, installDB types.PackageDatabase) (types.Packages, types.Packages, types.PackageDatabase, []*types.Package) {
+	return func(defDB types.PackageDatabase, installDB types.PackageDatabase) (types.Packages, types.Packages, types.PackageDatabase, []*types.Package) {
+		toUninstall := types.Packages{}
+		toInstall := types.Packages{}
 
 		// we do this in memory so we take into account of provides, and its faster
 		universe, _ := defDB.Copy()
@@ -535,15 +519,25 @@ func (s *Solver) computeUpgrade(ppsToUpgrade, ppsToNotUpgrade []pkg.Package) fun
 	}
 }
 
-func (s *Solver) upgrade(psToUpgrade, psToNotUpgrade pkg.Packages, fn func(defDB pkg.PackageDatabase, installDB pkg.PackageDatabase) (pkg.Packages, pkg.Packages, pkg.PackageDatabase, []pkg.Package), defDB pkg.PackageDatabase, installDB pkg.PackageDatabase, checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error) {
+func assertionToMemDB(assertions types.PackagesAssertions) types.PackageDatabase {
+	db := pkg.NewInMemoryDatabase(false)
+	for _, a := range assertions {
+		if a.Value {
+			db.CreatePackage(a.Package)
+		}
+	}
+	return db
+}
+
+func (s *Solver) upgrade(psToUpgrade, psToNotUpgrade types.Packages, fn func(defDB types.PackageDatabase, installDB types.PackageDatabase) (types.Packages, types.Packages, types.PackageDatabase, []*types.Package), defDB types.PackageDatabase, installDB types.PackageDatabase, checkconflicts, full bool) (types.Packages, types.PackagesAssertions, error) {
 
 	toUninstall, toInstall, installedcopy, packsToUpgrade := fn(defDB, installDB)
-	s2 := NewSolver(Options{Type: SingleCoreSimple}, installedcopy, defDB, pkg.NewInMemoryDatabase(false))
+	s2 := NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple}, installedcopy, defDB, pkg.NewInMemoryDatabase(false))
 	s2.SetResolver(s.Resolver)
 	if !full {
-		ass := PackagesAssertions{}
+		ass := types.PackagesAssertions{}
 		for _, i := range toInstall {
-			ass = append(ass, PackageAssert{Package: i.(*pkg.DefaultPackage), Value: true})
+			ass = append(ass, types.PackageAssert{Package: i, Value: true})
 		}
 	}
 	// Then try to uninstall the versions in the system, and store that tree
@@ -559,23 +553,23 @@ func (s *Solver) upgrade(psToUpgrade, psToNotUpgrade pkg.Packages, fn func(defDB
 	}
 
 	if len(toInstall) == 0 {
-		ass := PackagesAssertions{}
+		ass := types.PackagesAssertions{}
 		for _, i := range installDB.World() {
-			ass = append(ass, PackageAssert{Package: i.(*pkg.DefaultPackage), Value: true})
+			ass = append(ass, types.PackageAssert{Package: i, Value: true})
 		}
 		return toUninstall, ass, nil
 	}
 	assertions, err := s2.RelaxedInstall(toInstall.Unique())
 
-	wantedSystem := assertions.ToDB()
+	wantedSystem := assertionToMemDB(assertions)
 
-	fn = s.computeUpgrade(pkg.Packages{}, pkg.Packages{})
+	fn = s.computeUpgrade(types.Packages{}, types.Packages{})
 	if len(packsToUpgrade) > 0 {
 		// If we have packages in input,
 		// compute what we are looking to upgrade.
 		// those are assertions minus packsToUpgrade
 
-		var selectedPackages []pkg.Package
+		var selectedPackages []*types.Package
 
 		for _, p := range assertions {
 			if p.Value && !inPackage(psToUpgrade, p.Package) {
@@ -593,25 +587,25 @@ func (s *Solver) upgrade(psToUpgrade, psToNotUpgrade pkg.Packages, fn func(defDB
 	return toUninstall, assertions, err
 }
 
-func (s *Solver) Upgrade(checkconflicts, full bool) (pkg.Packages, PackagesAssertions, error) {
+func (s *Solver) Upgrade(checkconflicts, full bool) (types.Packages, types.PackagesAssertions, error) {
 
 	installedcopy := pkg.NewInMemoryDatabase(false)
 	err := s.InstalledDatabase.Clone(installedcopy)
 	if err != nil {
 		return nil, nil, err
 	}
-	return s.upgrade(pkg.Packages{}, pkg.Packages{}, s.computeUpgrade(pkg.Packages{}, pkg.Packages{}), s.DefinitionDatabase, installedcopy, checkconflicts, full)
+	return s.upgrade(types.Packages{}, types.Packages{}, s.computeUpgrade(types.Packages{}, types.Packages{}), s.DefinitionDatabase, installedcopy, checkconflicts, full)
 }
 
 // Uninstall takes a candidate package and return a list of packages that would be removed
 // in order to purge the candidate. Returns error if unsat.
-func (s *Solver) Uninstall(checkconflicts, full bool, packs ...pkg.Package) (pkg.Packages, error) {
+func (s *Solver) Uninstall(checkconflicts, full bool, packs ...*types.Package) (types.Packages, error) {
 	if len(packs) == 0 {
-		return pkg.Packages{}, nil
+		return types.Packages{}, nil
 	}
-	var res pkg.Packages
+	var res types.Packages
 
-	toRemove := pkg.Packages{}
+	toRemove := types.Packages{}
 
 	for _, c := range packs {
 		candidate, err := s.InstalledDatabase.FindPackage(c)
@@ -633,7 +627,7 @@ func (s *Solver) Uninstall(checkconflicts, full bool, packs ...pkg.Package) (pkg
 	}
 
 	// Build a fake "Installed" - Candidate and its requires tree
-	var InstalledMinusCandidate pkg.Packages
+	var InstalledMinusCandidate types.Packages
 
 	// We are asked to not perform a full uninstall (checking all the possible requires that could
 	// be removed). Let's only check if we can remove the selected package
@@ -666,7 +660,7 @@ func (s *Solver) Uninstall(checkconflicts, full bool, packs ...pkg.Package) (pkg
 		}
 	}
 
-	s2 := NewSolver(Options{Type: SingleCoreSimple}, pkg.NewInMemoryDatabase(false), s.InstalledDatabase, pkg.NewInMemoryDatabase(false))
+	s2 := NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple}, pkg.NewInMemoryDatabase(false), s.InstalledDatabase, pkg.NewInMemoryDatabase(false))
 	s2.SetResolver(s.Resolver)
 
 	// Get the requirements to install the candidate
@@ -756,7 +750,7 @@ func (s *Solver) solve(f bf.Formula) (map[string]bool, bf.Formula, error) {
 }
 
 // Solve builds the formula given the current state and returns package assertions
-func (s *Solver) Solve() (PackagesAssertions, error) {
+func (s *Solver) Solve() (types.PackagesAssertions, error) {
 	var model map[string]bool
 	var err error
 
@@ -780,7 +774,7 @@ func (s *Solver) Solve() (PackagesAssertions, error) {
 
 // Install given a list of packages, returns package assertions to indicate the packages that must be installed in the system in order
 // to statisfy all the constraints
-func (s *Solver) RelaxedInstall(c pkg.Packages) (PackagesAssertions, error) {
+func (s *Solver) RelaxedInstall(c types.Packages) (types.PackagesAssertions, error) {
 
 	coll, err := s.getList(s.DefinitionDatabase, c)
 	if err != nil {
@@ -790,13 +784,13 @@ func (s *Solver) RelaxedInstall(c pkg.Packages) (PackagesAssertions, error) {
 	s.Wanted = coll
 
 	if s.noRulesWorld() {
-		var ass PackagesAssertions
+		var ass types.PackagesAssertions
 		for _, p := range s.Installed() {
-			ass = append(ass, PackageAssert{Package: p.(*pkg.DefaultPackage), Value: true})
+			ass = append(ass, types.PackageAssert{Package: p, Value: true})
 
 		}
 		for _, p := range s.Wanted {
-			ass = append(ass, PackageAssert{Package: p.(*pkg.DefaultPackage), Value: true})
+			ass = append(ass, types.PackageAssert{Package: p, Value: true})
 		}
 		return ass, nil
 	}
@@ -811,7 +805,7 @@ func (s *Solver) RelaxedInstall(c pkg.Packages) (PackagesAssertions, error) {
 // Install returns the assertions necessary in order to install the packages in
 // a system.
 // It calculates the best result possible, trying to maximize new packages.
-func (s *Solver) Install(c pkg.Packages) (PackagesAssertions, error) {
+func (s *Solver) Install(c types.Packages) (types.PackagesAssertions, error) {
 	assertions, err := s.RelaxedInstall(c)
 	if err != nil {
 		return nil, err
@@ -819,8 +813,8 @@ func (s *Solver) Install(c pkg.Packages) (PackagesAssertions, error) {
 
 	systemAfterInstall := pkg.NewInMemoryDatabase(false)
 
-	toUpgrade := pkg.Packages{}
-	toNotUpgrade := pkg.Packages{}
+	toUpgrade := types.Packages{}
+	toNotUpgrade := types.Packages{}
 	for _, p := range c {
 		if p.GetVersion() == ">=0" || p.GetVersion() == ">0" {
 			toUpgrade = append(toUpgrade, p)

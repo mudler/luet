@@ -1,4 +1,4 @@
-// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2019-2022 Ettore Di Giacinto <mudler@mocaccino.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package pkg
+package database
 
 import (
 	"encoding/base64"
@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"sync"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/pkg/errors"
 )
 
@@ -30,8 +31,8 @@ var DBInMemoryInstance = &InMemoryDatabase{
 	FileDatabase:     map[string][]string{},
 	Database:         map[string]string{},
 	CacheNoVersion:   map[string]map[string]interface{}{},
-	ProvidesDatabase: map[string]map[string]Package{},
-	RevDepsDatabase:  map[string]map[string]Package{},
+	ProvidesDatabase: map[string]map[string]*types.Package{},
+	RevDepsDatabase:  map[string]map[string]*types.Package{},
 	cached:           map[string]interface{}{},
 }
 
@@ -40,12 +41,12 @@ type InMemoryDatabase struct {
 	Database         map[string]string
 	FileDatabase     map[string][]string
 	CacheNoVersion   map[string]map[string]interface{}
-	ProvidesDatabase map[string]map[string]Package
-	RevDepsDatabase  map[string]map[string]Package
+	ProvidesDatabase map[string]map[string]*types.Package
+	RevDepsDatabase  map[string]map[string]*types.Package
 	cached           map[string]interface{}
 }
 
-func NewInMemoryDatabase(singleton bool) PackageDatabase {
+func NewInMemoryDatabase(singleton bool) types.PackageDatabase {
 	// In memoryDB is a singleton
 	if !singleton {
 		return &InMemoryDatabase{
@@ -53,8 +54,8 @@ func NewInMemoryDatabase(singleton bool) PackageDatabase {
 			FileDatabase:     map[string][]string{},
 			Database:         map[string]string{},
 			CacheNoVersion:   map[string]map[string]interface{}{},
-			ProvidesDatabase: map[string]map[string]Package{},
-			RevDepsDatabase:  map[string]map[string]Package{},
+			ProvidesDatabase: map[string]map[string]*types.Package{},
+			RevDepsDatabase:  map[string]map[string]*types.Package{},
 			cached:           map[string]interface{}{},
 		}
 	}
@@ -98,19 +99,19 @@ func (db *InMemoryDatabase) Retrieve(ID string) ([]byte, error) {
 	return enc, nil
 }
 
-func (db *InMemoryDatabase) GetPackage(ID string) (Package, error) {
+func (db *InMemoryDatabase) GetPackage(ID string) (*types.Package, error) {
 
 	enc, err := db.Retrieve(ID)
 	if err != nil {
 		return nil, err
 	}
 
-	p := &DefaultPackage{}
+	p := &types.Package{}
 
 	rawIn := json.RawMessage(enc)
 	bytes, err := rawIn.MarshalJSON()
 	if err != nil {
-		return &DefaultPackage{}, err
+		return p, err
 	}
 
 	if err := json.Unmarshal(bytes, &p); err != nil {
@@ -119,7 +120,7 @@ func (db *InMemoryDatabase) GetPackage(ID string) (Package, error) {
 	return p, nil
 }
 
-func (db *InMemoryDatabase) GetAllPackages(packages chan Package) error {
+func (db *InMemoryDatabase) GetAllPackages(packages chan *types.Package) error {
 	packs := db.GetPackages()
 	for _, p := range packs {
 		pack, err := db.GetPackage(p)
@@ -131,14 +132,14 @@ func (db *InMemoryDatabase) GetAllPackages(packages chan Package) error {
 	return nil
 }
 
-func (db *InMemoryDatabase) getRevdeps(p Package, visited map[string]interface{}) (Packages, error) {
-	var versionsInWorld Packages
+func (db *InMemoryDatabase) getRevdeps(p *types.Package, visited map[string]interface{}) (types.Packages, error) {
+	var versionsInWorld types.Packages
 	if _, ok := visited[p.HumanReadableString()]; ok {
 		return versionsInWorld, nil
 	}
 	visited[p.HumanReadableString()] = true
 
-	var res Packages
+	var res types.Packages
 	packs, err := db.FindPackages(p)
 	if err != nil {
 		return res, err
@@ -169,43 +170,38 @@ func (db *InMemoryDatabase) getRevdeps(p Package, visited map[string]interface{}
 // GetRevdeps returns the package reverse dependencies,
 // matching also selectors in versions (>, <, >=, <=)
 // TODO: Code should use db explictly
-func (db *InMemoryDatabase) GetRevdeps(p Package) (Packages, error) {
+func (db *InMemoryDatabase) GetRevdeps(p *types.Package) (types.Packages, error) {
 	return db.getRevdeps(p, make(map[string]interface{}))
 }
 
 // Encode encodes the package to string.
 // It returns an ID which can be used to retrieve the package later on.
-func (db *InMemoryDatabase) CreatePackage(p Package) (string, error) {
-	pd, ok := p.(*DefaultPackage)
-	if !ok {
-		return "", errors.New("InMemoryDatabase suports only DefaultPackage")
-	}
+func (db *InMemoryDatabase) CreatePackage(p *types.Package) (string, error) {
 
-	res, err := pd.JSON()
+	res, err := p.JSON()
 	if err != nil {
 		return "", err
 	}
 
-	ID, err := db.Create(pd.GetFingerPrint(), res)
+	ID, err := db.Create(p.GetFingerPrint(), res)
 	if err != nil {
 		return "", err
 	}
 
-	db.populateCaches(pd)
+	db.populateCaches(p)
 
 	return ID, nil
 }
 
-func (db *InMemoryDatabase) updateRevDep(k, v string, b Package) {
+func (db *InMemoryDatabase) updateRevDep(k, v string, b *types.Package) {
 	_, ok := db.RevDepsDatabase[k]
 	if !ok {
-		db.RevDepsDatabase[k] = make(map[string]Package)
+		db.RevDepsDatabase[k] = make(map[string]*types.Package)
 	}
 	db.RevDepsDatabase[k][v] = b.Clone()
 }
 
-func (db *InMemoryDatabase) populateCaches(p Package) {
-	pd, _ := p.(*DefaultPackage)
+func (db *InMemoryDatabase) populateCaches(pd *types.Package) {
 
 	// Create extra cache between package -> []versions
 	db.Lock()
@@ -213,27 +209,27 @@ func (db *InMemoryDatabase) populateCaches(p Package) {
 		db.cached = map[string]interface{}{}
 	}
 
-	if _, ok := db.cached[p.GetFingerPrint()]; ok {
+	if _, ok := db.cached[pd.GetFingerPrint()]; ok {
 		db.Unlock()
 		return
 	}
-	db.cached[p.GetFingerPrint()] = nil
+	db.cached[pd.GetFingerPrint()] = nil
 
 	// Provides: Store package provides, we will reuse this when walking deps
 	for _, provide := range pd.Provides {
 		if _, ok := db.ProvidesDatabase[provide.GetPackageName()]; !ok {
-			db.ProvidesDatabase[provide.GetPackageName()] = make(map[string]Package)
+			db.ProvidesDatabase[provide.GetPackageName()] = make(map[string]*types.Package)
 
 		}
 
-		db.ProvidesDatabase[provide.GetPackageName()][provide.GetVersion()] = p
+		db.ProvidesDatabase[provide.GetPackageName()][provide.GetVersion()] = pd
 	}
 
-	_, ok := db.CacheNoVersion[p.GetPackageName()]
+	_, ok := db.CacheNoVersion[pd.GetPackageName()]
 	if !ok {
-		db.CacheNoVersion[p.GetPackageName()] = make(map[string]interface{})
+		db.CacheNoVersion[pd.GetPackageName()] = make(map[string]interface{})
 	}
-	db.CacheNoVersion[p.GetPackageName()][p.GetVersion()] = nil
+	db.CacheNoVersion[pd.GetPackageName()][pd.GetVersion()] = nil
 
 	db.Unlock()
 
@@ -267,7 +263,7 @@ func (db *InMemoryDatabase) populateCaches(p Package) {
 	}
 }
 
-func (db *InMemoryDatabase) getProvide(p Package) (Package, error) {
+func (db *InMemoryDatabase) getProvide(p *types.Package) (*types.Package, error) {
 
 	db.Lock()
 
@@ -302,30 +298,25 @@ func (db *InMemoryDatabase) getProvide(p Package) (Package, error) {
 	return db.FindPackage(pa)
 }
 
-func (db *InMemoryDatabase) Clone(to PackageDatabase) error {
+func (db *InMemoryDatabase) Clone(to types.PackageDatabase) error {
 	return clone(db, to)
 }
 
-func (db *InMemoryDatabase) Copy() (PackageDatabase, error) {
+func (db *InMemoryDatabase) Copy() (types.PackageDatabase, error) {
 	return copy(db)
 }
 
-func (db *InMemoryDatabase) encodePackage(p Package) (string, string, error) {
-	pd, ok := p.(*DefaultPackage)
-	if !ok {
-		return "", "", errors.New("InMemoryDatabase suports only DefaultPackage")
-	}
-
+func (db *InMemoryDatabase) encodePackage(pd *types.Package) (string, string, error) {
 	res, err := pd.JSON()
 	if err != nil {
 		return "", "", err
 	}
 	enc := base64.StdEncoding.EncodeToString(res)
 
-	return p.GetFingerPrint(), enc, nil
+	return pd.GetFingerPrint(), enc, nil
 }
 
-func (db *InMemoryDatabase) FindPackage(p Package) (Package, error) {
+func (db *InMemoryDatabase) FindPackage(p *types.Package) (*types.Package, error) {
 
 	// Provides: Return the replaced package here
 	if provided, err := db.getProvide(p); err == nil {
@@ -336,7 +327,7 @@ func (db *InMemoryDatabase) FindPackage(p Package) (Package, error) {
 }
 
 // FindPackages return the list of the packages beloging to cat/name
-func (db *InMemoryDatabase) FindPackageVersions(p Package) (Packages, error) {
+func (db *InMemoryDatabase) FindPackageVersions(p *types.Package) (types.Packages, error) {
 	// Provides: Treat as the replaced package here
 	if provided, err := db.getProvide(p); err == nil {
 		p = provided
@@ -347,48 +338,48 @@ func (db *InMemoryDatabase) FindPackageVersions(p Package) (Packages, error) {
 	if !ok {
 		return nil, errors.New("No versions found for package")
 	}
-	var versionsInWorld []Package
+	var versionsInWorld []*types.Package
 	for ve, _ := range versions {
-		w, err := db.FindPackage(&DefaultPackage{Name: p.GetName(), Category: p.GetCategory(), Version: ve})
+		w, err := db.FindPackage(&types.Package{Name: p.GetName(), Category: p.GetCategory(), Version: ve})
 		if err != nil {
 			return nil, errors.Wrap(err, "Cache mismatch - this shouldn't happen")
 		}
 		versionsInWorld = append(versionsInWorld, w)
 	}
-	return Packages(versionsInWorld), nil
+	return types.Packages(versionsInWorld), nil
 }
 
 // FindPackages return the list of the packages beloging to cat/name (any versions in requested range)
-func (db *InMemoryDatabase) FindPackages(p Package) (Packages, error) {
+func (db *InMemoryDatabase) FindPackages(p *types.Package) (types.Packages, error) {
 	if !p.IsSelector() {
 		pack, err := db.FindPackage(p)
 		if err != nil {
-			return []Package{}, err
+			return []*types.Package{}, err
 		}
-		return []Package{pack}, nil
+		return []*types.Package{pack}, nil
 	}
 	// Provides: Treat as the replaced package here
 	if provided, err := db.getProvide(p); err == nil {
 		p = provided
 		if !provided.IsSelector() {
-			return Packages{provided}, nil
+			return types.Packages{provided}, nil
 		}
 	}
 
 	db.Lock()
-	var matches []*DefaultPackage
+	var matches []*types.Package
 	versions, ok := db.CacheNoVersion[p.GetPackageName()]
 	for ve := range versions {
 		match, _ := p.SelectorMatchVersion(ve, nil)
 		if match {
-			matches = append(matches, &DefaultPackage{Name: p.GetName(), Category: p.GetCategory(), Version: ve})
+			matches = append(matches, &types.Package{Name: p.GetName(), Category: p.GetCategory(), Version: ve})
 		}
 	}
 	db.Unlock()
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("No versions found for: %s", p.HumanReadableString()))
+		return nil, fmt.Errorf("No versions found for: %s", p.HumanReadableString())
 	}
-	var versionsInWorld []Package
+	var versionsInWorld []*types.Package
 	for _, p := range matches {
 		w, err := db.FindPackage(p)
 		if err != nil {
@@ -396,10 +387,10 @@ func (db *InMemoryDatabase) FindPackages(p Package) (Packages, error) {
 		}
 		versionsInWorld = append(versionsInWorld, w)
 	}
-	return Packages(versionsInWorld), nil
+	return types.Packages(versionsInWorld), nil
 }
 
-func (db *InMemoryDatabase) UpdatePackage(p Package) error {
+func (db *InMemoryDatabase) UpdatePackage(p *types.Package) error {
 
 	_, enc, err := db.encodePackage(p)
 	if err != nil {
@@ -407,15 +398,13 @@ func (db *InMemoryDatabase) UpdatePackage(p Package) error {
 	}
 
 	return db.Set(p.GetFingerPrint(), enc)
-
-	return errors.New(fmt.Sprintf("Package not found: %s", p.HumanReadableString()))
 }
 
 func (db *InMemoryDatabase) GetPackages() []string {
 	keys := []string{}
 	db.Lock()
 	defer db.Unlock()
-	for k, _ := range db.Database {
+	for k := range db.Database {
 		keys = append(keys, k)
 	}
 	return keys
@@ -426,40 +415,40 @@ func (db *InMemoryDatabase) Clean() error {
 	return nil
 }
 
-func (db *InMemoryDatabase) GetPackageFiles(p Package) ([]string, error) {
+func (db *InMemoryDatabase) GetPackageFiles(p *types.Package) ([]string, error) {
 
 	db.Lock()
 	defer db.Unlock()
 
 	pa, ok := db.FileDatabase[p.GetFingerPrint()]
 	if !ok {
-		return pa, errors.New(fmt.Sprintf("No key found for: %s", p.HumanReadableString()))
+		return pa, fmt.Errorf("No key found for: %s", p.HumanReadableString())
 	}
 
 	return pa, nil
 }
-func (db *InMemoryDatabase) SetPackageFiles(p *PackageFile) error {
+func (db *InMemoryDatabase) SetPackageFiles(p *types.PackageFile) error {
 	db.Lock()
 	defer db.Unlock()
 	db.FileDatabase[p.PackageFingerprint] = p.Files
 	return nil
 }
-func (db *InMemoryDatabase) RemovePackageFiles(p Package) error {
+func (db *InMemoryDatabase) RemovePackageFiles(p *types.Package) error {
 	db.Lock()
 	defer db.Unlock()
 	delete(db.FileDatabase, p.GetFingerPrint())
 	return nil
 }
 
-func (db *InMemoryDatabase) RemovePackage(p Package) error {
+func (db *InMemoryDatabase) RemovePackage(p *types.Package) error {
 	db.Lock()
 	defer db.Unlock()
 
 	delete(db.Database, p.GetFingerPrint())
 	return nil
 }
-func (db *InMemoryDatabase) World() Packages {
-	var all []Package
+func (db *InMemoryDatabase) World() types.Packages {
+	var all []*types.Package
 	// FIXME: This should all be locked in the db - for now forbid the solver to be run in threads.
 	for _, k := range db.GetPackages() {
 		pack, err := db.GetPackage(k)
@@ -467,10 +456,10 @@ func (db *InMemoryDatabase) World() Packages {
 			all = append(all, pack)
 		}
 	}
-	return Packages(all)
+	return types.Packages(all)
 }
 
-func (db *InMemoryDatabase) FindPackageCandidate(p Package) (Package, error) {
+func (db *InMemoryDatabase) FindPackageCandidate(p *types.Package) (*types.Package, error) {
 
 	required, err := db.FindPackage(p)
 	if err != nil {
@@ -485,15 +474,15 @@ func (db *InMemoryDatabase) FindPackageCandidate(p Package) (Package, error) {
 			required = packages.Best(nil)
 		}
 		return required, err
-		//required = &DefaultPackage{Name: "test"}
+		//required = &types.Package{Name: "test"}
 	}
 
 	return required, err
 
 }
 
-func (db *InMemoryDatabase) FindPackageLabel(labelKey string) (Packages, error) {
-	var ans []Package
+func (db *InMemoryDatabase) FindPackageLabel(labelKey string) (types.Packages, error) {
+	var ans []*types.Package
 
 	for _, k := range db.GetPackages() {
 		pack, err := db.GetPackage(k)
@@ -505,11 +494,11 @@ func (db *InMemoryDatabase) FindPackageLabel(labelKey string) (Packages, error) 
 		}
 	}
 
-	return Packages(ans), nil
+	return types.Packages(ans), nil
 }
 
-func (db *InMemoryDatabase) FindPackageLabelMatch(pattern string) (Packages, error) {
-	var ans []Package
+func (db *InMemoryDatabase) FindPackageLabelMatch(pattern string) (types.Packages, error) {
+	var ans []*types.Package
 
 	re := regexp.MustCompile(pattern)
 	if re == nil {
@@ -526,11 +515,11 @@ func (db *InMemoryDatabase) FindPackageLabelMatch(pattern string) (Packages, err
 		}
 	}
 
-	return Packages(ans), nil
+	return types.Packages(ans), nil
 }
 
-func (db *InMemoryDatabase) FindPackageMatch(pattern string) (Packages, error) {
-	var ans []Package
+func (db *InMemoryDatabase) FindPackageMatch(pattern string) (types.Packages, error) {
+	var ans []*types.Package
 
 	re := regexp.MustCompile(pattern)
 	if re == nil {
@@ -548,9 +537,9 @@ func (db *InMemoryDatabase) FindPackageMatch(pattern string) (Packages, error) {
 		}
 	}
 
-	return Packages(ans), nil
+	return types.Packages(ans), nil
 }
 
-func (db *InMemoryDatabase) FindPackageByFile(pattern string) (Packages, error) {
+func (db *InMemoryDatabase) FindPackageByFile(pattern string) (types.Packages, error) {
 	return findPackageByFile(db, pattern)
 }

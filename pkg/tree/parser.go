@@ -15,9 +15,9 @@
 
 package tree
 
-import pkg "github.com/mudler/luet/pkg/package"
+import "github.com/mudler/luet/pkg/api/core/types"
 
 // parses ebuilds (?) and generates data which is readable by the builder
 type Parser interface {
-	Generate(string) (pkg.PackageDatabase, error) // Generate scannable luet tree (by builder)
+	Generate(string) (types.PackageDatabase, error) // Generate scannable luet tree (by builder)
 }

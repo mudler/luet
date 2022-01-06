@@ -20,12 +20,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/types"
+
 	options "github.com/mudler/luet/pkg/compiler/types/options"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	. "github.com/mudler/luet/pkg/compiler"
-	pkg "github.com/mudler/luet/pkg/package"
+	pkg "github.com/mudler/luet/pkg/database"
 	"github.com/mudler/luet/pkg/tree"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -34,10 +36,10 @@ import (
 var _ = Describe("Spec", func() {
 	Context("Luet specs", func() {
 		It("Allows normal operations", func() {
-			testSpec := &compilerspec.LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Category: "a", Version: "0"}}
-			testSpec2 := &compilerspec.LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "bar", Category: "a", Version: "0"}}
-			testSpec3 := &compilerspec.LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "baz", Category: "a", Version: "0"}}
-			testSpec4 := &compilerspec.LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Category: "a", Version: "0"}}
+			testSpec := &compilerspec.LuetCompilationSpec{Package: &types.Package{Name: "foo", Category: "a", Version: "0"}}
+			testSpec2 := &compilerspec.LuetCompilationSpec{Package: &types.Package{Name: "bar", Category: "a", Version: "0"}}
+			testSpec3 := &compilerspec.LuetCompilationSpec{Package: &types.Package{Name: "baz", Category: "a", Version: "0"}}
+			testSpec4 := &compilerspec.LuetCompilationSpec{Package: &types.Package{Name: "foo", Category: "a", Version: "0"}}
 
 			specs := compilerspec.NewLuetCompilationspecs(testSpec, testSpec2)
 			Expect(specs.Len()).To(Equal(2))
@@ -81,7 +83,7 @@ var _ = Describe("Spec", func() {
 				Image:        "foo",
 				BuildOptions: &options.Compiler{BuildValues: []map[string]interface{}{{"foo": "bar", "baz": true}}},
 
-				Package: &pkg.DefaultPackage{
+				Package: &types.Package{
 					Name:     "foo",
 					Category: "Bar",
 					Labels: map[string]string{
@@ -93,7 +95,7 @@ var _ = Describe("Spec", func() {
 			spec2 := &compilerspec.LuetCompilationSpec{
 				Image:        "foo",
 				BuildOptions: &options.Compiler{BuildValues: []map[string]interface{}{{"foo": "bar", "baz": true}}},
-				Package: &pkg.DefaultPackage{
+				Package: &types.Package{
 					Name:     "foo",
 					Category: "Bar",
 					Labels: map[string]string{
@@ -105,7 +107,7 @@ var _ = Describe("Spec", func() {
 			spec3 := &compilerspec.LuetCompilationSpec{
 				Image: "foo",
 				Steps: []string{"foo"},
-				Package: &pkg.DefaultPackage{
+				Package: &types.Package{
 					Name:     "foo",
 					Category: "Bar",
 					Labels: map[string]string{
@@ -141,7 +143,7 @@ var _ = Describe("Spec", func() {
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
 			compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase())
-			lspec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
+			lspec, err := compiler.FromPackage(&types.Package{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(lspec.Steps).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
@@ -193,7 +195,7 @@ RUN echo bar > /test2`))
 		Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
 		compiler := NewLuetCompiler(nil, generalRecipe.GetDatabase())
-		lspec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.0"})
+		lspec, err := compiler.FromPackage(&types.Package{Name: "a", Category: "test", Version: "1.0"})
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(lspec.Steps).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))

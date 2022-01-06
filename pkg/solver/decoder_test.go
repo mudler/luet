@@ -18,8 +18,8 @@ package solver_test
 import (
 	"strconv"
 
-	pkg "github.com/mudler/luet/pkg/package"
-	"github.com/mudler/luet/pkg/solver"
+	"github.com/mudler/luet/pkg/api/core/types"
+	pkg "github.com/mudler/luet/pkg/database"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -30,13 +30,13 @@ var _ = Describe("Decoder", func() {
 	db := pkg.NewInMemoryDatabase(false)
 	dbInstalled := pkg.NewInMemoryDatabase(false)
 	dbDefinitions := pkg.NewInMemoryDatabase(false)
-	s := NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
+	s := NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple}, dbInstalled, dbDefinitions, db)
 
 	BeforeEach(func() {
 		db = pkg.NewInMemoryDatabase(false)
 		dbInstalled = pkg.NewInMemoryDatabase(false)
 		dbDefinitions = pkg.NewInMemoryDatabase(false)
-		s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
+		s = NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple}, dbInstalled, dbDefinitions, db)
 	})
 
 	Context("Assertion ordering", func() {
@@ -44,32 +44,32 @@ var _ = Describe("Decoder", func() {
 		for index := 0; index < 300; index++ { // Just to make sure we don't have false positives
 			It("Orders them correctly #"+strconv.Itoa(index), func() {
 
-				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				G := pkg.NewPackage("G", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				H := pkg.NewPackage("H", "", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
-				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
-				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+				C := types.NewPackage("C", "", []*types.Package{}, []*types.Package{})
+				E := types.NewPackage("E", "", []*types.Package{}, []*types.Package{})
+				F := types.NewPackage("F", "", []*types.Package{}, []*types.Package{})
+				G := types.NewPackage("G", "", []*types.Package{}, []*types.Package{})
+				H := types.NewPackage("H", "", []*types.Package{G}, []*types.Package{})
+				D := types.NewPackage("D", "", []*types.Package{H}, []*types.Package{})
+				B := types.NewPackage("B", "", []*types.Package{D}, []*types.Package{})
+				A := types.NewPackage("A", "", []*types.Package{B}, []*types.Package{})
 
-				for _, p := range []pkg.Package{A, B, C, D, E, F, G} {
+				for _, p := range []*types.Package{A, B, C, D, E, F, G} {
 					_, err := dbDefinitions.CreatePackage(p)
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				for _, p := range []pkg.Package{C} {
+				for _, p := range []*types.Package{C} {
 					_, err := dbInstalled.CreatePackage(p)
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				solution, err := s.Install([]pkg.Package{A})
-				Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: H, Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: G, Value: true}))
+				solution, err := s.Install([]*types.Package{A})
+				Expect(solution).To(ContainElement(types.PackageAssert{Package: A, Value: true}))
+				Expect(solution).To(ContainElement(types.PackageAssert{Package: B, Value: true}))
+				Expect(solution).To(ContainElement(types.PackageAssert{Package: D, Value: true}))
+				Expect(solution).To(ContainElement(types.PackageAssert{Package: C, Value: true}))
+				Expect(solution).To(ContainElement(types.PackageAssert{Package: H, Value: true}))
+				Expect(solution).To(ContainElement(types.PackageAssert{Package: G, Value: true}))
 
 				Expect(len(solution)).To(Equal(6))
 				Expect(err).ToNot(HaveOccurred())
@@ -95,32 +95,32 @@ var _ = Describe("Decoder", func() {
 		for index := 0; index < 300; index++ { // Just to make sure we don't have false positives
 			It("Doesn't order them correctly otherwise #"+strconv.Itoa(index), func() {
 
-				C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				G := pkg.NewPackage("G", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				H := pkg.NewPackage("H", "", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
-				D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
-				B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-				A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+				C := types.NewPackage("C", "", []*types.Package{}, []*types.Package{})
+				E := types.NewPackage("E", "", []*types.Package{}, []*types.Package{})
+				F := types.NewPackage("F", "", []*types.Package{}, []*types.Package{})
+				G := types.NewPackage("G", "", []*types.Package{}, []*types.Package{})
+				H := types.NewPackage("H", "", []*types.Package{G}, []*types.Package{})
+				D := types.NewPackage("D", "", []*types.Package{H}, []*types.Package{})
+				B := types.NewPackage("B", "", []*types.Package{D}, []*types.Package{})
+				A := types.NewPackage("A", "", []*types.Package{B}, []*types.Package{})
 
-				for _, p := range []pkg.Package{A, B, C, D, E, F, G} {
+				for _, p := range []*types.Package{A, B, C, D, E, F, G} {
 					_, err := dbDefinitions.CreatePackage(p)
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				for _, p := range []pkg.Package{C} {
+				for _, p := range []*types.Package{C} {
 					_, err := dbInstalled.CreatePackage(p)
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				solution, err := s.Install([]pkg.Package{A})
-				Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: H, Value: true}))
-				Expect(solution).To(ContainElement(PackageAssert{Package: G, Value: true}))
+				solution, err := s.Install([]*types.Package{A})
+				Expect(solution).To(ContainElement(types.PackageAssert{Package: A, Value: true}))
+				Expect(solution).To(ContainElement(types.PackageAssert{Package: B, Value: true}))
+				Expect(solution).To(ContainElement(types.PackageAssert{Package: D, Value: true}))
+				Expect(solution).To(ContainElement(types.PackageAssert{Package: C, Value: true}))
+				Expect(solution).To(ContainElement(types.PackageAssert{Package: H, Value: true}))
+				Expect(solution).To(ContainElement(types.PackageAssert{Package: G, Value: true}))
 
 				Expect(len(solution)).To(Equal(6))
 				Expect(err).ToNot(HaveOccurred())
@@ -161,32 +161,32 @@ var _ = Describe("Decoder", func() {
 	Context("Assertion hashing", func() {
 		It("Hashes them, and could be used for comparison", func() {
 
-			C := pkg.NewPackage("C", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			E := pkg.NewPackage("E", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			G := pkg.NewPackage("G", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			H := pkg.NewPackage("H", "", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
-			D := pkg.NewPackage("D", "", []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
-			B := pkg.NewPackage("B", "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-			A := pkg.NewPackage("A", "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+			C := types.NewPackage("C", "", []*types.Package{}, []*types.Package{})
+			E := types.NewPackage("E", "", []*types.Package{}, []*types.Package{})
+			F := types.NewPackage("F", "", []*types.Package{}, []*types.Package{})
+			G := types.NewPackage("G", "", []*types.Package{}, []*types.Package{})
+			H := types.NewPackage("H", "", []*types.Package{G}, []*types.Package{})
+			D := types.NewPackage("D", "", []*types.Package{H}, []*types.Package{})
+			B := types.NewPackage("B", "", []*types.Package{D}, []*types.Package{})
+			A := types.NewPackage("A", "", []*types.Package{B}, []*types.Package{})
 
-			for _, p := range []pkg.Package{A, B, C, D, E, F, G} {
+			for _, p := range []*types.Package{A, B, C, D, E, F, G} {
 				_, err := dbDefinitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			for _, p := range []pkg.Package{C} {
+			for _, p := range []*types.Package{C} {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			solution, err := s.Install([]pkg.Package{A})
-			Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: H, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: G, Value: true}))
+			solution, err := s.Install([]*types.Package{A})
+			Expect(solution).To(ContainElement(types.PackageAssert{Package: A, Value: true}))
+			Expect(solution).To(ContainElement(types.PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(types.PackageAssert{Package: D, Value: true}))
+			Expect(solution).To(ContainElement(types.PackageAssert{Package: C, Value: true}))
+			Expect(solution).To(ContainElement(types.PackageAssert{Package: H, Value: true}))
+			Expect(solution).To(ContainElement(types.PackageAssert{Package: G, Value: true}))
 
 			Expect(len(solution)).To(Equal(6))
 			Expect(err).ToNot(HaveOccurred())
@@ -200,12 +200,12 @@ var _ = Describe("Decoder", func() {
 
 			hash := solution.AssertionHash()
 
-			solution, err = s.Install([]pkg.Package{B})
-			Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: H, Value: true}))
-			Expect(solution).To(ContainElement(PackageAssert{Package: G, Value: true}))
+			solution, err = s.Install([]*types.Package{B})
+			Expect(solution).To(ContainElement(types.PackageAssert{Package: B, Value: true}))
+			Expect(solution).To(ContainElement(types.PackageAssert{Package: D, Value: true}))
+			Expect(solution).To(ContainElement(types.PackageAssert{Package: C, Value: true}))
+			Expect(solution).To(ContainElement(types.PackageAssert{Package: H, Value: true}))
+			Expect(solution).To(ContainElement(types.PackageAssert{Package: G, Value: true}))
 
 			Expect(len(solution)).To(Equal(6))
 			Expect(err).ToNot(HaveOccurred())
@@ -226,24 +226,24 @@ var _ = Describe("Decoder", func() {
 		})
 		It("Hashes them, and could be used for comparison", func() {
 
-			X := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			Y := pkg.NewPackage("Y", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
-			Z := pkg.NewPackage("Z", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
+			X := types.NewPackage("X", "", []*types.Package{}, []*types.Package{})
+			Y := types.NewPackage("Y", "", []*types.Package{X}, []*types.Package{})
+			Z := types.NewPackage("Z", "", []*types.Package{X}, []*types.Package{})
 
-			for _, p := range []pkg.Package{X, Y, Z} {
+			for _, p := range []*types.Package{X, Y, Z} {
 				_, err := dbDefinitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			for _, p := range []pkg.Package{} {
+			for _, p := range []*types.Package{} {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			solution, err := s.Install([]pkg.Package{Y})
+			solution, err := s.Install([]*types.Package{Y})
 			Expect(err).ToNot(HaveOccurred())
 
-			solution2, err := s.Install([]pkg.Package{Z})
+			solution2, err := s.Install([]*types.Package{Z})
 			Expect(err).ToNot(HaveOccurred())
 			orderY, err := solution.Order(dbDefinitions, Y.GetFingerPrint())
 			Expect(err).ToNot(HaveOccurred())
@@ -254,24 +254,24 @@ var _ = Describe("Decoder", func() {
 
 		It("Hashes them, Cuts them and could be used for comparison", func() {
 
-			X := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			Y := pkg.NewPackage("Y", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
-			Z := pkg.NewPackage("Z", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
+			X := types.NewPackage("X", "", []*types.Package{}, []*types.Package{})
+			Y := types.NewPackage("Y", "", []*types.Package{X}, []*types.Package{})
+			Z := types.NewPackage("Z", "", []*types.Package{X}, []*types.Package{})
 
-			for _, p := range []pkg.Package{X, Y, Z} {
+			for _, p := range []*types.Package{X, Y, Z} {
 				_, err := dbDefinitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			for _, p := range []pkg.Package{} {
+			for _, p := range []*types.Package{} {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			solution, err := s.Install([]pkg.Package{Y})
+			solution, err := s.Install([]*types.Package{Y})
 			Expect(err).ToNot(HaveOccurred())
 
-			solution2, err := s.Install([]pkg.Package{Z})
+			solution2, err := s.Install([]*types.Package{Z})
 			Expect(err).ToNot(HaveOccurred())
 			orderY, err := solution.Order(dbDefinitions, Y.GetFingerPrint())
 			Expect(err).ToNot(HaveOccurred())
@@ -284,24 +284,24 @@ var _ = Describe("Decoder", func() {
 
 		It("HashFrom can be used equally", func() {
 
-			X := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			Y := pkg.NewPackage("Y", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
-			Z := pkg.NewPackage("Z", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
+			X := types.NewPackage("X", "", []*types.Package{}, []*types.Package{})
+			Y := types.NewPackage("Y", "", []*types.Package{X}, []*types.Package{})
+			Z := types.NewPackage("Z", "", []*types.Package{X}, []*types.Package{})
 
-			for _, p := range []pkg.Package{X, Y, Z} {
+			for _, p := range []*types.Package{X, Y, Z} {
 				_, err := dbDefinitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			for _, p := range []pkg.Package{} {
+			for _, p := range []*types.Package{} {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			solution, err := s.Install([]pkg.Package{Y})
+			solution, err := s.Install([]*types.Package{Y})
 			Expect(err).ToNot(HaveOccurred())
 
-			solution2, err := s.Install([]pkg.Package{Z})
+			solution2, err := s.Install([]*types.Package{Z})
 			Expect(err).ToNot(HaveOccurred())
 			orderY, err := solution.Order(dbDefinitions, Y.GetFingerPrint())
 			Expect(err).ToNot(HaveOccurred())
@@ -314,27 +314,27 @@ var _ = Describe("Decoder", func() {
 
 		It("Unique hashes for single packages", func() {
 
-			X := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			D := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+			X := types.NewPackage("X", "", []*types.Package{}, []*types.Package{})
+			F := types.NewPackage("F", "", []*types.Package{}, []*types.Package{})
+			D := types.NewPackage("X", "", []*types.Package{}, []*types.Package{})
 
-			for _, p := range []pkg.Package{X, F, D} {
+			for _, p := range []*types.Package{X, F, D} {
 				_, err := dbDefinitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			for _, p := range []pkg.Package{} {
+			for _, p := range []*types.Package{} {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			solution, err := s.Install([]pkg.Package{X})
+			solution, err := s.Install([]*types.Package{X})
 			Expect(err).ToNot(HaveOccurred())
 
-			solution2, err := s.Install([]pkg.Package{F})
+			solution2, err := s.Install([]*types.Package{F})
 			Expect(err).ToNot(HaveOccurred())
 
-			solution3, err := s.Install([]pkg.Package{D})
+			solution3, err := s.Install([]*types.Package{D})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(solution.AssertionHash()).ToNot(Equal(solution2.AssertionHash()))
@@ -343,41 +343,41 @@ var _ = Describe("Decoder", func() {
 		})
 
 		It("Unique hashes for empty assertions", func() {
-			empty := solver.PackagesAssertions{}
-			empty2 := solver.PackagesAssertions{}
+			empty := types.PackagesAssertions{}
+			empty2 := types.PackagesAssertions{}
 
 			Expect(empty.AssertionHash()).To(Equal(empty2.AssertionHash()))
 		})
 
 		It("Unique hashes for single packages with HashFrom", func() {
 
-			X := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			F := pkg.NewPackage("F", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			D := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-			Y := pkg.NewPackage("Y", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
+			X := types.NewPackage("X", "", []*types.Package{}, []*types.Package{})
+			F := types.NewPackage("F", "", []*types.Package{}, []*types.Package{})
+			D := types.NewPackage("X", "", []*types.Package{}, []*types.Package{})
+			Y := types.NewPackage("Y", "", []*types.Package{X}, []*types.Package{})
 
-			empty := solver.PackagesAssertions{}
+			empty := types.PackagesAssertions{}
 
-			for _, p := range []pkg.Package{X, F, D, Y} {
+			for _, p := range []*types.Package{X, F, D, Y} {
 				_, err := dbDefinitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			for _, p := range []pkg.Package{} {
+			for _, p := range []*types.Package{} {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			solution, err := s.Install([]pkg.Package{X})
+			solution, err := s.Install([]*types.Package{X})
 			Expect(err).ToNot(HaveOccurred())
 
-			solution2, err := s.Install([]pkg.Package{F})
+			solution2, err := s.Install([]*types.Package{F})
 			Expect(err).ToNot(HaveOccurred())
 
-			solution3, err := s.Install([]pkg.Package{D})
+			solution3, err := s.Install([]*types.Package{D})
 			Expect(err).ToNot(HaveOccurred())
 
-			solution4, err := s.Install([]pkg.Package{Y})
+			solution4, err := s.Install([]*types.Package{Y})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(solution.HashFrom(X)).ToNot(Equal(solution2.HashFrom(F)))
@@ -395,22 +395,22 @@ var _ = Describe("Decoder", func() {
 
 			It("Always same solution", func() {
 
-				X := pkg.NewPackage("X", "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				Y := pkg.NewPackage("Y", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
-				Z := pkg.NewPackage("Z", "", []*pkg.DefaultPackage{X}, []*pkg.DefaultPackage{})
-				W := pkg.NewPackage("W", "", []*pkg.DefaultPackage{Z, Y}, []*pkg.DefaultPackage{})
+				X := types.NewPackage("X", "", []*types.Package{}, []*types.Package{})
+				Y := types.NewPackage("Y", "", []*types.Package{X}, []*types.Package{})
+				Z := types.NewPackage("Z", "", []*types.Package{X}, []*types.Package{})
+				W := types.NewPackage("W", "", []*types.Package{Z, Y}, []*types.Package{})
 
-				for _, p := range []pkg.Package{X, Y, Z} {
+				for _, p := range []*types.Package{X, Y, Z} {
 					_, err := dbDefinitions.CreatePackage(p)
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				for _, p := range []pkg.Package{} {
+				for _, p := range []*types.Package{} {
 					_, err := dbInstalled.CreatePackage(p)
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				solution, err := s.Install([]pkg.Package{W})
+				solution, err := s.Install([]*types.Package{W})
 				Expect(err).ToNot(HaveOccurred())
 
 				orderW, err := solution.Order(dbDefinitions, W.GetFingerPrint())

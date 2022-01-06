@@ -47,8 +47,6 @@ import (
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-	pkg "github.com/mudler/luet/pkg/package"
-	"github.com/mudler/luet/pkg/solver"
 
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
@@ -63,11 +61,11 @@ type PackageArtifact struct {
 	Dependencies      []*PackageArtifact                `json:"dependencies"`
 	CompileSpec       *compilerspec.LuetCompilationSpec `json:"compilationspec"`
 	Checksums         Checksums                         `json:"checksums"`
-	SourceAssertion   solver.PackagesAssertions         `json:"-"`
+	SourceAssertion   types.PackagesAssertions          `json:"-"`
 	CompressionType   compression.Implementation        `json:"compressiontype"`
 	Files             []string                          `json:"files"`
 	PackageCacheImage string                            `json:"package_cacheimage"`
-	Runtime           *pkg.DefaultPackage               `json:"runtime,omitempty"`
+	Runtime           *types.Package                    `json:"runtime,omitempty"`
 }
 
 func ImageToArtifact(ctx types.Context, img v1.Image, t compression.Implementation, output string, filter func(h *tar.Header) (bool, error)) (*PackageArtifact, error) {
@@ -97,7 +95,7 @@ func NewPackageArtifact(path string) *PackageArtifact {
 
 func NewPackageArtifactFromYaml(data []byte) (*PackageArtifact, error) {
 	p := &PackageArtifact{Checksums: Checksums{}}
-	err := yaml.Unmarshal(data, &p)
+	err := yaml.Unmarshal(data, p)
 	if err != nil {
 		return p, err
 	}
@@ -499,14 +497,9 @@ func (a *PackageArtifact) GetProtectFiles(ctx types.Context) (res []string) {
 	annotationDir := ""
 
 	if !ctx.GetConfig().ConfigProtectSkip {
-
 		// a.CompileSpec could be nil when artifact.Unpack is used for tree tarball
-		if a.CompileSpec != nil &&
-			a.CompileSpec.GetPackage().HasAnnotation(string(pkg.ConfigProtectAnnnotation)) {
-			dir, ok := a.CompileSpec.GetPackage().GetAnnotations()[string(pkg.ConfigProtectAnnnotation)]
-			if ok {
-				annotationDir = dir
-			}
+		if a.CompileSpec != nil {
+			annotationDir, _ = a.CompileSpec.GetPackage().Annotations[types.ConfigProtectAnnotation]
 		}
 		// TODO: check if skip this if we have a.CompileSpec nil
 

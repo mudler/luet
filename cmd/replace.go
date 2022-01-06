@@ -15,13 +15,11 @@
 package cmd
 
 import (
+	"github.com/mudler/luet/pkg/api/core/types"
 	installer "github.com/mudler/luet/pkg/installer"
-	"github.com/mudler/luet/pkg/solver"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
-
-	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -44,8 +42,8 @@ var replaceCmd = &cobra.Command{
 		viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		var toUninstall pkg.Packages
-		var toAdd pkg.Packages
+		var toUninstall types.Packages
+		var toAdd types.Packages
 
 		f := viper.GetStringSlice("for")
 		force := viper.GetBool("force")
@@ -70,7 +68,7 @@ var replaceCmd = &cobra.Command{
 			toAdd = append(toAdd, pack)
 		}
 
-		util.DefaultContext.Config.Solver.Implementation = solver.SingleCoreSimple
+		util.DefaultContext.Config.Solver.Implementation = types.SolverSingleCoreSimple
 
 		util.DefaultContext.Debug("Solver", util.DefaultContext.Config.Solver.CompactString())
 
@@ -87,7 +85,7 @@ var replaceCmd = &cobra.Command{
 			Context:                     util.DefaultContext,
 		})
 
-		system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.System.Rootfs}
+		system := &installer.System{Database: util.SystemDB(util.DefaultContext.Config), Target: util.DefaultContext.Config.System.Rootfs}
 		err := inst.Swap(toUninstall, toAdd, system)
 		if err != nil {
 			util.DefaultContext.Fatal("Error: " + err.Error())

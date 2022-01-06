@@ -26,22 +26,23 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/types"
+	pkg "github.com/mudler/luet/pkg/database"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-	pkg "github.com/mudler/luet/pkg/package"
 	spectooling "github.com/mudler/luet/pkg/spectooling"
 
 	"github.com/pkg/errors"
 )
 
-func NewGeneralRecipe(db pkg.PackageDatabase) Builder { return &Recipe{Database: db} }
+func NewGeneralRecipe(db types.PackageDatabase) Builder { return &Recipe{Database: db} }
 
 // Recipe is the "general" reciper for Trees
 type Recipe struct {
 	SourcePath []string
-	Database   pkg.PackageDatabase
+	Database   types.PackageDatabase
 }
 
-func WriteDefinitionFile(p pkg.Package, definitionFilePath string) error {
+func WriteDefinitionFile(p *types.Package, definitionFilePath string) error {
 	data, err := spectooling.NewDefaultPackageSanitized(p).Yaml()
 	if err != nil {
 		return err
@@ -59,7 +60,7 @@ func (r *Recipe) Save(path string) error {
 		dir := filepath.Join(path, p.GetCategory(), p.GetName(), p.GetVersion())
 		os.MkdirAll(dir, os.ModePerm)
 
-		err := WriteDefinitionFile(p, filepath.Join(dir, pkg.PackageDefinitionFile))
+		err := WriteDefinitionFile(p, filepath.Join(dir, types.PackageDefinitionFile))
 		if err != nil {
 			return err
 		}
@@ -91,7 +92,7 @@ func (r *Recipe) Load(path string) error {
 	// the function that handles each file or dir
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
 
-		if info.Name() != pkg.PackageDefinitionFile && info.Name() != pkg.PackageCollectionFile {
+		if info.Name() != types.PackageDefinitionFile && info.Name() != types.PackageCollectionFile {
 			return nil // Skip with no errors
 		}
 
@@ -101,8 +102,8 @@ func (r *Recipe) Load(path string) error {
 		}
 
 		switch info.Name() {
-		case pkg.PackageDefinitionFile:
-			pack, err := pkg.DefaultPackageFromYaml(dat)
+		case types.PackageDefinitionFile:
+			pack, err := types.PackageFromYaml(dat)
 			if err != nil {
 				return errors.Wrap(err, "Error reading yaml "+currentpath)
 			}
@@ -113,8 +114,8 @@ func (r *Recipe) Load(path string) error {
 			if err != nil {
 				return errors.Wrap(err, "Error creating package "+pack.GetName())
 			}
-		case pkg.PackageCollectionFile:
-			packs, err := pkg.DefaultPackagesFromYAML(dat)
+		case types.PackageCollectionFile:
+			packs, err := types.PackagesFromYAML(dat)
 			if err != nil {
 				return errors.Wrap(err, "Error reading yaml "+currentpath)
 			}
@@ -139,6 +140,6 @@ func (r *Recipe) Load(path string) error {
 	return nil
 }
 
-func (r *Recipe) GetDatabase() pkg.PackageDatabase   { return r.Database }
-func (r *Recipe) WithDatabase(d pkg.PackageDatabase) { r.Database = d }
-func (r *Recipe) GetSourcePath() []string            { return r.SourcePath }
+func (r *Recipe) GetDatabase() types.PackageDatabase   { return r.Database }
+func (r *Recipe) WithDatabase(d types.PackageDatabase) { r.Database = d }
+func (r *Recipe) GetSourcePath() []string              { return r.SourcePath }

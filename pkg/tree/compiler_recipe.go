@@ -25,9 +25,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/pkg/errors"
 )
 
@@ -35,17 +35,17 @@ const (
 	CompilerDefinitionFile = "build.yaml"
 )
 
-func NewCompilerRecipe(d pkg.PackageDatabase) Builder {
+func NewCompilerRecipe(d types.PackageDatabase) Builder {
 	return &CompilerRecipe{Recipe: Recipe{Database: d}}
 }
 
-func ReadDefinitionFile(path string) (pkg.DefaultPackage, error) {
-	empty := pkg.DefaultPackage{}
+func ReadDefinitionFile(path string) (types.Package, error) {
+	empty := types.Package{}
 	dat, err := ioutil.ReadFile(path)
 	if err != nil {
 		return empty, errors.Wrap(err, "Error reading file "+path)
 	}
-	pack, err := pkg.DefaultPackageFromYaml(dat)
+	pack, err := types.PackageFromYaml(dat)
 	if err != nil {
 		return empty, errors.Wrap(err, "Error reading yaml "+path)
 	}
@@ -90,12 +90,12 @@ func (r *CompilerRecipe) Load(path string) error {
 			return errors.Wrap(err, "Error on walk path "+currentpath)
 		}
 
-		if info.Name() != pkg.PackageDefinitionFile && info.Name() != pkg.PackageCollectionFile {
+		if info.Name() != types.PackageDefinitionFile && info.Name() != types.PackageCollectionFile {
 			return nil // Skip with no errors
 		}
 
 		switch info.Name() {
-		case pkg.PackageDefinitionFile:
+		case types.PackageDefinitionFile:
 
 			pack, err := ReadDefinitionFile(currentpath)
 			if err != nil {
@@ -115,7 +115,7 @@ func (r *CompilerRecipe) Load(path string) error {
 							filepath.Dir(currentpath))
 				}
 
-				packbuild, err := pkg.DefaultPackageFromYaml([]byte(dat))
+				packbuild, err := types.PackageFromYaml([]byte(dat))
 				if err != nil {
 					return errors.Wrap(err,
 						"Error reading yaml "+CompilerDefinitionFile+" from "+
@@ -130,19 +130,19 @@ func (r *CompilerRecipe) Load(path string) error {
 				return errors.Wrap(err, "Error creating package "+pack.GetName())
 			}
 
-		case pkg.PackageCollectionFile:
+		case types.PackageCollectionFile:
 
 			dat, err := ioutil.ReadFile(currentpath)
 			if err != nil {
 				return errors.Wrap(err, "Error reading file "+currentpath)
 			}
 
-			packs, err := pkg.DefaultPackagesFromYAML(dat)
+			packs, err := types.PackagesFromYAML(dat)
 			if err != nil {
 				return errors.Wrap(err, "Error reading yaml "+currentpath)
 			}
 
-			packsRaw, err := pkg.GetRawPackages(dat)
+			packsRaw, err := types.GetRawPackages(dat)
 			if err != nil {
 				return errors.Wrap(err, "Error reading raw packages from "+currentpath)
 			}
@@ -167,7 +167,7 @@ func (r *CompilerRecipe) Load(path string) error {
 								filepath.Dir(currentpath))
 					}
 
-					packbuild, err := pkg.DefaultPackageFromYaml([]byte(dat))
+					packbuild, err := types.PackageFromYaml([]byte(dat))
 					if err != nil {
 						return errors.Wrap(err,
 							"Error reading yaml "+CompilerDefinitionFile+" from "+
@@ -194,6 +194,6 @@ func (r *CompilerRecipe) Load(path string) error {
 	return nil
 }
 
-func (r *CompilerRecipe) GetDatabase() pkg.PackageDatabase   { return r.Database }
-func (r *CompilerRecipe) WithDatabase(d pkg.PackageDatabase) { r.Database = d }
-func (r *CompilerRecipe) GetSourcePath() []string            { return r.SourcePath }
+func (r *CompilerRecipe) GetDatabase() types.PackageDatabase   { return r.Database }
+func (r *CompilerRecipe) WithDatabase(d types.PackageDatabase) { r.Database = d }
+func (r *CompilerRecipe) GetSourcePath() []string              { return r.SourcePath }

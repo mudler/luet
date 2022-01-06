@@ -20,7 +20,6 @@ import (
 
 	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/compiler/types/compression"
-	"github.com/mudler/luet/pkg/solver"
 )
 
 type Compiler struct {
@@ -66,7 +65,7 @@ func NewDefaultCompiler() *Compiler {
 		Concurrency:         runtime.NumCPU(),
 		OnlyDeps:            false,
 		NoDeps:              false,
-		SolverOptions:       types.LuetSolverOptions{Options: solver.Options{Concurrency: 1, Type: solver.SingleCoreSimple}},
+		SolverOptions:       types.LuetSolverOptions{SolverOptions: types.SolverOptions{Concurrency: 1, Type: types.SolverSingleCoreSimple}},
 	}
 }
 

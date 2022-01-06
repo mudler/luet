@@ -24,8 +24,9 @@ import (
 	"path/filepath"
 
 	"github.com/mudler/luet/pkg/api/core/context"
+	"github.com/mudler/luet/pkg/api/core/types"
+	pkg "github.com/mudler/luet/pkg/database"
 	. "github.com/mudler/luet/pkg/installer"
-	pkg "github.com/mudler/luet/pkg/package"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -34,23 +35,23 @@ import (
 var _ = Describe("System", func() {
 	Context("Files", func() {
 		var s *System
-		var db pkg.PackageDatabase
-		var a, b *pkg.DefaultPackage
+		var db types.PackageDatabase
+		var a, b *types.Package
 		ctx := context.NewContext()
 
 		BeforeEach(func() {
 			db = pkg.NewInMemoryDatabase(false)
 			s = &System{Database: db}
 
-			a = &pkg.DefaultPackage{Name: "test", Version: "1", Category: "t"}
+			a = &types.Package{Name: "test", Version: "1", Category: "t"}
 
 			db.CreatePackage(a)
-			db.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: a.GetFingerPrint(), Files: []string{"foo", "f"}})
+			db.SetPackageFiles(&types.PackageFile{PackageFingerprint: a.GetFingerPrint(), Files: []string{"foo", "f"}})
 
-			b = &pkg.DefaultPackage{Name: "test2", Version: "1", Category: "t"}
+			b = &types.Package{Name: "test2", Version: "1", Category: "t"}
 
 			db.CreatePackage(b)
-			db.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: b.GetFingerPrint(), Files: []string{"barz", "f"}})
+			db.SetPackageFiles(&types.PackageFile{PackageFingerprint: b.GetFingerPrint(), Files: []string{"barz", "f"}})
 		})
 
 		It("detects when are already shipped by other packages", func() {

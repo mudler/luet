@@ -22,26 +22,23 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/mudler/luet/pkg/api/core/config"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-	pkg "github.com/mudler/luet/pkg/package"
-	solver "github.com/mudler/luet/pkg/solver"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
-var AvailableResolvers = strings.Join([]string{solver.QLearningResolverType}, " ")
-
+// LuetLoggingConfig is the config
+// relative to logging of luet
 type LuetLoggingConfig struct {
 	// Path of the logfile
 	Path string `yaml:"path" mapstructure:"path"`
 	// Enable/Disable logging to file
 	EnableLogFile bool `yaml:"enable_logfile" mapstructure:"enable_logfile"`
 	// Enable JSON format logging in file
-	JsonFormat bool `yaml:"json_format" mapstructure:"json_format"`
+	JSONFormat bool `yaml:"json_format" mapstructure:"json_format"`
 
 	// Log level
 	Level string `yaml:"level" mapstructure:"level"`
@@ -55,6 +52,8 @@ type LuetLoggingConfig struct {
 	NoSpinner bool `yaml:"no_spinner" mapstructure:"no_spinner"`
 }
 
+// LuetGeneralConfig is the general configuration structure
+// which applies to all the luet actions
 type LuetGeneralConfig struct {
 	SameOwner       bool `yaml:"same_owner,omitempty" mapstructure:"same_owner"`
 	Concurrency     int  `yaml:"concurrency,omitempty" mapstructure:"concurrency"`
@@ -65,42 +64,25 @@ type LuetGeneralConfig struct {
 	Quiet           bool `yaml:"quiet" mapstructure:"quiet"`
 }
 
+// LuetSolverOptions this is the option struct for the luet solver
 type LuetSolverOptions struct {
-	solver.Options `yaml:"options,omitempty"`
-	Type           string            `yaml:"type,omitempty" mapstructure:"type"`
-	LearnRate      float32           `yaml:"rate,omitempty" mapstructure:"rate"`
-	Discount       float32           `yaml:"discount,omitempty" mapstructure:"discount"`
-	MaxAttempts    int               `yaml:"max_attempts,omitempty" mapstructure:"max_attempts"`
-	Implementation solver.SolverType `yaml:"implementation,omitempty" mapstructure:"implementation"`
+	SolverOptions  `yaml:"options,omitempty"`
+	Type           string     `yaml:"type,omitempty" mapstructure:"type"`
+	LearnRate      float32    `yaml:"rate,omitempty" mapstructure:"rate"`
+	Discount       float32    `yaml:"discount,omitempty" mapstructure:"discount"`
+	MaxAttempts    int        `yaml:"max_attempts,omitempty" mapstructure:"max_attempts"`
+	Implementation SolverType `yaml:"implementation,omitempty" mapstructure:"implementation"`
 }
 
-func (opts LuetSolverOptions) ResolverIsSet() bool {
-	switch opts.Type {
-	case solver.QLearningResolverType:
-		return true
-	default:
-		return false
-	}
-}
-
-func (opts LuetSolverOptions) Resolver() solver.PackageResolver {
-	switch opts.Type {
-	case solver.QLearningResolverType:
-		if opts.LearnRate != 0.0 {
-			return solver.NewQLearningResolver(opts.LearnRate, opts.Discount, opts.MaxAttempts, 999999)
-
-		}
-		return solver.SimpleQLearningSolver()
-	}
-
-	return &solver.Explainer{}
-}
-
+// CompactString returns a compact string to display solver options over CLI
 func (opts *LuetSolverOptions) CompactString() string {
 	return fmt.Sprintf("type: %s rate: %f, discount: %f, attempts: %d, initialobserved: %d",
 		opts.Type, opts.LearnRate, opts.Discount, opts.MaxAttempts, 999999)
 }
 
+// LuetSystemConfig is the system configuration.
+// Typically this represent a host system that is about to perform
+// operations on a Rootfs. Note all the fields needs to be in absolute form.
 type LuetSystemConfig struct {
 	DatabaseEngine string `yaml:"database_engine" mapstructure:"database_engine"`
 	DatabasePath   string `yaml:"database_path" mapstructure:"database_path"`
@@ -153,8 +135,10 @@ func (s *LuetSystemConfig) setRootfs() error {
 	return nil
 }
 
-func (sc LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
-	dbpath := filepath.Join(sc.DatabasePath, "repos/"+name)
+// GetRepoDatabaseDirPath is synatx sugar to return the repository path given
+// a repository name in the system target
+func (s LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
+	dbpath := filepath.Join(s.DatabasePath, "repos/"+name)
 	err := os.MkdirAll(dbpath, os.ModePerm)
 	if err != nil {
 		panic(err)
@@ -162,41 +146,49 @@ func (sc LuetSystemConfig) GetRepoDatabaseDirPath(name string) string {
 	return dbpath
 }
 
-func (sc *LuetSystemConfig) setDBPath() error {
-	dbpath := filepath.Join(sc.Rootfs,
-		sc.DatabasePath)
+func (s *LuetSystemConfig) setDBPath() error {
+	dbpath := filepath.Join(
+		s.Rootfs,
+		s.DatabasePath,
+	)
 	err := os.MkdirAll(dbpath, os.ModePerm)
 	if err != nil {
 		return err
 	}
-	sc.DatabasePath = dbpath
+	s.DatabasePath = dbpath
 	return nil
 }
 
-func (sc *LuetSystemConfig) setCachePath() {
+func (s *LuetSystemConfig) setCachePath() {
 	var cachepath string
-	if sc.PkgsCachePath != "" {
+	if s.PkgsCachePath != "" {
 		if !filepath.IsAbs(cachepath) {
-			cachepath = filepath.Join(sc.DatabasePath, sc.PkgsCachePath)
+			cachepath = filepath.Join(s.DatabasePath, s.PkgsCachePath)
 			os.MkdirAll(cachepath, os.ModePerm)
 		} else {
-			cachepath = sc.PkgsCachePath
+			cachepath = s.PkgsCachePath
 		}
 	} else {
 		// Create dynamic cache for test suites
 		cachepath, _ = ioutil.TempDir(os.TempDir(), "cachepkgs")
 	}
 
-	sc.PkgsCachePath = cachepath // Be consistent with the path we set
+	s.PkgsCachePath = cachepath // Be consistent with the path we set
 }
 
+// FinalizerEnv represent a K/V environment to be set
+// while running a package finalizer
 type FinalizerEnv struct {
 	Key   string `json:"key" yaml:"key" mapstructure:"key"`
 	Value string `json:"value" yaml:"value" mapstructure:"value"`
 }
 
+// Finalizers are a slice of K/V environments to set
+// while running package finalizers
 type Finalizers []FinalizerEnv
 
+// Slice returns the finalizers as a string slice in
+// k=v form.
 func (f Finalizers) Slice() (sl []string) {
 	for _, kv := range f {
 		sl = append(sl, fmt.Sprintf("%s=%s", kv.Key, kv.Value))
@@ -204,6 +196,9 @@ func (f Finalizers) Slice() (sl []string) {
 	return
 }
 
+// LuetConfig is the general structure which holds
+// all the configuration fields.
+// It includes, Logging, General, System and Solver sub configurations.
 type LuetConfig struct {
 	Logging LuetLoggingConfig `yaml:"logging,omitempty" mapstructure:"logging"`
 	General LuetGeneralConfig `yaml:"general,omitempty" mapstructure:"general"`
@@ -221,20 +216,13 @@ type LuetConfig struct {
 	ConfigProtectConfFiles []config.ConfigProtectConfFile `yaml:"-" mapstructure:"-"`
 }
 
-func (c *LuetConfig) GetSystemDB() pkg.PackageDatabase {
-	switch c.System.DatabaseEngine {
-	case "boltdb":
-		return pkg.NewBoltDatabase(
-			filepath.Join(c.System.DatabasePath, "luet.db"))
-	default:
-		return pkg.NewInMemoryDatabase(true)
-	}
-}
-
+// AddSystemRepository is just syntax sugar to add a repository in the system set
 func (c *LuetConfig) AddSystemRepository(r LuetRepository) {
 	c.SystemRepositories = append(c.SystemRepositories, r)
 }
 
+// SetFinalizerEnv sets a k,v couple among the finalizers
+// It ensures that the key is unique, and if set again it gets updated
 func (c *LuetConfig) SetFinalizerEnv(k, v string) {
 	keyPresent := false
 	envs := []FinalizerEnv{}
@@ -254,6 +242,7 @@ func (c *LuetConfig) SetFinalizerEnv(k, v string) {
 	c.FinalizerEnvs = envs
 }
 
+// YAML returns the config in yaml format
 func (c *LuetConfig) YAML() ([]byte, error) {
 	return yaml.Marshal(c)
 }
@@ -313,8 +302,10 @@ func (c *LuetConfig) loadRepositories() error {
 	return nil
 }
 
+// GetSystemRepository retrieve the system repository inside the configuration
+// Note, the configuration needs to be loaded first.
 func (c *LuetConfig) GetSystemRepository(name string) (*LuetRepository, error) {
-	var ans *LuetRepository = nil
+	var ans *LuetRepository
 
 	for idx, repo := range c.SystemRepositories {
 		if repo.Name == name {

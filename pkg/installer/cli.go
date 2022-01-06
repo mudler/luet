@@ -20,11 +20,11 @@ import (
 	"sort"
 	"strings"
 
-	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/pterm/pterm"
 )
 
-func packsToList(p pkg.Packages) string {
+func packsToList(p types.Packages) string {
 	var packs []string
 
 	for _, pp := range p {
@@ -35,7 +35,7 @@ func packsToList(p pkg.Packages) string {
 	return strings.Join(packs, " ")
 }
 
-func printList(p pkg.Packages) {
+func printList(p types.Packages) {
 	fmt.Println()
 	d := pterm.TableData{{"Program Name", "Version", "License"}}
 	for _, m := range p {
@@ -47,7 +47,7 @@ func printList(p pkg.Packages) {
 	fmt.Println()
 }
 
-func printUpgradeList(install, uninstall pkg.Packages) {
+func printUpgradeList(install, uninstall types.Packages) {
 	fmt.Println()
 
 	d := pterm.TableData{{"Old version", "New version", "License"}}
@@ -72,8 +72,8 @@ func printUpgradeList(install, uninstall pkg.Packages) {
 
 }
 
-func printMatchUpgrade(artefacts map[string]ArtifactMatch, uninstall pkg.Packages) {
-	p := pkg.Packages{}
+func printMatchUpgrade(artefacts map[string]ArtifactMatch, uninstall types.Packages) {
+	p := types.Packages{}
 
 	for _, a := range artefacts {
 		p = append(p, a.Package)

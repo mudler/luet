@@ -25,7 +25,7 @@ import (
 	installer "github.com/mudler/luet/pkg/installer"
 
 	//	. "github.com/mudler/luet/pkg/logger"
-	pkg "github.com/mudler/luet/pkg/package"
+	pkg "github.com/mudler/luet/pkg/database"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

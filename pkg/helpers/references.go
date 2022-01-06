@@ -1,5 +1,4 @@
-// Copyright © 2019-2020 Ettore Di Giacinto <mudler@gentoo.org>
-//                       David Cassany <dcassany@suse.com>
+// Copyright © 2019-2022 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,17 +17,7 @@ package helpers
 
 import (
 	"strings"
-
-	"github.com/asaskevich/govalidator"
 )
-
-func StripRegistryFromImage(image string) string {
-	img := strings.SplitN(image, "/", 2)
-	if len(img) == 2 && govalidator.IsURL(img[0]) {
-		return img[1]
-	}
-	return image
-}
 
 func SanitizeImageString(s string) string {
 	return strings.ReplaceAll(s, "+", "-")

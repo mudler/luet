@@ -16,6 +16,8 @@
 package backend_test
 
 import (
+	"github.com/mudler/luet/pkg/api/core/types"
+
 	"github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
@@ -26,7 +28,7 @@ import (
 	"os"
 	"path/filepath"
 
-	pkg "github.com/mudler/luet/pkg/package"
+	pkg "github.com/mudler/luet/pkg/database"
 	"github.com/mudler/luet/pkg/tree"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -44,7 +46,7 @@ var _ = Describe("Docker backend", func() {
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
 			cc := NewLuetCompiler(nil, generalRecipe.GetDatabase())
-			lspec, err := cc.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
+			lspec, err := cc.FromPackage(&types.Package{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(lspec.Steps).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))

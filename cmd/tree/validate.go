@@ -25,10 +25,12 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/mudler/luet/pkg/api/core/types"
+
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
 
-	pkg "github.com/mudler/luet/pkg/package"
+	pkg "github.com/mudler/luet/pkg/database"
 	"github.com/mudler/luet/pkg/solver"
 	tree "github.com/mudler/luet/pkg/tree"
 
@@ -77,21 +79,21 @@ func (o *ValidateOpts) AddError(err error) {
 	o.Errors = append(o.Errors, err)
 }
 
-func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, reciper tree.Builder, cacheDeps *pkg.InMemoryDatabase) error {
+func validatePackage(p *types.Package, checkType string, opts *ValidateOpts, reciper tree.Builder, cacheDeps *pkg.InMemoryDatabase) error {
 	var errstr string
 	var ans error
 
-	var depSolver solver.PackageSolver
+	var depSolver types.PackageSolver
 
 	if opts.WithSolver {
 		emptyInstallationDb := pkg.NewInMemoryDatabase(false)
-		depSolver = solver.NewSolver(solver.Options{Type: solver.SingleCoreSimple}, pkg.NewInMemoryDatabase(false),
+		depSolver = solver.NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple}, pkg.NewInMemoryDatabase(false),
 			reciper.GetDatabase(),
 			emptyInstallationDb)
 	}
 
 	found, err := reciper.GetDatabase().FindPackages(
-		&pkg.DefaultPackage{
+		&types.Package{
 			Name:     p.GetName(),
 			Category: p.GetCategory(),
 			Version:  ">=0",
@@ -122,7 +124,7 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 
 	// Ensure that we use the right package from right recipier for deps
 	pReciper, err := reciper.GetDatabase().FindPackage(
-		&pkg.DefaultPackage{
+		&types.Package{
 			Name:     p.GetName(),
 			Category: p.GetCategory(),
 			Version:  p.GetVersion(),
@@ -181,11 +183,11 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 	all = append(all, p.GetConflicts()...)
 	for idx, r := range all {
 
-		var deps pkg.Packages
+		var deps types.Packages
 		var err error
 		if r.IsSelector() {
 			deps, err = reciper.GetDatabase().FindPackages(
-				&pkg.DefaultPackage{
+				&types.Package{
 					Name:     r.GetName(),
 					Category: r.GetCategory(),
 					Version:  r.GetVersion(),
@@ -242,7 +244,7 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 				}
 
 				util.DefaultContext.Spinner()
-				solution, err := depSolver.Install(pkg.Packages{r})
+				solution, err := depSolver.Install(types.Packages{r})
 				ass := solution.SearchByName(r.GetPackageName())
 				util.DefaultContext.SpinnerStop()
 				if err == nil {
@@ -309,7 +311,7 @@ func validatePackage(p pkg.Package, checkType string, opts *ValidateOpts, recipe
 
 func validateWorker(i int,
 	wg *sync.WaitGroup,
-	c <-chan pkg.Package,
+	c <-chan *types.Package,
 	opts *ValidateOpts) {
 
 	defer wg.Done()
@@ -443,7 +445,7 @@ func NewTreeValidateCommand() *cobra.Command {
 				reciper = opts.RuntimeReciper
 			}
 
-			all := make(chan pkg.Package)
+			all := make(chan *types.Package)
 
 			var wg = new(sync.WaitGroup)
 

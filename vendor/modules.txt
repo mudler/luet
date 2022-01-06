@@ -44,9 +44,6 @@ github.com/Microsoft/hcsshim/pkg/ociwclayer
 # github.com/Sabayon/pkgs-checker v0.8.4
 ## explicit
 github.com/Sabayon/pkgs-checker/pkg/gentoo
-# github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
-## explicit
-github.com/asaskevich/govalidator
 # github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 ## explicit
 github.com/asdine/storm

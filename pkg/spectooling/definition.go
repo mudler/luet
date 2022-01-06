@@ -17,19 +17,19 @@
 package spectooling
 
 import (
-	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/api/core/types"
 
 	"gopkg.in/yaml.v2"
 )
 
-type DefaultPackageSanitized struct {
-	Name             string                     `json:"name" yaml:"name"`
-	Version          string                     `json:"version" yaml:"version"`
-	Category         string                     `json:"category" yaml:"category"`
-	UseFlags         []string                   `json:"use_flags,omitempty" yaml:"use_flags,omitempty"`
-	PackageRequires  []*DefaultPackageSanitized `json:"requires,omitempty" yaml:"requires,omitempty"`
-	PackageConflicts []*DefaultPackageSanitized `json:"conflicts,omitempty" yaml:"conflicts,omitempty"`
-	Provides         []*DefaultPackageSanitized `json:"provides,omitempty" yaml:"provides,omitempty"`
+type PackageSanitized struct {
+	Name             string              `json:"name" yaml:"name"`
+	Version          string              `json:"version" yaml:"version"`
+	Category         string              `json:"category" yaml:"category"`
+	UseFlags         []string            `json:"use_flags,omitempty" yaml:"use_flags,omitempty"`
+	PackageRequires  []*PackageSanitized `json:"requires,omitempty" yaml:"requires,omitempty"`
+	PackageConflicts []*PackageSanitized `json:"conflicts,omitempty" yaml:"conflicts,omitempty"`
+	Provides         []*PackageSanitized `json:"provides,omitempty" yaml:"provides,omitempty"`
 
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 
@@ -44,16 +44,26 @@ type DefaultPackageSanitized struct {
 	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
 }
 
-func NewDefaultPackageSanitizedFromYaml(data []byte) (*DefaultPackageSanitized, error) {
-	ans := &DefaultPackageSanitized{}
+func NewDefaultPackageSanitizedFromYaml(data []byte) (*PackageSanitized, error) {
+	ans := &PackageSanitized{}
 	if err := yaml.Unmarshal(data, ans); err != nil {
 		return nil, err
 	}
 	return ans, nil
 }
 
-func NewDefaultPackageSanitized(p pkg.Package) *DefaultPackageSanitized {
-	ans := &DefaultPackageSanitized{
+func NewDefaultPackageSanitized(p *types.Package) (ans *PackageSanitized) {
+
+	ann := map[string]string{}
+	if len(p.Annotations) == 0 {
+		ann = nil
+	} else {
+		for k, v := range p.Annotations {
+			ann[string(k)] = v
+		}
+	}
+
+	ans = &PackageSanitized{
 		Name:        p.GetName(),
 		Version:     p.GetVersion(),
 		Category:    p.GetCategory(),
@@ -64,15 +74,15 @@ func NewDefaultPackageSanitized(p pkg.Package) *DefaultPackageSanitized {
 		Uri:         p.GetURI(),
 		License:     p.GetLicense(),
 		Labels:      p.GetLabels(),
-		Annotations: p.GetAnnotations(),
+		Annotations: ann,
 	}
 
 	if p.GetRequires() != nil && len(p.GetRequires()) > 0 {
-		ans.PackageRequires = []*DefaultPackageSanitized{}
+		ans.PackageRequires = []*PackageSanitized{}
 		for _, r := range p.GetRequires() {
 			// I avoid recursive call of NewDefaultPackageSanitized
 			ans.PackageRequires = append(ans.PackageRequires,
-				&DefaultPackageSanitized{
+				&PackageSanitized{
 					Name:     r.Name,
 					Version:  r.Version,
 					Category: r.Category,
@@ -83,11 +93,11 @@ func NewDefaultPackageSanitized(p pkg.Package) *DefaultPackageSanitized {
 	}
 
 	if p.GetConflicts() != nil && len(p.GetConflicts()) > 0 {
-		ans.PackageConflicts = []*DefaultPackageSanitized{}
+		ans.PackageConflicts = []*PackageSanitized{}
 		for _, c := range p.GetConflicts() {
 			// I avoid recursive call of NewDefaultPackageSanitized
 			ans.PackageConflicts = append(ans.PackageConflicts,
-				&DefaultPackageSanitized{
+				&PackageSanitized{
 					Name:     c.Name,
 					Version:  c.Version,
 					Category: c.Category,
@@ -98,11 +108,11 @@ func NewDefaultPackageSanitized(p pkg.Package) *DefaultPackageSanitized {
 	}
 
 	if p.GetProvides() != nil && len(p.GetProvides()) > 0 {
-		ans.Provides = []*DefaultPackageSanitized{}
+		ans.Provides = []*PackageSanitized{}
 		for _, prov := range p.GetProvides() {
 			// I avoid recursive call of NewDefaultPackageSanitized
 			ans.Provides = append(ans.Provides,
-				&DefaultPackageSanitized{
+				&PackageSanitized{
 					Name:     prov.Name,
 					Version:  prov.Version,
 					Category: prov.Category,
@@ -112,14 +122,14 @@ func NewDefaultPackageSanitized(p pkg.Package) *DefaultPackageSanitized {
 		}
 	}
 
-	return ans
+	return
 }
 
-func (p *DefaultPackageSanitized) Yaml() ([]byte, error) {
+func (p PackageSanitized) Yaml() ([]byte, error) {
 	return yaml.Marshal(p)
 }
 
-func (p *DefaultPackageSanitized) Clone() (*DefaultPackageSanitized, error) {
+func (p PackageSanitized) Clone() (*PackageSanitized, error) {
 	data, err := p.Yaml()
 	if err != nil {
 		return nil, err

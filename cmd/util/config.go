@@ -115,7 +115,7 @@ func InitContext(cmd *cobra.Command) (ctx *context.Context, err error) {
 	finalizerEnvs, _ := cmd.Flags().GetStringArray("finalizer-env")
 	setCliFinalizerEnvs(c, finalizerEnvs)
 
-	c.Solver.Options = solver.Options{Type: solver.SingleCoreSimple, Concurrency: c.General.Concurrency}
+	c.Solver.SolverOptions = types.SolverOptions{Type: types.SolverSingleCoreSimple, Concurrency: c.General.Concurrency}
 
 	ctx = context.NewContext(
 		context.WithConfig(c),
@@ -187,7 +187,7 @@ func initContext(cmd *cobra.Command, c *context.Context) (err error) {
 
 	if c.Config.Logging.EnableLogFile && c.Config.Logging.Path != "" {
 		f := "console"
-		if c.Config.Logging.JsonFormat {
+		if c.Config.Logging.JSONFormat {
 			f = "json"
 		}
 		opts = append(opts, logger.WithFileLogging(c.Config.Logging.Path, f))
@@ -274,7 +274,7 @@ func InitViper(RootCmd *cobra.Command) {
 	pflags.String("system-target", "", "System rootpath")
 	pflags.String("system-engine", "", "System DB engine")
 
-	pflags.String("solver-type", "", "Solver strategy ( Defaults none, available: "+types.AvailableResolvers+" )")
+	pflags.String("solver-type", "", "Solver strategy ( Defaults none, available: "+solver.AvailableResolvers+" )")
 	pflags.Float32("solver-rate", 0.7, "Solver learning rate")
 	pflags.Float32("solver-discount", 1.0, "Solver discount rate")
 	pflags.Int("solver-attempts", 9000, "Solver maximum attempts")

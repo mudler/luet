@@ -20,8 +20,6 @@ import (
 
 	"github.com/mudler/luet/pkg/api/core/types"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
-	pkg "github.com/mudler/luet/pkg/package"
-	"github.com/mudler/luet/pkg/solver"
 	"github.com/pkg/errors"
 )
 
@@ -31,7 +29,7 @@ import (
 // It is responsible of returning a concrete result
 // which identifies a Package in a HashTree
 type ImageHashTree struct {
-	Database      pkg.PackageDatabase
+	Database      types.PackageDatabase
 	SolverOptions types.LuetSolverOptions
 }
 
@@ -42,21 +40,21 @@ type ImageHashTree struct {
 // and the specfile signatures. This guarantees that each image of the build stage
 // is unique and can be identified later on.
 type PackageImageHashTree struct {
-	Target                       *solver.PackageAssert
-	Dependencies                 solver.PackagesAssertions
-	Solution                     solver.PackagesAssertions
+	Target                       *types.PackageAssert
+	Dependencies                 types.PackagesAssertions
+	Solution                     types.PackagesAssertions
 	dependencyBuilderImageHashes map[string]string
 	SourceHash                   string
 	BuilderImageHash             string
 }
 
-func NewHashTree(db pkg.PackageDatabase) *ImageHashTree {
+func NewHashTree(db types.PackageDatabase) *ImageHashTree {
 	return &ImageHashTree{
 		Database: db,
 	}
 }
 
-func (ht *PackageImageHashTree) DependencyBuildImage(p pkg.Package) (string, error) {
+func (ht *PackageImageHashTree) DependencyBuildImage(p *types.Package) (string, error) {
 	found, ok := ht.dependencyBuilderImageHashes[p.GetFingerPrint()]
 	if !ok {
 		return "", errors.New("package hash not found")
@@ -122,7 +120,7 @@ func (ht *ImageHashTree) genBuilderImageTag(p *compilerspec.LuetCompilationSpec,
 
 // resolve computes the dependency tree of a compilation spec and returns solver assertions
 // in order to be able to compile the spec.
-func (ht *ImageHashTree) resolve(cs *LuetCompiler, p *compilerspec.LuetCompilationSpec) (solver.PackagesAssertions, error) {
+func (ht *ImageHashTree) resolve(cs *LuetCompiler, p *compilerspec.LuetCompilationSpec) (types.PackagesAssertions, error) {
 	dependencies, err := cs.ComputeDepTree(p)
 	if err != nil {
 		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().HumanReadableString())
@@ -144,11 +142,11 @@ func (ht *ImageHashTree) resolve(cs *LuetCompiler, p *compilerspec.LuetCompilati
 		}
 	}
 
-	assertions := solver.PackagesAssertions{}
+	assertions := types.PackagesAssertions{}
 	for _, assertion := range dependencies { //highly dependent on the order
 		if assertion.Value {
 			nthsolution := dependencies.Cut(assertion.Package)
-			assertion.Hash = solver.PackageHash{
+			assertion.Hash = types.PackageHash{
 				BuildHash:   nthsolution.SaltedHashFrom(assertion.Package, salts),
 				PackageHash: nthsolution.SaltedAssertionHash(salts),
 			}

@@ -15,16 +15,14 @@
 
 package tree
 
-import (
-	pkg "github.com/mudler/luet/pkg/package"
-)
+import "github.com/mudler/luet/pkg/api/core/types"
 
 // reads a luet tree and generates the package lists
 type Builder interface {
 	Save(string) error // A tree might be saved to a folder structure (human editable)
 	Load(string) error // A tree might be loaded from a db (e.g. bolt) and written to folder
-	GetDatabase() pkg.PackageDatabase
-	WithDatabase(d pkg.PackageDatabase)
+	GetDatabase() types.PackageDatabase
+	WithDatabase(d types.PackageDatabase)
 
 	GetSourcePath() []string
 }

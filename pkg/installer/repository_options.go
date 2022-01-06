@@ -18,7 +18,6 @@ package installer
 import (
 	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/compiler"
-	pkg "github.com/mudler/luet/pkg/package"
 )
 
 type RepositoryOption func(cfg *RepositoryConfig) error
@@ -29,7 +28,7 @@ type RepositoryConfig struct {
 	Priority                int
 	Src                     string
 	Tree                    []string
-	DB                      pkg.PackageDatabase
+	DB                      types.PackageDatabase
 	CompilerBackend         compiler.CompilerBackend
 	ImagePrefix             string
 
@@ -58,7 +57,7 @@ func WithContext(c types.Context) func(cfg *RepositoryConfig) error {
 	}
 }
 
-func WithDatabase(b pkg.PackageDatabase) func(cfg *RepositoryConfig) error {
+func WithDatabase(b types.PackageDatabase) func(cfg *RepositoryConfig) error {
 	return func(cfg *RepositoryConfig) error {
 		cfg.DB = b
 		return nil

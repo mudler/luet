@@ -13,12 +13,14 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package pkg_test
+package types_test
 
 import (
 	"regexp"
 
-	. "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/api/core/types"
+
+	. "github.com/mudler/luet/pkg/database"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -26,12 +28,12 @@ import (
 var _ = Describe("Package", func() {
 
 	Context("Encoding/Decoding", func() {
-		a := &DefaultPackage{Name: "test", Version: "1", Category: "t"}
-		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a := &types.Package{Name: "test", Version: "1", Category: "t"}
+		a1 := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
 
 		It("Encodes and decodes correctly", func() {
 			Expect(a.String()).ToNot(Equal(""))
-			p := FromString(a.String())
+			p := types.PackageFromString(a.String())
 			Expect(p).To(Equal(a))
 		})
 
@@ -42,14 +44,14 @@ var _ = Describe("Package", func() {
 	})
 
 	Context("Simple package", func() {
-		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
-		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-		a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-		a01 := NewPackage("A", "0.1", []*DefaultPackage{}, []*DefaultPackage{})
+		a := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
+		a1 := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+		a11 := types.NewPackage("A", "1.1", []*types.Package{}, []*types.Package{})
+		a01 := types.NewPackage("A", "0.1", []*types.Package{}, []*types.Package{})
 		re := regexp.MustCompile("project[0-9][=].*")
 		It("Expands correctly", func() {
 			definitions := NewInMemoryDatabase(false)
-			for _, p := range []Package{a1, a11, a01} {
+			for _, p := range []*types.Package{a1, a11, a01} {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -68,26 +70,26 @@ var _ = Describe("Package", func() {
 
 	Context("ImageID", func() {
 		It("Returns a correct ImageID escaping unsupported chars", func() {
-			p := NewPackage("A", "1.0+p1", []*DefaultPackage{}, []*DefaultPackage{})
+			p := types.NewPackage("A", "1.0+p1", []*types.Package{}, []*types.Package{})
 			Expect(p.ImageID()).To(Equal("A--1.0-p1"))
 		})
 		It("Returns a correct ImageID", func() {
-			p := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+			p := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
 			Expect(p.ImageID()).To(Equal("A--1.0"))
 		})
 	})
 
 	Context("Find label on packages", func() {
-		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
 		a.AddLabel("project1", "test1")
 		a.AddLabel("label2", "value1")
-		b := NewPackage("B", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		b := types.NewPackage("B", "1.0", []*types.Package{}, []*types.Package{})
 		b.AddLabel("project2", "test2")
 		b.AddLabel("label2", "value1")
 		It("Expands correctly", func() {
 			var err error
 			definitions := NewInMemoryDatabase(false)
-			for _, p := range []Package{a, b} {
+			for _, p := range []*types.Package{a, b} {
 				_, err = definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -106,35 +108,40 @@ var _ = Describe("Package", func() {
 	})
 
 	Context("Find annotations on packages", func() {
-		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
 		a.AddAnnotation("project1", "test1")
 		a.AddAnnotation("label2", "value1")
-		b := NewPackage("B", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		b := types.NewPackage("B", "1.0", []*types.Package{}, []*types.Package{})
 		b.AddAnnotation("project2", "test2")
-		b.AddAnnotation("label2", "value1")
+		b.AddAnnotation("label2", "value2")
 		It("Expands correctly", func() {
 			var err error
 			definitions := NewInMemoryDatabase(false)
-			for _, p := range []Package{a, b} {
+			for _, p := range []*types.Package{a, b} {
 				_, err = definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
 			re := regexp.MustCompile("project[0-9][=].*")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(re).ToNot(BeNil())
-			Expect(a.HasAnnotation("label2")).To(Equal(true))
-			Expect(a.HasAnnotation("label3")).To(Equal(false))
-			Expect(a.HasAnnotation("project1")).To(Equal(true))
-			Expect(b.HasAnnotation("project2")).To(Equal(true))
-			Expect(b.HasAnnotation("label2")).To(Equal(true))
+
+			Expect(a.Annotations).To(Equal(map[types.PackageAnnotation]string{
+				types.PackageAnnotation("project1"): "test1",
+				types.PackageAnnotation("label2"):   "value1",
+			}))
+
+			Expect(b.Annotations).To(Equal(map[types.PackageAnnotation]string{
+				types.PackageAnnotation("project2"): "test2",
+				types.PackageAnnotation("label2"):   "value2",
+			}))
+
 			Expect(b.MatchAnnotation(re)).To(Equal(true))
 			Expect(a.MatchAnnotation(re)).To(Equal(true))
-
 		})
 	})
 
 	Context("Check description", func() {
-		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
 		a.SetDescription("Description A")
 
 		It("Set and get correctly a description", func() {
@@ -143,7 +150,7 @@ var _ = Describe("Package", func() {
 	})
 
 	Context("Check licenses", func() {
-		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
 		a.SetLicense("MIT")
 
 		It("Set and get correctly a license", func() {
@@ -152,7 +159,7 @@ var _ = Describe("Package", func() {
 	})
 
 	Context("Check URI", func() {
-		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
 		a.AddURI("ftp://ftp.freeradius.org/pub/radius/freearadius-server-3.0.20.tar.gz")
 
 		It("Set and get correctly an uri", func() {
@@ -163,13 +170,13 @@ var _ = Describe("Package", func() {
 	})
 
 	Context("revdeps", func() {
-		a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-		b := NewPackage("B", "1.0", []*DefaultPackage{a}, []*DefaultPackage{})
-		c := NewPackage("C", "1.1", []*DefaultPackage{b}, []*DefaultPackage{})
-		d := NewPackage("D", "0.1", []*DefaultPackage{}, []*DefaultPackage{})
+		a := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+		b := types.NewPackage("B", "1.0", []*types.Package{a}, []*types.Package{})
+		c := types.NewPackage("C", "1.1", []*types.Package{b}, []*types.Package{})
+		d := types.NewPackage("D", "0.1", []*types.Package{}, []*types.Package{})
 		It("Computes correctly", func() {
 			definitions := NewInMemoryDatabase(false)
-			for _, p := range []Package{a, b, c, d} {
+			for _, p := range []*types.Package{a, b, c, d} {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -181,15 +188,15 @@ var _ = Describe("Package", func() {
 	})
 
 	Context("revdeps", func() {
-		a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-		b := NewPackage("B", "1.0", []*DefaultPackage{a}, []*DefaultPackage{})
-		c := NewPackage("C", "1.1", []*DefaultPackage{b}, []*DefaultPackage{})
-		d := NewPackage("D", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
-		e := NewPackage("E", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
+		a := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+		b := types.NewPackage("B", "1.0", []*types.Package{a}, []*types.Package{})
+		c := types.NewPackage("C", "1.1", []*types.Package{b}, []*types.Package{})
+		d := types.NewPackage("D", "0.1", []*types.Package{c}, []*types.Package{})
+		e := types.NewPackage("E", "0.1", []*types.Package{c}, []*types.Package{})
 
 		It("Computes correctly", func() {
 			definitions := NewInMemoryDatabase(false)
-			for _, p := range []Package{a, b, c, d, e} {
+			for _, p := range []*types.Package{a, b, c, d, e} {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -202,15 +209,15 @@ var _ = Describe("Package", func() {
 	})
 
 	Context("revdeps", func() {
-		a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-		b := NewPackage("B", "1.0", []*DefaultPackage{&DefaultPackage{Name: "A", Version: ">=1.0"}}, []*DefaultPackage{})
-		c := NewPackage("C", "1.1", []*DefaultPackage{&DefaultPackage{Name: "B", Version: ">=1.0"}}, []*DefaultPackage{})
-		d := NewPackage("D", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
-		e := NewPackage("E", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
+		a := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+		b := types.NewPackage("B", "1.0", []*types.Package{&types.Package{Name: "A", Version: ">=1.0"}}, []*types.Package{})
+		c := types.NewPackage("C", "1.1", []*types.Package{&types.Package{Name: "B", Version: ">=1.0"}}, []*types.Package{})
+		d := types.NewPackage("D", "0.1", []*types.Package{c}, []*types.Package{})
+		e := types.NewPackage("E", "0.1", []*types.Package{c}, []*types.Package{})
 
 		It("doesn't resolve selectors", func() {
 			definitions := NewInMemoryDatabase(false)
-			for _, p := range []Package{a, b, c, d, e} {
+			for _, p := range []*types.Package{a, b, c, d, e} {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -219,15 +226,15 @@ var _ = Describe("Package", func() {
 		})
 	})
 	Context("Expandedrevdeps", func() {
-		a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-		b := NewPackage("B", "1.0", []*DefaultPackage{&DefaultPackage{Name: "A", Version: ">=1.0"}}, []*DefaultPackage{})
-		c := NewPackage("C", "1.1", []*DefaultPackage{&DefaultPackage{Name: "B", Version: ">=1.0"}}, []*DefaultPackage{})
-		d := NewPackage("D", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
-		e := NewPackage("E", "0.1", []*DefaultPackage{c}, []*DefaultPackage{})
+		a := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+		b := types.NewPackage("B", "1.0", []*types.Package{{Name: "A", Version: ">=1.0"}}, []*types.Package{})
+		c := types.NewPackage("C", "1.1", []*types.Package{{Name: "B", Version: ">=1.0"}}, []*types.Package{})
+		d := types.NewPackage("D", "0.1", []*types.Package{c}, []*types.Package{})
+		e := types.NewPackage("E", "0.1", []*types.Package{c}, []*types.Package{})
 
 		It("Computes correctly", func() {
 			definitions := NewInMemoryDatabase(false)
-			for _, p := range []Package{a, b, c, d, e} {
+			for _, p := range []*types.Package{a, b, c, d, e} {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -241,15 +248,15 @@ var _ = Describe("Package", func() {
 	})
 
 	Context("Expandedrevdeps", func() {
-		a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-		b := NewPackage("B", "1.0", []*DefaultPackage{&DefaultPackage{Name: "A", Version: ">=1.0"}}, []*DefaultPackage{})
-		c := NewPackage("C", "1.1", []*DefaultPackage{&DefaultPackage{Name: "B", Version: ">=1.0"}}, []*DefaultPackage{})
-		d := NewPackage("D", "0.1", []*DefaultPackage{&DefaultPackage{Name: "C", Version: ">=1.0"}}, []*DefaultPackage{})
-		e := NewPackage("E", "0.1", []*DefaultPackage{&DefaultPackage{Name: "C", Version: ">=1.0"}}, []*DefaultPackage{})
+		a := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+		b := types.NewPackage("B", "1.0", []*types.Package{&types.Package{Name: "A", Version: ">=1.0"}}, []*types.Package{})
+		c := types.NewPackage("C", "1.1", []*types.Package{&types.Package{Name: "B", Version: ">=1.0"}}, []*types.Package{})
+		d := types.NewPackage("D", "0.1", []*types.Package{&types.Package{Name: "C", Version: ">=1.0"}}, []*types.Package{})
+		e := types.NewPackage("E", "0.1", []*types.Package{&types.Package{Name: "C", Version: ">=1.0"}}, []*types.Package{})
 
 		It("Computes correctly", func() {
 			definitions := NewInMemoryDatabase(false)
-			for _, p := range []Package{a, b, c, d, e} {
+			for _, p := range []*types.Package{a, b, c, d, e} {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -265,15 +272,15 @@ var _ = Describe("Package", func() {
 	})
 
 	Context("Expandedrevdeps", func() {
-		a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-		b := NewPackage("B", "1.0", []*DefaultPackage{&DefaultPackage{Name: "A", Version: ">=1.0"}}, []*DefaultPackage{})
-		c := NewPackage("C", "1.1", []*DefaultPackage{&DefaultPackage{Name: "B", Version: ">=1.0"}, &DefaultPackage{Name: "A", Version: ">=0"}}, []*DefaultPackage{})
-		d := NewPackage("D", "0.1", []*DefaultPackage{&DefaultPackage{Name: "C", Version: ">=1.0"}}, []*DefaultPackage{})
-		e := NewPackage("E", "0.1", []*DefaultPackage{&DefaultPackage{Name: "C", Version: ">=1.0"}}, []*DefaultPackage{})
+		a := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+		b := types.NewPackage("B", "1.0", []*types.Package{{Name: "A", Version: ">=1.0"}}, []*types.Package{})
+		c := types.NewPackage("C", "1.1", []*types.Package{{Name: "B", Version: ">=1.0"}, &types.Package{Name: "A", Version: ">=0"}}, []*types.Package{})
+		d := types.NewPackage("D", "0.1", []*types.Package{{Name: "C", Version: ">=1.0"}}, []*types.Package{})
+		e := types.NewPackage("E", "0.1", []*types.Package{{Name: "C", Version: ">=1.0"}}, []*types.Package{})
 
 		It("Computes correctly", func() {
 			definitions := NewInMemoryDatabase(false)
-			for _, p := range []Package{a, b, c, d, e} {
+			for _, p := range []*types.Package{a, b, c, d, e} {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -288,14 +295,14 @@ var _ = Describe("Package", func() {
 	})
 
 	Context("RequiresContains", func() {
-		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
-		a1 := NewPackage("A", "1.0", []*DefaultPackage{a}, []*DefaultPackage{})
-		a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-		a01 := NewPackage("A", "0.1", []*DefaultPackage{a1, a11}, []*DefaultPackage{})
+		a := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
+		a1 := types.NewPackage("A", "1.0", []*types.Package{a}, []*types.Package{})
+		a11 := types.NewPackage("A", "1.1", []*types.Package{}, []*types.Package{})
+		a01 := types.NewPackage("A", "0.1", []*types.Package{a1, a11}, []*types.Package{})
 
 		It("returns correctly", func() {
 			definitions := NewInMemoryDatabase(false)
-			for _, p := range []Package{a, a1, a11, a01} {
+			for _, p := range []*types.Package{a, a1, a11, a01} {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -311,15 +318,15 @@ var _ = Describe("Package", func() {
 
 	Context("Encoding", func() {
 		db := NewInMemoryDatabase(false)
-		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-		a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-		a := NewPackage("A", ">=1.0", []*DefaultPackage{a1}, []*DefaultPackage{a11})
+		a1 := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+		a11 := types.NewPackage("A", "1.1", []*types.Package{}, []*types.Package{})
+		a := types.NewPackage("A", ">=1.0", []*types.Package{a1}, []*types.Package{a11})
 		It("decodes and encodes correctly", func() {
 
 			ID, err := a.Encode(db)
 			Expect(err).ToNot(HaveOccurred())
 
-			p, err := DecodePackage(ID, db)
+			p, err := types.DecodePackage(ID, db)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(p.GetVersion()).To(Equal(a.GetVersion()))
@@ -339,10 +346,10 @@ var _ = Describe("Package", func() {
 	Context("BuildFormula", func() {
 		It("builds empty constraints", func() {
 			db := NewInMemoryDatabase(false)
-			a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+			a1 := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
 
 			definitions := NewInMemoryDatabase(false)
-			for _, p := range []Package{a1} {
+			for _, p := range []*types.Package{a1} {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -354,14 +361,14 @@ var _ = Describe("Package", func() {
 		It("builds constraints correctly", func() {
 			db := NewInMemoryDatabase(false)
 
-			a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-			a21 := NewPackage("A", "1.2", []*DefaultPackage{}, []*DefaultPackage{})
-			a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-			a1.Requires([]*DefaultPackage{a11})
-			a1.Conflicts([]*DefaultPackage{a21})
+			a11 := types.NewPackage("A", "1.1", []*types.Package{}, []*types.Package{})
+			a21 := types.NewPackage("A", "1.2", []*types.Package{}, []*types.Package{})
+			a1 := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+			a1.Requires([]*types.Package{a11})
+			a1.Conflicts([]*types.Package{a21})
 
 			definitions := NewInMemoryDatabase(false)
-			for _, p := range []Package{a1, a21, a11} {
+			for _, p := range []*types.Package{a1, a21, a11} {
 				_, err := definitions.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -375,9 +382,9 @@ var _ = Describe("Package", func() {
 	})
 
 	Context("Clone", func() {
-		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-		a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-		a := NewPackage("A", ">=1.0", []*DefaultPackage{a1}, []*DefaultPackage{a11})
+		a1 := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+		a11 := types.NewPackage("A", "1.1", []*types.Package{}, []*types.Package{})
+		a := types.NewPackage("A", ">=1.0", []*types.Package{a1}, []*types.Package{a11})
 
 		It("Clones correctly", func() {
 			a2 := a.Clone()
@@ -395,7 +402,7 @@ var _ = Describe("Package", func() {
 	})
 
 	Context("Useflags", func() {
-		a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a1 := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
 		It("Adds correctly", func() {
 			a1.AddUse("test")
 			Expect(a1.GetUses()[0]).To(Equal("test"))
@@ -411,62 +418,62 @@ var _ = Describe("Package", func() {
 
 	Context("Check Bump build Version", func() {
 		It("Bump without build version", func() {
-			a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+			a1 := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
 			err := a1.BumpBuildVersion()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(a1.GetVersion()).To(Equal("1.0+1"))
 		})
 		It("Bump 2", func() {
-			p := NewPackage("A", "1.0+1", []*DefaultPackage{}, []*DefaultPackage{})
+			p := types.NewPackage("A", "1.0+1", []*types.Package{}, []*types.Package{})
 			err := p.BumpBuildVersion()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(p.GetVersion()).To(Equal("1.0+2"))
 		})
 
 		It("Bump 3", func() {
-			p := NewPackage("A", "1.0+100", []*DefaultPackage{}, []*DefaultPackage{})
+			p := types.NewPackage("A", "1.0+100", []*types.Package{}, []*types.Package{})
 			err := p.BumpBuildVersion()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(p.GetVersion()).To(Equal("1.0+101"))
 		})
 
 		It("Bump 4", func() {
-			p := NewPackage("A", "1.0+r1", []*DefaultPackage{}, []*DefaultPackage{})
+			p := types.NewPackage("A", "1.0+r1", []*types.Package{}, []*types.Package{})
 			err := p.BumpBuildVersion()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(p.GetVersion()).To(Equal("1.0+r2"))
 		})
 
 		It("Bump 5", func() {
-			p := NewPackage("A", "1.0+p1", []*DefaultPackage{}, []*DefaultPackage{})
+			p := types.NewPackage("A", "1.0+p1", []*types.Package{}, []*types.Package{})
 			err := p.BumpBuildVersion()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(p.GetVersion()).To(Equal("1.0+p2"))
 		})
 
 		It("Bump 6", func() {
-			p := NewPackage("A", "1.0+pre20200315", []*DefaultPackage{}, []*DefaultPackage{})
+			p := types.NewPackage("A", "1.0+pre20200315", []*types.Package{}, []*types.Package{})
 			err := p.BumpBuildVersion()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(p.GetVersion()).To(Equal("1.0+pre20200315.1"))
 		})
 
 		It("Bump 7", func() {
-			p := NewPackage("A", "1.0+pre20200315.1", []*DefaultPackage{}, []*DefaultPackage{})
+			p := types.NewPackage("A", "1.0+pre20200315.1", []*types.Package{}, []*types.Package{})
 			err := p.BumpBuildVersion()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(p.GetVersion()).To(Equal("1.0+pre20200315.2"))
 		})
 
 		It("Bump 8", func() {
-			p := NewPackage("A", "1.0+d-r1", []*DefaultPackage{}, []*DefaultPackage{})
+			p := types.NewPackage("A", "1.0+d-r1", []*types.Package{}, []*types.Package{})
 			err := p.BumpBuildVersion()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(p.GetVersion()).To(Equal("1.0+d-r1.1"))
 		})
 
 		It("Bump 9", func() {
-			p := NewPackage("A", "1.0+p20200315.1", []*DefaultPackage{}, []*DefaultPackage{})
+			p := types.NewPackage("A", "1.0+p20200315.1", []*types.Package{}, []*types.Package{})
 			err := p.BumpBuildVersion()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(p.GetVersion()).To(Equal("1.0+p20200315.2"))

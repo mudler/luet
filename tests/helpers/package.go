@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/api/core/types"
 )
 
 const charset = "abcdefghijklmnopqrstuvwxyz" +
@@ -26,6 +26,6 @@ func String(length int) string {
 	return StringWithCharset(length, charset)
 }
 
-func RandomPackage() pkg.Package {
-	return pkg.NewPackage(String(5), strconv.Itoa(rand.Intn(100)), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+func RandomPackage() *types.Package {
+	return types.NewPackage(String(5), strconv.Itoa(rand.Intn(100)), []*types.Package{}, []*types.Package{})
 }

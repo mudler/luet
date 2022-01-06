@@ -21,11 +21,10 @@ import (
 	"path/filepath"
 
 	"github.com/mitchellh/hashstructure/v2"
+	"github.com/mudler/luet/pkg/api/core/types"
 	options "github.com/mudler/luet/pkg/compiler/types/options"
 
 	"github.com/ghodss/yaml"
-	pkg "github.com/mudler/luet/pkg/package"
-	"github.com/mudler/luet/pkg/solver"
 	"github.com/otiai10/copy"
 	dirhash "golang.org/x/mod/sumdb/dirhash"
 )
@@ -65,7 +64,7 @@ func (specs *LuetCompilationspecs) Add(s *LuetCompilationSpec) {
 
 func (specs *LuetCompilationspecs) All() []*LuetCompilationSpec {
 	var cspecs []*LuetCompilationSpec
-	for i, _ := range *specs {
+	for i := range *specs {
 		f := (*specs)[i]
 		cspecs = append(cspecs, &f)
 	}
@@ -77,7 +76,7 @@ func (specs *LuetCompilationspecs) Unique() *LuetCompilationspecs {
 	newSpecs := LuetCompilationspecs{}
 	seen := map[string]bool{}
 
-	for i, _ := range *specs {
+	for i := range *specs {
 		j := (*specs)[i]
 		_, ok := seen[j.GetPackage().GetFingerPrint()]
 		if !ok {
@@ -89,21 +88,21 @@ func (specs *LuetCompilationspecs) Unique() *LuetCompilationspecs {
 }
 
 type CopyField struct {
-	Package     *pkg.DefaultPackage `json:"package"`
-	Image       string              `json:"image"`
-	Source      string              `json:"source"`
-	Destination string              `json:"destination"`
+	Package     *types.Package `json:"package"`
+	Image       string         `json:"image"`
+	Source      string         `json:"source"`
+	Destination string         `json:"destination"`
 }
 
 type LuetCompilationSpec struct {
-	Steps           []string                  `json:"steps"` // Are run inside a container and the result layer diff is saved
-	Env             []string                  `json:"env"`
-	Prelude         []string                  `json:"prelude"` // Are run inside the image which will be our builder
-	Image           string                    `json:"image"`
-	Seed            string                    `json:"seed"`
-	Package         *pkg.DefaultPackage       `json:"package"`
-	SourceAssertion solver.PackagesAssertions `json:"-"`
-	PackageDir      string                    `json:"package_dir" yaml:"package_dir"`
+	Steps           []string                 `json:"steps"` // Are run inside a container and the result layer diff is saved
+	Env             []string                 `json:"env"`
+	Prelude         []string                 `json:"prelude"` // Are run inside the image which will be our builder
+	Image           string                   `json:"image"`
+	Seed            string                   `json:"seed"`
+	Package         *types.Package           `json:"package"`
+	SourceAssertion types.PackagesAssertions `json:"-"`
+	PackageDir      string                   `json:"package_dir" yaml:"package_dir"`
 
 	Retrieve []string `json:"retrieve"`
 
@@ -132,7 +131,7 @@ type Signature struct {
 	Includes            []string
 	Excludes            []string
 	Copy                []CopyField
-	Requires            pkg.DefaultPackages
+	Requires            types.Packages
 	RequiresFinalImages bool
 }
 
@@ -154,9 +153,9 @@ func (cs *LuetCompilationSpec) signature() Signature {
 	}
 }
 
-func NewLuetCompilationSpec(b []byte, p pkg.Package) (*LuetCompilationSpec, error) {
+func NewLuetCompilationSpec(b []byte, p *types.Package) (*LuetCompilationSpec, error) {
 	var spec LuetCompilationSpec
-	var packageDefinition pkg.DefaultPackage
+	var packageDefinition types.Package
 	err := yaml.Unmarshal(b, &spec)
 	if err != nil {
 		return &spec, err
@@ -170,7 +169,7 @@ func NewLuetCompilationSpec(b []byte, p pkg.Package) (*LuetCompilationSpec, erro
 	// When we have been passed a bytes slice, parse it as a package
 	// and updates requires/conflicts/provides.
 	// This is required in order to allow manipulation of such fields with templating
-	copy := *p.(*pkg.DefaultPackage)
+	copy := *p
 	spec.Package = &copy
 	if len(packageDefinition.GetRequires()) != 0 {
 		spec.Package.Requires(packageDefinition.GetRequires())
@@ -183,7 +182,7 @@ func NewLuetCompilationSpec(b []byte, p pkg.Package) (*LuetCompilationSpec, erro
 	}
 	return &spec, nil
 }
-func (cs *LuetCompilationSpec) GetSourceAssertion() solver.PackagesAssertions {
+func (cs *LuetCompilationSpec) GetSourceAssertion() types.PackagesAssertions {
 	return cs.SourceAssertion
 }
 
@@ -191,10 +190,10 @@ func (cs *LuetCompilationSpec) SetBuildOptions(b options.Compiler) {
 	cs.BuildOptions = &b
 }
 
-func (cs *LuetCompilationSpec) SetSourceAssertion(as solver.PackagesAssertions) {
+func (cs *LuetCompilationSpec) SetSourceAssertion(as types.PackagesAssertions) {
 	cs.SourceAssertion = as
 }
-func (cs *LuetCompilationSpec) GetPackage() pkg.Package {
+func (cs *LuetCompilationSpec) GetPackage() *types.Package {
 	return cs.Package
 }
 

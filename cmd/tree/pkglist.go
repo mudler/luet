@@ -24,7 +24,8 @@ import (
 	"github.com/ghodss/yaml"
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
-	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/api/core/types"
+	pkg "github.com/mudler/luet/pkg/database"
 	"github.com/mudler/luet/pkg/solver"
 	tree "github.com/mudler/luet/pkg/tree"
 
@@ -43,7 +44,7 @@ type TreeResults struct {
 	Packages []TreePackageResult `json:"packages"`
 }
 
-func pkgDetail(pkg pkg.Package) string {
+func pkgDetail(pkg *types.Package) string {
 	ans := fmt.Sprintf(`
   @@ Package: %s/%s-%s
      Description: %s
@@ -89,7 +90,7 @@ func NewTreePkglistCommand() *cobra.Command {
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			var results TreeResults
-			var depSolver solver.PackageSolver
+			var depSolver types.PackageSolver
 
 			treePath, _ := cmd.Flags().GetStringArray("tree")
 			verbose, _ := cmd.Flags().GetBool("verbose")
@@ -117,7 +118,7 @@ func NewTreePkglistCommand() *cobra.Command {
 			if deps {
 				emptyInstallationDb := pkg.NewInMemoryDatabase(false)
 
-				depSolver = solver.NewSolver(solver.Options{Type: solver.SingleCoreSimple}, pkg.NewInMemoryDatabase(false),
+				depSolver = solver.NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple}, pkg.NewInMemoryDatabase(false),
 					reciper.GetDatabase(),
 					emptyInstallationDb)
 
@@ -191,7 +192,7 @@ func NewTreePkglistCommand() *cobra.Command {
 					}
 				} else if deps {
 
-					solution, err := depSolver.Install(pkg.Packages{p})
+					solution, err := depSolver.Install(types.Packages{p})
 					if err != nil {
 						util.DefaultContext.Fatal(err.Error())
 					}

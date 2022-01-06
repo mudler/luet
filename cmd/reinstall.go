@@ -15,11 +15,11 @@
 package cmd
 
 import (
+	"github.com/mudler/luet/pkg/api/core/types"
 	installer "github.com/mudler/luet/pkg/installer"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
-	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -40,8 +40,8 @@ var reinstallCmd = &cobra.Command{
 		viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		var toUninstall pkg.Packages
-		var toAdd pkg.Packages
+		var toUninstall types.Packages
+		var toAdd types.Packages
 
 		force := viper.GetBool("force")
 		onlydeps := viper.GetBool("onlydeps")
@@ -65,7 +65,7 @@ var reinstallCmd = &cobra.Command{
 			PackageRepositories:         util.DefaultContext.Config.SystemRepositories,
 		})
 
-		system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.System.Rootfs}
+		system := &installer.System{Database: util.SystemDB(util.DefaultContext.Config), Target: util.DefaultContext.Config.System.Rootfs}
 
 		if installed {
 			for _, p := range system.Database.World() {

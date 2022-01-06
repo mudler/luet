@@ -36,7 +36,7 @@ This commands takes multiple packages as arguments and prunes their entries from
 
 		Run: func(cmd *cobra.Command, args []string) {
 
-			systemDB := util.DefaultContext.Config.GetSystemDB()
+			systemDB := util.SystemDB(util.DefaultContext.Config)
 
 			for _, a := range args {
 				pack, err := helpers.ParsePackageStr(a)

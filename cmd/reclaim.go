@@ -49,7 +49,7 @@ It scans the target file system, and if finds a match with a package available i
 		})
 
 		system := &installer.System{
-			Database: util.DefaultContext.Config.GetSystemDB(),
+			Database: util.SystemDB(util.DefaultContext.Config),
 			Target:   util.DefaultContext.Config.System.Rootfs,
 		}
 		err := inst.Reclaim(system)

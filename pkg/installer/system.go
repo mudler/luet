@@ -9,23 +9,22 @@ import (
 	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/tree"
 )
 
 type System struct {
-	Database          pkg.PackageDatabase
+	Database          types.PackageDatabase
 	Target            string
-	fileIndex         map[string]pkg.Package
-	fileIndexPackages map[string]pkg.Package
+	fileIndex         map[string]*types.Package
+	fileIndexPackages map[string]*types.Package
 	sync.Mutex
 }
 
-func (s *System) World() (pkg.Packages, error) {
+func (s *System) World() (types.Packages, error) {
 	return s.Database.World(), nil
 }
 
-func (s *System) OSCheck(ctx types.Context) (notFound pkg.Packages) {
+func (s *System) OSCheck(ctx types.Context) (notFound types.Packages) {
 	s.buildFileIndex()
 	s.Lock()
 	defer s.Unlock()
@@ -42,12 +41,12 @@ func (s *System) OSCheck(ctx types.Context) (notFound pkg.Packages) {
 	return
 }
 
-func (s *System) ExecuteFinalizers(ctx types.Context, packs []pkg.Package) error {
+func (s *System) ExecuteFinalizers(ctx types.Context, packs []*types.Package) error {
 	var errs error
 	executedFinalizer := map[string]bool{}
 	for _, p := range packs {
 		if fileHelper.Exists(p.Rel(tree.FinalizerFile)) {
-			out, err := helpers.RenderFiles(helpers.ChartFile(p.Rel(tree.FinalizerFile)), p.Rel(pkg.PackageDefinitionFile))
+			out, err := helpers.RenderFiles(helpers.ChartFile(p.Rel(tree.FinalizerFile)), p.Rel(types.PackageDefinitionFile))
 			if err != nil {
 				ctx.Warning("Failed rendering finalizer for ", p.HumanReadableString(), err.Error())
 				errs = multierror.Append(errs, err)
@@ -81,16 +80,16 @@ func (s *System) buildFileIndex() {
 	defer s.Unlock()
 
 	if s.fileIndex == nil {
-		s.fileIndex = make(map[string]pkg.Package)
+		s.fileIndex = make(map[string]*types.Package)
 	}
 
 	if s.fileIndexPackages == nil {
-		s.fileIndexPackages = make(map[string]pkg.Package)
+		s.fileIndexPackages = make(map[string]*types.Package)
 	}
 
 	// Check if cache is empty or if it got modified
 	if len(s.Database.GetPackages()) != len(s.fileIndexPackages) {
-		s.fileIndexPackages = make(map[string]pkg.Package)
+		s.fileIndexPackages = make(map[string]*types.Package)
 		for _, p := range s.Database.World() {
 			files, _ := s.Database.GetPackageFiles(p)
 			for _, f := range files {
@@ -107,14 +106,14 @@ func (s *System) Clean() {
 	s.fileIndex = nil
 }
 
-func (s *System) FileIndex() map[string]pkg.Package {
+func (s *System) FileIndex() map[string]*types.Package {
 	s.buildFileIndex()
 	s.Lock()
 	defer s.Unlock()
 	return s.fileIndex
 }
 
-func (s *System) ExistsPackageFile(file string) (bool, pkg.Package, error) {
+func (s *System) ExistsPackageFile(file string) (bool, *types.Package, error) {
 	s.buildFileIndex()
 	s.Lock()
 	defer s.Unlock()

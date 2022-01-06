@@ -1,5 +1,4 @@
-// Copyright © 2019-2020 Ettore Di Giacinto <mudler@gentoo.org>
-//                       David Cassany <dcassany@suse.com>
+// Copyright © 2019-2022 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -26,24 +25,6 @@ var _ = Describe("Helpers", func() {
 	Context("Image names", func() {
 		It("strips invalid chars", func() {
 			Expect(SanitizeImageString("foo+bar")).To(Equal("foo-bar"))
-		})
-	})
-	Context("StripRegistryFromImage", func() {
-		It("Strips the domain name", func() {
-			out := StripRegistryFromImage("valid.domain.org/base/image:tag")
-			Expect(out).To(Equal("base/image:tag"))
-		})
-		It("Strips the domain name when port is included", func() {
-			out := StripRegistryFromImage("valid.domain.org:5000/base/image:tag")
-			Expect(out).To(Equal("base/image:tag"))
-		})
-		It("Does not strip the domain name", func() {
-			out := StripRegistryFromImage("not-a-domain/base/image:tag")
-			Expect(out).To(Equal("not-a-domain/base/image:tag"))
-		})
-		It("Does not strip the domain name on invalid domains", func() {
-			out := StripRegistryFromImage("-invaliddomain.org/base/image:tag")
-			Expect(out).To(Equal("-invaliddomain.org/base/image:tag"))
 		})
 	})
 })

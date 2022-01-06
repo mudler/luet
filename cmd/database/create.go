@@ -19,9 +19,8 @@ import (
 	"io/ioutil"
 
 	"github.com/mudler/luet/cmd/util"
+	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
-
-	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/spf13/cobra"
 )
@@ -44,7 +43,7 @@ For reference, inspect a "metadata.yaml" file generated while running "luet buil
 		Args: cobra.OnlyValidArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 
-			systemDB := util.DefaultContext.Config.GetSystemDB()
+			systemDB := util.SystemDB(util.DefaultContext.Config)
 
 			for _, a := range args {
 				dat, err := ioutil.ReadFile(a)
@@ -67,7 +66,7 @@ For reference, inspect a "metadata.yaml" file generated while running "luet buil
 				if _, err := systemDB.CreatePackage(art.CompileSpec.GetPackage()); err != nil {
 					util.DefaultContext.Fatal("Failed to create ", a, ": ", err.Error())
 				}
-				if err := systemDB.SetPackageFiles(&pkg.PackageFile{PackageFingerprint: art.CompileSpec.GetPackage().GetFingerPrint(), Files: files}); err != nil {
+				if err := systemDB.SetPackageFiles(&types.PackageFile{PackageFingerprint: art.CompileSpec.GetPackage().GetFingerPrint(), Files: files}); err != nil {
 					util.DefaultContext.Fatal("Failed setting package files for ", a, ": ", err.Error())
 				}
 

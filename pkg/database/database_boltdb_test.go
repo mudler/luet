@@ -13,14 +13,15 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package pkg_test
+package database_test
 
 import (
 	"io/ioutil"
 	"os"
 	"regexp"
 
-	. "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/api/core/types"
+	. "github.com/mudler/luet/pkg/database"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -29,7 +30,7 @@ var _ = Describe("BoltDB Database", func() {
 
 	tmpfile, _ := ioutil.TempFile(os.TempDir(), "tests")
 	defer os.Remove(tmpfile.Name()) // clean up
-	var db PackageDatabase
+	var db types.PackageDatabase
 
 	BeforeEach(func() {
 		tmpfile, _ = ioutil.TempFile(os.TempDir(), "tests")
@@ -37,7 +38,7 @@ var _ = Describe("BoltDB Database", func() {
 		db = NewBoltDatabase(tmpfile.Name())
 	})
 	Context("Simple package", func() {
-		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
 
 		It("Find packages", func() {
 			ID, err := db.CreatePackage(a)
@@ -58,9 +59,9 @@ var _ = Describe("BoltDB Database", func() {
 		})
 
 		It("Find package files", func() {
-			a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-			a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-			a3 := NewPackage("A", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+			a := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+			a1 := types.NewPackage("A", "1.1", []*types.Package{}, []*types.Package{})
+			a3 := types.NewPackage("A", "1.3", []*types.Package{}, []*types.Package{})
 			_, err := db.CreatePackage(a)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -70,10 +71,10 @@ var _ = Describe("BoltDB Database", func() {
 			_, err = db.CreatePackage(a3)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = db.SetPackageFiles(&PackageFile{PackageFingerprint: a.GetFingerPrint(), Files: []string{"foo"}})
+			err = db.SetPackageFiles(&types.PackageFile{PackageFingerprint: a.GetFingerPrint(), Files: []string{"foo"}})
 			Expect(err).ToNot(HaveOccurred())
 
-			err = db.SetPackageFiles(&PackageFile{PackageFingerprint: a1.GetFingerPrint(), Files: []string{"bar"}})
+			err = db.SetPackageFiles(&types.PackageFile{PackageFingerprint: a1.GetFingerPrint(), Files: []string{"bar"}})
 			Expect(err).ToNot(HaveOccurred())
 
 			pack, err := db.FindPackageByFile("fo")
@@ -84,12 +85,12 @@ var _ = Describe("BoltDB Database", func() {
 
 		It("Expands correctly", func() {
 
-			a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
-			a1 := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-			a11 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-			a01 := NewPackage("A", "0.1", []*DefaultPackage{}, []*DefaultPackage{})
+			a := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
+			a1 := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+			a11 := types.NewPackage("A", "1.1", []*types.Package{}, []*types.Package{})
+			a01 := types.NewPackage("A", "0.1", []*types.Package{}, []*types.Package{})
 			re := regexp.MustCompile("project[0-9][=].*")
-			for _, p := range []Package{a1, a11, a01} {
+			for _, p := range []*types.Package{a1, a11, a01} {
 				_, err := db.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -106,9 +107,9 @@ var _ = Describe("BoltDB Database", func() {
 		})
 
 		It("Find best package candidate", func() {
-			a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-			a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-			a3 := NewPackage("A", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+			a := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+			a1 := types.NewPackage("A", "1.1", []*types.Package{}, []*types.Package{})
+			a3 := types.NewPackage("A", "1.3", []*types.Package{}, []*types.Package{})
 			_, err := db.CreatePackage(a)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -117,7 +118,7 @@ var _ = Describe("BoltDB Database", func() {
 
 			_, err = db.CreatePackage(a3)
 			Expect(err).ToNot(HaveOccurred())
-			s := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+			s := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
 
 			pack, err := db.FindPackageCandidate(s)
 			Expect(err).ToNot(HaveOccurred())
@@ -126,9 +127,9 @@ var _ = Describe("BoltDB Database", func() {
 		})
 
 		It("Find specific package candidate", func() {
-			a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-			a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-			a3 := NewPackage("A", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+			a := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+			a1 := types.NewPackage("A", "1.1", []*types.Package{}, []*types.Package{})
+			a3 := types.NewPackage("A", "1.3", []*types.Package{}, []*types.Package{})
 			_, err := db.CreatePackage(a)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -137,7 +138,7 @@ var _ = Describe("BoltDB Database", func() {
 
 			_, err = db.CreatePackage(a3)
 			Expect(err).ToNot(HaveOccurred())
-			s := NewPackage("A", "=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+			s := types.NewPackage("A", "=1.0", []*types.Package{}, []*types.Package{})
 
 			pack, err := db.FindPackageCandidate(s)
 			Expect(err).ToNot(HaveOccurred())
@@ -146,12 +147,12 @@ var _ = Describe("BoltDB Database", func() {
 		})
 
 		It("Provides replaces definitions", func() {
-			a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-			a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-			a3 := NewPackage("A", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+			a := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+			a1 := types.NewPackage("A", "1.1", []*types.Package{}, []*types.Package{})
+			a3 := types.NewPackage("A", "1.3", []*types.Package{}, []*types.Package{})
 
-			a3.SetProvides([]*DefaultPackage{{Name: "A", Category: "", Version: "1.0"}})
-			Expect(a3.GetProvides()).To(Equal([]*DefaultPackage{{Name: "A", Category: "", Version: "1.0"}}))
+			a3.SetProvides([]*types.Package{{Name: "A", Category: "", Version: "1.0"}})
+			Expect(a3.GetProvides()).To(Equal([]*types.Package{{Name: "A", Category: "", Version: "1.0"}}))
 
 			_, err := db.CreatePackage(a)
 			Expect(err).ToNot(HaveOccurred())
@@ -162,7 +163,7 @@ var _ = Describe("BoltDB Database", func() {
 			_, err = db.CreatePackage(a3)
 			Expect(err).ToNot(HaveOccurred())
 
-			s := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+			s := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
 
 			pack, err := db.FindPackage(s)
 			Expect(err).ToNot(HaveOccurred())
@@ -172,12 +173,12 @@ var _ = Describe("BoltDB Database", func() {
 		Context("Provides", func() {
 
 			It("replaces definitions", func() {
-				a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-				a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-				a3 := NewPackage("A", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+				a := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+				a1 := types.NewPackage("A", "1.1", []*types.Package{}, []*types.Package{})
+				a3 := types.NewPackage("A", "1.3", []*types.Package{}, []*types.Package{})
 
-				a3.SetProvides([]*DefaultPackage{{Name: "A", Category: "", Version: "1.0"}})
-				Expect(a3.GetProvides()).To(Equal([]*DefaultPackage{{Name: "A", Category: "", Version: "1.0"}}))
+				a3.SetProvides([]*types.Package{{Name: "A", Category: "", Version: "1.0"}})
+				Expect(a3.GetProvides()).To(Equal([]*types.Package{{Name: "A", Category: "", Version: "1.0"}}))
 
 				_, err := db.CreatePackage(a)
 				Expect(err).ToNot(HaveOccurred())
@@ -188,7 +189,7 @@ var _ = Describe("BoltDB Database", func() {
 				_, err = db.CreatePackage(a3)
 				Expect(err).ToNot(HaveOccurred())
 
-				s := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+				s := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
 
 				pack, err := db.FindPackage(s)
 				Expect(err).ToNot(HaveOccurred())
@@ -196,12 +197,12 @@ var _ = Describe("BoltDB Database", func() {
 			})
 
 			It("replaces definitions", func() {
-				a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-				a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-				a3 := NewPackage("A", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+				a := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+				a1 := types.NewPackage("A", "1.1", []*types.Package{}, []*types.Package{})
+				a3 := types.NewPackage("A", "1.3", []*types.Package{}, []*types.Package{})
 
-				a3.SetProvides([]*DefaultPackage{{Name: "A", Category: "", Version: "1.0"}})
-				Expect(a3.GetProvides()).To(Equal([]*DefaultPackage{{Name: "A", Category: "", Version: "1.0"}}))
+				a3.SetProvides([]*types.Package{{Name: "A", Category: "", Version: "1.0"}})
+				Expect(a3.GetProvides()).To(Equal([]*types.Package{{Name: "A", Category: "", Version: "1.0"}}))
 
 				_, err := db.CreatePackage(a)
 				Expect(err).ToNot(HaveOccurred())
@@ -212,7 +213,7 @@ var _ = Describe("BoltDB Database", func() {
 				_, err = db.CreatePackage(a3)
 				Expect(err).ToNot(HaveOccurred())
 
-				s := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+				s := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
 
 				packs, err := db.FindPackages(s)
 				Expect(err).ToNot(HaveOccurred())
@@ -220,12 +221,12 @@ var _ = Describe("BoltDB Database", func() {
 			})
 
 			It("replaces definitions", func() {
-				a := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
-				a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-				z := NewPackage("Z", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+				a := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+				a1 := types.NewPackage("A", "1.1", []*types.Package{}, []*types.Package{})
+				z := types.NewPackage("Z", "1.3", []*types.Package{}, []*types.Package{})
 
-				z.SetProvides([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}})
-				Expect(z.GetProvides()).To(Equal([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}}))
+				z.SetProvides([]*types.Package{{Name: "A", Category: "", Version: ">=1.0"}})
+				Expect(z.GetProvides()).To(Equal([]*types.Package{{Name: "A", Category: "", Version: ">=1.0"}}))
 
 				_, err := db.CreatePackage(a)
 				Expect(err).ToNot(HaveOccurred())
@@ -236,7 +237,7 @@ var _ = Describe("BoltDB Database", func() {
 				_, err = db.CreatePackage(z)
 				Expect(err).ToNot(HaveOccurred())
 
-				s := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+				s := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
 
 				packs, err := db.FindPackages(s)
 				Expect(err).ToNot(HaveOccurred())
@@ -244,11 +245,11 @@ var _ = Describe("BoltDB Database", func() {
 			})
 
 			It("replaces definitions of unexisting packages", func() {
-				a1 := NewPackage("A", "1.1", []*DefaultPackage{}, []*DefaultPackage{})
-				z := NewPackage("Z", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+				a1 := types.NewPackage("A", "1.1", []*types.Package{}, []*types.Package{})
+				z := types.NewPackage("Z", "1.3", []*types.Package{}, []*types.Package{})
 
-				z.SetProvides([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}})
-				Expect(z.GetProvides()).To(Equal([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}}))
+				z.SetProvides([]*types.Package{{Name: "A", Category: "", Version: ">=1.0"}})
+				Expect(z.GetProvides()).To(Equal([]*types.Package{{Name: "A", Category: "", Version: ">=1.0"}}))
 
 				_, err := db.CreatePackage(a1)
 				Expect(err).ToNot(HaveOccurred())
@@ -256,7 +257,7 @@ var _ = Describe("BoltDB Database", func() {
 				_, err = db.CreatePackage(z)
 				Expect(err).ToNot(HaveOccurred())
 
-				s := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+				s := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
 
 				packs, err := db.FindPackages(s)
 				Expect(err).ToNot(HaveOccurred())
@@ -265,18 +266,18 @@ var _ = Describe("BoltDB Database", func() {
 
 			It("replaces definitions of a required package", func() {
 
-				c := NewPackage("C", "1.1", []*DefaultPackage{{Name: "A", Category: "", Version: ">=0"}}, []*DefaultPackage{})
-				z := NewPackage("Z", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+				c := types.NewPackage("C", "1.1", []*types.Package{{Name: "A", Category: "", Version: ">=0"}}, []*types.Package{})
+				z := types.NewPackage("Z", "1.3", []*types.Package{}, []*types.Package{})
 
-				z.SetProvides([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}})
-				Expect(z.GetProvides()).To(Equal([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}}))
+				z.SetProvides([]*types.Package{{Name: "A", Category: "", Version: ">=1.0"}})
+				Expect(z.GetProvides()).To(Equal([]*types.Package{{Name: "A", Category: "", Version: ">=1.0"}}))
 
 				_, err := db.CreatePackage(z)
 				Expect(err).ToNot(HaveOccurred())
 				_, err = db.CreatePackage(c)
 				Expect(err).ToNot(HaveOccurred())
 
-				s := NewPackage("A", "1.0", []*DefaultPackage{}, []*DefaultPackage{})
+				s := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
 
 				packs, err := db.FindPackages(s)
 				Expect(err).ToNot(HaveOccurred())
@@ -286,18 +287,18 @@ var _ = Describe("BoltDB Database", func() {
 			When("Searching with selectors", func() {
 				It("replaces definitions of a required package", func() {
 
-					c := NewPackage("C", "1.1", []*DefaultPackage{{Name: "A", Category: "", Version: ">=0"}}, []*DefaultPackage{})
-					z := NewPackage("Z", "1.3", []*DefaultPackage{}, []*DefaultPackage{})
+					c := types.NewPackage("C", "1.1", []*types.Package{{Name: "A", Category: "", Version: ">=0"}}, []*types.Package{})
+					z := types.NewPackage("Z", "1.3", []*types.Package{}, []*types.Package{})
 
-					z.SetProvides([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}})
-					Expect(z.GetProvides()).To(Equal([]*DefaultPackage{{Name: "A", Category: "", Version: ">=1.0"}}))
+					z.SetProvides([]*types.Package{{Name: "A", Category: "", Version: ">=1.0"}})
+					Expect(z.GetProvides()).To(Equal([]*types.Package{{Name: "A", Category: "", Version: ">=1.0"}}))
 
 					_, err := db.CreatePackage(z)
 					Expect(err).ToNot(HaveOccurred())
 					_, err = db.CreatePackage(c)
 					Expect(err).ToNot(HaveOccurred())
 
-					s := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+					s := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
 
 					packs, err := db.FindPackages(s)
 					Expect(err).ToNot(HaveOccurred())

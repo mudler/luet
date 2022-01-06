@@ -32,13 +32,14 @@ import (
 	bus "github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/image"
+	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/compiler/types/options"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
+	pkg "github.com/mudler/luet/pkg/database"
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/solver"
 
 	"github.com/imdario/mergo"
@@ -66,7 +67,7 @@ func (i ArtifactIndex) CleanPath() ArtifactIndex {
 type LuetCompiler struct {
 	//*tree.CompilerRecipe
 	Backend  CompilerBackend
-	Database pkg.PackageDatabase
+	Database types.PackageDatabase
 	Options  options.Compiler
 }
 
@@ -77,7 +78,7 @@ func NewCompiler(p ...options.Option) *LuetCompiler {
 	return &LuetCompiler{Options: *c}
 }
 
-func NewLuetCompiler(backend CompilerBackend, db pkg.PackageDatabase, compilerOpts ...options.Option) *LuetCompiler {
+func NewLuetCompiler(backend CompilerBackend, db types.PackageDatabase, compilerOpts ...options.Option) *LuetCompiler {
 	// The CompilerRecipe will gives us a tree with only build deps listed.
 
 	c := NewCompiler(compilerOpts...)
@@ -749,7 +750,7 @@ func (cs *LuetCompiler) compileWithImage(image, builderHash string, packageTagHa
 
 // FromDatabase returns all the available compilation specs from a database. If the minimum flag is returned
 // it will be computed a minimal subset that will guarantees that all packages are built ( if not targeting a single package explictly )
-func (cs *LuetCompiler) FromDatabase(db pkg.PackageDatabase, minimum bool, dst string) ([]*compilerspec.LuetCompilationSpec, error) {
+func (cs *LuetCompiler) FromDatabase(db types.PackageDatabase, minimum bool, dst string) ([]*compilerspec.LuetCompilationSpec, error) {
 	compilerSpecs := compilerspec.NewLuetCompilationspecs()
 
 	w := db.World()
@@ -773,10 +774,10 @@ func (cs *LuetCompiler) FromDatabase(db pkg.PackageDatabase, minimum bool, dst s
 	}
 }
 
-func (cs *LuetCompiler) ComputeDepTree(p *compilerspec.LuetCompilationSpec) (solver.PackagesAssertions, error) {
-	s := solver.NewResolver(cs.Options.SolverOptions.Options, pkg.NewInMemoryDatabase(false), cs.Database, pkg.NewInMemoryDatabase(false), cs.Options.SolverOptions.Resolver())
+func (cs *LuetCompiler) ComputeDepTree(p *compilerspec.LuetCompilationSpec) (types.PackagesAssertions, error) {
+	s := solver.NewResolver(cs.Options.SolverOptions.SolverOptions, pkg.NewInMemoryDatabase(false), cs.Database, pkg.NewInMemoryDatabase(false), solver.NewSolverFromOptions(cs.Options.SolverOptions))
 
-	solution, err := s.Install(pkg.Packages{p.GetPackage()})
+	solution, err := s.Install(types.Packages{p.GetPackage()})
 	if err != nil {
 		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().HumanReadableString())
 	}
@@ -837,7 +838,7 @@ func (cs *LuetCompiler) BuildTree(compilerSpecs compilerspec.LuetCompilationspec
 func (cs *LuetCompiler) ComputeMinimumCompilableSet(p ...*compilerspec.LuetCompilationSpec) ([]*compilerspec.LuetCompilationSpec, error) {
 	// Generate a set with all the deps of the provided specs
 	// we will use that set to remove the deps from the list of provided compilation specs
-	allDependencies := solver.PackagesAssertions{} // Get all packages that will be in deps
+	allDependencies := types.PackagesAssertions{} // Get all packages that will be in deps
 	result := []*compilerspec.LuetCompilationSpec{}
 	for _, spec := range p {
 		sol, err := cs.ComputeDepTree(spec)
@@ -888,7 +889,7 @@ func (cs *LuetCompiler) inheritSpecBuildOptions(p *compilerspec.LuetCompilationS
 	cs.Options.Context.Debug(p.GetPackage().HumanReadableString(), "Build options after inherit", p.BuildOptions)
 }
 
-func (cs *LuetCompiler) getSpecHash(pkgs pkg.DefaultPackages, salt string) (string, error) {
+func (cs *LuetCompiler) getSpecHash(pkgs types.Packages, salt string) (string, error) {
 	ht := NewHashTree(cs.Database)
 	overallFp := ""
 	for _, p := range pkgs {
@@ -911,7 +912,7 @@ func (cs *LuetCompiler) getSpecHash(pkgs pkg.DefaultPackages, salt string) (stri
 func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) error {
 
 	joinTag := ">:loop: final images<"
-	var fromPackages pkg.DefaultPackages
+	var fromPackages types.Packages
 
 	if p.RequiresFinalImages {
 		cs.Options.Context.Info(joinTag, "Generating a parent image from final packages")
@@ -1078,7 +1079,7 @@ func CompilerFinalImages(cs *LuetCompiler) (*LuetCompiler, error) {
 			return nil, errors.Wrap(err, "failed getting compile spec for package "+p.HumanReadableString())
 		}
 		if spec.RequiresFinalImages {
-			copy.Requires([]*pkg.DefaultPackage{})
+			copy.Requires([]*types.Package{})
 		}
 
 		memDB.CreatePackage(copy)
@@ -1125,7 +1126,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 
 	bus.Manager.Publish(bus.EventPackagePreBuild, struct {
 		CompileSpec     *compilerspec.LuetCompilationSpec
-		Assert          solver.PackageAssert
+		Assert          types.PackageAssert
 		PackageHashTree *PackageImageHashTree
 	}{
 		CompileSpec:     p,
@@ -1195,7 +1196,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 
 			bus.Manager.Publish(bus.EventPackagePreBuild, struct {
 				CompileSpec *compilerspec.LuetCompilationSpec
-				Assert      solver.PackageAssert
+				Assert      types.PackageAssert
 			}{
 				CompileSpec: compileSpec,
 				Assert:      assertion,
@@ -1291,7 +1292,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 
 type templatedata map[string]interface{}
 
-func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack pkg.Package, dst templatedata) ([]byte, error) {
+func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack *types.Package, dst templatedata) ([]byte, error) {
 	// Grab shared templates first
 	var chartFiles []*chart.File
 	if len(cs.Options.TemplatesFolder) != 0 {
@@ -1317,7 +1318,7 @@ func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack pkg.
 			return nil, errors.Wrap(err, "rendering file "+val)
 		}
 
-		packsRaw, err := pkg.GetRawPackages(data)
+		packsRaw, err := types.GetRawPackages(data)
 		if err != nil {
 			return nil, errors.Wrap(err, "getting raw packages")
 		}
@@ -1380,7 +1381,7 @@ func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack pkg.
 }
 
 // FromPackage returns a compilation spec from a package definition
-func (cs *LuetCompiler) FromPackage(p pkg.Package) (*compilerspec.LuetCompilationSpec, error) {
+func (cs *LuetCompiler) FromPackage(p *types.Package) (*compilerspec.LuetCompilationSpec, error) {
 
 	pack, err := cs.Database.FindPackageCandidate(p)
 	if err != nil {

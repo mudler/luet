@@ -13,14 +13,15 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package pkg_test
+package database_test
 
 import (
 	"io/ioutil"
 	"os"
 	"strconv"
 
-	. "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/api/core/types"
+	. "github.com/mudler/luet/pkg/database"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -29,11 +30,11 @@ var _ = Describe("Database  benchmark", func() {
 
 	Context("BoltDB", func() {
 
-		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
 
 		tmpfile, _ := ioutil.TempFile(os.TempDir(), "tests")
 		defer os.Remove(tmpfile.Name()) // clean up
-		var db PackageSet
+		var db types.PackageSet
 
 		BeforeEach(func() {
 
@@ -47,7 +48,7 @@ var _ = Describe("Database  benchmark", func() {
 
 		Measure("it should be fast in computing world from a 50000 dataset", func(b Benchmarker) {
 			for i := 0; i < 50000; i++ {
-				a = NewPackage("A"+strconv.Itoa(i), ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+				a = types.NewPackage("A"+strconv.Itoa(i), ">=1.0", []*types.Package{}, []*types.Package{})
 
 				_, err := db.CreatePackage(a)
 				Expect(err).ToNot(HaveOccurred())
@@ -63,7 +64,7 @@ var _ = Describe("Database  benchmark", func() {
 
 		Measure("it should be fast in computing world from a 100000 dataset", func(b Benchmarker) {
 			for i := 0; i < 100000; i++ {
-				a = NewPackage("A"+strconv.Itoa(i), ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+				a = types.NewPackage("A"+strconv.Itoa(i), ">=1.0", []*types.Package{}, []*types.Package{})
 
 				_, err := db.CreatePackage(a)
 				Expect(err).ToNot(HaveOccurred())
@@ -80,11 +81,11 @@ var _ = Describe("Database  benchmark", func() {
 
 	Context("InMemory", func() {
 
-		a := NewPackage("A", ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+		a := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
 
 		tmpfile, _ := ioutil.TempFile(os.TempDir(), "tests")
 		defer os.Remove(tmpfile.Name()) // clean up
-		var db PackageSet
+		var db types.PackageSet
 
 		BeforeEach(func() {
 
@@ -100,7 +101,7 @@ var _ = Describe("Database  benchmark", func() {
 
 			runtime := b.Time("runtime", func() {
 				for i := 0; i < 100000; i++ {
-					a = NewPackage("A"+strconv.Itoa(i), ">=1.0", []*DefaultPackage{}, []*DefaultPackage{})
+					a = types.NewPackage("A"+strconv.Itoa(i), ">=1.0", []*types.Package{}, []*types.Package{})
 
 					_, err := db.CreatePackage(a)
 					Expect(err).ToNot(HaveOccurred())

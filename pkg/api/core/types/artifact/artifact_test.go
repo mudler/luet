@@ -20,6 +20,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/types"
+
 	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/image"
 	. "github.com/mudler/luet/pkg/api/core/types/artifact"
@@ -29,8 +31,8 @@ import (
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 
 	. "github.com/mudler/luet/pkg/compiler"
+	pkg "github.com/mudler/luet/pkg/database"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/tree"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -49,7 +51,7 @@ var _ = Describe("Artifact", func() {
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
 			cc := NewLuetCompiler(nil, generalRecipe.GetDatabase(), options.WithContext(context.NewContext()))
-			lspec, err := cc.FromPackage(&pkg.DefaultPackage{Name: "enman", Category: "app-admin", Version: "1.4.0"})
+			lspec, err := cc.FromPackage(&types.Package{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(lspec.Steps).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
@@ -140,7 +142,7 @@ RUN echo bar > /test2`))
 			Expect(err).ToNot(HaveOccurred())
 
 			a := NewPackageArtifact(filepath.Join(tmpWork, "fake.tar"))
-			a.CompileSpec = &compilerspec.LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Version: "1.0"}}
+			a.CompileSpec = &compilerspec.LuetCompilationSpec{Package: &types.Package{Name: "foo", Version: "1.0"}}
 
 			err = a.Compress(tmpdir, 1)
 			Expect(err).ToNot(HaveOccurred())
@@ -188,7 +190,7 @@ RUN echo bar > /test2`))
 			defer os.RemoveAll(tmpWork) // clean up
 
 			a := NewPackageArtifact(filepath.Join(tmpWork, "fake.tar"))
-			a.CompileSpec = &compilerspec.LuetCompilationSpec{Package: &pkg.DefaultPackage{Name: "foo", Version: "1.0"}}
+			a.CompileSpec = &compilerspec.LuetCompilationSpec{Package: &types.Package{Name: "foo", Version: "1.0"}}
 
 			err = a.Compress(tmpdir, 1)
 			Expect(err).ToNot(HaveOccurred())

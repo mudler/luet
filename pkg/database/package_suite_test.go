@@ -1,5 +1,4 @@
-// Copyright © 2019-2020 Ettore Di Giacinto <mudler@gentoo.org>
-//                       Daniele Rondina <geaaru@sabayonlinux.org>
+// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,10 +13,16 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package pkg
+package database_test
 
-type AnnotationKey string
+import (
+	"testing"
 
-const (
-	ConfigProtectAnnnotation AnnotationKey = "config_protect"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
+
+func TestSolver(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Package Suite")
+}

@@ -36,7 +36,7 @@ import (
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/installer/client"
 
-	pkg "github.com/mudler/luet/pkg/package"
+	pkg "github.com/mudler/luet/pkg/database"
 	tree "github.com/mudler/luet/pkg/tree"
 
 	"github.com/ghodss/yaml"
@@ -115,7 +115,7 @@ func SystemRepositories(t types.LuetRepositories) Repositories {
 }
 
 // LoadBuildTree loads to the tree the compilation specs from the system repositories
-func LoadBuildTree(t tree.Builder, db pkg.PackageDatabase, ctx types.Context) error {
+func LoadBuildTree(t tree.Builder, db types.PackageDatabase, ctx types.Context) error {
 	var reserr error
 	repos := SystemRepositories(ctx.GetConfig().SystemRepositories)
 	for _, r := range repos {
@@ -301,7 +301,7 @@ func GenerateRepository(p ...RepositoryOption) (*LuetSystemRepository, error) {
 		}
 
 		// Only those which are metadata
-		if !strings.HasSuffix(info.Name(), pkg.PackageMetaSuffix) {
+		if !strings.HasSuffix(info.Name(), types.PackageMetaSuffix) {
 			return nil
 		}
 
@@ -320,7 +320,7 @@ func GenerateRepository(p ...RepositoryOption) (*LuetSystemRepository, error) {
 				runtimeTree.CreatePackage(art.Runtime)
 			} else {
 				// We don't have runtime at this point. So we import the package as is
-				r := []*pkg.DefaultPackage{}
+				r := []*types.Package{}
 				p := art.CompileSpec.Package.Clone()
 				p.Requires(r)
 				p.SetProvides(r)
@@ -362,7 +362,7 @@ func NewSystemRepository(repo types.LuetRepository) *LuetSystemRepository {
 	}
 }
 
-func NewLuetSystemRepositoryFromYaml(data []byte, db pkg.PackageDatabase) (*LuetSystemRepository, error) {
+func NewLuetSystemRepositoryFromYaml(data []byte, db types.PackageDatabase) (*LuetSystemRepository, error) {
 	var p *LuetSystemRepository
 	err := yaml.Unmarshal(data, &p)
 	if err != nil {
@@ -393,8 +393,8 @@ func (r *LuetSystemRepository) initialize(ctx types.Context, src string) error {
 }
 
 // FileSearch search a pattern among the artifacts in a repository
-func (r *LuetSystemRepository) FileSearch(pattern string) (pkg.Packages, error) {
-	var matches pkg.Packages
+func (r *LuetSystemRepository) FileSearch(pattern string) (types.Packages, error) {
+	var matches types.Packages
 	reg, err := regexp.Compile(pattern)
 	if err != nil {
 		return matches, err
@@ -707,7 +707,7 @@ func (r *LuetSystemRepository) ReadSpecFile(file string) (*LuetSystemRepository,
 
 type RepositoryGenerator interface {
 	Generate(*LuetSystemRepository, string, bool) error
-	Initialize(string, pkg.PackageDatabase) ([]*artifact.PackageArtifact, error)
+	Initialize(string, types.PackageDatabase) ([]*artifact.PackageArtifact, error)
 }
 
 func (r *LuetSystemRepository) getGenerator(ctx types.Context, snapshotID string) (RepositoryGenerator, error) {
@@ -766,7 +766,7 @@ func (r *LuetSystemRepository) Client(ctx types.Context) Client {
 	return nil
 }
 
-func (r *LuetSystemRepository) SearchArtefact(p pkg.Package) (*artifact.PackageArtifact, error) {
+func (r *LuetSystemRepository) SearchArtefact(p *types.Package) (*artifact.PackageArtifact, error) {
 	for _, a := range r.GetIndex() {
 		if a.CompileSpec.GetPackage().Matches(p) {
 			return a, nil
@@ -1065,9 +1065,9 @@ func (r Repositories) Less(i, j int) bool {
 	return r[i].GetPriority() < r[j].GetPriority()
 }
 
-func (r Repositories) World() pkg.Packages {
-	cache := map[string]pkg.Package{}
-	world := pkg.Packages{}
+func (r Repositories) World() types.Packages {
+	cache := map[string]*types.Package{}
+	world := types.Packages{}
 
 	// Get Uniques. Walk in reverse so the definitions of most prio-repo overwrites lower ones
 	// In this way, when we will walk again later the deps sorting them by most higher prio we have better chance of success.
@@ -1084,7 +1084,7 @@ func (r Repositories) World() pkg.Packages {
 	return world
 }
 
-func (r Repositories) SyncDatabase(d pkg.PackageDatabase) {
+func (r Repositories) SyncDatabase(d types.PackageDatabase) {
 	cache := map[string]bool{}
 
 	// Get Uniques. Walk in reverse so the definitions of most prio-repo overwrites lower ones
@@ -1102,10 +1102,10 @@ func (r Repositories) SyncDatabase(d pkg.PackageDatabase) {
 type PackageMatch struct {
 	Repo     *LuetSystemRepository
 	Artifact *artifact.PackageArtifact
-	Package  pkg.Package
+	Package  *types.Package
 }
 
-func (re Repositories) PackageMatches(p pkg.Packages) []PackageMatch {
+func (re Repositories) PackageMatches(p types.Packages) []PackageMatch {
 	// TODO: Better heuristic. here we pick the first repo that contains the atom, sorted by priority but
 	// we should do a permutations and get the best match, and in case there are more solutions the user should be able to pick
 	sort.Sort(re)
@@ -1126,10 +1126,10 @@ PACKAGE:
 
 }
 
-func (re Repositories) ResolveSelectors(p pkg.Packages) pkg.Packages {
+func (re Repositories) ResolveSelectors(p types.Packages) types.Packages {
 	// If a selector is given, get the best from each repo
 	sort.Sort(re) // respect prio
-	var matches pkg.Packages
+	var matches types.Packages
 PACKAGE:
 	for _, pack := range p {
 	REPOSITORY:
@@ -1160,7 +1160,7 @@ func (re Repositories) SearchPackages(p string, t LuetSearchModeType) []PackageM
 	var err error
 
 	for _, r := range re {
-		var repoMatches pkg.Packages
+		var repoMatches types.Packages
 
 		switch t {
 		case SRegexPkg:

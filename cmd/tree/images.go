@@ -23,12 +23,12 @@ import (
 	"github.com/ghodss/yaml"
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/compiler/types/options"
 
-	pkg "github.com/mudler/luet/pkg/package"
-	"github.com/mudler/luet/pkg/solver"
+	pkg "github.com/mudler/luet/pkg/database"
 	tree "github.com/mudler/luet/pkg/tree"
 
 	"github.com/spf13/cobra"
@@ -76,7 +76,7 @@ func NewTreeImageCommand() *cobra.Command {
 			compilerBackend := backend.NewSimpleDockerBackend(util.DefaultContext)
 
 			opts := util.DefaultContext.Config.Solver
-			opts.Options = solver.Options{Type: solver.SingleCoreSimple, Concurrency: 1}
+			opts.SolverOptions = types.SolverOptions{Type: types.SolverSingleCoreSimple, Concurrency: 1}
 			luetCompiler := compiler.NewLuetCompiler(
 				compilerBackend,
 				reciper.GetDatabase(),

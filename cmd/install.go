@@ -15,11 +15,11 @@
 package cmd
 
 import (
+	"github.com/mudler/luet/pkg/api/core/types"
 	installer "github.com/mudler/luet/pkg/installer"
 
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
-	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -52,7 +52,7 @@ To force install a package:
 		viper.BindPFlag("yes", cmd.Flags().Lookup("yes"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		var toInstall pkg.Packages
+		var toInstall types.Packages
 
 		for _, a := range args {
 			pack, err := helpers.ParsePackageStr(a)
@@ -86,7 +86,7 @@ To force install a package:
 		})
 
 		system := &installer.System{
-			Database: util.DefaultContext.Config.GetSystemDB(),
+			Database: util.SystemDB(util.DefaultContext.Config),
 			Target:   util.DefaultContext.Config.System.Rootfs,
 		}
 		err := inst.Install(toInstall, system)

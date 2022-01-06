@@ -22,9 +22,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/mudler/luet/pkg/api/core/types"
+
 	_gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
 	"github.com/mudler/luet/cmd/util"
-	pkg "github.com/mudler/luet/pkg/package"
 )
 
 func CreateRegexArray(rgx []string) ([]*regexp.Regexp, error) {
@@ -83,7 +84,7 @@ func gentooVersion(gp *_gentoo.GentooPackage) string {
 	return pkgVersion
 }
 
-func ParsePackageStr(p string) (*pkg.DefaultPackage, error) {
+func ParsePackageStr(p string) (*types.Package, error) {
 
 	if packageHasGentooSelector(p) {
 		gp, err := _gentoo.ParsePackageStr(p)
@@ -95,7 +96,7 @@ func ParsePackageStr(p string) (*pkg.DefaultPackage, error) {
 			gp.Condition = _gentoo.PkgCondGreaterEqual
 		}
 
-		return &pkg.DefaultPackage{
+		return &types.Package{
 			Name:     gp.Name,
 			Category: gp.Category,
 			Version:  gentooVersion(gp),
@@ -115,7 +116,7 @@ func ParsePackageStr(p string) (*pkg.DefaultPackage, error) {
 		cat, name = packageData(p)
 	}
 
-	return &pkg.DefaultPackage{
+	return &types.Package{
 		Name:     name,
 		Category: cat,
 		Version:  ver,

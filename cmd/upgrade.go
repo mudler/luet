@@ -16,8 +16,8 @@ package cmd
 
 import (
 	"github.com/mudler/luet/cmd/util"
+	"github.com/mudler/luet/pkg/api/core/types"
 	installer "github.com/mudler/luet/pkg/installer"
-	"github.com/mudler/luet/pkg/solver"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -46,7 +46,7 @@ var upgradeCmd = &cobra.Command{
 		yes := viper.GetBool("yes")
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
 
-		util.DefaultContext.Config.Solver.Implementation = solver.SingleCoreSimple
+		util.DefaultContext.Config.Solver.Implementation = types.SolverSingleCoreSimple
 
 		util.DefaultContext.Debug("Solver", util.DefaultContext.GetConfig().Solver)
 
@@ -67,7 +67,7 @@ var upgradeCmd = &cobra.Command{
 			Context:                     util.DefaultContext,
 		})
 
-		system := &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.System.Rootfs}
+		system := &installer.System{Database: util.SystemDB(util.DefaultContext.Config), Target: util.DefaultContext.Config.System.Rootfs}
 		if err := inst.Upgrade(system); err != nil {
 			util.DefaultContext.Fatal("Error: " + err.Error())
 		}

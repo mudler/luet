@@ -20,8 +20,8 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/mudler/luet/cmd/util"
+	"github.com/mudler/luet/pkg/api/core/types"
 	installer "github.com/mudler/luet/pkg/installer"
-	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -48,11 +48,11 @@ func (r PackageResult) String() string {
 
 var rows []string = []string{"Package", "Category", "Name", "Version", "Repository", "License", "Installed"}
 
-func packageToRow(repo string, p pkg.Package, installed bool) []string {
+func packageToRow(repo string, p *types.Package, installed bool) []string {
 	return []string{p.HumanReadableString(), p.GetCategory(), p.GetName(), p.GetVersion(), repo, p.GetLicense(), fmt.Sprintf("%t", installed)}
 }
 
-func packageToList(l *util.ListWriter, repo string, p pkg.Package, installed bool) {
+func packageToList(l *util.ListWriter, repo string, p *types.Package, installed bool) {
 	l.AppendItem(pterm.BulletListItem{
 		Level: 0, Text: p.HumanReadableString(),
 		TextStyle: pterm.NewStyle(pterm.FgCyan), Bullet: ">", BulletStyle: pterm.NewStyle(pterm.FgYellow),
@@ -93,11 +93,11 @@ func sys() *installer.System {
 	if s != nil {
 		return s
 	}
-	s = &installer.System{Database: util.DefaultContext.Config.GetSystemDB(), Target: util.DefaultContext.Config.System.Rootfs}
+	s = &installer.System{Database: util.SystemDB(util.DefaultContext.Config), Target: util.DefaultContext.Config.System.Rootfs}
 	return s
 }
 
-func installed(p pkg.Package) bool {
+func installed(p *types.Package) bool {
 	s := sys()
 	_, err := s.Database.FindPackage(p)
 	return err == nil
@@ -109,7 +109,7 @@ func searchLocally(term string, l *util.ListWriter, t *util.TableWriter, label, 
 	system := sys()
 
 	var err error
-	iMatches := pkg.Packages{}
+	iMatches := types.Packages{}
 	if label {
 		iMatches, err = system.Database.FindPackageLabel(term)
 	} else if labelMatch {
@@ -240,12 +240,12 @@ func searchLocalFiles(term string, l *util.ListWriter, t *util.TableWriter) Resu
 	var results Results
 	util.DefaultContext.Info("--- Search results (" + term + "): ---")
 
-	matches, _ := util.DefaultContext.Config.GetSystemDB().FindPackageByFile(term)
+	matches, _ := util.SystemDB(util.DefaultContext.Config).FindPackageByFile(term)
 	for _, pack := range matches {
 		i := installed(pack)
 		t.AppendRow(packageToRow("system", pack, i))
 		packageToList(l, "system", pack, i)
-		f, _ := util.DefaultContext.Config.GetSystemDB().GetPackageFiles(pack)
+		f, _ := util.SystemDB(util.DefaultContext.Config).GetPackageFiles(pack)
 		results.Packages = append(results.Packages,
 			PackageResult{
 				Name:       pack.GetName(),

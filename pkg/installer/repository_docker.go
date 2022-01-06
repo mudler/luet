@@ -31,7 +31,6 @@ import (
 	compiler "github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/helpers"
-	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/pkg/errors"
 )
@@ -43,7 +42,7 @@ type dockerRepositoryGenerator struct {
 	context                 types.Context
 }
 
-func (l *dockerRepositoryGenerator) Initialize(path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
+func (l *dockerRepositoryGenerator) Initialize(path string, db types.PackageDatabase) ([]*artifact.PackageArtifact, error) {
 	l.context.Info("Generating docker images for packages in", l.imagePrefix)
 	var art []*artifact.PackageArtifact
 	var ff = func(currentpath string, info os.FileInfo, err error) error {

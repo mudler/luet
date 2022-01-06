@@ -26,7 +26,6 @@ import (
 
 	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
-	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/pkg/errors"
@@ -37,11 +36,11 @@ type localRepositoryGenerator struct {
 	snapshotID string
 }
 
-func (l *localRepositoryGenerator) Initialize(path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
+func (l *localRepositoryGenerator) Initialize(path string, db types.PackageDatabase) ([]*artifact.PackageArtifact, error) {
 	return buildPackageIndex(l.context, path, db)
 }
 
-func buildPackageIndex(ctx types.Context, path string, db pkg.PackageDatabase) ([]*artifact.PackageArtifact, error) {
+func buildPackageIndex(ctx types.Context, path string, db types.PackageDatabase) ([]*artifact.PackageArtifact, error) {
 
 	var art []*artifact.PackageArtifact
 	var ff = func(currentpath string, info os.FileInfo, err error) error {

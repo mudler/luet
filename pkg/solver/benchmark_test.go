@@ -21,7 +21,8 @@ import (
 	"os"
 	"strconv"
 
-	pkg "github.com/mudler/luet/pkg/package"
+	types "github.com/mudler/luet/pkg/api/core/types"
+	pkg "github.com/mudler/luet/pkg/database"
 	"github.com/mudler/luet/tests/helpers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,14 +34,14 @@ var _ = Describe("Solver Benchmarks", func() {
 	db := pkg.NewInMemoryDatabase(false)
 	dbInstalled := pkg.NewInMemoryDatabase(false)
 	dbDefinitions := pkg.NewInMemoryDatabase(false)
-	var s PackageSolver
+	var s types.PackageSolver
 
 	Context("Complex data sets", func() {
 		BeforeEach(func() {
 			db = pkg.NewInMemoryDatabase(false)
 			dbInstalled = pkg.NewInMemoryDatabase(false)
 			dbDefinitions = pkg.NewInMemoryDatabase(false)
-			s = NewSolver(Options{Type: SingleCoreSimple}, dbInstalled, dbDefinitions, db)
+			s = NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple}, dbInstalled, dbDefinitions, db)
 			if os.Getenv("BENCHMARK_TESTS") != "true" {
 				Skip("BENCHMARK_TESTS not enabled")
 			}
@@ -49,15 +50,15 @@ var _ = Describe("Solver Benchmarks", func() {
 
 			runtime := b.Time("runtime", func() {
 				for i := 0; i < 50000; i++ {
-					C := pkg.NewPackage("C"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					E := pkg.NewPackage("E"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					F := pkg.NewPackage("F"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					G := pkg.NewPackage("G"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					H := pkg.NewPackage("H"+strconv.Itoa(i), "", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
-					D := pkg.NewPackage("D"+strconv.Itoa(i), "", []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
-					B := pkg.NewPackage("B"+strconv.Itoa(i), "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-					A := pkg.NewPackage("A"+strconv.Itoa(i), "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
-					for _, p := range []pkg.Package{A, B, C, D, E, F, G} {
+					C := types.NewPackage("C"+strconv.Itoa(i), "", []*types.Package{}, []*types.Package{})
+					E := types.NewPackage("E"+strconv.Itoa(i), "", []*types.Package{}, []*types.Package{})
+					F := types.NewPackage("F"+strconv.Itoa(i), "", []*types.Package{}, []*types.Package{})
+					G := types.NewPackage("G"+strconv.Itoa(i), "", []*types.Package{}, []*types.Package{})
+					H := types.NewPackage("H"+strconv.Itoa(i), "", []*types.Package{G}, []*types.Package{})
+					D := types.NewPackage("D"+strconv.Itoa(i), "", []*types.Package{H}, []*types.Package{})
+					B := types.NewPackage("B"+strconv.Itoa(i), "", []*types.Package{D}, []*types.Package{})
+					A := types.NewPackage("A"+strconv.Itoa(i), "", []*types.Package{B}, []*types.Package{})
+					for _, p := range []*types.Package{A, B, C, D, E, F, G} {
 						_, err := dbDefinitions.CreatePackage(p)
 						Expect(err).ToNot(HaveOccurred())
 					}
@@ -66,22 +67,22 @@ var _ = Describe("Solver Benchmarks", func() {
 				}
 
 				for i := 0; i < 1; i++ {
-					C := pkg.NewPackage("C"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					G := pkg.NewPackage("G"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					H := pkg.NewPackage("H"+strconv.Itoa(i), "", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
-					D := pkg.NewPackage("D"+strconv.Itoa(i), "", []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
-					B := pkg.NewPackage("B"+strconv.Itoa(i), "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-					A := pkg.NewPackage("A"+strconv.Itoa(i), "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+					C := types.NewPackage("C"+strconv.Itoa(i), "", []*types.Package{}, []*types.Package{})
+					G := types.NewPackage("G"+strconv.Itoa(i), "", []*types.Package{}, []*types.Package{})
+					H := types.NewPackage("H"+strconv.Itoa(i), "", []*types.Package{G}, []*types.Package{})
+					D := types.NewPackage("D"+strconv.Itoa(i), "", []*types.Package{H}, []*types.Package{})
+					B := types.NewPackage("B"+strconv.Itoa(i), "", []*types.Package{D}, []*types.Package{})
+					A := types.NewPackage("A"+strconv.Itoa(i), "", []*types.Package{B}, []*types.Package{})
 
-					solution, err := s.Install([]pkg.Package{A})
+					solution, err := s.Install([]*types.Package{A})
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
-					Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
-					Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
-					Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
-					Expect(solution).To(ContainElement(PackageAssert{Package: H, Value: true}))
-					Expect(solution).To(ContainElement(PackageAssert{Package: G, Value: true}))
+					Expect(solution).To(ContainElement(types.PackageAssert{Package: A, Value: true}))
+					Expect(solution).To(ContainElement(types.PackageAssert{Package: B, Value: true}))
+					Expect(solution).To(ContainElement(types.PackageAssert{Package: D, Value: true}))
+					Expect(solution).To(ContainElement(types.PackageAssert{Package: C, Value: true}))
+					Expect(solution).To(ContainElement(types.PackageAssert{Package: H, Value: true}))
+					Expect(solution).To(ContainElement(types.PackageAssert{Package: G, Value: true}))
 				}
 			})
 
@@ -94,7 +95,7 @@ var _ = Describe("Solver Benchmarks", func() {
 			db = pkg.NewInMemoryDatabase(false)
 			dbInstalled = pkg.NewInMemoryDatabase(false)
 			dbDefinitions = pkg.NewInMemoryDatabase(false)
-			s = NewSolver(Options{Type: SingleCoreSimple, Concurrency: 10}, dbInstalled, dbDefinitions, db)
+			s = NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple, Concurrency: 10}, dbInstalled, dbDefinitions, db)
 			if os.Getenv("BENCHMARK_TESTS") != "true" {
 				Skip("BENCHMARK_TESTS not enabled")
 			}
@@ -102,15 +103,15 @@ var _ = Describe("Solver Benchmarks", func() {
 		Measure("it should be fast in resolution from a 50000 dataset", func(b Benchmarker) {
 			runtime := b.Time("runtime", func() {
 				for i := 0; i < 50000; i++ {
-					C := pkg.NewPackage("C"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					E := pkg.NewPackage("E"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					F := pkg.NewPackage("F"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					G := pkg.NewPackage("G"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					H := pkg.NewPackage("H"+strconv.Itoa(i), "", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
-					D := pkg.NewPackage("D"+strconv.Itoa(i), "", []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
-					B := pkg.NewPackage("B"+strconv.Itoa(i), "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-					A := pkg.NewPackage("A"+strconv.Itoa(i), "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
-					for _, p := range []pkg.Package{A, B, C, D, E, F, G} {
+					C := types.NewPackage("C"+strconv.Itoa(i), "", []*types.Package{}, []*types.Package{})
+					E := types.NewPackage("E"+strconv.Itoa(i), "", []*types.Package{}, []*types.Package{})
+					F := types.NewPackage("F"+strconv.Itoa(i), "", []*types.Package{}, []*types.Package{})
+					G := types.NewPackage("G"+strconv.Itoa(i), "", []*types.Package{}, []*types.Package{})
+					H := types.NewPackage("H"+strconv.Itoa(i), "", []*types.Package{G}, []*types.Package{})
+					D := types.NewPackage("D"+strconv.Itoa(i), "", []*types.Package{H}, []*types.Package{})
+					B := types.NewPackage("B"+strconv.Itoa(i), "", []*types.Package{D}, []*types.Package{})
+					A := types.NewPackage("A"+strconv.Itoa(i), "", []*types.Package{B}, []*types.Package{})
+					for _, p := range []*types.Package{A, B, C, D, E, F, G} {
 						_, err := dbDefinitions.CreatePackage(p)
 						Expect(err).ToNot(HaveOccurred())
 					}
@@ -118,22 +119,22 @@ var _ = Describe("Solver Benchmarks", func() {
 					Expect(err).ToNot(HaveOccurred())
 				}
 				for i := 0; i < 1; i++ {
-					C := pkg.NewPackage("C"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					G := pkg.NewPackage("G"+strconv.Itoa(i), "", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					H := pkg.NewPackage("H"+strconv.Itoa(i), "", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
-					D := pkg.NewPackage("D"+strconv.Itoa(i), "", []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
-					B := pkg.NewPackage("B"+strconv.Itoa(i), "", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-					A := pkg.NewPackage("A"+strconv.Itoa(i), "", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+					C := types.NewPackage("C"+strconv.Itoa(i), "", []*types.Package{}, []*types.Package{})
+					G := types.NewPackage("G"+strconv.Itoa(i), "", []*types.Package{}, []*types.Package{})
+					H := types.NewPackage("H"+strconv.Itoa(i), "", []*types.Package{G}, []*types.Package{})
+					D := types.NewPackage("D"+strconv.Itoa(i), "", []*types.Package{H}, []*types.Package{})
+					B := types.NewPackage("B"+strconv.Itoa(i), "", []*types.Package{D}, []*types.Package{})
+					A := types.NewPackage("A"+strconv.Itoa(i), "", []*types.Package{B}, []*types.Package{})
 
-					solution, err := s.Install([]pkg.Package{A})
+					solution, err := s.Install([]*types.Package{A})
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(solution).To(ContainElement(PackageAssert{Package: A, Value: true}))
-					Expect(solution).To(ContainElement(PackageAssert{Package: B, Value: true}))
-					Expect(solution).To(ContainElement(PackageAssert{Package: D, Value: true}))
-					Expect(solution).To(ContainElement(PackageAssert{Package: C, Value: true}))
-					Expect(solution).To(ContainElement(PackageAssert{Package: H, Value: true}))
-					Expect(solution).To(ContainElement(PackageAssert{Package: G, Value: true}))
+					Expect(solution).To(ContainElement(types.PackageAssert{Package: A, Value: true}))
+					Expect(solution).To(ContainElement(types.PackageAssert{Package: B, Value: true}))
+					Expect(solution).To(ContainElement(types.PackageAssert{Package: D, Value: true}))
+					Expect(solution).To(ContainElement(types.PackageAssert{Package: C, Value: true}))
+					Expect(solution).To(ContainElement(types.PackageAssert{Package: H, Value: true}))
+					Expect(solution).To(ContainElement(types.PackageAssert{Package: G, Value: true}))
 
 					//	Expect(len(solution)).To(Equal(6))
 				}
@@ -152,7 +153,7 @@ var _ = Describe("Solver Benchmarks", func() {
 
 			//	dbInstalled = pkg.NewInMemoryDatabase(false)
 			dbDefinitions = pkg.NewInMemoryDatabase(false)
-			s = NewSolver(Options{Type: SingleCoreSimple, Concurrency: 100}, dbInstalled, dbDefinitions, db)
+			s = NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple, Concurrency: 100}, dbInstalled, dbDefinitions, db)
 			if os.Getenv("BENCHMARK_TESTS") != "true" {
 				Skip("BENCHMARK_TESTS not enabled")
 			}
@@ -161,26 +162,26 @@ var _ = Describe("Solver Benchmarks", func() {
 		Measure("it should be fast in resolution from a 10000*8 dataset", func(b Benchmarker) {
 			runtime := b.Time("runtime", func() {
 				for i := 2; i < 10000; i++ {
-					C := pkg.NewPackage("C", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					E := pkg.NewPackage("E", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					F := pkg.NewPackage("F", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					G := pkg.NewPackage("G", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					H := pkg.NewPackage("H", strconv.Itoa(i), []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
-					D := pkg.NewPackage("D", strconv.Itoa(i), []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
-					B := pkg.NewPackage("B", strconv.Itoa(i), []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-					A := pkg.NewPackage("A", strconv.Itoa(i), []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
-					for _, p := range []pkg.Package{A, B, C, D, E, F, G, H} {
+					C := types.NewPackage("C", strconv.Itoa(i), []*types.Package{}, []*types.Package{})
+					E := types.NewPackage("E", strconv.Itoa(i), []*types.Package{}, []*types.Package{})
+					F := types.NewPackage("F", strconv.Itoa(i), []*types.Package{}, []*types.Package{})
+					G := types.NewPackage("G", strconv.Itoa(i), []*types.Package{}, []*types.Package{})
+					H := types.NewPackage("H", strconv.Itoa(i), []*types.Package{G}, []*types.Package{})
+					D := types.NewPackage("D", strconv.Itoa(i), []*types.Package{H}, []*types.Package{})
+					B := types.NewPackage("B", strconv.Itoa(i), []*types.Package{D}, []*types.Package{})
+					A := types.NewPackage("A", strconv.Itoa(i), []*types.Package{B}, []*types.Package{})
+					for _, p := range []*types.Package{A, B, C, D, E, F, G, H} {
 						_, err := dbDefinitions.CreatePackage(p)
 						Expect(err).ToNot(HaveOccurred())
 					}
 				}
 
-				//C := pkg.NewPackage("C", "1", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				G := pkg.NewPackage("G", "1", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				H := pkg.NewPackage("H", "1", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
-				D := pkg.NewPackage("D", "1", []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
-				B := pkg.NewPackage("B", "1", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-				A := pkg.NewPackage("A", "1", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+				//C := types.NewPackage("C", "1", []*types.Package{}, []*types.Package{})
+				G := types.NewPackage("G", "1", []*types.Package{}, []*types.Package{})
+				H := types.NewPackage("H", "1", []*types.Package{G}, []*types.Package{})
+				D := types.NewPackage("D", "1", []*types.Package{H}, []*types.Package{})
+				B := types.NewPackage("B", "1", []*types.Package{D}, []*types.Package{})
+				A := types.NewPackage("A", "1", []*types.Package{B}, []*types.Package{})
 				_, err := dbInstalled.CreatePackage(A)
 				Expect(err).ToNot(HaveOccurred())
 				_, err = dbInstalled.CreatePackage(B)
@@ -198,12 +199,12 @@ var _ = Describe("Solver Benchmarks", func() {
 
 				Expect(packages).To(ContainElement(A))
 
-				G = pkg.NewPackage("G", "9999", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				H = pkg.NewPackage("H", "9999", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
-				D = pkg.NewPackage("D", "9999", []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
-				B = pkg.NewPackage("B", "9999", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-				A = pkg.NewPackage("A", "9999", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
-				Expect(ass).To(ContainElement(PackageAssert{Package: A, Value: true}))
+				G = types.NewPackage("G", "9999", []*types.Package{}, []*types.Package{})
+				H = types.NewPackage("H", "9999", []*types.Package{G}, []*types.Package{})
+				D = types.NewPackage("D", "9999", []*types.Package{H}, []*types.Package{})
+				B = types.NewPackage("B", "9999", []*types.Package{D}, []*types.Package{})
+				A = types.NewPackage("A", "9999", []*types.Package{B}, []*types.Package{})
+				Expect(ass).To(ContainElement(types.PackageAssert{Package: A, Value: true}))
 
 				Expect(len(packages)).To(Equal(5))
 				//	Expect(len(solution)).To(Equal(6))
@@ -216,15 +217,15 @@ var _ = Describe("Solver Benchmarks", func() {
 		Measure("it should be fast in installation with 12000 packages installed and 2000*8 available", func(b Benchmarker) {
 			runtime := b.Time("runtime", func() {
 				for i := 0; i < 2000; i++ {
-					C := pkg.NewPackage("C", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					E := pkg.NewPackage("E", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					F := pkg.NewPackage("F", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					G := pkg.NewPackage("G", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					H := pkg.NewPackage("H", strconv.Itoa(i), []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
-					D := pkg.NewPackage("D", strconv.Itoa(i), []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
-					B := pkg.NewPackage("B", strconv.Itoa(i), []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-					A := pkg.NewPackage("A", strconv.Itoa(i), []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
-					for _, p := range []pkg.Package{A, B, C, D, E, F, G} {
+					C := types.NewPackage("C", strconv.Itoa(i), []*types.Package{}, []*types.Package{})
+					E := types.NewPackage("E", strconv.Itoa(i), []*types.Package{}, []*types.Package{})
+					F := types.NewPackage("F", strconv.Itoa(i), []*types.Package{}, []*types.Package{})
+					G := types.NewPackage("G", strconv.Itoa(i), []*types.Package{}, []*types.Package{})
+					H := types.NewPackage("H", strconv.Itoa(i), []*types.Package{G}, []*types.Package{})
+					D := types.NewPackage("D", strconv.Itoa(i), []*types.Package{H}, []*types.Package{})
+					B := types.NewPackage("B", strconv.Itoa(i), []*types.Package{D}, []*types.Package{})
+					A := types.NewPackage("A", strconv.Itoa(i), []*types.Package{B}, []*types.Package{})
+					for _, p := range []*types.Package{A, B, C, D, E, F, G} {
 						_, err := dbDefinitions.CreatePackage(p)
 						Expect(err).ToNot(HaveOccurred())
 					}
@@ -237,16 +238,16 @@ var _ = Describe("Solver Benchmarks", func() {
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				G := pkg.NewPackage("G", strconv.Itoa(50000), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				H := pkg.NewPackage("H", strconv.Itoa(50000), []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
-				D := pkg.NewPackage("D", strconv.Itoa(50000), []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
-				B := pkg.NewPackage("B", strconv.Itoa(50000), []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-				A := pkg.NewPackage("A", strconv.Itoa(50000), []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+				G := types.NewPackage("G", strconv.Itoa(50000), []*types.Package{}, []*types.Package{})
+				H := types.NewPackage("H", strconv.Itoa(50000), []*types.Package{G}, []*types.Package{})
+				D := types.NewPackage("D", strconv.Itoa(50000), []*types.Package{H}, []*types.Package{})
+				B := types.NewPackage("B", strconv.Itoa(50000), []*types.Package{D}, []*types.Package{})
+				A := types.NewPackage("A", strconv.Itoa(50000), []*types.Package{B}, []*types.Package{})
 
-				ass, err := s.Install([]pkg.Package{A})
+				ass, err := s.Install([]*types.Package{A})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(ass).To(ContainElement(PackageAssert{Package: pkg.NewPackage("A", "50000", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{}), Value: true}))
+				Expect(ass).To(ContainElement(types.PackageAssert{Package: types.NewPackage("A", "50000", []*types.Package{B}, []*types.Package{}), Value: true}))
 				//Expect(ass).To(Equal(5))
 				//	Expect(len(solution)).To(Equal(6))
 
@@ -258,26 +259,26 @@ var _ = Describe("Solver Benchmarks", func() {
 		Measure("it should be fast in resolution from a 50000 dataset with upgrade universe", func(b Benchmarker) {
 			runtime := b.Time("runtime", func() {
 				for i := 0; i < 2; i++ {
-					C := pkg.NewPackage("C", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					E := pkg.NewPackage("E", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					F := pkg.NewPackage("F", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					G := pkg.NewPackage("G", strconv.Itoa(i), []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-					H := pkg.NewPackage("H", strconv.Itoa(i), []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
-					D := pkg.NewPackage("D", strconv.Itoa(i), []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
-					B := pkg.NewPackage("B", strconv.Itoa(i), []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-					A := pkg.NewPackage("A", strconv.Itoa(i), []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
-					for _, p := range []pkg.Package{A, B, C, D, E, F, G} {
+					C := types.NewPackage("C", strconv.Itoa(i), []*types.Package{}, []*types.Package{})
+					E := types.NewPackage("E", strconv.Itoa(i), []*types.Package{}, []*types.Package{})
+					F := types.NewPackage("F", strconv.Itoa(i), []*types.Package{}, []*types.Package{})
+					G := types.NewPackage("G", strconv.Itoa(i), []*types.Package{}, []*types.Package{})
+					H := types.NewPackage("H", strconv.Itoa(i), []*types.Package{G}, []*types.Package{})
+					D := types.NewPackage("D", strconv.Itoa(i), []*types.Package{H}, []*types.Package{})
+					B := types.NewPackage("B", strconv.Itoa(i), []*types.Package{D}, []*types.Package{})
+					A := types.NewPackage("A", strconv.Itoa(i), []*types.Package{B}, []*types.Package{})
+					for _, p := range []*types.Package{A, B, C, D, E, F, G} {
 						_, err := dbDefinitions.CreatePackage(p)
 						Expect(err).ToNot(HaveOccurred())
 					}
 					fmt.Println("Creating package, run", i)
 				}
 
-				G := pkg.NewPackage("G", "1", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-				H := pkg.NewPackage("H", "1", []*pkg.DefaultPackage{G}, []*pkg.DefaultPackage{})
-				D := pkg.NewPackage("D", "1", []*pkg.DefaultPackage{H}, []*pkg.DefaultPackage{})
-				B := pkg.NewPackage("B", "1", []*pkg.DefaultPackage{D}, []*pkg.DefaultPackage{})
-				A := pkg.NewPackage("A", "1", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})
+				G := types.NewPackage("G", "1", []*types.Package{}, []*types.Package{})
+				H := types.NewPackage("H", "1", []*types.Package{G}, []*types.Package{})
+				D := types.NewPackage("D", "1", []*types.Package{H}, []*types.Package{})
+				B := types.NewPackage("B", "1", []*types.Package{D}, []*types.Package{})
+				A := types.NewPackage("A", "1", []*types.Package{B}, []*types.Package{})
 				_, err := dbInstalled.CreatePackage(A)
 				Expect(err).ToNot(HaveOccurred())
 				fmt.Println("Upgrade starts")
@@ -285,8 +286,8 @@ var _ = Describe("Solver Benchmarks", func() {
 				packages, ass, err := s.UpgradeUniverse(true)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(ass).To(ContainElement(PackageAssert{Package: pkg.NewPackage("A", "50000", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{}), Value: true}))
-				Expect(packages).To(ContainElement(pkg.NewPackage("A", "50000", []*pkg.DefaultPackage{B}, []*pkg.DefaultPackage{})))
+				Expect(ass).To(ContainElement(types.PackageAssert{Package: types.NewPackage("A", "50000", []*types.Package{B}, []*types.Package{}), Value: true}))
+				Expect(packages).To(ContainElement(types.NewPackage("A", "50000", []*types.Package{B}, []*types.Package{})))
 				Expect(packages).To(Equal(5))
 				//	Expect(len(solution)).To(Equal(6))
 

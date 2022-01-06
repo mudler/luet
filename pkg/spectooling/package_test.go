@@ -17,7 +17,8 @@
 package spectooling_test
 
 import (
-	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/api/core/types"
+
 	. "github.com/mudler/luet/pkg/spectooling"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -27,13 +28,13 @@ import (
 var _ = Describe("Spec Tooling", func() {
 	Context("Conversion1", func() {
 
-		b := pkg.NewPackage("B", "1.0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-		c := pkg.NewPackage("C", "1.0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-		d := pkg.NewPackage("D", "1.0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
-		p1 := pkg.NewPackage("A", "1.0", []*pkg.DefaultPackage{b, c}, []*pkg.DefaultPackage{d})
-		virtual := pkg.NewPackage("E", "1.0", []*pkg.DefaultPackage{}, []*pkg.DefaultPackage{})
+		b := types.NewPackage("B", "1.0", []*types.Package{}, []*types.Package{})
+		c := types.NewPackage("C", "1.0", []*types.Package{}, []*types.Package{})
+		d := types.NewPackage("D", "1.0", []*types.Package{}, []*types.Package{})
+		p1 := types.NewPackage("A", "1.0", []*types.Package{b, c}, []*types.Package{d})
+		virtual := types.NewPackage("E", "1.0", []*types.Package{}, []*types.Package{})
 		virtual.SetCategory("virtual")
-		p1.Provides = []*pkg.DefaultPackage{virtual}
+		p1.Provides = []*types.Package{virtual}
 		p1.AddLabel("label1", "value1")
 		p1.AddLabel("label2", "value2")
 		p1.SetDescription("Package1")
@@ -43,28 +44,28 @@ var _ = Describe("Spec Tooling", func() {
 		p1.AddUse("systemd")
 		It("Convert pkg1", func() {
 			res := NewDefaultPackageSanitized(p1)
-			expected_res := &DefaultPackageSanitized{
+			expected_res := &PackageSanitized{
 				Name:     "A",
 				Version:  "1.0",
 				Category: "cat1",
-				PackageRequires: []*DefaultPackageSanitized{
-					&DefaultPackageSanitized{
+				PackageRequires: []*PackageSanitized{
+					&PackageSanitized{
 						Name:    "B",
 						Version: "1.0",
 					},
-					&DefaultPackageSanitized{
+					&PackageSanitized{
 						Name:    "C",
 						Version: "1.0",
 					},
 				},
-				PackageConflicts: []*DefaultPackageSanitized{
-					&DefaultPackageSanitized{
+				PackageConflicts: []*PackageSanitized{
+					&PackageSanitized{
 						Name:    "D",
 						Version: "1.0",
 					},
 				},
-				Provides: []*DefaultPackageSanitized{
-					&DefaultPackageSanitized{
+				Provides: []*PackageSanitized{
+					&PackageSanitized{
 						Name:     "E",
 						Category: "virtual",
 						Version:  "1.0",

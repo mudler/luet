@@ -31,9 +31,9 @@ import (
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/compiler/types/options"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
+	pkg "github.com/mudler/luet/pkg/database"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/installer"
-	pkg "github.com/mudler/luet/pkg/package"
 	"github.com/mudler/luet/pkg/tree"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -75,7 +75,7 @@ var _ = Describe("Repository", func() {
 
 			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase())
 
-			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			spec, err := compiler.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
@@ -141,12 +141,12 @@ var _ = Describe("Repository", func() {
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
 			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), options.WithContext(context.NewContext()))
-			spec2, err := compiler2.FromPackage(&pkg.DefaultPackage{Name: "alpine", Category: "seed", Version: "1.0"})
+			spec2, err := compiler2.FromPackage(&types.Package{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(context.NewContext()))
 
-			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			spec, err := compiler.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
@@ -238,12 +238,12 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
 			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), options.WithContext(ctx))
-			spec2, err := compiler2.FromPackage(&pkg.DefaultPackage{Name: "alpine", Category: "seed", Version: "1.0"})
+			spec2, err := compiler2.FromPackage(&types.Package{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(ctx))
 
-			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			spec, err := compiler.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
@@ -356,12 +356,12 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
 			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), options.WithContext(ctx))
-			spec2, err := compiler2.FromPackage(&pkg.DefaultPackage{Name: "alpine", Category: "seed", Version: "1.0"})
+			spec2, err := compiler2.FromPackage(&types.Package{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(ctx))
 
-			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			spec, err := compiler.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
@@ -447,8 +447,8 @@ urls:
 	})
 	Context("Matching packages", func() {
 		It("Matches packages in different repositories by priority", func() {
-			package1 := &pkg.DefaultPackage{Name: "Test"}
-			package2 := &pkg.DefaultPackage{Name: "Test2"}
+			package1 := &types.Package{Name: "Test"}
+			package2 := &types.Package{Name: "Test2"}
 			builder1 := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
 			builder2 := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
 
@@ -460,7 +460,7 @@ urls:
 			repo1 := &LuetSystemRepository{LuetRepository: &types.LuetRepository{Name: "test1"}, Tree: builder1}
 			repo2 := &LuetSystemRepository{LuetRepository: &types.LuetRepository{Name: "test2"}, Tree: builder2}
 			repositories := Repositories{repo1, repo2}
-			matches := repositories.PackageMatches([]pkg.Package{package1})
+			matches := repositories.PackageMatches([]*types.Package{package1})
 			Expect(matches).To(Equal([]PackageMatch{{Repo: repo1, Package: package1}}))
 
 		})
@@ -491,7 +491,7 @@ urls:
 			localcompiler := compiler.NewLuetCompiler(
 				backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(ctx))
 
-			spec, err := localcompiler.FromPackage(&pkg.DefaultPackage{Name: "b", Category: "test", Version: "1.0"})
+			spec, err := localcompiler.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
@@ -537,7 +537,7 @@ urls:
 			a, err = c.DownloadArtifact(&artifact.PackageArtifact{
 				Path: "test.tar",
 				CompileSpec: &compilerspec.LuetCompilationSpec{
-					Package: &pkg.DefaultPackage{
+					Package: &types.Package{
 						Name:     "b",
 						Category: "test",
 						Version:  "1.0",
@@ -566,7 +566,7 @@ urls:
 			localcompiler := compiler.NewLuetCompiler(
 				backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(ctx))
 
-			spec, err := localcompiler.FromPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.99"})
+			spec, err := localcompiler.FromPackage(&types.Package{Name: "a", Category: "test", Version: "1.99"})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
@@ -609,7 +609,7 @@ urls:
 			a, err = c.DownloadArtifact(&artifact.PackageArtifact{
 				Path: "test.tar",
 				CompileSpec: &compilerspec.LuetCompilationSpec{
-					Package: &pkg.DefaultPackage{
+					Package: &types.Package{
 						Name:     "a",
 						Category: "test",
 						Version:  "1.99",
@@ -630,7 +630,7 @@ urls:
 					Index: compiler.ArtifactIndex{
 						&artifact.PackageArtifact{
 							CompileSpec: &compilerspec.LuetCompilationSpec{
-								Package: &pkg.DefaultPackage{},
+								Package: &types.Package{},
 							},
 							Path:  "bar",
 							Files: []string{"boo"},
@@ -654,7 +654,7 @@ urls:
 					&artifact.PackageArtifact{
 						Path: "foo",
 						CompileSpec: &compilerspec.LuetCompilationSpec{
-							Package: &pkg.DefaultPackage{
+							Package: &types.Package{
 								Name:     "foo",
 								Category: "bar",
 								Version:  "1.0",
@@ -664,7 +664,7 @@ urls:
 					&artifact.PackageArtifact{
 						Path: "baz",
 						CompileSpec: &compilerspec.LuetCompilationSpec{
-							Package: &pkg.DefaultPackage{
+							Package: &types.Package{
 								Name:     "foo",
 								Category: "baz",
 								Version:  "1.0",
@@ -674,7 +674,7 @@ urls:
 				},
 			}
 
-			a, err := repo.SearchArtefact(&pkg.DefaultPackage{
+			a, err := repo.SearchArtefact(&types.Package{
 				Name:     "foo",
 				Category: "baz",
 				Version:  "1.0",
@@ -682,7 +682,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			Expect(a.Path).To(Equal("baz"))
 
-			a, err = repo.SearchArtefact(&pkg.DefaultPackage{
+			a, err = repo.SearchArtefact(&types.Package{
 				Name:     "foo",
 				Category: "bar",
 				Version:  "1.0",
@@ -691,7 +691,7 @@ urls:
 			Expect(a.Path).To(Equal("foo"))
 
 			// Doesn't exist. so must fail
-			_, err = repo.SearchArtefact(&pkg.DefaultPackage{
+			_, err = repo.SearchArtefact(&types.Package{
 				Name:     "foo",
 				Category: "bar",
 				Version:  "1.1",

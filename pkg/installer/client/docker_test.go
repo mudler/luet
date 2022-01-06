@@ -20,12 +20,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/types"
+
 	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
-
-	pkg "github.com/mudler/luet/pkg/package"
 
 	. "github.com/mudler/luet/pkg/installer/client"
 	. "github.com/onsi/ginkgo/v2"
@@ -62,7 +62,7 @@ var _ = Describe("Docker client", func() {
 			f, err := c.DownloadArtifact(&artifact.PackageArtifact{
 				Path: "test.tar",
 				CompileSpec: &compilerspec.LuetCompilationSpec{
-					Package: &pkg.DefaultPackage{
+					Package: &types.Package{
 						Name:     "c",
 						Category: "test",
 						Version:  "1.0",

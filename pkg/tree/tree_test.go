@@ -28,7 +28,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	pkg "github.com/mudler/luet/pkg/package"
+	"github.com/mudler/luet/pkg/api/core/types"
+	pkg "github.com/mudler/luet/pkg/database"
 	"github.com/mudler/luet/pkg/solver"
 	. "github.com/mudler/luet/pkg/tree"
 )
@@ -49,7 +50,7 @@ var _ = Describe("Tree", func() {
 
 				Expect(len(generalRecipe.GetDatabase().World())).To(Equal(4))
 
-				D, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
+				D, err := generalRecipe.GetDatabase().FindPackage(&types.Package{Name: "d", Category: "test", Version: "1.0"})
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(D.GetRequires()[0].GetName()).To(Equal("c"))
@@ -59,11 +60,11 @@ var _ = Describe("Tree", func() {
 				Expect(len(CfromD.GetRequires()) != 0).To(BeTrue())
 				Expect(CfromD.GetRequires()[0].GetName()).To(Equal("b"))
 
-				s := solver.NewSolver(solver.Options{Type: solver.SingleCoreSimple}, pkg.NewInMemoryDatabase(false), generalRecipe.GetDatabase(), db)
-				pack, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
+				s := solver.NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple}, pkg.NewInMemoryDatabase(false), generalRecipe.GetDatabase(), db)
+				pack, err := generalRecipe.GetDatabase().FindPackage(&types.Package{Name: "d", Category: "test", Version: "1.0"})
 				Expect(err).ToNot(HaveOccurred())
 
-				solution, err := s.Install([]pkg.Package{pack})
+				solution, err := s.Install([]*types.Package{pack})
 				Expect(err).ToNot(HaveOccurred())
 
 				solution, err = solution.Order(generalRecipe.GetDatabase(), pack.GetFingerPrint())
@@ -79,7 +80,7 @@ var _ = Describe("Tree", func() {
 				Expect(solution[2].Value).To(BeTrue())
 				Expect(len(solution)).To(Equal(3))
 
-				newsolution := solution.Drop(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
+				newsolution := solution.Drop(&types.Package{Name: "d", Category: "test", Version: "1.0"})
 				Expect(len(newsolution)).To(Equal(2))
 
 				Expect(newsolution[0].Package.GetName()).To(Equal("b"))
@@ -111,11 +112,11 @@ var _ = Describe("Tree", func() {
 
 				Expect(len(generalRecipe.GetDatabase().World())).To(Equal(6))
 
-				extra, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "extra", Category: "layer", Version: "1.0"})
+				extra, err := generalRecipe.GetDatabase().FindPackage(&types.Package{Name: "extra", Category: "layer", Version: "1.0"})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(extra).ToNot(BeNil())
 
-				D, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
+				D, err := generalRecipe.GetDatabase().FindPackage(&types.Package{Name: "d", Category: "test", Version: "1.0"})
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(D.GetRequires()[0].GetName()).To(Equal("c"))
@@ -125,25 +126,25 @@ var _ = Describe("Tree", func() {
 				Expect(len(CfromD.GetRequires()) != 0).To(BeTrue())
 				Expect(CfromD.GetRequires()[0].GetName()).To(Equal("b"))
 
-				s := solver.NewSolver(solver.Options{Type: solver.SingleCoreSimple}, pkg.NewInMemoryDatabase(false), generalRecipe.GetDatabase(), db)
+				s := solver.NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple}, pkg.NewInMemoryDatabase(false), generalRecipe.GetDatabase(), db)
 
-				Dd, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "d", Category: "test", Version: "1.0"})
+				Dd, err := generalRecipe.GetDatabase().FindPackage(&types.Package{Name: "d", Category: "test", Version: "1.0"})
 				Expect(err).ToNot(HaveOccurred())
 
-				solution, err := s.Install([]pkg.Package{Dd})
+				solution, err := s.Install([]*types.Package{Dd})
 				Expect(err).ToNot(HaveOccurred())
 
 				solution, err = solution.Order(generalRecipe.GetDatabase(), Dd.GetFingerPrint())
 				Expect(err).ToNot(HaveOccurred())
-				pack, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "a", Category: "test", Version: "1.0"})
+				pack, err := generalRecipe.GetDatabase().FindPackage(&types.Package{Name: "a", Category: "test", Version: "1.0"})
 				Expect(err).ToNot(HaveOccurred())
 
-				base, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "base", Category: "layer", Version: "0.2"})
+				base, err := generalRecipe.GetDatabase().FindPackage(&types.Package{Name: "base", Category: "layer", Version: "0.2"})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(solution).ToNot(ContainElement(solver.PackageAssert{Package: pack.(*pkg.DefaultPackage), Value: true}))
-				Expect(solution).To(ContainElement(solver.PackageAssert{Package: D.(*pkg.DefaultPackage), Value: true}))
-				Expect(solution).ToNot(ContainElement(solver.PackageAssert{Package: extra.(*pkg.DefaultPackage), Value: true}))
-				Expect(solution).ToNot(ContainElement(solver.PackageAssert{Package: base.(*pkg.DefaultPackage), Value: true}))
+				Expect(solution).ToNot(ContainElement(types.PackageAssert{Package: pack, Value: true}))
+				Expect(solution).To(ContainElement(types.PackageAssert{Package: D, Value: true}))
+				Expect(solution).ToNot(ContainElement(types.PackageAssert{Package: extra, Value: true}))
+				Expect(solution).ToNot(ContainElement(types.PackageAssert{Package: base, Value: true}))
 				Expect(len(solution)).To(Equal(3))
 			}
 		})
@@ -158,7 +159,7 @@ var _ = Describe("Tree", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(len(generalRecipe.GetDatabase().World())).To(Equal(1))
-			pack, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "pkgA", Category: "test", Version: "0.1"})
+			pack, err := generalRecipe.GetDatabase().FindPackage(&types.Package{Name: "pkgA", Category: "test", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(pack.HasLabel("label1")).To(Equal(true))
@@ -176,11 +177,13 @@ var _ = Describe("Tree", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(len(generalRecipe.GetDatabase().World())).To(Equal(1))
-			pack, err := generalRecipe.GetDatabase().FindPackage(&pkg.DefaultPackage{Name: "pkgA", Category: "test", Version: "0.1"})
+			pack, err := generalRecipe.GetDatabase().FindPackage(&types.Package{Name: "pkgA", Category: "test", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(pack.HasAnnotation("label1")).To(Equal(true))
-			Expect(pack.HasAnnotation("label3")).To(Equal(false))
+			_, existsLabel1 := pack.Annotations["label1"]
+			_, existsLabel2 := pack.Annotations["label3"]
+			Expect(existsLabel1).To(Equal(true))
+			Expect(existsLabel2).To(Equal(false))
 			Expect(pack.MatchAnnotation(r)).To(Equal(true))
 		})
 	})

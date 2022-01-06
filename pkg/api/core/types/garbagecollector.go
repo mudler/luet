@@ -17,6 +17,8 @@ package types
 
 import "os"
 
+// GarbageCollector is a general garbage collector for temporary files
+// It is responsible of assigning temporary files and cleaning up afterwards
 type GarbageCollector interface {
 	Clean() error
 	TempDir(pattern string) (string, error)

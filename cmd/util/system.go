@@ -1,4 +1,4 @@
-// Copyright © 2019-2022 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2022 Ettore Di Giacinto <mudler@mocaccino.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -13,23 +13,21 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package helpers
+package util
 
-import "reflect"
+import (
+	"path/filepath"
 
-func Contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
+	"github.com/mudler/luet/pkg/api/core/types"
+	pkg "github.com/mudler/luet/pkg/database"
+)
 
-func ReverseAny(s interface{}) {
-	n := reflect.ValueOf(s).Len()
-	swap := reflect.Swapper(s)
-	for i, j := 0, n-1; i < j; i, j = i+1, j-1 {
-		swap(i, j)
+func SystemDB(c *types.LuetConfig) types.PackageDatabase {
+	switch c.System.DatabaseEngine {
+	case "boltdb":
+		return pkg.NewBoltDatabase(
+			filepath.Join(c.System.DatabasePath, "luet.db"))
+	default:
+		return pkg.NewInMemoryDatabase(true)
 	}
 }

@@ -1,4 +1,4 @@
-// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2019-2022 Ettore Di Giacinto <mudler@mocaccino.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package pkg
+package types
 
 import (
 	"bytes"
@@ -30,7 +30,6 @@ import (
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
-	"github.com/mudler/luet/pkg/helpers/match"
 	version "github.com/mudler/luet/pkg/versioner"
 
 	gentoo "github.com/Sabayon/pkgs-checker/pkg/gentoo"
@@ -40,93 +39,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Package is a package interface (TBD)
-// FIXME: Currently some of the methods are returning DefaultPackages due to JSON serialization of the package
-type Package interface {
-	Encode(PackageDatabase) (string, error)
-	Related(definitiondb PackageDatabase) Packages
+type PackageAnnotation string
 
-	BuildFormula(PackageDatabase, PackageDatabase) ([]bf.Formula, error)
-
-	GetFingerPrint() string
-	GetPackageName() string
-	ImageID() string
-	Requires([]*DefaultPackage) Package
-	Conflicts([]*DefaultPackage) Package
-	Revdeps(PackageDatabase) Packages
-	LabelDeps(PackageDatabase, string) Packages
-
-	GetProvides() []*DefaultPackage
-	SetProvides([]*DefaultPackage) Package
-
-	GetRequires() []*DefaultPackage
-	GetConflicts() []*DefaultPackage
-	Expand(PackageDatabase) (Packages, error)
-	SetCategory(string)
-
-	GetName() string
-	SetName(string)
-	GetCategory() string
-
-	GetVersion() string
-	SetVersion(string)
-	RequiresContains(PackageDatabase, Package) (bool, error)
-	Matches(m Package) bool
-	AtomMatches(m Package) bool
-	BumpBuildVersion() error
-
-	AddUse(use string)
-	RemoveUse(use string)
-	GetUses() []string
-
-	Yaml() ([]byte, error)
-	Explain()
-
-	SetPath(string)
-	GetPath() string
-	Rel(string) string
-
-	GetDescription() string
-	SetDescription(string)
-
-	AddURI(string)
-	GetURI() []string
-
-	SetLicense(string)
-	GetLicense() string
-
-	AddLabel(string, string)
-	GetLabels() map[string]string
-	HasLabel(string) bool
-	MatchLabel(*regexp.Regexp) bool
-
-	AddAnnotation(string, string)
-	GetAnnotations() map[string]string
-	HasAnnotation(string) bool
-	MatchAnnotation(*regexp.Regexp) bool
-
-	IsHidden() bool
-	IsSelector() bool
-	VersionMatchSelector(string, version.Versioner) (bool, error)
-	SelectorMatchVersion(string, version.Versioner) (bool, error)
-
-	String() string
-	HumanReadableString() string
-	HashFingerprint(string) string
-
-	SetBuildTimestamp(s string)
-	GetBuildTimestamp() string
-
-	Clone() Package
-
-	GetMetadataFilePath() string
-	SetTreeDir(s string)
-	GetTreeDir() string
-
-	Mark() Package
-
-	JSON() ([]byte, error)
-}
+const (
+	ConfigProtectAnnotation PackageAnnotation = "config_protect"
+)
 
 const (
 	PackageMetaSuffix     = "metadata.yaml"
@@ -134,19 +51,55 @@ const (
 	PackageDefinitionFile = "definition.yaml"
 )
 
-type Tree interface {
-	GetPackageSet() PackageDatabase
-	Prelude() string // A tree might have a prelude to be able to consume a tree
-	SetPackageSet(s PackageDatabase)
-	World() (Packages, error)
-	FindPackage(Package) (Package, error)
+type Packages []*Package
+
+type PackageMap map[string]*Package
+
+// Database is a merely simple in-memory db.
+// FIXME: Use a proper structure or delegate to third-party
+type PackageDatabase interface {
+	PackageSet
+
+	Get(s string) (string, error)
+	Set(k, v string) error
+
+	Create(string, []byte) (string, error)
+	Retrieve(ID string) ([]byte, error)
 }
 
-type Packages []Package
+type PackageFile struct {
+	ID                 int `storm:"id,increment"` // primary key with auto increment
+	PackageFingerprint string
+	Files              []string
+}
 
-type DefaultPackages []*DefaultPackage
+type PackageSet interface {
+	Clone(PackageDatabase) error
+	Copy() (PackageDatabase, error)
 
-type PackageMap map[string]Package
+	GetRevdeps(p *Package) (Packages, error)
+	GetPackages() []string //Ids
+	CreatePackage(pkg *Package) (string, error)
+	GetPackage(ID string) (*Package, error)
+	Clean() error
+	FindPackage(*Package) (*Package, error)
+	FindPackages(p *Package) (Packages, error)
+	UpdatePackage(p *Package) error
+	GetAllPackages(packages chan *Package) error
+	RemovePackage(*Package) error
+
+	GetPackageFiles(*Package) ([]string, error)
+	SetPackageFiles(*PackageFile) error
+	RemovePackageFiles(*Package) error
+	FindPackageVersions(p *Package) (Packages, error)
+	World() Packages
+
+	FindPackageCandidate(p *Package) (*Package, error)
+	FindPackageLabel(labelKey string) (Packages, error)
+	FindPackageLabelMatch(pattern string) (Packages, error)
+	FindPackageMatch(pattern string) (Packages, error)
+	FindPackageByFile(pattern string) (Packages, error)
+}
 
 func (pm PackageMap) String() string {
 	rr := []string{}
@@ -158,7 +111,7 @@ func (pm PackageMap) String() string {
 	return fmt.Sprint(rr)
 }
 
-func (d DefaultPackages) Hash(salt string) string {
+func (d Packages) Hash(salt string) string {
 
 	overallFp := ""
 	for _, c := range d {
@@ -170,23 +123,23 @@ func (d DefaultPackages) Hash(salt string) string {
 }
 
 // >> Unmarshallers
-// DefaultPackageFromYaml decodes a package from yaml bytes
-func DefaultPackageFromYaml(yml []byte) (DefaultPackage, error) {
+// PackageFromYaml decodes a package from yaml bytes
+func PackageFromYaml(yml []byte) (Package, error) {
 
-	var unescaped DefaultPackage
+	var unescaped Package
 	source, err := yaml.YAMLToJSON(yml)
 	if err != nil {
-		return DefaultPackage{}, err
+		return Package{}, err
 	}
 
 	rawIn := json.RawMessage(source)
 	bytes, err := rawIn.MarshalJSON()
 	if err != nil {
-		return DefaultPackage{}, err
+		return Package{}, err
 	}
 	err = json.Unmarshal(bytes, &unescaped)
 	if err != nil {
-		return DefaultPackage{}, err
+		return Package{}, err
 	}
 	return unescaped, nil
 }
@@ -225,31 +178,34 @@ func GetRawPackages(yml []byte) (rawPackages, error) {
 }
 
 type Collection struct {
-	Packages []DefaultPackage `json:"packages"`
+	Packages []Package `json:"packages"`
 }
 
-func DefaultPackagesFromYAML(yml []byte) ([]DefaultPackage, error) {
+func PackagesFromYAML(yml []byte) ([]Package, error) {
 
 	var unescaped Collection
 	source, err := yaml.YAMLToJSON(yml)
 	if err != nil {
-		return []DefaultPackage{}, err
+		return []Package{}, err
 	}
 
 	rawIn := json.RawMessage(source)
 	bytes, err := rawIn.MarshalJSON()
 	if err != nil {
-		return []DefaultPackage{}, err
+		return []Package{}, err
 	}
 	err = json.Unmarshal(bytes, &unescaped)
 	if err != nil {
-		return []DefaultPackage{}, err
+		return []Package{}, err
 	}
 	return unescaped.Packages, nil
 }
 
-// Major and minor gets escaped when marshalling in JSON, making compiler fails recognizing selectors for expansion
-func (t *DefaultPackage) JSON() ([]byte, error) {
+// JSON returns the package in JSON form.
+// Note this function sets a specific encoder as
+// major and minor gets escaped when marshalling in JSON,
+// making compiler fails recognizing selectors for expansion
+func (t *Package) JSON() ([]byte, error) {
 	buffer := &bytes.Buffer{}
 	encoder := json.NewEncoder(buffer)
 	encoder.SetEscapeHTML(false)
@@ -258,25 +214,25 @@ func (t *DefaultPackage) JSON() ([]byte, error) {
 }
 
 // GetMetadataFilePath returns the canonical name of an artifact metadata file
-func (d *DefaultPackage) GetMetadataFilePath() string {
+func (d *Package) GetMetadataFilePath() string {
 	return fmt.Sprintf("%s.%s", d.GetFingerPrint(), PackageMetaSuffix)
 }
 
-// DefaultPackage represent a standard package definition
-type DefaultPackage struct {
-	ID               int               `storm:"id,increment" json:"id"` // primary key with auto increment
-	Name             string            `json:"name"`                    // Affects YAML field names too.
-	Version          string            `json:"version"`                 // Affects YAML field names too.
-	Category         string            `json:"category"`                // Affects YAML field names too.
-	UseFlags         []string          `json:"use_flags,omitempty"`     // Affects YAML field names too.
-	State            State             `json:"state,omitempty"`
-	PackageRequires  []*DefaultPackage `json:"requires"`           // Affects YAML field names too.
-	PackageConflicts []*DefaultPackage `json:"conflicts"`          // Affects YAML field names too.
-	Provides         []*DefaultPackage `json:"provides,omitempty"` // Affects YAML field names too.
-	Hidden           bool              `json:"hidden,omitempty"`   // Affects YAML field names too.
+// Package represent a standard package definition
+type Package struct {
+	ID               int        `storm:"id,increment" json:"id"` // primary key with auto increment
+	Name             string     `json:"name"`                    // Affects YAML field names too.
+	Version          string     `json:"version"`                 // Affects YAML field names too.
+	Category         string     `json:"category"`                // Affects YAML field names too.
+	UseFlags         []string   `json:"use_flags,omitempty"`     // Affects YAML field names too.
+	State            State      `json:"state,omitempty"`
+	PackageRequires  []*Package `json:"requires"`           // Affects YAML field names too.
+	PackageConflicts []*Package `json:"conflicts"`          // Affects YAML field names too.
+	Provides         []*Package `json:"provides,omitempty"` // Affects YAML field names too.
+	Hidden           bool       `json:"hidden,omitempty"`   // Affects YAML field names too.
 
 	// Annotations are used for core features/options
-	Annotations map[string]string `json:"annotations,omitempty"` // Affects YAML field names too
+	Annotations map[PackageAnnotation]string `json:"annotations,omitempty"` // Affects YAML field names too
 
 	// Path is set only internally when tree is loaded from disk
 	Path string `json:"path,omitempty"`
@@ -295,8 +251,8 @@ type DefaultPackage struct {
 type State string
 
 // NewPackage returns a new package
-func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*DefaultPackage) *DefaultPackage {
-	return &DefaultPackage{
+func NewPackage(name, version string, requires []*Package, conflicts []*Package) *Package {
+	return &Package{
 		Name:             name,
 		Version:          version,
 		PackageRequires:  requires,
@@ -305,13 +261,13 @@ func NewPackage(name, version string, requires []*DefaultPackage, conflicts []*D
 	}
 }
 
-func (p *DefaultPackage) SetTreeDir(s string) {
+func (p *Package) SetTreeDir(s string) {
 	p.TreeDir = s
 }
-func (p *DefaultPackage) GetTreeDir() string {
+func (p *Package) GetTreeDir() string {
 	return p.TreeDir
 }
-func (p *DefaultPackage) String() string {
+func (p *Package) String() string {
 	b, err := p.JSON()
 	if err != nil {
 		return fmt.Sprintf("{ id: \"%d\", name: \"%s\", version: \"%s\", category: \"%s\"  }", p.ID, p.Name, p.Version, p.Category)
@@ -321,22 +277,22 @@ func (p *DefaultPackage) String() string {
 
 // GetFingerPrint returns a UUID of the package.
 // FIXME: this needs to be unique, now just name is generalized
-func (p *DefaultPackage) GetFingerPrint() string {
+func (p *Package) GetFingerPrint() string {
 	return fmt.Sprintf("%s-%s-%s", p.Name, p.Category, p.Version)
 }
 
-func (p *DefaultPackage) HashFingerprint(salt string) string {
+func (p *Package) HashFingerprint(salt string) string {
 	h := md5.New()
 	io.WriteString(h, fmt.Sprintf("%s-%s", p.GetFingerPrint(), salt))
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-func (p *DefaultPackage) HumanReadableString() string {
+func (p *Package) HumanReadableString() string {
 	return fmt.Sprintf("%s/%s-%s", p.Category, p.Name, p.Version)
 }
 
-func FromString(s string) Package {
-	var unescaped DefaultPackage
+func PackageFromString(s string) *Package {
+	var unescaped Package
 
 	err := json.Unmarshal([]byte(s), &unescaped)
 	if err != nil {
@@ -345,67 +301,82 @@ func FromString(s string) Package {
 	return &unescaped
 }
 
-func (p *DefaultPackage) GetPackageName() string {
+func (p *Package) GetPackageName() string {
 	return fmt.Sprintf("%s-%s", p.Name, p.Category)
 }
 
-func (p *DefaultPackage) ImageID() string {
+func (p *Package) ImageID() string {
 	return helpers.SanitizeImageString(p.GetFingerPrint())
 }
 
 // GetBuildTimestamp returns the package build timestamp
-func (p *DefaultPackage) GetBuildTimestamp() string {
+func (p *Package) GetBuildTimestamp() string {
 	return p.BuildTimestamp
 }
 
 // SetBuildTimestamp sets the package Build timestamp
-func (p *DefaultPackage) SetBuildTimestamp(s string) {
+func (p *Package) SetBuildTimestamp(s string) {
 	p.BuildTimestamp = s
 }
 
 // GetPath returns the path where the definition file was found
-func (p *DefaultPackage) GetPath() string {
+func (p *Package) GetPath() string {
 	return p.Path
 }
 
-func (p *DefaultPackage) Rel(s string) string {
+func (p *Package) Rel(s string) string {
 	return filepath.Join(p.GetPath(), s)
 }
 
-func (p *DefaultPackage) SetPath(s string) {
+func (p *Package) SetPath(s string) {
 	p.Path = s
 }
 
-func (p *DefaultPackage) IsSelector() bool {
+func (p *Package) IsSelector() bool {
 	return strings.ContainsAny(p.GetVersion(), "<>=")
 }
 
-func (p *DefaultPackage) IsHidden() bool {
+func (p *Package) IsHidden() bool {
 	return p.Hidden
 }
 
-func (p *DefaultPackage) HasLabel(label string) bool {
-	return match.MapHasKey(&p.Labels, label)
+func (p *Package) HasLabel(label string) (b bool) {
+	for k := range p.Labels {
+		if k == label {
+			b = true
+			return
+		}
+	}
+
+	return
 }
 
-func (p *DefaultPackage) MatchLabel(r *regexp.Regexp) bool {
-	return match.MapMatchRegex(&p.Labels, r)
+func (p *Package) MatchLabel(r *regexp.Regexp) (b bool) {
+	for k, v := range p.Labels {
+		if r.MatchString(k + "=" + v) {
+			b = true
+			return
+		}
+	}
+	return
 }
 
-func (p DefaultPackage) IsCollection() bool {
+func (p Package) IsCollection() bool {
 	return fileHelper.Exists(filepath.Join(p.Path, PackageCollectionFile))
 }
 
-func (p *DefaultPackage) HasAnnotation(label string) bool {
-	return match.MapHasKey(&p.Annotations, label)
-}
-
-func (p *DefaultPackage) MatchAnnotation(r *regexp.Regexp) bool {
-	return match.MapMatchRegex(&p.Annotations, r)
+func (p *Package) MatchAnnotation(r *regexp.Regexp) (b bool) {
+	for k, v := range p.Annotations {
+		if r.MatchString(string(k) + "=" + v) {
+			b = true
+			return
+		}
+	}
+	return
 }
 
 // AddUse adds a use to a package
-func (p *DefaultPackage) AddUse(use string) {
+func (p *Package) AddUse(use string) {
 	for _, v := range p.UseFlags {
 		if v == use {
 			return
@@ -415,7 +386,7 @@ func (p *DefaultPackage) AddUse(use string) {
 }
 
 // RemoveUse removes a use to a package
-func (p *DefaultPackage) RemoveUse(use string) {
+func (p *Package) RemoveUse(use string) {
 
 	for i := len(p.UseFlags) - 1; i >= 0; i-- {
 		if p.UseFlags[i] == use {
@@ -427,11 +398,11 @@ func (p *DefaultPackage) RemoveUse(use string) {
 
 // Encode encodes the package to string.
 // It returns an ID which can be used to retrieve the package later on.
-func (p *DefaultPackage) Encode(db PackageDatabase) (string, error) {
+func (p *Package) Encode(db PackageDatabase) (string, error) {
 	return db.CreatePackage(p)
 }
 
-func (p *DefaultPackage) Yaml() ([]byte, error) {
+func (p *Package) Yaml() ([]byte, error) {
 	j, err := p.JSON()
 	if err != nil {
 		return []byte{}, err
@@ -444,113 +415,111 @@ func (p *DefaultPackage) Yaml() ([]byte, error) {
 	return y, nil
 }
 
-func (p *DefaultPackage) GetName() string {
+func (p *Package) GetName() string {
 	return p.Name
 }
 
-func (p *DefaultPackage) GetVersion() string {
+func (p *Package) GetVersion() string {
 	return p.Version
 }
-func (p *DefaultPackage) SetVersion(v string) {
+func (p *Package) SetVersion(v string) {
 	p.Version = v
 }
-func (p *DefaultPackage) GetDescription() string {
+func (p *Package) GetDescription() string {
 	return p.Description
 }
-func (p *DefaultPackage) SetDescription(s string) {
+func (p *Package) SetDescription(s string) {
 	p.Description = s
 }
-func (p *DefaultPackage) GetLicense() string {
+func (p *Package) GetLicense() string {
 	return p.License
 }
-func (p *DefaultPackage) SetLicense(s string) {
+func (p *Package) SetLicense(s string) {
 	p.License = s
 }
-func (p *DefaultPackage) AddURI(s string) {
+func (p *Package) AddURI(s string) {
 	p.Uri = append(p.Uri, s)
 }
-func (p *DefaultPackage) GetURI() []string {
+func (p *Package) GetURI() []string {
 	return p.Uri
 }
-func (p *DefaultPackage) GetCategory() string {
+func (p *Package) GetCategory() string {
 	return p.Category
 }
-func (p *DefaultPackage) SetCategory(s string) {
+func (p *Package) SetCategory(s string) {
 	p.Category = s
 }
 
-func (p *DefaultPackage) SetName(s string) {
+func (p *Package) SetName(s string) {
 	p.Name = s
 }
 
-func (p *DefaultPackage) GetUses() []string {
+func (p *Package) GetUses() []string {
 	return p.UseFlags
 }
-func (p *DefaultPackage) AddLabel(k, v string) {
+func (p *Package) AddLabel(k, v string) {
 	if p.Labels == nil {
 		p.Labels = make(map[string]string, 0)
 	}
 	p.Labels[k] = v
 }
-func (p *DefaultPackage) AddAnnotation(k, v string) {
+func (p *Package) AddAnnotation(k, v string) {
 	if p.Annotations == nil {
-		p.Annotations = make(map[string]string, 0)
+		p.Annotations = make(map[PackageAnnotation]string, 0)
 	}
-	p.Annotations[k] = v
+	p.Annotations[PackageAnnotation(k)] = v
 }
-func (p *DefaultPackage) GetLabels() map[string]string {
+func (p *Package) GetLabels() map[string]string {
 	return p.Labels
 }
-func (p *DefaultPackage) GetAnnotations() map[string]string {
-	return p.Annotations
-}
-func (p *DefaultPackage) GetProvides() []*DefaultPackage {
+
+func (p *Package) GetProvides() []*Package {
 	return p.Provides
 }
-func (p *DefaultPackage) SetProvides(req []*DefaultPackage) Package {
+func (p *Package) SetProvides(req []*Package) *Package {
 	p.Provides = req
 	return p
 }
-func (p *DefaultPackage) GetRequires() []*DefaultPackage {
+func (p *Package) GetRequires() []*Package {
 	return p.PackageRequires
 }
-func (p *DefaultPackage) GetConflicts() []*DefaultPackage {
+func (p *Package) GetConflicts() []*Package {
 	return p.PackageConflicts
 }
-func (p *DefaultPackage) Requires(req []*DefaultPackage) Package {
+func (p *Package) Requires(req []*Package) *Package {
 	p.PackageRequires = req
 	return p
 }
-func (p *DefaultPackage) Conflicts(req []*DefaultPackage) Package {
+func (p *Package) Conflicts(req []*Package) *Package {
 	p.PackageConflicts = req
 	return p
 }
-func (p *DefaultPackage) Clone() Package {
-	new := &DefaultPackage{}
+func (p *Package) Clone() *Package {
+	new := &Package{}
 	copier.Copy(&new, &p)
 	return new
 }
-func (p *DefaultPackage) Matches(m Package) bool {
+func (p *Package) Matches(m *Package) bool {
 	if p.GetFingerPrint() == m.GetFingerPrint() {
 		return true
 	}
 	return false
 }
 
-func (p *DefaultPackage) AtomMatches(m Package) bool {
+func (p *Package) AtomMatches(m *Package) bool {
 	if p.GetName() == m.GetName() && p.GetCategory() == m.GetCategory() {
 		return true
 	}
 	return false
 }
 
-func (p *DefaultPackage) Mark() Package {
+func (p *Package) Mark() *Package {
 	marked := p.Clone()
 	marked.SetName("@@" + marked.GetName())
 	return marked
 }
 
-func (p *DefaultPackage) Expand(definitiondb PackageDatabase) (Packages, error) {
+func (p *Package) Expand(definitiondb PackageDatabase) (Packages, error) {
 	var versionsInWorld Packages
 
 	all, err := definitiondb.FindPackages(p)
@@ -570,7 +539,7 @@ func (p *DefaultPackage) Expand(definitiondb PackageDatabase) (Packages, error) 
 	return versionsInWorld, nil
 }
 
-func (p *DefaultPackage) Revdeps(definitiondb PackageDatabase) Packages {
+func (p *Package) Revdeps(definitiondb PackageDatabase) Packages {
 	var versionsInWorld Packages
 	for _, w := range definitiondb.World() {
 		if w.Matches(p) {
@@ -587,7 +556,7 @@ func (p *DefaultPackage) Revdeps(definitiondb PackageDatabase) Packages {
 	return versionsInWorld
 }
 
-func walkPackage(p Package, definitiondb PackageDatabase, visited map[string]interface{}) Packages {
+func walkPackage(p *Package, definitiondb PackageDatabase, visited map[string]interface{}) Packages {
 	var versionsInWorld Packages
 	if _, ok := visited[p.HumanReadableString()]; ok {
 		return versionsInWorld
@@ -624,11 +593,11 @@ func walkPackage(p Package, definitiondb PackageDatabase, visited map[string]int
 	return versionsInWorld.Unique()
 }
 
-func (p *DefaultPackage) Related(definitiondb PackageDatabase) Packages {
+func (p *Package) Related(definitiondb PackageDatabase) Packages {
 	return walkPackage(p, definitiondb, map[string]interface{}{})
 }
 
-func (p *DefaultPackage) LabelDeps(definitiondb PackageDatabase, labelKey string) Packages {
+func (p *Package) LabelDeps(definitiondb PackageDatabase, labelKey string) Packages {
 	var pkgsWithLabelInWorld Packages
 	// TODO: check if integrate some index to improve
 	// research instead of iterate all list.
@@ -641,11 +610,11 @@ func (p *DefaultPackage) LabelDeps(definitiondb PackageDatabase, labelKey string
 	return pkgsWithLabelInWorld
 }
 
-func DecodePackage(ID string, db PackageDatabase) (Package, error) {
+func DecodePackage(ID string, db PackageDatabase) (*Package, error) {
 	return db.GetPackage(ID)
 }
 
-func (pack *DefaultPackage) scanRequires(definitiondb PackageDatabase, s Package, visited map[string]interface{}) (bool, error) {
+func (pack *Package) scanRequires(definitiondb PackageDatabase, s *Package, visited map[string]interface{}) (bool, error) {
 	if _, ok := visited[pack.HumanReadableString()]; ok {
 		return false, nil
 	}
@@ -677,18 +646,18 @@ func (pack *DefaultPackage) scanRequires(definitiondb PackageDatabase, s Package
 
 // RequiresContains recursively scans into the database packages dependencies to find a match with the given package
 // It is used by the solver during uninstall.
-func (pack *DefaultPackage) RequiresContains(definitiondb PackageDatabase, s Package) (bool, error) {
+func (pack *Package) RequiresContains(definitiondb PackageDatabase, s *Package) (bool, error) {
 	return pack.scanRequires(definitiondb, s, make(map[string]interface{}))
 }
 
 // Best returns the best version of the package (the most bigger) from a list
 // Accepts a versioner interface to change the ordering policy. If null is supplied
 // It defaults to version.WrappedVersioner which supports both semver and debian versioning
-func (set Packages) Best(v version.Versioner) Package {
+func (set Packages) Best(v version.Versioner) *Package {
 	if v == nil {
 		v = &version.WrappedVersioner{}
 	}
-	var versionsMap map[string]Package = make(map[string]Package)
+	var versionsMap map[string]*Package = make(map[string]*Package)
 	if len(set) == 0 {
 		panic("Best needs a list with elements")
 	}
@@ -703,19 +672,19 @@ func (set Packages) Best(v version.Versioner) Package {
 	return versionsMap[sorted[len(sorted)-1]]
 }
 
-func (set Packages) Find(packageName string) (Package, error) {
+func (set Packages) Find(packageName string) (*Package, error) {
 	for _, p := range set {
 		if p.GetPackageName() == packageName {
 			return p, nil
 		}
 	}
 
-	return &DefaultPackage{}, errors.New("package not found")
+	return nil, errors.New("package not found")
 }
 
 func (set Packages) Unique() Packages {
 	var result Packages
-	uniq := make(map[string]Package)
+	uniq := make(map[string]*Package)
 	for _, p := range set {
 		uniq[p.GetFingerPrint()] = p
 	}
@@ -725,15 +694,15 @@ func (set Packages) Unique() Packages {
 	return result
 }
 
-func (p *DefaultPackage) GetRuntimePackage() (*DefaultPackage, error) {
-	var r *DefaultPackage
+func (p *Package) GetRuntimePackage() (*Package, error) {
+	var r *Package
 	if p.IsCollection() {
 		collectionFile := filepath.Join(p.Path, PackageCollectionFile)
 		dat, err := ioutil.ReadFile(collectionFile)
 		if err != nil {
 			return r, errors.Wrapf(err, "failed while reading '%s'", collectionFile)
 		}
-		coll, err := DefaultPackagesFromYAML(dat)
+		coll, err := PackagesFromYAML(dat)
 		if err != nil {
 			return r, errors.Wrapf(err, "failed while parsing YAML '%s'", collectionFile)
 		}
@@ -749,7 +718,7 @@ func (p *DefaultPackage) GetRuntimePackage() (*DefaultPackage, error) {
 		if err != nil {
 			return r, errors.Wrapf(err, "failed while reading '%s'", definitionFile)
 		}
-		d, err := DefaultPackageFromYaml(dat)
+		d, err := PackageFromYaml(dat)
 		if err != nil {
 			return r, errors.Wrapf(err, "failed while parsing YAML '%s'", definitionFile)
 		}
@@ -758,7 +727,7 @@ func (p *DefaultPackage) GetRuntimePackage() (*DefaultPackage, error) {
 	return r, nil
 }
 
-func (pack *DefaultPackage) buildFormula(definitiondb PackageDatabase, db PackageDatabase, visited map[string]interface{}) ([]bf.Formula, error) {
+func (pack *Package) buildFormula(definitiondb PackageDatabase, db PackageDatabase, visited map[string]interface{}) ([]bf.Formula, error) {
 	if _, ok := visited[pack.HumanReadableString()]; ok {
 		return nil, nil
 	}
@@ -795,45 +764,14 @@ func (pack *DefaultPackage) buildFormula(definitiondb PackageDatabase, db Packag
 		required, err := definitiondb.FindPackage(requiredDef)
 		if err != nil || requiredDef.IsSelector() {
 			if err == nil {
-				requiredDef = required.(*DefaultPackage)
+				required = requiredDef
 			}
-
 			packages, err := definitiondb.FindPackages(requiredDef)
 			if err != nil || len(packages) == 0 {
 				required = requiredDef
 			} else {
 
-				var ALO []bf.Formula // , priorityConstraints, priorityALO []bf.Formula
-
-				// Try to prio best match
-				// Force the solver to consider first our candidate (if does exists).
-				// Then builds ALO and AMO for the requires.
-				// c, candidateErr := definitiondb.FindPackageCandidate(requiredDef)
-				// var C bf.Formula
-				// if candidateErr == nil {
-				// 	// We have a desired candidate, try to look a solution with that included first
-				// 	for _, o := range packages {
-				// 		encodedB, err := o.Encode(db)
-				// 		if err != nil {
-				// 			return nil, err
-				// 		}
-				// 		B := bf.Var(encodedB)
-				// 		if !o.Matches(c) {
-				// 			priorityConstraints = append(priorityConstraints, bf.Not(B))
-				// 			priorityALO = append(priorityALO, B)
-				// 		}
-				// 	}
-				// 	encodedC, err := c.Encode(db)
-				// 	if err != nil {
-				// 		return nil, err
-				// 	}
-				// 	C = bf.Var(encodedC)
-				// 	// Or the Candidate is true, or all the others might be not true
-				// 	// This forces the CDCL sat implementation to look first at a solution with C=true
-				// 	//formulas = append(formulas, bf.Or(bf.Not(A), bf.Or(bf.And(C, bf.Or(priorityConstraints...)), bf.And(bf.Not(C), bf.Or(priorityALO...)))))
-				// 	formulas = append(formulas, bf.Or(C, bf.Or(priorityConstraints...)))
-				// }
-
+				var ALO []bf.Formula
 				// AMO/ALO - At most/least one
 				for _, o := range packages {
 					encodedB, err := o.Encode(db)
@@ -865,8 +803,7 @@ func (pack *DefaultPackage) buildFormula(definitiondb PackageDatabase, db Packag
 		}
 		B := bf.Var(encodedB)
 		formulas = append(formulas, bf.Or(bf.Not(A), B))
-		r := required.(*DefaultPackage) // We know since the implementation is DefaultPackage, that can be only DefaultPackage
-		f, err := r.buildFormula(definitiondb, db, visited)
+		f, err := required.buildFormula(definitiondb, db, visited)
 		if err != nil {
 			return nil, err
 		}
@@ -878,7 +815,7 @@ func (pack *DefaultPackage) buildFormula(definitiondb PackageDatabase, db Packag
 		required, err := definitiondb.FindPackage(requiredDef)
 		if err != nil || requiredDef.IsSelector() {
 			if err == nil {
-				requiredDef = required.(*DefaultPackage)
+				requiredDef = required
 			}
 			packages, err := definitiondb.FindPackages(requiredDef)
 			if err != nil || len(packages) == 0 {
@@ -895,8 +832,7 @@ func (pack *DefaultPackage) buildFormula(definitiondb PackageDatabase, db Packag
 						B := bf.Var(encodedB)
 						formulas = append(formulas, bf.Or(bf.Not(A),
 							bf.Not(B)))
-						r := p.(*DefaultPackage) // We know since the implementation is DefaultPackage, that can be only DefaultPackage
-						f, err := r.buildFormula(definitiondb, db, visited)
+						f, err := p.buildFormula(definitiondb, db, visited)
 						if err != nil {
 							return nil, err
 						}
@@ -915,8 +851,7 @@ func (pack *DefaultPackage) buildFormula(definitiondb PackageDatabase, db Packag
 		formulas = append(formulas, bf.Or(bf.Not(A),
 			bf.Not(B)))
 
-		r := required.(*DefaultPackage) // We know since the implementation is DefaultPackage, that can be only DefaultPackage
-		f, err := r.buildFormula(definitiondb, db, visited)
+		f, err := required.buildFormula(definitiondb, db, visited)
 		if err != nil {
 			return nil, err
 		}
@@ -927,11 +862,11 @@ func (pack *DefaultPackage) buildFormula(definitiondb PackageDatabase, db Packag
 	return formulas, nil
 }
 
-func (pack *DefaultPackage) BuildFormula(definitiondb PackageDatabase, db PackageDatabase) ([]bf.Formula, error) {
+func (pack *Package) BuildFormula(definitiondb PackageDatabase, db PackageDatabase) ([]bf.Formula, error) {
 	return pack.buildFormula(definitiondb, db, make(map[string]interface{}))
 }
 
-func (p *DefaultPackage) Explain() {
+func (p *Package) Explain() {
 
 	fmt.Println("====================")
 	fmt.Println("Name: ", p.GetName())
@@ -950,7 +885,7 @@ func (p *DefaultPackage) Explain() {
 
 }
 
-func (p *DefaultPackage) BumpBuildVersion() error {
+func (p *Package) BumpBuildVersion() error {
 	cat := p.Category
 	if cat == "" {
 		// Use fake category for parse package
@@ -1036,7 +971,7 @@ end:
 	return nil
 }
 
-func (p *DefaultPackage) SelectorMatchVersion(ver string, v version.Versioner) (bool, error) {
+func (p *Package) SelectorMatchVersion(ver string, v version.Versioner) (bool, error) {
 	if !p.IsSelector() {
 		return false, errors.New("Package is not a selector")
 	}
@@ -1047,7 +982,7 @@ func (p *DefaultPackage) SelectorMatchVersion(ver string, v version.Versioner) (
 	return v.ValidateSelector(ver, p.GetVersion()), nil
 }
 
-func (p *DefaultPackage) VersionMatchSelector(selector string, v version.Versioner) (bool, error) {
+func (p *Package) VersionMatchSelector(selector string, v version.Versioner) (bool, error) {
 	if v == nil {
 		v = &version.WrappedVersioner{}
 	}

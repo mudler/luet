@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, see <http://www.gnu.org/licenses/>.
 
-package pkg
+package database
 
 import (
 	"encoding/base64"
@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/pkg/errors"
 
 	storm "github.com/asdine/storm"
@@ -31,32 +32,45 @@ import (
 	"go.etcd.io/bbolt"
 )
 
-//var BoltInstance PackageDatabase
+//var BoltInstance types.PackageDatabase
 
 type BoltDatabase struct {
 	sync.Mutex
+	timeout          time.Duration
 	Path             string
-	ProvidesDatabase map[string]map[string]Package
+	ProvidesDatabase map[string]map[string]*types.Package
 }
 
-func NewBoltDatabase(path string) PackageDatabase {
-	// if BoltInstance == nil {
-	// 	BoltInstance = &BoltDatabase{Path: path}
-	// }
-	//return BoltInstance, nil
-	return &BoltDatabase{Path: path, ProvidesDatabase: map[string]map[string]Package{}}
+func checkMigrationSchema(path string) {
+	b, err := storm.Open(path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 10 * time.Second}))
+	if err != nil {
+		return
+	}
+	defer b.Close()
+
+	for _, m := range migrations {
+		b.Bolt.Update(m)
+	}
 }
 
-func (db *BoltDatabase) Clone(to PackageDatabase) error {
+func NewBoltDatabase(path string) types.PackageDatabase {
+	checkMigrationSchema(path)
+
+	return &BoltDatabase{
+		timeout: 30 * time.Second,
+		Path:    path, ProvidesDatabase: map[string]map[string]*types.Package{}}
+}
+
+func (db *BoltDatabase) Clone(to types.PackageDatabase) error {
 	return clone(db, to)
 }
 
-func (db *BoltDatabase) Copy() (PackageDatabase, error) {
+func (db *BoltDatabase) Copy() (types.PackageDatabase, error) {
 	return copy(db)
 }
 
 func (db *BoltDatabase) Get(s string) (string, error) {
-	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: db.timeout}))
 	if err != nil {
 		return "", err
 	}
@@ -68,13 +82,14 @@ func (db *BoltDatabase) Get(s string) (string, error) {
 }
 
 func (db *BoltDatabase) Set(k, v string) error {
-	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
+	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: db.timeout}))
 	if err != nil {
 		return err
 	}
 	defer bolt.Close()
 	return bolt.Set("solver", k, v)
 }
+
 func (db *BoltDatabase) Create(id string, v []byte) (string, error) {
 	enc := base64.StdEncoding.EncodeToString(v)
 
@@ -97,7 +112,7 @@ func (db *BoltDatabase) Retrieve(ID string) ([]byte, error) {
 // GetRevdeps uses a new inmemory db to calcuate revdeps
 // TODO: Have a memory instance for boltdb, so we don't compute each time we get called
 // as this is REALLY expensive. But we don't perform usually those operations in a file db.
-func (db *BoltDatabase) GetRevdeps(p Package) (Packages, error) {
+func (db *BoltDatabase) GetRevdeps(p *types.Package) (types.Packages, error) {
 	memory, err := db.Copy()
 	if err != nil {
 		return nil, errors.New("Failed copying bolt db to memory")
@@ -105,13 +120,13 @@ func (db *BoltDatabase) GetRevdeps(p Package) (Packages, error) {
 	return memory.GetRevdeps(p)
 }
 
-func (db *BoltDatabase) FindPackage(tofind Package) (Package, error) {
+func (db *BoltDatabase) FindPackage(tofind *types.Package) (*types.Package, error) {
 	// Provides: Return the replaced package here
 	if provided, err := db.getProvide(tofind); err == nil {
 		return provided, nil
 	}
 
-	p := &DefaultPackage{}
+	p := &types.Package{}
 	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return nil, err
@@ -125,7 +140,7 @@ func (db *BoltDatabase) FindPackage(tofind Package) (Package, error) {
 	return p, nil
 }
 
-func (db *BoltDatabase) UpdatePackage(p Package) error {
+func (db *BoltDatabase) UpdatePackage(p *types.Package) error {
 	// TODO: Change, but by query we cannot update by ID
 	err := db.RemovePackage(p)
 	if err != nil {
@@ -140,8 +155,8 @@ func (db *BoltDatabase) UpdatePackage(p Package) error {
 	return nil
 }
 
-func (db *BoltDatabase) GetPackage(ID string) (Package, error) {
-	p := &DefaultPackage{}
+func (db *BoltDatabase) GetPackage(ID string) (*types.Package, error) {
+	p := &types.Package{}
 	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return nil, err
@@ -167,21 +182,21 @@ func (db *BoltDatabase) GetPackages() []string {
 	// Fetching records one by one (useful when the bucket contains a lot of records)
 	query := bolt.Select()
 
-	query.Each(new(DefaultPackage), func(record interface{}) error {
-		u := record.(*DefaultPackage)
+	query.Each(new(types.Package), func(record interface{}) error {
+		u := record.(*types.Package)
 		ids = append(ids, strconv.Itoa(u.ID))
 		return nil
 	})
 	return ids
 }
 
-func (db *BoltDatabase) GetAllPackages(packages chan Package) error {
+func (db *BoltDatabase) GetAllPackages(packages chan *types.Package) error {
 	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return err
 	}
 	defer bolt.Close()
-	var packs []DefaultPackage
+	var packs []types.Package
 	err = bolt.All(&packs)
 	if err != nil {
 		return err
@@ -196,19 +211,14 @@ func (db *BoltDatabase) GetAllPackages(packages chan Package) error {
 
 // Encode encodes the package to string.
 // It returns an ID which can be used to retrieve the package later on.
-func (db *BoltDatabase) CreatePackage(p Package) (string, error) {
+func (db *BoltDatabase) CreatePackage(p *types.Package) (string, error) {
 	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return "", errors.Wrap(err, "Error opening boltdb "+db.Path)
 	}
 	defer bolt.Close()
 
-	dp, ok := p.(*DefaultPackage)
-	if !ok {
-		return "", errors.New("Bolt DB support only DefaultPackage type for now")
-	}
-
-	err = bolt.Save(dp)
+	err = bolt.Save(p)
 	if err != nil {
 		return "", errors.Wrap(err, "Error saving package to "+db.Path)
 	}
@@ -218,20 +228,20 @@ func (db *BoltDatabase) CreatePackage(p Package) (string, error) {
 	defer db.Unlock()
 	// TODO: Replace with a bolt implementation (and not in memory)
 	// Provides: Store package provides, we will reuse this when walking deps
-	for _, provide := range dp.Provides {
+	for _, provide := range p.Provides {
 		if _, ok := db.ProvidesDatabase[provide.GetPackageName()]; !ok {
-			db.ProvidesDatabase[provide.GetPackageName()] = make(map[string]Package)
+			db.ProvidesDatabase[provide.GetPackageName()] = make(map[string]*types.Package)
 
 		}
 
 		db.ProvidesDatabase[provide.GetPackageName()][provide.GetVersion()] = p
 	}
 
-	return strconv.Itoa(dp.ID), err
+	return strconv.Itoa(p.ID), err
 }
 
 // Dup from memory implementation
-func (db *BoltDatabase) getProvide(p Package) (Package, error) {
+func (db *BoltDatabase) getProvide(p *types.Package) (*types.Package, error) {
 	db.Lock()
 	pa, ok := db.ProvidesDatabase[p.GetPackageName()][p.GetVersion()]
 	if !ok {
@@ -270,7 +280,7 @@ func (db *BoltDatabase) Clean() error {
 	return os.RemoveAll(db.Path)
 }
 
-func (db *BoltDatabase) GetPackageFiles(p Package) ([]string, error) {
+func (db *BoltDatabase) GetPackageFiles(p *types.Package) ([]string, error) {
 	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return []string{}, errors.Wrap(err, "Error opening boltdb "+db.Path)
@@ -278,14 +288,14 @@ func (db *BoltDatabase) GetPackageFiles(p Package) ([]string, error) {
 	defer bolt.Close()
 
 	files := bolt.From("files")
-	var pf PackageFile
+	var pf types.PackageFile
 	err = files.One("PackageFingerprint", p.GetFingerPrint(), &pf)
 	if err != nil {
 		return []string{}, errors.Wrap(err, "While finding files")
 	}
 	return pf.Files, nil
 }
-func (db *BoltDatabase) SetPackageFiles(p *PackageFile) error {
+func (db *BoltDatabase) SetPackageFiles(p *types.PackageFile) error {
 	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return errors.Wrap(err, "Error opening boltdb "+db.Path)
@@ -295,7 +305,7 @@ func (db *BoltDatabase) SetPackageFiles(p *PackageFile) error {
 	files := bolt.From("files")
 	return files.Save(p)
 }
-func (db *BoltDatabase) RemovePackageFiles(p Package) error {
+func (db *BoltDatabase) RemovePackageFiles(p *types.Package) error {
 	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return errors.Wrap(err, "Error opening boltdb "+db.Path)
@@ -303,7 +313,7 @@ func (db *BoltDatabase) RemovePackageFiles(p Package) error {
 	defer bolt.Close()
 
 	files := bolt.From("files")
-	var pf PackageFile
+	var pf types.PackageFile
 	err = files.One("PackageFingerprint", p.GetFingerPrint(), &pf)
 	if err != nil {
 		return errors.Wrap(err, "While finding files")
@@ -311,13 +321,13 @@ func (db *BoltDatabase) RemovePackageFiles(p Package) error {
 	return files.DeleteStruct(&pf)
 }
 
-func (db *BoltDatabase) RemovePackage(p Package) error {
+func (db *BoltDatabase) RemovePackage(p *types.Package) error {
 	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
 		return errors.Wrap(err, "Error opening boltdb "+db.Path)
 	}
 	defer bolt.Close()
-	var found DefaultPackage
+	var found types.Package
 	err = bolt.Select(q.Eq("Name", p.GetName()), q.Eq("Category", p.GetCategory()), q.Eq("Version", p.GetVersion())).Limit(1).Delete(&found)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Package not found: %s", p.HumanReadableString()))
@@ -325,27 +335,27 @@ func (db *BoltDatabase) RemovePackage(p Package) error {
 	return nil
 }
 
-func (db *BoltDatabase) World() Packages {
-	var packs []DefaultPackage
+func (db *BoltDatabase) World() types.Packages {
+	var packs []types.Package
 
 	bolt, err := storm.Open(db.Path, storm.BoltOptions(0600, &bbolt.Options{Timeout: 30 * time.Second}))
 	if err != nil {
-		return Packages([]Package{})
+		return types.Packages([]*types.Package{})
 	}
 	defer bolt.Close()
 	err = bolt.All(&packs)
 	if err != nil {
-		return Packages([]Package{})
+		return types.Packages([]*types.Package{})
 	}
-	models := make([]Package, len(packs))
+	models := make([]*types.Package, len(packs))
 	for i, _ := range packs {
 		models[i] = &packs[i]
 	}
 
-	return Packages(models)
+	return types.Packages(models)
 }
 
-func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
+func (db *BoltDatabase) FindPackageCandidate(p *types.Package) (*types.Package, error) {
 
 	required, err := db.FindPackage(p)
 	if err != nil {
@@ -361,7 +371,7 @@ func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
 
 		}
 		return required, err
-		//required = &DefaultPackage{Name: "test"}
+		//required = &*types.Package{Name: "test"}
 	}
 
 	return required, err
@@ -370,24 +380,24 @@ func (db *BoltDatabase) FindPackageCandidate(p Package) (Package, error) {
 
 // FindPackages return the list of the packages beloging to cat/name  (any versions in requested range)
 // FIXME: Optimize, see inmemorydb
-func (db *BoltDatabase) FindPackages(p Package) (Packages, error) {
+func (db *BoltDatabase) FindPackages(p *types.Package) (types.Packages, error) {
 	if !p.IsSelector() {
 		pack, err := db.FindPackage(p)
 		if err != nil {
-			return []Package{}, err
+			return []*types.Package{}, err
 		}
-		return []Package{pack}, nil
+		return []*types.Package{pack}, nil
 	}
 
 	// Provides: Treat as the replaced package here
 	if provided, err := db.getProvide(p); err == nil {
 		p = provided
 		if !provided.IsSelector() {
-			return Packages{provided}, nil
+			return types.Packages{provided}, nil
 		}
 	}
 
-	var versionsInWorld []Package
+	var versionsInWorld []*types.Package
 	for _, w := range db.World() {
 		if w.GetName() != p.GetName() || w.GetCategory() != p.GetCategory() {
 			continue
@@ -401,17 +411,17 @@ func (db *BoltDatabase) FindPackages(p Package) (Packages, error) {
 			versionsInWorld = append(versionsInWorld, w)
 		}
 	}
-	return Packages(versionsInWorld), nil
+	return types.Packages(versionsInWorld), nil
 }
 
 // FindPackageVersions return the list of the packages beloging to cat/name
-func (db *BoltDatabase) FindPackageVersions(p Package) (Packages, error) {
+func (db *BoltDatabase) FindPackageVersions(p *types.Package) (types.Packages, error) {
 	// Provides: Treat as the replaced package here
 	if provided, err := db.getProvide(p); err == nil {
 		p = provided
 	}
 
-	var versionsInWorld []Package
+	var versionsInWorld []*types.Package
 	for _, w := range db.World() {
 		if w.GetName() != p.GetName() || w.GetCategory() != p.GetCategory() {
 			continue
@@ -419,22 +429,22 @@ func (db *BoltDatabase) FindPackageVersions(p Package) (Packages, error) {
 
 		versionsInWorld = append(versionsInWorld, w)
 	}
-	return Packages(versionsInWorld), nil
+	return types.Packages(versionsInWorld), nil
 }
 
-func (db *BoltDatabase) FindPackageLabel(labelKey string) (Packages, error) {
-	var ans []Package
+func (db *BoltDatabase) FindPackageLabel(labelKey string) (types.Packages, error) {
+	var ans []*types.Package
 
 	for _, pack := range db.World() {
 		if pack.HasLabel(labelKey) {
 			ans = append(ans, pack)
 		}
 	}
-	return Packages(ans), nil
+	return types.Packages(ans), nil
 }
 
-func (db *BoltDatabase) FindPackageLabelMatch(pattern string) (Packages, error) {
-	var ans []Package
+func (db *BoltDatabase) FindPackageLabelMatch(pattern string) (types.Packages, error) {
+	var ans []*types.Package
 
 	re, err := regexp.Compile(pattern)
 	if err != nil {
@@ -447,14 +457,14 @@ func (db *BoltDatabase) FindPackageLabelMatch(pattern string) (Packages, error) 
 		}
 	}
 
-	return Packages(ans), nil
+	return types.Packages(ans), nil
 }
 
-func (db *BoltDatabase) FindPackageByFile(pattern string) (Packages, error) {
+func (db *BoltDatabase) FindPackageByFile(pattern string) (types.Packages, error) {
 	return findPackageByFile(db, pattern)
 }
-func (db *BoltDatabase) FindPackageMatch(pattern string) (Packages, error) {
-	var ans []Package
+func (db *BoltDatabase) FindPackageMatch(pattern string) (types.Packages, error) {
+	var ans []*types.Package
 
 	re, err := regexp.Compile(pattern)
 	if err != nil {
@@ -467,5 +477,5 @@ func (db *BoltDatabase) FindPackageMatch(pattern string) (Packages, error) {
 		}
 	}
 
-	return Packages(ans), nil
+	return types.Packages(ans), nil
 }

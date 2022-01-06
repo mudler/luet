@@ -19,8 +19,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/mudler/luet/pkg/api/core/types"
 	installer "github.com/mudler/luet/pkg/installer"
-	pkg "github.com/mudler/luet/pkg/package"
 
 	"github.com/mudler/luet/cmd/util"
 
@@ -55,7 +55,7 @@ To reinstall packages in the list:
 		downloadOnly, _ := cmd.Flags().GetBool("download-only")
 
 		system := &installer.System{
-			Database: util.DefaultContext.Config.GetSystemDB(),
+			Database: util.SystemDB(util.DefaultContext.Config),
 			Target:   util.DefaultContext.Config.System.Rootfs,
 		}
 		packs := system.OSCheck(util.DefaultContext)
@@ -81,7 +81,7 @@ To reinstall packages in the list:
 		if reinstall {
 
 			// Strip version for reinstall
-			toInstall := pkg.Packages{}
+			toInstall := types.Packages{}
 			for _, p := range packs {
 				new := p.Clone()
 				new.SetVersion(">=0")
