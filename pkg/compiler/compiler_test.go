@@ -1064,5 +1064,41 @@ var _ = Describe("Compiler", func() {
 			files := art.Files
 			Expect(files).To(ContainElement("bin/busybox"))
 		})
+
+		It("is not generated after the compilation process and annotated in the metadata if a package is hidden", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err := generalRecipe.Load("../../tests/fixtures/packagelayers_hidden")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(context.NewContext()))
+
+			spec, err := compiler.FromPackage(&pkg.DefaultPackage{Name: "runtime", Category: "layer", Version: "0.1"})
+			Expect(err).ToNot(HaveOccurred())
+			compiler.Options.CompressionType = compression.GZip
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			spec.SetOutputPath(tmpdir)
+
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(1))
+			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
+			Expect(artifacts[0].Files).ToNot(ContainElement("bin/busybox"))
+
+			Expect(fileHelper.Exists(spec.Rel("runtime-layer-0.1.metadata.yaml"))).To(BeTrue())
+
+			art, err := LoadArtifactFromYaml(spec)
+			Expect(err).ToNot(HaveOccurred())
+
+			files := art.Files
+			Expect(files).ToNot(ContainElement("bin/busybox"))
+		})
 	})
 })

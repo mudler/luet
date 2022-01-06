@@ -1,0 +1,8 @@
+
+unpack: true
+requires:
+- category: "layer"
+  name: "build"
+  version: ">=0.1"
+steps: 
+- rm -rfv /var

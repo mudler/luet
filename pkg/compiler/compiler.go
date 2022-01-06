@@ -502,12 +502,14 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 		}
 	}
 
-	filelist, err := a.FileList()
-	if err != nil {
-		return a, errors.Wrapf(err, "Failed getting package list for '%s' '%s'", a.Path, a.CompileSpec.Package.HumanReadableString())
+	if !p.Package.Hidden {
+		filelist, err := a.FileList()
+		if err != nil {
+			return a, errors.Wrapf(err, "Failed getting package list for '%s' '%s'", a.Path, a.CompileSpec.Package.HumanReadableString())
+		}
+		a.Files = filelist
 	}
 
-	a.Files = filelist
 	a.CompileSpec.GetPackage().SetBuildTimestamp(time.Now().String())
 
 	err = a.WriteYAML(p.GetOutputPath())
