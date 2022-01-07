@@ -30,7 +30,7 @@ var cfgFile string
 var Verbose bool
 
 const (
-	LuetCLIVersion = "0.22.5"
+	LuetCLIVersion = "0.22.6"
 	LuetEnvPrefix  = "LUET"
 )
 
