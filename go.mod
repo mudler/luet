@@ -9,7 +9,7 @@ require (
 	github.com/Sabayon/pkgs-checker v0.8.4
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 	github.com/cavaliercoder/grab v1.0.1-0.20201108051000-98a5bfe305ec
-	github.com/containerd/containerd v1.5.7
+	github.com/containerd/containerd v1.5.9
 	github.com/crillab/gophersat v1.3.2-0.20210701121804-72b19f5b6b38
 	github.com/docker/cli v20.10.10+incompatible
 	github.com/docker/distribution v2.7.1+incompatible
@@ -47,7 +47,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.0.0
 	github.com/onsi/gomega v1.17.0
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/opencontainers/image-spec v1.0.2-0.20210730191737-8e42a01fb1b7
+	github.com/opencontainers/image-spec v1.0.2
 	github.com/otiai10/copy v1.2.1-0.20200916181228-26f84a0b1578
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible
