@@ -2,12 +2,10 @@ package sprig
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/dsa"
 	"crypto/ecdsa"
-	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/hmac"
 	"crypto/rand"
@@ -32,7 +30,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	bcrypt_lib "golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/scrypt"
 )
 
@@ -51,28 +49,15 @@ func adler32sum(input string) string {
 	return fmt.Sprintf("%d", hash)
 }
 
-func bcrypt(input string) string {
-	hash, err := bcrypt_lib.GenerateFromPassword([]byte(input), bcrypt_lib.DefaultCost)
-	if err != nil {
-		return fmt.Sprintf("failed to encrypt string with bcrypt: %s", err)
-	}
-
-	return string(hash)
-}
-
 func htpasswd(username string, password string) string {
 	if strings.Contains(username, ":") {
 		return fmt.Sprintf("invalid username: %s", username)
 	}
-	return fmt.Sprintf("%s:%s", username, bcrypt(password))
-}
-
-func randBytes(count int) (string, error) {
-	buf := make([]byte, count)
-	if _, err := rand.Read(buf); err != nil {
-		return "", err
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Sprintf("failed to create htpasswd: %s", err)
 	}
-	return base64.StdEncoding.EncodeToString(buf), nil
+	return fmt.Sprintf("%s:%s", username, hash)
 }
 
 // uuidv4 provides a safe and secure UUID v4 implementation
@@ -162,8 +147,6 @@ func generatePrivateKey(typ string) string {
 	case "ecdsa":
 		// again, good enough for government work
 		priv, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	case "ed25519":
-		_, priv, err = ed25519.GenerateKey(rand.Reader)
 	default:
 		return "Unknown type " + typ
 	}
@@ -196,73 +179,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 		b, _ := x509.MarshalECPrivateKey(k)
 		return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}
 	default:
-		// attempt PKCS#8 format for all other keys
-		b, err := x509.MarshalPKCS8PrivateKey(k)
-		if err != nil {
-			return nil
-		}
-		return &pem.Block{Type: "PRIVATE KEY", Bytes: b}
-	}
-}
-
-func parsePrivateKeyPEM(pemBlock string) (crypto.PrivateKey, error) {
-	block, _ := pem.Decode([]byte(pemBlock))
-	if block == nil {
-		return nil, errors.New("no PEM data in input")
-	}
-
-	if block.Type == "PRIVATE KEY" {
-		priv, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-		if err != nil {
-			return nil, fmt.Errorf("decoding PEM as PKCS#8: %s", err)
-		}
-		return priv, nil
-	} else if !strings.HasSuffix(block.Type, " PRIVATE KEY") {
-		return nil, fmt.Errorf("no private key data in PEM block of type %s", block.Type)
-	}
-
-	switch block.Type[:len(block.Type)-12] { // strip " PRIVATE KEY"
-	case "RSA":
-		priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			return nil, fmt.Errorf("parsing RSA private key from PEM: %s", err)
-		}
-		return priv, nil
-	case "EC":
-		priv, err := x509.ParseECPrivateKey(block.Bytes)
-		if err != nil {
-			return nil, fmt.Errorf("parsing EC private key from PEM: %s", err)
-		}
-		return priv, nil
-	case "DSA":
-		var k DSAKeyFormat
-		_, err := asn1.Unmarshal(block.Bytes, &k)
-		if err != nil {
-			return nil, fmt.Errorf("parsing DSA private key from PEM: %s", err)
-		}
-		priv := &dsa.PrivateKey{
-			PublicKey: dsa.PublicKey{
-				Parameters: dsa.Parameters{
-					P: k.P, Q: k.Q, G: k.G,
-				},
-				Y: k.Y,
-			},
-			X: k.X,
-		}
-		return priv, nil
-	default:
-		return nil, fmt.Errorf("invalid private key type %s", block.Type)
-	}
-}
-
-func getPublicKey(priv crypto.PrivateKey) (crypto.PublicKey, error) {
-	switch k := priv.(type) {
-	case interface{ Public() crypto.PublicKey }:
-		return k.Public(), nil
-	case *dsa.PrivateKey:
-		return &k.PublicKey, nil
-	default:
-		return nil, fmt.Errorf("unable to get public key for type %T", priv)
+		return nil
 	}
 }
 
@@ -296,10 +213,14 @@ func buildCustomCertificate(b64cert string, b64key string) (certificate, error) 
 		)
 	}
 
-	_, err = parsePrivateKeyPEM(string(key))
+	decodedKey, _ := pem.Decode(key)
+	if decodedKey == nil {
+		return crt, errors.New("unable to decode key")
+	}
+	_, err = x509.ParsePKCS1PrivateKey(decodedKey.Bytes)
 	if err != nil {
 		return crt, fmt.Errorf(
-			"error parsing private key: %s",
+			"error parsing prive key: decodedKey.Bytes: %s",
 			err,
 		)
 	}
@@ -314,31 +235,6 @@ func generateCertificateAuthority(
 	cn string,
 	daysValid int,
 ) (certificate, error) {
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return certificate{}, fmt.Errorf("error generating rsa key: %s", err)
-	}
-
-	return generateCertificateAuthorityWithKeyInternal(cn, daysValid, priv)
-}
-
-func generateCertificateAuthorityWithPEMKey(
-	cn string,
-	daysValid int,
-	privPEM string,
-) (certificate, error) {
-	priv, err := parsePrivateKeyPEM(privPEM)
-	if err != nil {
-		return certificate{}, fmt.Errorf("parsing private key: %s", err)
-	}
-	return generateCertificateAuthorityWithKeyInternal(cn, daysValid, priv)
-}
-
-func generateCertificateAuthorityWithKeyInternal(
-	cn string,
-	daysValid int,
-	priv crypto.PrivateKey,
-) (certificate, error) {
 	ca := certificate{}
 
 	template, err := getBaseCertTemplate(cn, nil, nil, daysValid)
@@ -351,6 +247,11 @@ func generateCertificateAuthorityWithKeyInternal(
 		x509.KeyUsageCertSign
 	template.IsCA = true
 
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return ca, fmt.Errorf("error generating rsa key: %s", err)
+	}
+
 	ca.Cert, ca.Key, err = getCertAndKey(template, priv, template, priv)
 
 	return ca, err
@@ -362,39 +263,16 @@ func generateSelfSignedCertificate(
 	alternateDNS []interface{},
 	daysValid int,
 ) (certificate, error) {
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return certificate{}, fmt.Errorf("error generating rsa key: %s", err)
-	}
-	return generateSelfSignedCertificateWithKeyInternal(cn, ips, alternateDNS, daysValid, priv)
-}
-
-func generateSelfSignedCertificateWithPEMKey(
-	cn string,
-	ips []interface{},
-	alternateDNS []interface{},
-	daysValid int,
-	privPEM string,
-) (certificate, error) {
-	priv, err := parsePrivateKeyPEM(privPEM)
-	if err != nil {
-		return certificate{}, fmt.Errorf("parsing private key: %s", err)
-	}
-	return generateSelfSignedCertificateWithKeyInternal(cn, ips, alternateDNS, daysValid, priv)
-}
-
-func generateSelfSignedCertificateWithKeyInternal(
-	cn string,
-	ips []interface{},
-	alternateDNS []interface{},
-	daysValid int,
-	priv crypto.PrivateKey,
-) (certificate, error) {
 	cert := certificate{}
 
 	template, err := getBaseCertTemplate(cn, ips, alternateDNS, daysValid)
 	if err != nil {
 		return cert, err
+	}
+
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return cert, fmt.Errorf("error generating rsa key: %s", err)
 	}
 
 	cert.Cert, cert.Key, err = getCertAndKey(template, priv, template, priv)
@@ -409,36 +287,6 @@ func generateSignedCertificate(
 	daysValid int,
 	ca certificate,
 ) (certificate, error) {
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return certificate{}, fmt.Errorf("error generating rsa key: %s", err)
-	}
-	return generateSignedCertificateWithKeyInternal(cn, ips, alternateDNS, daysValid, ca, priv)
-}
-
-func generateSignedCertificateWithPEMKey(
-	cn string,
-	ips []interface{},
-	alternateDNS []interface{},
-	daysValid int,
-	ca certificate,
-	privPEM string,
-) (certificate, error) {
-	priv, err := parsePrivateKeyPEM(privPEM)
-	if err != nil {
-		return certificate{}, fmt.Errorf("parsing private key: %s", err)
-	}
-	return generateSignedCertificateWithKeyInternal(cn, ips, alternateDNS, daysValid, ca, priv)
-}
-
-func generateSignedCertificateWithKeyInternal(
-	cn string,
-	ips []interface{},
-	alternateDNS []interface{},
-	daysValid int,
-	ca certificate,
-	priv crypto.PrivateKey,
-) (certificate, error) {
 	cert := certificate{}
 
 	decodedSignerCert, _ := pem.Decode([]byte(ca.Cert))
@@ -452,10 +300,14 @@ func generateSignedCertificateWithKeyInternal(
 			err,
 		)
 	}
-	signerKey, err := parsePrivateKeyPEM(ca.Key)
+	decodedSignerKey, _ := pem.Decode([]byte(ca.Key))
+	if decodedSignerKey == nil {
+		return cert, errors.New("unable to decode key")
+	}
+	signerKey, err := x509.ParsePKCS1PrivateKey(decodedSignerKey.Bytes)
 	if err != nil {
 		return cert, fmt.Errorf(
-			"error parsing private key: %s",
+			"error parsing prive key: decodedSignerKey.Bytes: %s",
 			err,
 		)
 	}
@@ -463,6 +315,11 @@ func generateSignedCertificateWithKeyInternal(
 	template, err := getBaseCertTemplate(cn, ips, alternateDNS, daysValid)
 	if err != nil {
 		return cert, err
+	}
+
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return cert, fmt.Errorf("error generating rsa key: %s", err)
 	}
 
 	cert.Cert, cert.Key, err = getCertAndKey(
@@ -477,19 +334,15 @@ func generateSignedCertificateWithKeyInternal(
 
 func getCertAndKey(
 	template *x509.Certificate,
-	signeeKey crypto.PrivateKey,
+	signeeKey *rsa.PrivateKey,
 	parent *x509.Certificate,
-	signingKey crypto.PrivateKey,
+	signingKey *rsa.PrivateKey,
 ) (string, string, error) {
-	signeePubKey, err := getPublicKey(signeeKey)
-	if err != nil {
-		return "", "", fmt.Errorf("error retrieving public key from signee key: %s", err)
-	}
 	derBytes, err := x509.CreateCertificate(
 		rand.Reader,
 		template,
 		parent,
-		signeePubKey,
+		&signeeKey.PublicKey,
 		signingKey,
 	)
 	if err != nil {
@@ -507,7 +360,10 @@ func getCertAndKey(
 	keyBuffer := bytes.Buffer{}
 	if err := pem.Encode(
 		&keyBuffer,
-		pemBlockForKey(signeeKey),
+		&pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(signeeKey),
+		},
 	); err != nil {
 		return "", "", fmt.Errorf("error pem-encoding key: %s", err)
 	}
