@@ -2,7 +2,6 @@ package sprig
 
 import (
 	"fmt"
-	"math"
 	"reflect"
 	"sort"
 )
@@ -70,50 +69,6 @@ func mustPrepend(list interface{}, v interface{}) ([]interface{}, error) {
 
 	default:
 		return nil, fmt.Errorf("Cannot prepend on type %s", tp)
-	}
-}
-
-func chunk(size int, list interface{}) [][]interface{} {
-	l, err := mustChunk(size, list)
-	if err != nil {
-		panic(err)
-	}
-
-	return l
-}
-
-func mustChunk(size int, list interface{}) ([][]interface{}, error) {
-	tp := reflect.TypeOf(list).Kind()
-	switch tp {
-	case reflect.Slice, reflect.Array:
-		l2 := reflect.ValueOf(list)
-
-		l := l2.Len()
-
-		cs := int(math.Floor(float64(l-1)/float64(size)) + 1)
-		nl := make([][]interface{}, cs)
-
-		for i := 0; i < cs; i++ {
-			clen := size
-			if i == cs-1 {
-				clen = int(math.Floor(math.Mod(float64(l), float64(size))))
-				if clen == 0 {
-					clen = size
-				}
-			}
-
-			nl[i] = make([]interface{}, clen)
-
-			for j := 0; j < clen; j++ {
-				ix := i*size + j
-				nl[i][j] = l2.Index(ix).Interface()
-			}
-		}
-
-		return nl, nil
-
-	default:
-		return nil, fmt.Errorf("Cannot chunk type %s", tp)
 	}
 }
 

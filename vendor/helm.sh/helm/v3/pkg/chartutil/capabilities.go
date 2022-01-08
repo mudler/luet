@@ -16,21 +16,12 @@ limitations under the License.
 package chartutil
 
 import (
-	"fmt"
-	"strconv"
-
-	"github.com/Masterminds/semver/v3"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 
 	helmversion "helm.sh/helm/v3/internal/version"
-)
-
-const (
-	k8sVersionMajor = 1
-	k8sVersionMinor = 20
 )
 
 var (
@@ -40,9 +31,9 @@ var (
 	// DefaultCapabilities is the default set of capabilities.
 	DefaultCapabilities = &Capabilities{
 		KubeVersion: KubeVersion{
-			Version: fmt.Sprintf("v%d.%d.0", k8sVersionMajor, k8sVersionMinor),
-			Major:   strconv.Itoa(k8sVersionMajor),
-			Minor:   strconv.Itoa(k8sVersionMinor),
+			Version: "v1.18.0",
+			Major:   "1",
+			Minor:   "18",
 		},
 		APIVersions: DefaultVersionSet,
 		HelmVersion: helmversion.Get(),
@@ -59,14 +50,6 @@ type Capabilities struct {
 	HelmVersion helmversion.BuildInfo
 }
 
-func (capabilities *Capabilities) Copy() *Capabilities {
-	return &Capabilities{
-		KubeVersion: capabilities.KubeVersion,
-		APIVersions: capabilities.APIVersions,
-		HelmVersion: capabilities.HelmVersion,
-	}
-}
-
 // KubeVersion is the Kubernetes version.
 type KubeVersion struct {
 	Version string // Kubernetes version
@@ -81,19 +64,6 @@ func (kv *KubeVersion) String() string { return kv.Version }
 //
 // Deprecated: use KubeVersion.Version.
 func (kv *KubeVersion) GitVersion() string { return kv.Version }
-
-// ParseKubeVersion parses kubernetes version from string
-func ParseKubeVersion(version string) (*KubeVersion, error) {
-	sv, err := semver.NewVersion(version)
-	if err != nil {
-		return nil, err
-	}
-	return &KubeVersion{
-		Version: "v" + sv.String(),
-		Major:   strconv.FormatUint(sv.Major(), 10),
-		Minor:   strconv.FormatUint(sv.Minor(), 10),
-	}, nil
-}
 
 // VersionSet is a set of Kubernetes API versions.
 type VersionSet []string
