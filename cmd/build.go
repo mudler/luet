@@ -132,15 +132,20 @@ Build packages specifying multiple definition trees:
 
 		generalRecipe := tree.NewCompilerRecipe(db)
 
-		if fromRepo {
-			if err := installer.LoadBuildTree(generalRecipe, db, util.DefaultContext); err != nil {
-				util.DefaultContext.Warning("errors while loading trees from repositories", err.Error())
-			}
-		}
-
 		for _, src := range treePaths {
 			util.DefaultContext.Info("Loading tree", src)
 			helpers.CheckErr(generalRecipe.Load(src))
+		}
+		templateFolders := []string{}
+
+		if fromRepo {
+			bt, err := installer.LoadBuildTree(generalRecipe, db, util.DefaultContext)
+			if err != nil {
+				util.DefaultContext.Warning("errors while loading trees from repositories", err.Error())
+			}
+			templateFolders = util.TemplateFolders(util.DefaultContext, bt, treePaths)
+		} else {
+			templateFolders = util.TemplateFolders(util.DefaultContext, installer.BuildTreeResult{}, treePaths)
 		}
 
 		util.DefaultContext.Info("Building in", dst)
@@ -162,7 +167,7 @@ Build packages specifying multiple definition trees:
 			options.WithPullRepositories(pullRepo),
 			options.WithPushRepository(imageRepository),
 			options.Rebuild(rebuild),
-			options.WithTemplateFolder(util.TemplateFolders(util.DefaultContext, fromRepo, treePaths)),
+			options.WithTemplateFolder(templateFolders),
 			options.WithSolverOptions(opts),
 			options.Wait(wait),
 			options.OnlyTarget(onlyTarget),

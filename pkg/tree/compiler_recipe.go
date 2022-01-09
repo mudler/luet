@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/template"
 	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
@@ -72,18 +73,12 @@ func (r *CompilerRecipe) Save(path string) error {
 func (r *CompilerRecipe) Load(path string) error {
 
 	r.SourcePath = append(r.SourcePath, path)
-	//tmpfile, err := ioutil.TempFile("", "luet")
-	//if err != nil {
-	//	return err
-	//}
-	c, err := helpers.ChartFiles([]string{filepath.Join(path, "templates")})
+
+	c, err := helpers.ChartFiles(template.FindPossibleTemplatesDir(path))
 	if err != nil {
 		return err
 	}
 
-	//r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
-	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
-	// the function that handles each file or dir
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
 
 		if err != nil {
