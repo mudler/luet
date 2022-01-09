@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mudler/luet/pkg/api/core/template"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	compression "github.com/mudler/luet/pkg/compiler/types/compression"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
@@ -114,9 +115,18 @@ func SystemRepositories(t types.LuetRepositories) Repositories {
 	return repos
 }
 
+type BuildTreeResult struct {
+	Repositories Repositories
+	TemplatesDir map[*LuetSystemRepository][]string
+}
+
 // LoadBuildTree loads to the tree the compilation specs from the system repositories
-func LoadBuildTree(t tree.Builder, db pkg.PackageDatabase, ctx types.Context) error {
+func LoadBuildTree(t tree.Builder, db pkg.PackageDatabase, ctx types.Context) (BuildTreeResult, error) {
 	var reserr error
+	res := &BuildTreeResult{
+		TemplatesDir: make(map[*LuetSystemRepository][]string),
+	}
+
 	repos := SystemRepositories(ctx.GetConfig().SystemRepositories)
 	for _, r := range repos {
 		repodir, err := ctx.TempDir(r.Name)
@@ -136,11 +146,14 @@ func LoadBuildTree(t tree.Builder, db pkg.PackageDatabase, ctx types.Context) er
 		}
 
 		r.SetTree(generalRecipe)
+		res.TemplatesDir[r] = template.FindPossibleTemplatesDir(repodir)
 	}
+
+	res.Repositories = repos
 
 	repos.SyncDatabase(db)
 
-	return reserr
+	return *res, reserr
 }
 
 func (m *LuetSystemRepositoryMetadata) WriteFile(path string) error {
@@ -277,14 +290,12 @@ func GenerateRepository(p ...RepositoryOption) (*LuetSystemRepository, error) {
 	generalRecipe := tree.NewCompilerRecipe(repodb)
 
 	if c.FromRepository {
-		if err := LoadBuildTree(generalRecipe, repodb, c.context); err != nil {
+		if _, err := LoadBuildTree(generalRecipe, repodb, c.context); err != nil {
 			c.context.Warning("errors while loading trees from repositories", err.Error())
 		}
-
 		if err := repodb.Clone(tempTree); err != nil {
 			c.context.Warning("errors while cloning trees from repositories", err.Error())
 		}
-
 	}
 
 	// Pick only atoms in db which have a real metadata for runtime db (tr)

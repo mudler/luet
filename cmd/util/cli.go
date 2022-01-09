@@ -17,7 +17,6 @@ package util
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/marcsauter/single"
@@ -26,6 +25,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/mudler/luet/pkg/api/core/context"
+	"github.com/mudler/luet/pkg/api/core/template"
 	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/installer"
 )
@@ -42,16 +42,15 @@ func ValuesFlags() []string {
 }
 
 // TemplateFolders returns the default folders which holds shared template between packages in a given tree path
-func TemplateFolders(ctx *context.Context, fromRepo bool, treePaths []string) []string {
+func TemplateFolders(ctx *context.Context, i installer.BuildTreeResult, treePaths []string) []string {
 	templateFolders := []string{}
 	for _, t := range treePaths {
-		templateFolders = append(templateFolders, filepath.Join(t, "templates"))
+		templateFolders = append(templateFolders, template.FindPossibleTemplatesDir(t)...)
 	}
-	if fromRepo {
-		for _, s := range installer.SystemRepositories(ctx.GetConfig().SystemRepositories) {
-			templateFolders = append(templateFolders, filepath.Join(s.TreePath, "templates"))
-		}
+	for _, r := range i.TemplatesDir {
+		templateFolders = append(templateFolders, r...)
 	}
+
 	return templateFolders
 }
 
