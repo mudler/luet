@@ -60,7 +60,7 @@ testInstall() {
     luet install -y --config $tmpdir/luet.yaml test1/conflict test2/conflict
     #luet install -y --config $tmpdir/luet.yaml test/c@1.0 > /dev/null
     installst=$?
-    assertEquals 'install test failed' "$installst" "1"
+    assertEquals 'install test failed' "$installst" "2"
     #assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/c' ]"
 }
 
@@ -72,7 +72,7 @@ testReInstall() {
     luet install -y --config $tmpdir/luet.yaml test2/conflict
     #luet install -y --config $tmpdir/luet.yaml test/c@1.0 > /dev/null
     installst=$?
-    assertEquals 'install test succeeded' "$installst" "1"
+    assertEquals 'install test succeeded' "$installst" "2"
     luet install -y --force --config $tmpdir/luet.yaml test2/conflict
     #luet install -y --config $tmpdir/luet.yaml test/c@1.0 > /dev/null
     installst=$?

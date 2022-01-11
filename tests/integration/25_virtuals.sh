@@ -23,14 +23,14 @@ testBuildB() {
     mkdir $tmpdir/testbuild2
     luet build --tree "$ROOT_DIR/tests/fixtures/virtuals"  --debug --compression "gzip" --destination $tmpdir/testbuild2 test/b
     buildst=$?
-    assertEquals 'builds of B expected to fail. It depends on a virtual' "$buildst" "1"
+    assertEquals 'builds of B expected to fail. It depends on a virtual' "$buildst" "2"
 }
 
 testBuildC() {
     mkdir $tmpdir/testbuild3
     luet build --tree "$ROOT_DIR/tests/fixtures/virtuals"  --debug --compression "gzip" --destination $tmpdir/testbuild3 test/c
     buildst=$?
-    assertEquals 'builds of C expected to fail. Steps with no source image' "$buildst" "1"
+    assertEquals 'builds of C expected to fail. Steps with no source image' "$buildst" "2"
 }
 
 testBuildImage() {

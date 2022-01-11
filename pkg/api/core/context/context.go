@@ -135,7 +135,7 @@ func (c *Context) Copy() types.Context {
 func (c *Context) Warning(mess ...interface{}) {
 	c.Logger.Warn(mess...)
 	if c.Config.General.FatalWarns {
-		os.Exit(2)
+		panic("panic on warning")
 	}
 }
 
@@ -146,7 +146,7 @@ func (c *Context) Warn(mess ...interface{}) {
 func (c *Context) Warnf(t string, mess ...interface{}) {
 	c.Logger.Warnf(t, mess...)
 	if c.Config.General.FatalWarns {
-		os.Exit(2)
+		panic("panic on warning")
 	}
 }
 
