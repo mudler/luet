@@ -17,7 +17,6 @@ package logger
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"regexp"
 	"runtime"
@@ -253,7 +252,7 @@ func (l *Logger) Tracef(t string, args ...interface{}) {
 
 func (l *Logger) Fatal(args ...interface{}) {
 	l.send(log.LevelFatal, "", args...)
-	os.Exit(1)
+	panic("fatal error")
 }
 
 func (l *Logger) Info(args ...interface{}) {

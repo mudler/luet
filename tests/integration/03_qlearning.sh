@@ -67,7 +67,7 @@ testInstall() {
 testFullInstall() {
     output=$(luet install -y --config $tmpdir/luet.yaml test/d test/f test/e test/a)
     installst=$?
-    assertEquals 'cannot install' "$installst" "1"
+    assertEquals 'cannot install' "$installst" "2"
     assertTrue 'package D installed' "[ ! -e '$tmpdir/testrootfs/d' ]"
     assertTrue 'package F installed' "[ ! -e '$tmpdir/testrootfs/f' ]"
 }
