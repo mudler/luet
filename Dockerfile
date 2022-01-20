@@ -1,7 +1,7 @@
 FROM golang as builder
 RUN apt-get update && apt-get install -y upx
 ADD . /luet
-RUN cd /luet && make build-small
+RUN cd /luet && make build
 
 FROM scratch
 ENV LUET_NOLOCK=true
