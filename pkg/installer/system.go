@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/mudler/luet/pkg/api/core/template"
 	"github.com/mudler/luet/pkg/api/core/types"
-	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/mudler/luet/pkg/tree"
 )
@@ -46,7 +46,7 @@ func (s *System) ExecuteFinalizers(ctx types.Context, packs []*types.Package) er
 	executedFinalizer := map[string]bool{}
 	for _, p := range packs {
 		if fileHelper.Exists(p.Rel(tree.FinalizerFile)) {
-			out, err := helpers.RenderFiles(helpers.ChartFile(p.Rel(tree.FinalizerFile)), p.Rel(types.PackageDefinitionFile))
+			out, err := template.RenderWithValues([]string{p.Rel(tree.FinalizerFile)}, p.Rel(types.PackageDefinitionFile))
 			if err != nil {
 				ctx.Warning("Failed rendering finalizer for ", p.HumanReadableString(), err.Error())
 				errs = multierror.Append(errs, err)

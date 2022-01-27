@@ -6,6 +6,7 @@ require (
 	github.com/DataDog/zstd v1.4.5 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
+	github.com/Masterminds/sprig/v3 v3.1.0
 	github.com/Sabayon/pkgs-checker v0.8.4
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 	github.com/cavaliercoder/grab v1.0.1-0.20201108051000-98a5bfe305ec
@@ -68,6 +69,5 @@ require (
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	gopkg.in/ini.v1 v1.63.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0
-	helm.sh/helm/v3 v3.3.4
 
 )

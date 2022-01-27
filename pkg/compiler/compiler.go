@@ -32,6 +32,7 @@ import (
 	bus "github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/image"
+	"github.com/mudler/luet/pkg/api/core/template"
 	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler/backend"
@@ -45,7 +46,6 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
-	"helm.sh/helm/v3/pkg/chart"
 )
 
 const BuildFile = "build.yaml"
@@ -1294,9 +1294,9 @@ type templatedata map[string]interface{}
 
 func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack *types.Package, dst templatedata) ([]byte, error) {
 	// Grab shared templates first
-	var chartFiles []*chart.File
+	var chartFiles []string
 	if len(cs.Options.TemplatesFolder) != 0 {
-		c, err := helpers.ChartFiles(cs.Options.TemplatesFolder)
+		c, err := template.FilesInDir(cs.Options.TemplatesFolder)
 		if err == nil {
 			chartFiles = c
 		}
@@ -1338,7 +1338,7 @@ func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack *typ
 			return nil, errors.Wrap(err, "merging values maps")
 		}
 
-		dat, err := helpers.RenderHelm(append(chartFiles, helpers.ChartFileB(dataBuild)...), td, dst)
+		dat, err := template.Render(append(template.ReadFiles(chartFiles...), string(dataBuild)), td, dst)
 		if err != nil {
 			return nil, errors.Wrap(err, "rendering file "+pack.Rel(BuildFile))
 		}
@@ -1365,12 +1365,7 @@ func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack *typ
 			}
 		}
 
-		raw, err := ioutil.ReadFile(pack.Rel(BuildFile))
-		if err != nil {
-			return nil, err
-		}
-
-		out, err := helpers.RenderFiles(append(chartFiles, helpers.ChartFileB(raw)...), val, bv...)
+		out, err := template.RenderWithValues(append(chartFiles, pack.Rel(BuildFile)), val, bv...)
 		if err != nil {
 			return nil, errors.Wrap(err, "rendering file "+pack.Rel(BuildFile))
 		}
@@ -1417,7 +1412,7 @@ func (cs *LuetCompiler) FromPackage(p *types.Package) (*compilerspec.LuetCompila
 	}
 
 	// Update processed build values
-	dst, err := helpers.UnMarshalValues(cs.Options.BuildValuesFile)
+	dst, err := template.UnMarshalValues(cs.Options.BuildValuesFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "unmarshalling values")
 	}

@@ -1,4 +1,4 @@
-// Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2019-2022 Ettore Di Giacinto <mudler@mocaccino.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -27,7 +27,6 @@ import (
 
 	"github.com/mudler/luet/pkg/api/core/template"
 	"github.com/mudler/luet/pkg/api/core/types"
-	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/pkg/errors"
 )
@@ -74,7 +73,7 @@ func (r *CompilerRecipe) Load(path string) error {
 
 	r.SourcePath = append(r.SourcePath, path)
 
-	c, err := helpers.ChartFiles(template.FindPossibleTemplatesDir(path))
+	c, err := template.FilesInDir(template.FindPossibleTemplatesDir(path))
 	if err != nil {
 		return err
 	}
@@ -103,7 +102,7 @@ func (r *CompilerRecipe) Load(path string) error {
 			// Instead of rdeps, have a different tree for build deps.
 			compileDefPath := pack.Rel(CompilerDefinitionFile)
 			if fileHelper.Exists(compileDefPath) {
-				dat, err := helpers.RenderFiles(append(c, helpers.ChartFile(compileDefPath)...), currentpath)
+				dat, err := template.RenderWithValues(append(c, compileDefPath), currentpath)
 				if err != nil {
 					return errors.Wrap(err,
 						"Error templating file "+CompilerDefinitionFile+" from "+
@@ -155,7 +154,7 @@ func (r *CompilerRecipe) Load(path string) error {
 					if err != nil {
 						return errors.Wrap(err, "Error reading file "+currentpath)
 					}
-					dat, err := helpers.RenderHelm(append(c, helpers.ChartFileB(buildyaml)...), raw, map[string]interface{}{})
+					dat, err := template.Render(append(template.ReadFiles(c...), string(buildyaml)), raw, map[string]interface{}{})
 					if err != nil {
 						return errors.Wrap(err,
 							"Error templating file "+CompilerDefinitionFile+" from "+
