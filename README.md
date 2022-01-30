@@ -12,7 +12,7 @@
 
 Luet is a multi-platform Package Manager based off from containers - it uses Docker (and others) to build packages. It has zero dependencies and it is well suitable for "from scratch" environments. It can also version entire rootfs and enables delivery of OTA-alike updates, making it a perfect fit for the Edge computing era and IoT embedded devices.
 
-It offers a simple [specfile format](https://luet-lab.github.io/docs/docs/concepts/packages/specfile/) in YAML notation to define both [packages](https://luet-lab.github.io/docs/docs/concepts/packages/) and [rootfs](https://luet-lab.github.io/docs/docs/concepts/packages/#package-layers). As it is based on containers, it can be also used to build stages for Linux From Scratch installations and it can build and track updates for those systems.
+It offers a simple [specfile format](https://luet.io/docs/concepts/packages/specfile/) in YAML notation to define both [packages](https://luet.io/docs/concepts/packages/) and [rootfs](https://luet.io/docs/concepts/packages/#package-layers). As it is based on containers, it can be also used to build stages for Linux From Scratch installations and it can build and track updates for those systems.
 
 It is written entirely in Golang and where used as package manager, it can run in from scratch environment, with zero dependencies.
 
@@ -25,10 +25,10 @@ It is written entirely in Golang and where used as package manager, it can run i
 - It builds from containers, but installs, uninstalls and perform upgrades on machines
 - Installer doesn't depend on anything ( 0 dep installer !), statically built
 - You can install it aside also with your current distro package manager, and start building and distributing your packages
-- [Support for packages as "layers"](https://luet-lab.github.io/docs/docs/concepts/packages/specfile/#building-strategies)
-- [It uses SAT solving techniques to solve the deptree](https://luet-lab.github.io/docs/docs/concepts/overview/constraints/) ( Inspired by [OPIUM](https://ranjitjhala.github.io/static/opium.pdf) )
-- Support for [collections](https://luet-lab.github.io/docs/docs/concepts/packages/collections/) and [templated package definitions](https://luet-lab.github.io/docs/docs/concepts/packages/templates/)
-- [Can be extended with Plugins and Extensions](https://luet-lab.github.io/docs/docs/concepts/plugins-and-extensions/)
+- [Support for packages as "layers"](https://luet.io/docs/concepts/packages/specfile/#building-strategies)
+- [It uses SAT solving techniques to solve the deptree](https://luet.io/docs/concepts/overview/constraints/) ( Inspired by [OPIUM](https://ranjitjhala.github.io/static/opium.pdf) )
+- Support for [collections](https://luet.io/docs/concepts/packages/collections/) and [templated package definitions](https://luet.io/docs/concepts/packages/templates/)
+- [Can be extended with Plugins and Extensions](https://luet.io/docs/concepts/plugins-and-extensions/)
 - [Can build packages in Kubernetes (experimental)](https://github.com/mudler/luet-k8s)
 - Uses containerd/go-containerregistry to manipulate images - works also daemonless with the img backend
 
@@ -37,7 +37,7 @@ It is written entirely in Golang and where used as package manager, it can run i
 To install luet, you can grab a release on the [Release page](https://github.com/mudler/luet/releases) or to install it in your system:
 
 ```bash
-$ curl https://get.mocaccino.org/luet/get_luet_root.sh | sudo sh
+$ curl https://luet.io/install.sh | sudo sh
 $ luet search ...
 $ luet install ..
 $ luet --help
@@ -53,7 +53,7 @@ $ make build
 
 ## Documentation
 
-[Documentation](https://luet-lab.github.io/docs) is available, or
+[Documentation](https://luet.io/) is available, or
 run `luet --help`,  any subcommand is documented as well, try e.g.: `luet build --help`.
 
 # Dependency solving
