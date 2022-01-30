@@ -1,0 +1,264 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Luet – Resources</title>
+    <link>https://luet-lab.github.io/docs/docs/resources/</link>
+    <description>Recent content in Resources on Luet</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Thu, 05 Jan 2017 00:00:00 +0000</lastBuildDate>
+    
+	  <atom:link href="https://luet-lab.github.io/docs/docs/resources/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Docs: ARM images</title>
+      <link>https://luet-lab.github.io/docs/docs/resources/arm/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://luet-lab.github.io/docs/docs/resources/arm/</guid>
+      <description>
+        
+        
+        
+
+&lt;div class=&#34;alert alert-warning&#34; role=&#34;alert&#34;&gt;
+&lt;h4 class=&#34;alert-heading&#34;&gt;Warning&lt;/h4&gt;
+
+    This article is outdated.
+Please refer to the &lt;a href=&#34;../../tutorials/hello_world/&#34;&gt;&amp;ldquo;Hello World&amp;rdquo;&lt;/a&gt; tutorial instead.
+
+&lt;/div&gt;
+
+&lt;p&gt;Here we show an example on how to build &amp;ldquo;burnable&amp;rdquo; SD images for Raspberry Pi with Luet. This approach lets you describe and version OTA upgrades for your embedded devices, delivering upgrades as layer upgrades on the Pi.&lt;/p&gt;
+&lt;p&gt;The other good side of the medal is that you can build a Luet package repository with multiple distributions (e.g. &lt;code&gt;Raspbian&lt;/code&gt;, &lt;code&gt;OpenSUSE&lt;/code&gt;, &lt;code&gt;Gentoo&lt;/code&gt;, &amp;hellip; ) and switch among them in runtime. In the above example &lt;code&gt;Raspbian&lt;/code&gt; and &lt;code&gt;Funtoo&lt;/code&gt; (at the time of writing) are available.&lt;/p&gt;
+&lt;h2 id=&#34;prerequisites&#34;&gt;Prerequisites&lt;/h2&gt;
+&lt;p&gt;You have to run the following steps inside an ARM board to produce arm-compatible binaries. Any distribution with Docker will work. Note that the same steps could be done in a cross-compilation approach, or with qemu-binfmt in a amd64 host.&lt;/p&gt;
+&lt;p&gt;You will also need in your host:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Docker&lt;/li&gt;
+&lt;li&gt;Luet installed (+container-diff) in &lt;code&gt;/usr/bin/luet&lt;/code&gt; (arm build)&lt;/li&gt;
+&lt;li&gt;make&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;build-the-packages&#34;&gt;Build the packages&lt;/h2&gt;
+&lt;p&gt;Clone the repository &lt;a href=&#34;https://github.com/Luet-lab/luet-embedded&#34;&gt;https://github.com/Luet-lab/luet-embedded&lt;/a&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$&amp;gt; git clone https://github.com/Luet-lab/luet-embedded
+$&amp;gt; cd luet-embedded
+$&amp;gt; sudo make build-all
+...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If a rebuild is needed, just do &lt;code&gt;sudo make rebuild-all&lt;/code&gt; after applying the changes.&lt;/p&gt;
+&lt;h2 id=&#34;create-the-repository&#34;&gt;Create the repository&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;$&amp;gt; sudo make create-repo
+...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;serve-the-repo-locally&#34;&gt;Serve the repo locally&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;$&amp;gt; make serve-repo
+...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;create-the-flashable-image&#34;&gt;Create the flashable image&lt;/h2&gt;
+&lt;h3 id=&#34;funtoo-based-system&#34;&gt;Funtoo based system&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;$&amp;gt; sudo LUET_PACKAGES=&#39;distro/funtoo-1.4 distro/raspbian-boot-0.20191208 system/luet-develop-0.5&#39; make image
+...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;raspbian-based-system&#34;&gt;Raspbian based system&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;$&amp;gt; sudo LUET_PACKAGES=&#39;distro/raspbian-0.20191208 distro/raspbian-boot-0.20191208 system/luet-develop-0.5&#39; make image
+...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;At the end of the process, a file &lt;code&gt;luet_os.img&lt;/code&gt;, ready to be flashed to an SD card, should be present in the current directory.&lt;/p&gt;
+&lt;h2 id=&#34;add-packages&#34;&gt;Add packages&lt;/h2&gt;
+&lt;p&gt;In order to build and add &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/&#34;&gt;packages&lt;/a&gt; to the exiting repository, simply add or edit the &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/specfile&#34;&gt;specfiles&lt;/a&gt; under the &lt;code&gt;distro&lt;/code&gt; folder. When doing &lt;code&gt;make rebuild-all&lt;/code&gt; the packages will be automatically compiled and made available to the local repository.&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: Building</title>
+      <link>https://luet-lab.github.io/docs/docs/resources/building/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://luet-lab.github.io/docs/docs/resources/building/</guid>
+      <description>
+        
+        
+        &lt;h2 id=&#34;simple-package-build&#34;&gt;Simple package build&lt;/h2&gt;
+&lt;p&gt;Creating and building a simple &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/&#34;&gt;package&lt;/a&gt;:&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;$&amp;gt; mkdir package
+
+$&amp;gt; cat &amp;lt;&amp;lt;EOF &amp;gt; package/build.yaml
+image: busybox
+steps:
+- echo &amp;quot;foo&amp;quot; &amp;gt; /foo
+EOF
+
+$&amp;gt; cat &amp;lt;&amp;lt;EOF &amp;gt; package/definition.yaml
+name: &amp;quot;foo&amp;quot;
+version: &amp;quot;0.1&amp;quot;
+EOF
+
+$&amp;gt; luet build --all
+
+📦  Selecting  foo 0.1
+📦  Compiling foo version 0.1 .... ☕
+🐋  Downloading image luet/cache-foo-bar-0.1-builder
+🐋  Downloading image luet/cache-foo-bar-0.1
+📦   foo Generating 🐋  definition for builder image from busybox
+🐋  Building image luet/cache-foo-bar-0.1-builder
+🐋  Building image luet/cache-foo-bar-0.1-builder done
+ Sending build context to Docker daemon  4.096kB
+ ...
+
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&#34;build-packages&#34;&gt;Build packages&lt;/h3&gt;
+&lt;p&gt;In order to build a specific version, a full &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/&#34;&gt;package&lt;/a&gt; definition (triple of &lt;code&gt;category&lt;/code&gt;, &lt;code&gt;name&lt;/code&gt; and &lt;code&gt;version&lt;/code&gt;) has to be specified.
+In this example we will also enable package compression (gzip).&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;$&amp;gt; mkdir package
+
+$&amp;gt; cat &amp;lt;&amp;lt;EOF &amp;gt; package/build.yaml
+image: busybox
+steps:
+- echo &amp;quot;foo&amp;quot; &amp;gt; /foo
+EOF
+
+$&amp;gt; cat &amp;lt;&amp;lt;EOF &amp;gt; package/definition.yaml
+name: &amp;quot;foo&amp;quot;
+version: &amp;quot;0.1&amp;quot;
+category: &amp;quot;bar&amp;quot;
+EOF
+
+$&amp;gt; luet build bar/foo-0.1 --compression gzip
+
+📦  Selecting  foo 0.1
+📦  Compiling foo version 0.1 .... ☕
+🐋  Downloading image luet/cache-foo-bar-0.1-builder
+🐋  Downloading image luet/cache-foo-bar-0.1
+📦   foo Generating 🐋  definition for builder image from busybox
+🐋  Building image luet/cache-foo-bar-0.1-builder
+🐋  Building image luet/cache-foo-bar-0.1-builder done
+ Sending build context to Docker daemon  4.096kB
+ ...
+
+&lt;/code&gt;&lt;/pre&gt;
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: Frequently Asked Questions</title>
+      <link>https://luet-lab.github.io/docs/docs/resources/faq/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://luet-lab.github.io/docs/docs/resources/faq/</guid>
+      <description>
+        
+        
+        &lt;h2 id=&#34;cant-build-packages&#34;&gt;Can&amp;rsquo;t build packages&lt;/h2&gt;
+&lt;p&gt;There might be several reasons why packages fails to build, for example, if your build fails like this:&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;$ luet build ...
+
+ INFO   Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?
+  ERROR    Error: Failed compiling development/toolchain-go-0.6: failed building package image: Could not push image: quay.io/mocaccino/micro-toolchain:latest toolchain-go-development-0.6-builder.dockerfile: Could not build image: quay.io/mocaccino/micro-toolchain:latest toolchain-go-development-0.6-builder.dockerfile: Failed running command: : exit status 1
+  ERROR    Bailing out
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;means the user you are running the build command can&amp;rsquo;t either connect to docker or &lt;code&gt;docker&lt;/code&gt; is not started.&lt;/p&gt;
+&lt;p&gt;Check if the user you are running the build is in the &lt;code&gt;docker&lt;/code&gt; group, or if the &lt;code&gt;docker&lt;/code&gt; daemon is started.&lt;/p&gt;
+&lt;p&gt;Luet by default if run with multiple packages summarize errors and can be difficult to navigate to logs, but if you think you might have found a bug, run the build with &lt;code&gt;--debug&lt;/code&gt; before opening an issue.&lt;/p&gt;
+&lt;h2 id=&#34;why-the-name-luet&#34;&gt;Why the name &lt;code&gt;luet&lt;/code&gt;?&lt;/h2&gt;
+&lt;p&gt;Well, I have the idea that programs should be small, so they are not difficult to type and easy to remember, and easy to stick in. &lt;code&gt;luet&lt;/code&gt; is really a combination of the first letters of my fiancee name (Lucia) and my name (Ettore) &lt;code&gt;lu+et = luet&lt;/code&gt;! and besides, happen to be also a &lt;a href=&#34;http://www.comuniterrae.it/punto/ponte-luet/&#34;&gt;small bridge&lt;/a&gt; in Italy ;)&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: Images from scratch</title>
+      <link>https://luet-lab.github.io/docs/docs/resources/scratch/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://luet-lab.github.io/docs/docs/resources/scratch/</guid>
+      <description>
+        
+        
+        &lt;p&gt;The Docker image &lt;code&gt;quay.io/luet/base&lt;/code&gt; is a &lt;code&gt;scratch&lt;/code&gt; Docker image always kept up-to-date with the latest luet version. That image can be used to bootstrap new images with Luet repositories with the packages you want, from the repositories you prefer.&lt;/p&gt;
+&lt;p&gt;For example we can mount a config file, and later on install a package:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; $PWD/luet.yaml  
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;repositories: 
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  - name: &amp;#34;micro-stable&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;    enable: true
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;    cached: true
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;    priority: 1
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;    type: &amp;#34;http&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;    urls: 
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;    - &amp;#34;https://get.mocaccino.org/mocaccino-micro-stable&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+
+docker rm luet-runtime-test &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;||&lt;/span&gt; &lt;span style=&#34;color:#204a87&#34;&gt;true&lt;/span&gt;
+docker run --name luet-runtime-test &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;       -ti -v /tmp:/tmp &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;       -v &lt;span style=&#34;color:#000&#34;&gt;$PWD&lt;/span&gt;/luet.yaml:/etc/luet/luet.yaml:ro &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;       quay.io/luet/base install shells/bash
+ 
+docker commit luet-runtime-test luet-runtime-test-image
+
+&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Try your new image!&lt;/span&gt;
+
+docker run -ti --entrypoint /bin/bash --rm luet-runtime-test-image
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;In this way we will create a new image, with only &lt;code&gt;luet&lt;/code&gt; and &lt;code&gt;bash&lt;/code&gt;, and nothing else from a scratch image.&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: References</title>
+      <link>https://luet-lab.github.io/docs/docs/resources/references/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://luet-lab.github.io/docs/docs/resources/references/</guid>
+      <description>
+        
+        
+        &lt;h2 id=&#34;references&#34;&gt;References&lt;/h2&gt;
+&lt;p&gt;Here is a list of references to projects that are related to Luet (open up a PR to add yours to the list!):&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Description&lt;/th&gt;
+&lt;th&gt;URL&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Official Luet repository&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/Luet-lab/luet-repo&#34;&gt;https://github.com/Luet-lab/luet-repo&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Example repository to host package browser websites on gh-pages. It uses the package-browser extension to generate HTML pages from a list of luet repositories&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/Luet-lab/package-browser-sample&#34;&gt;https://github.com/Luet-lab/package-browser-sample&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;LineageOS builds with luet&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/mudler/android-builds&#34;&gt;https://github.com/mudler/android-builds&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Example repository template to build packages on github actions and push packages on a container registry&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/Luet-lab/github-repository&#34;&gt;https://github.com/Luet-lab/github-repository&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Immutable container OS toolkit&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/rancher-sandbox/cOS-toolkit&#34;&gt;https://github.com/rancher-sandbox/cOS-toolkit&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;mocaccinoOS desktop&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/mocaccinoOS/desktop&#34;&gt;https://github.com/mocaccinoOS/desktop&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;mocaccinoOS extra&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/mocaccinoOS/mocaccino-extra&#34;&gt;https://github.com/mocaccinoOS/mocaccino-extra&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>

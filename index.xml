@@ -1,0 +1,49 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Luet – Luet docs</title>
+    <link>https://luet-lab.github.io/docs/</link>
+    <description>Recent content in Luet docs on Luet</description>
+    <generator>Hugo -- gohugo.io</generator>
+    
+	  <atom:link href="https://luet-lab.github.io/docs/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+      
+    
+    
+    <item>
+      <title>Blog: 0.3 Release</title>
+      <link>https://luet-lab.github.io/docs/blog/2019/12/23/0.3-release/</link>
+      <pubDate>Mon, 23 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://luet-lab.github.io/docs/blog/2019/12/23/0.3-release/</guid>
+      <description>
+        
+        
+        &lt;p&gt;This release comes with a lot of bugfixes and enhancement to the SAT solver core:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Add support for &lt;code&gt;provides&lt;/code&gt;. They allow to have &lt;code&gt;virtual&lt;/code&gt; packages which can be replaced during solving by other drop-in packages.&lt;/li&gt;
+&lt;li&gt;Tons of fixes&lt;/li&gt;
+&lt;li&gt;Preparation for upcoming compression support&lt;/li&gt;
+&lt;/ul&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: Website is up</title>
+      <link>https://luet-lab.github.io/docs/blog/2019/12/23/website-is-up/</link>
+      <pubDate>Mon, 23 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://luet-lab.github.io/docs/blog/2019/12/23/website-is-up/</guid>
+      <description>
+        
+        
+        &lt;p&gt;Finally the website is up! Docs are a work in progress. Stay tuned for more upcoming updates&lt;/p&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>

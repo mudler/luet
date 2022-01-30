@@ -1,0 +1,334 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Luet – Overview</title>
+    <link>https://luet-lab.github.io/docs/docs/concepts/overview/</link>
+    <description>Recent content in Overview on Luet</description>
+    <generator>Hugo -- gohugo.io</generator>
+    
+	  <atom:link href="https://luet-lab.github.io/docs/docs/concepts/overview/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Docs: Building packages</title>
+      <link>https://luet-lab.github.io/docs/docs/concepts/overview/build_packages/</link>
+      <pubDate>Thu, 05 Jan 2017 00:00:00 +0000</pubDate>
+      
+      <guid>https://luet-lab.github.io/docs/docs/concepts/overview/build_packages/</guid>
+      <description>
+        
+        
+        &lt;h2 id=&#34;prerequisistes&#34;&gt;Prerequisistes&lt;/h2&gt;
+&lt;p&gt;Luet currently supports &lt;a href=&#34;https://www.docker.com/&#34;&gt;Docker&lt;/a&gt; and &lt;a href=&#34;https://github.com/genuinetools/img&#34;&gt;Img&lt;/a&gt; as backends to build packages. Both of them can be used and switched in runtime with the &lt;code&gt;--backend&lt;/code&gt; option, so either one of them must be present in the host system.&lt;/p&gt;
+&lt;h3 id=&#34;docker&#34;&gt;Docker&lt;/h3&gt;
+&lt;p&gt;Docker is the (less) experimental Luet engine supported. Be sure to have Docker installed and the daemon running. The user running &lt;code&gt;luet&lt;/code&gt; commands needs the corresponding permissions to run the &lt;code&gt;docker&lt;/code&gt; executable, and to connect to a &lt;code&gt;docker&lt;/code&gt; daemon. The only feature needed by the daemon is the ability to build images, so it fully supports remote daemon as well (this can be specified with the &lt;code&gt;DOCKER_HOST&lt;/code&gt; environment variable, that is respected by &lt;code&gt;luet&lt;/code&gt;)&lt;/p&gt;
+&lt;h3 id=&#34;img&#34;&gt;Img&lt;/h3&gt;
+&lt;p&gt;Luet supports &lt;a href=&#34;https://github.com/genuinetools/img&#34;&gt;Img&lt;/a&gt;. To use it, simply install it in your system, and while running &lt;code&gt;luet build&lt;/code&gt;, you can switch the backend by providing it as a parameter: &lt;code&gt;luet build --backend img&lt;/code&gt;. For small packages it is particularly powerful, as it doesn&amp;rsquo;t require any docker daemon running in the host.&lt;/p&gt;
+&lt;h3 id=&#34;building-packages-on-kubernetes&#34;&gt;Building packages on Kubernetes&lt;/h3&gt;
+&lt;p&gt;Luet and img can be used together to orchestrate package builds also on kubernetes. There is available an experimental &lt;a href=&#34;https://github.com/mudler/luet-k8s&#34;&gt;Kubernetes CRD for Luet&lt;/a&gt; which allows to build packages seamelessly in Kubernetes and push package artifacts to an S3 Compatible object storage (e.g. Minio).&lt;/p&gt;
+&lt;h2 id=&#34;building-packages&#34;&gt;Building packages&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&#34;https://luet-lab.github.io/docs/docs/tree.jpg&#34; alt=&#34;Build packages&#34;&gt;&lt;/p&gt;
+&lt;p&gt;Luet provides an abstraction layer on top of the container image layer to make the package a first class construct. A package definition and all its dependencies are translated by Luet to Dockerfiles which can then be built anywhere that docker runs.&lt;/p&gt;
+&lt;p&gt;To resolve the dependency tree Luet uses a SAT solver and no database. It is responsible for calculating the dependencies of a package and to prevent conflicts. The Luet core is still young, but it has a comprehensive test suite that we use to validate any future changes.&lt;/p&gt;
+&lt;p&gt;Building a package with Luet requires only a &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile&#34;&gt;definition&lt;/a&gt;. This definition can be self-contained and be only composed of one &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile&#34;&gt;specfile&lt;/a&gt;, or a group of them, forming a Luet tree. For more complex use-cases, see &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/collections&#34;&gt;collections&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Run &lt;code&gt;luet build --help&lt;/code&gt; to get more help for each parameter.&lt;/p&gt;
+&lt;p&gt;Build accepts a list of packages to build, which syntax is in the &lt;code&gt;category/name-version&lt;/code&gt; notation. See also &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile/#refering-to-packages-from-the-cli&#34;&gt;specfile documentation page&lt;/a&gt; to see how to express packages from the CLI.&lt;/p&gt;
+&lt;h2 id=&#34;environmental-variables&#34;&gt;Environmental variables&lt;/h2&gt;
+&lt;p&gt;Luet builds passes its environment variable at the engine which is called during build, so for example the environment variable &lt;code&gt;DOCKER_HOST&lt;/code&gt; or &lt;code&gt;DOCKER_BUILDKIT&lt;/code&gt; can be setted.&lt;/p&gt;
+&lt;p&gt;Every argument from the CLI can be setted via environment variable too with a &lt;code&gt;LUET_&lt;/code&gt; prefix, for instance the flag &lt;code&gt;--clean&lt;/code&gt;, can be setted via environment with &lt;code&gt;LUET_CLEAN&lt;/code&gt;, &lt;code&gt;--privileged&lt;/code&gt; can be enabled with &lt;code&gt;LUET_PRIVILEGED&lt;/code&gt; and so on.&lt;/p&gt;
+&lt;h2 id=&#34;supported-compression-format&#34;&gt;Supported compression format&lt;/h2&gt;
+&lt;p&gt;At the moment, &lt;code&gt;luet&lt;/code&gt; can compress packages and tree with &lt;code&gt;zstd&lt;/code&gt; and &lt;code&gt;gzip&lt;/code&gt;. For example:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;luet build --compression zstd ...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Will output package compressed in the zstd format.&lt;/p&gt;
+&lt;p&gt;See the &lt;code&gt;--help&lt;/code&gt; of &lt;code&gt;create-repo&lt;/code&gt; and &lt;code&gt;build&lt;/code&gt; to learn all the available options.&lt;/p&gt;
+&lt;h2 id=&#34;example&#34;&gt;Example&lt;/h2&gt;
+&lt;p&gt;A &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile&#34;&gt;package definition&lt;/a&gt; is composed of a &lt;code&gt;build.yaml&lt;/code&gt; and a sibiling &lt;code&gt;definition.yaml&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;In the following example, we are creating a dummy package (&lt;code&gt;bar/foo&lt;/code&gt;). Which ships one file only, &lt;code&gt;/foo&lt;/code&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$&amp;gt; &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# put yourself in some workdir&lt;/span&gt;
+
+$~/workdir&amp;gt; mkdir package
+
+$~/workdir&amp;gt; cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; package/build.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;image: busybox
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;steps:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- echo &amp;#34;foo=bar&amp;#34; &amp;gt; /foo
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+
+$~/workdir&amp;gt; cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; package/definition.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;name: &amp;#34;foo&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;version: &amp;#34;0.1&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;category: &amp;#34;bar&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;To build it, simply run &lt;code&gt;luet build bar/foo&lt;/code&gt; or &lt;code&gt;luet build --all&lt;/code&gt; to build all the packages in the current directory:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$&amp;gt; luet build --all
+
+📦  Selecting  foo 0.1
+📦  Compiling foo version 0.1 .... ☕
+🐋  Downloading image luet/cache-foo-bar-0.1-builder
+🐋  Downloading image luet/cache-foo-bar-0.1
+📦   foo Generating 🐋  definition &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;for&lt;/span&gt; builder image from busybox
+🐋  Building image luet/cache-foo-bar-0.1-builder
+🐋  Building image luet/cache-foo-bar-0.1-builder &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;done&lt;/span&gt;
+ Sending build context to Docker daemon  4.096kB
+ ...
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Luet &amp;ldquo;trees&amp;rdquo; are just a group of specfiles, in the above example, our tree was the current directory. You can also specify a directory with the &lt;code&gt;--tree&lt;/code&gt; option. Luet doesn&amp;rsquo;t enforce any tree layout, so they can be nested at any level. The only rule of thumb is that a &lt;code&gt;build.yaml&lt;/code&gt; file needs to have either a &lt;code&gt;definition.yaml&lt;/code&gt; or a &lt;code&gt;collection.yaml&lt;/code&gt; file next to it.&lt;/p&gt;
+&lt;h2 id=&#34;nesting-dependencies&#34;&gt;Nesting dependencies&lt;/h2&gt;
+&lt;p&gt;In the example above we have created a package from a &lt;code&gt;delta&lt;/code&gt;. Luet by default creates packages by analyzing the differences between the generated containers, and extracts the differences as archive, the resulting files then are compressed and can be consumed later on by &lt;code&gt;luet install&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Luet can create packages from different &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile/#building-strategies&#34;&gt;building strategies&lt;/a&gt;: by delta, by taking a whole container content, or by considering a single directory in the build container.&lt;/p&gt;
+&lt;p&gt;Besides that, &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile/#build-time-dependencies&#34;&gt;a package can reference a strict dependency on others&lt;/a&gt;.&lt;/p&gt;
+&lt;h3 id=&#34;example-1&#34;&gt;Example&lt;/h3&gt;
+&lt;p&gt;Let&amp;rsquo;s extend the above example with two packages which depends on it during the build phase.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;
+$~/workdir&amp;gt; mkdir package2
+
+$~/workdir&amp;gt; cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; package2/build.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;requires:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- name: &amp;#34;foo&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  category: &amp;#34;bar&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  version: &amp;#34;&amp;gt;=0&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;steps:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- source /foo &amp;amp;&amp;amp; echo &amp;#34;$foo&amp;#34; &amp;gt; /bar
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+
+$~/workdir&amp;gt; cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; package2/definition.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;name: &amp;#34;ineedfoo&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;version: &amp;#34;0.1&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;category: &amp;#34;bar&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+
+
+$~/workdir&amp;gt; mkdir package3
+
+$~/workdir&amp;gt; cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; package3/build.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;requires:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- name: &amp;#34;foo&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  category: &amp;#34;bar&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  version: &amp;#34;&amp;gt;=0&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- name: &amp;#34;ineedfoo&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  category: &amp;#34;bar&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  version: &amp;#34;&amp;gt;=0&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;steps:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- source /foo &amp;amp;&amp;amp; echo &amp;#34;$foo&amp;#34; &amp;gt; /ineedboth
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- cat /bar &amp;gt; /bar
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+
+$~/workdir&amp;gt; cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; package3/definition.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;name: &amp;#34;ineedfooandbar&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;version: &amp;#34;0.1&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;category: &amp;#34;bar&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;To build, run again:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$&amp;gt; luet build --all
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;As we can see, now Luet generated 3 packages, &lt;code&gt;bar/foo&lt;/code&gt;, &lt;code&gt;bar/ineedfoo&lt;/code&gt; and &lt;code&gt;bar/ineedfooandbar&lt;/code&gt;. They aren&amp;rsquo;t doing anything special than just shipping text files, this is an illustrative example on how build requirements can be combined to form new packages:&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;bar/ineedfooandbar&lt;/code&gt; depends on both &lt;code&gt;bar/ineedfoo&lt;/code&gt; and &lt;code&gt;bar/foo&lt;/code&gt; during build-time, while &lt;code&gt;bar/foo&lt;/code&gt; uses a docker image as a build base.&lt;/p&gt;
+&lt;p&gt;See the &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile/#building-strategies&#34;&gt;package definition documentation page&lt;/a&gt; for more details on how to instruct the Luet compiler to build packages with different strategies.&lt;/p&gt;
+&lt;h2 id=&#34;caching-docker-images&#34;&gt;Caching docker images&lt;/h2&gt;
+&lt;p&gt;Luet can push and pull the docker images that are being generated during the build process. A tree is represented by a single docker image, and each package can have one or more tags attached to it.&lt;/p&gt;
+&lt;p&gt;To push automatically docker images that are built, use the &lt;code&gt;--push&lt;/code&gt; option, to pull, use the &lt;code&gt;--pull&lt;/code&gt; option. An image repository can be specified with &lt;code&gt;--image-repository&lt;/code&gt; flag, and can include also the remote registries where the images are pushed to.&lt;/p&gt;
+&lt;p&gt;Luet doesn&amp;rsquo;t handle login to registries, so that has to be handled separately with &lt;code&gt;docker login&lt;/code&gt; or &lt;code&gt;img login&lt;/code&gt; before the build process starts.&lt;/p&gt;
+&lt;h3 id=&#34;build-faster&#34;&gt;Build faster&lt;/h3&gt;
+&lt;p&gt;When packages are cached, for iterating locally it&amp;rsquo;s particularly useful to jump straight to the image that you want to build. You can use &lt;code&gt;--only-target-package&lt;/code&gt; to jump directly to the image you are interested in. Luet will take care of checking if the images are present in the remote registry, and would build them if any of those are missing.&lt;/p&gt;
+&lt;h2 id=&#34;notes&#34;&gt;Notes&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;All the files which are next to a &lt;code&gt;build.yaml&lt;/code&gt; are copied in the container which is running your build, so they are always accessible during build time.&lt;/li&gt;
+&lt;li&gt;If you notice errors about disk space, mind to set the &lt;code&gt;TMPDIR&lt;/code&gt; env variable to a different folder. By default luet respects the O.S. default (which in the majority of system is &lt;code&gt;/tmp&lt;/code&gt;).&lt;/li&gt;
+&lt;/ul&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: Creating Luet repositories</title>
+      <link>https://luet-lab.github.io/docs/docs/concepts/overview/repositories/</link>
+      <pubDate>Thu, 05 Jan 2017 00:00:00 +0000</pubDate>
+      
+      <guid>https://luet-lab.github.io/docs/docs/concepts/overview/repositories/</guid>
+      <description>
+        
+        
+        &lt;p&gt;After a set of packages has been built, a repository must be created in order to make them accessible by Luet clients. A Repository can be served either local files or via http(s) (at the moment of writing). Luet, by default, supports multiple-repositories with priorities.&lt;/p&gt;
+&lt;h2 id=&#34;create-a-repository&#34;&gt;Create a repository&lt;/h2&gt;
+&lt;p&gt;After issuing a &lt;code&gt;luet build&lt;/code&gt;, the built packages are present in the output build directory. The &lt;code&gt;create-repo&lt;/code&gt; step is needed to generate a portable tree, which is read by the clients, and a &lt;code&gt;repository.yaml&lt;/code&gt; which contains the repository metadata.&lt;/p&gt;
+&lt;p&gt;Note that the output of &lt;code&gt;create-repo&lt;/code&gt; is &lt;em&gt;additive&lt;/em&gt; so it integrates with the current build content. The repository is composed by the packages generated by the &lt;code&gt;build&lt;/code&gt; command (or &lt;code&gt;pack&lt;/code&gt;) and the &lt;code&gt;create-repo&lt;/code&gt; generated metadata.&lt;/p&gt;
+&lt;h3 id=&#34;flags&#34;&gt;Flags&lt;/h3&gt;
+&lt;p&gt;Some of the relevant flags for &lt;code&gt;create-repo&lt;/code&gt; are:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;&amp;ndash;descr&lt;/strong&gt;: Repository description&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&amp;ndash;name&lt;/strong&gt;: Repository name&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&amp;ndash;output&lt;/strong&gt;: Metadata output folder (while a different path can be specified, it&amp;rsquo;s prefered to output the metadata files directly to the package directory).This most of the time matches the packages path for convenience.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&amp;ndash;packages&lt;/strong&gt;: Directory where built packages are stored. This most of the time is also the output path.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&amp;ndash;reset-revision&lt;/strong&gt;: Reset the repository revision number&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&amp;ndash;tree-path&lt;/strong&gt;: Specify a custom name for the tree path. (Defaults to tree.tar)&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&amp;ndash;tree-compression&lt;/strong&gt;: Specify a compression algorithm for the tree. (Available: gzip, Defaults: none)&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&amp;ndash;tree&lt;/strong&gt;: Path of the tree which was used to generate the packages and holds package metadatas&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&amp;ndash;type&lt;/strong&gt;: Repository type (http/local). It is just descriptive, the clients will be able to consume the repo in whatsoever way it is served.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&amp;ndash;urls&lt;/strong&gt;: List of URIS where the repository is available&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;See &lt;code&gt;luet create-repo --help&lt;/code&gt; for a full description.&lt;/p&gt;
+&lt;h2 id=&#34;example&#34;&gt;Example&lt;/h2&gt;
+&lt;p&gt;Build a package and generate the repository metadata:&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;$&amp;gt; mkdir package
+
+$&amp;gt; cat &amp;lt;&amp;lt;EOF &amp;gt; package/build.yaml
+image: busybox
+steps:
+- echo &amp;quot;foo&amp;quot; &amp;gt; /foo
+EOF
+
+$&amp;gt; cat &amp;lt;&amp;lt;EOF &amp;gt; package/definition.yaml
+name: &amp;quot;foo&amp;quot;
+version: &amp;quot;0.1&amp;quot;
+category: &amp;quot;bar&amp;quot; # optional!
+EOF
+
+$&amp;gt; luet build --all --destination $PWD/out/ --tree $PWD/package
+
+📦  Selecting  foo 0.1
+📦  Compiling foo version 0.1 .... ☕
+🐋  Downloading image luet/cache-foo-bar-0.1-builder
+🐋  Downloading image luet/cache-foo-bar-0.1
+📦   foo Generating 🐋  definition for builder image from busybox
+🐋  Building image luet/cache-foo-bar-0.1-builder
+🐋  Building image luet/cache-foo-bar-0.1-builder done
+ Sending build context to Docker daemon  4.096kB
+ ...
+
+$&amp;gt; luet create-repo --name &amp;quot;test&amp;quot; --output $PWD/out --packages $PWD/out --tree $PWD/package
+ For repository test creating revision 1 and last update 1580641614...
+
+$&amp;gt; ls out
+foo-bar-0.1-builder.image.tar  foo-bar-0.1.image.tar  foo-bar-0.1.metadata.yaml  foo-bar-0.1.package.tar  repository.yaml  tree.tar
+
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&#34;repositories-type&#34;&gt;Repositories type&lt;/h3&gt;
+&lt;p&gt;There are 3 types of repositories supported by luet: &lt;code&gt;disk&lt;/code&gt;, &lt;code&gt;http&lt;/code&gt;, &lt;code&gt;docker&lt;/code&gt;.&lt;/p&gt;
+&lt;h4 id=&#34;disk&#34;&gt;&lt;code&gt;disk&lt;/code&gt;&lt;/h4&gt;
+&lt;p&gt;It is a repository which is merely a local folder in your system. When creating a repository and specifying &lt;code&gt;--output&lt;/code&gt;, &lt;code&gt;luet&lt;/code&gt; expects a local path to the system where to store the generated metadata.&lt;/p&gt;
+&lt;h4 id=&#34;http&#34;&gt;&lt;code&gt;http&lt;/code&gt;&lt;/h4&gt;
+&lt;p&gt;It is a repository type which is hosted behind a webserver. When creating a repository and specifying &lt;code&gt;--output&lt;/code&gt;, &lt;code&gt;luet&lt;/code&gt; expects a local path to the system where to store the generated metadata, similarly to the &lt;code&gt;disk&lt;/code&gt; repository type. Luet is not handling any file upload. The &lt;code&gt;http&lt;/code&gt; repository type gains meaning when being used from the client, where the repository source must be specified&lt;/p&gt;
+&lt;h4 id=&#34;docker&#34;&gt;&lt;code&gt;docker&lt;/code&gt;&lt;/h4&gt;
+&lt;p&gt;When specifying the &lt;code&gt;docker&lt;/code&gt; repository type, &lt;code&gt;luet&lt;/code&gt; will generate final images from the build results and upload them to the docker reference specified with &lt;code&gt;--output&lt;/code&gt;. The images contains the artifact output from the build result, and they are tagged accordingly to their package name. A single image reference needs to be passed, all the packages will be pushed in a single image but with different tags.&lt;/p&gt;
+&lt;p&gt;The login to the container registry is not handled, the daemon needs to have already proper permissions to push the image to the destination.&lt;/p&gt;
+&lt;h2 id=&#34;notes&#34;&gt;Notes&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;The tree of definition being used to build the repository, and the package directories must &lt;strong&gt;not&lt;/strong&gt; be symlinks.&lt;/li&gt;
+&lt;li&gt;To build a repository is not required to hold the packages artifacts, only the respective &lt;code&gt;metadata.yaml&lt;/code&gt; file is required.&lt;/li&gt;
+&lt;/ul&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: CLI usage</title>
+      <link>https://luet-lab.github.io/docs/docs/concepts/overview/usage/</link>
+      <pubDate>Sat, 14 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://luet-lab.github.io/docs/docs/concepts/overview/usage/</guid>
+      <description>
+        
+        
+        &lt;h2 id=&#34;installing-a-package&#34;&gt;Installing a package&lt;/h2&gt;
+&lt;p&gt;To install a package with &lt;code&gt;luet&lt;/code&gt;, simply run:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;
+$ luet install &amp;lt;package_name&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;To relax dependency constraints and avoid auto-upgrades, add the &lt;code&gt;--relax&lt;/code&gt; flag:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ luet install --relax &amp;lt;package name&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;To install only the package without considering the deps, add the &lt;code&gt;--nodeps&lt;/code&gt; flag:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ luet install --nodeps &amp;lt;package name&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;To install only package dependencies, add the &lt;code&gt;--onlydeps&lt;/code&gt; flag:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ luet install --onlydeps &amp;lt;package name&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;To only download packages, without installing them use the &lt;code&gt;--download-only&lt;/code&gt; flag:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ luet install --download-only &amp;lt;package name&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;uninstalling-a-package&#34;&gt;Uninstalling a package&lt;/h2&gt;
+&lt;p&gt;To uninstall a package with &lt;code&gt;luet&lt;/code&gt;, simply run:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;
+$ luet uninstall &amp;lt;package_name&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;upgrading-the-system&#34;&gt;Upgrading the system&lt;/h2&gt;
+&lt;p&gt;To upgrade your system, simply run:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ luet upgrade
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;refreshing-repositories&#34;&gt;Refreshing repositories&lt;/h2&gt;
+&lt;p&gt;Luet automatically syncs repositories definition on the machine when necessary, but it avoids to sync up in a 24h range. In order to refresh the repositories manually, run:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ luet repo update
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;searching-a-package&#34;&gt;Searching a package&lt;/h2&gt;
+&lt;p&gt;To search a package:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;
+$ luet search &amp;lt;regex&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;To search a package and display results in a table:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;
+$ luet search --table &amp;lt;regex&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;To look into the installed packages:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;
+$ luet search --installed &amp;lt;regex&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Note: the regex argument is optional&lt;/p&gt;
+&lt;h2 id=&#34;search-file-belonging-to-packages&#34;&gt;Search file belonging to packages&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ luet search --file &amp;lt;file_pattern&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;search-output&#34;&gt;Search output&lt;/h3&gt;
+&lt;p&gt;Search can return results in the terminal in different ways: as terminal output, as json or as yaml.&lt;/p&gt;
+&lt;h4 id=&#34;json&#34;&gt;JSON&lt;/h4&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;
+$ luet search --json &amp;lt;regex&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;yaml&#34;&gt;YAML&lt;/h4&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;
+$ luet search --yaml &amp;lt;regex&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;tabular&#34;&gt;Tabular&lt;/h4&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;
+$ luet search --table &amp;lt;regex&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;quiet-luet-output&#34;&gt;Quiet luet output&lt;/h2&gt;
+&lt;p&gt;Luet output is verbose by default and colourful, however will try to adapt to the terminal, based on which environment is executed (as a service, in the terminal, etc.)&lt;/p&gt;
+&lt;p&gt;You can quiet &lt;code&gt;luet&lt;/code&gt; output with  the &lt;code&gt;--quiet&lt;/code&gt; flag or &lt;code&gt;-q&lt;/code&gt; to have a more compact output in all the commands.&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: CSP, SAT &amp;&amp; RL</title>
+      <link>https://luet-lab.github.io/docs/docs/concepts/overview/constraints/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://luet-lab.github.io/docs/docs/concepts/overview/constraints/</guid>
+      <description>
+        
+        
+        &lt;p&gt;Under the hood, Luet uses boolean satisfiability problem (&lt;a href=&#34;https://en.wikipedia.org/wiki/Boolean_satisfiability_problem&#34;&gt;SAT&lt;/a&gt;)  &lt;a href=&#34;https://en.wikipedia.org/wiki/Reinforcement_learning&#34;&gt;reinforcement learning&lt;/a&gt; techniques to solve package constraints.&lt;/p&gt;
+&lt;p&gt;Luet allows you to specify 3 types of set of contraints on a &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/&#34;&gt;package&lt;/a&gt; definition:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Requires&lt;/li&gt;
+&lt;li&gt;Conflicts&lt;/li&gt;
+&lt;li&gt;Provides&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The package definition in your tree definition, along with its Requires and Conflicts, are turned into Boolean formulas that are consumed by the solver to compute a solution. The solution represent the state of your system after a particular query is asked to the solver (Install, Uninstall, Upgrade).&lt;/p&gt;
+&lt;h2 id=&#34;requires-and-conflicts&#34;&gt;Requires and Conflicts&lt;/h2&gt;
+&lt;p&gt;A list of requires and conflicts, composed of one or more &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/&#34;&gt;packages&lt;/a&gt;, becomes a SAT formula. The formula is then given to the SAT solver to compute a finite state set of packages which must be installed in the system in order to met the requirements.&lt;/p&gt;
+&lt;p&gt;As Luet allows to express constraints with selectors ( e.g. &lt;code&gt;A depends on &amp;gt;=B-1.0&lt;/code&gt;) it generates additional constraints to guarantee that at least one package and at most one is picked as dependency (&lt;em&gt;ALO&lt;/em&gt; and &lt;em&gt;AMO&lt;/em&gt;).&lt;/p&gt;
+&lt;h2 id=&#34;provides&#34;&gt;Provides&lt;/h2&gt;
+&lt;p&gt;Provides constraints are not encoded in a SAT formula. Instead, they are &lt;code&gt;expanded&lt;/code&gt; into an in-place substitution of the packages that they have to be replaced with.
+They share the same SAT logic of expansion, allowing to swap entire version ranges (e.g. &lt;code&gt;&amp;gt;=1.0&lt;/code&gt;), allowing to handle package rename, removals, and virtuals.&lt;/p&gt;
+&lt;h2 id=&#34;references&#34;&gt;References&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;OPIUM (Luet is inspired by it): &lt;a href=&#34;https://ranjitjhala.github.io/static/opium.pdf&#34;&gt;https://ranjitjhala.github.io/static/opium.pdf&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;FROM TRACTABLE CSP TO TRACTABLE SAT: &lt;a href=&#34;https://www.cs.ox.ac.uk/files/4014/maxclosed_orderencoding_v16_TR.pdf&#34;&gt;https://www.cs.ox.ac.uk/files/4014/maxclosed_orderencoding_v16_TR.pdf&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Solver concepts applied to packages (&lt;code&gt;zypper&lt;/code&gt;): &lt;a href=&#34;https://en.opensuse.org/openSUSE:Libzypp_satsolver_basics&#34;&gt;https://en.opensuse.org/openSUSE:Libzypp_satsolver_basics&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>

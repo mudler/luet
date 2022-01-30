@@ -1,0 +1,310 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Luet – Tutorials</title>
+    <link>https://luet-lab.github.io/docs/docs/tutorials/</link>
+    <description>Recent content in Tutorials on Luet</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Wed, 04 Jan 2017 00:00:00 +0000</lastBuildDate>
+    
+	  <atom:link href="https://luet-lab.github.io/docs/docs/tutorials/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Docs: Hello world!</title>
+      <link>https://luet-lab.github.io/docs/docs/tutorials/hello_world/</link>
+      <pubDate>Wed, 04 Jan 2017 00:00:00 +0000</pubDate>
+      
+      <guid>https://luet-lab.github.io/docs/docs/tutorials/hello_world/</guid>
+      <description>
+        
+        
+        &lt;p&gt;This article will guide you to build your first package with Luet!
+For this purpose, we have picked a real-world example: &lt;a href=&#34;https://github.com/gogs/gogs&#34;&gt;gogs&lt;/a&gt; which is a &amp;ldquo;painless self-hosted Git service&amp;rdquo;, an open-source alternative to Github.&lt;/p&gt;
+&lt;p&gt;Gogs is written in Golang, and we need a working Golang version in order to build it.&lt;/p&gt;
+&lt;p&gt;Here you can see a live recorded session of this tutorial:&lt;/p&gt;
+&lt;script id=&#34;asciicast-388348&#34; src=&#34;https://asciinema.org/a/388348.js&#34; data-autoplay=&#34;true&#34; data-size=&#34;small&#34; data-cols=&#34;120&#34; data-rows=&#34;40&#34; async&gt;&lt;/script&gt;
+&lt;h1 id=&#34;define-a-luet-tree&#34;&gt;Define a Luet tree&lt;/h1&gt;
+&lt;p&gt;Everything starts from a Luet tree. A Luet tree is just a directory containing one (or more) Luet specfile, here on we assume that you are working in a dedicated folder (e.g. &lt;code&gt;~/demo&lt;/code&gt;) in your system.&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s create then a package that will be our base to build other packages from now on, we have picked &lt;code&gt;busybox&lt;/code&gt; here - it is really small and enough for our purpose.&lt;/p&gt;
+&lt;h2 id=&#34;busybox&#34;&gt;busybox&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;mkdir busybox
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Let&amp;rsquo;s now write the build specification, which is just containing the image tag that we are referencing to&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; busybox/build.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;image: &amp;#34;busybox:{{.Values.version}}-glibc&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now, lets write the &lt;code&gt;definition.yaml&lt;/code&gt;, which contains the metadata information about our package ( e.g. how we refer to it with luet, the version, and so on )&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; busybox/definition.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;category: &amp;#34;distro&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;name: &amp;#34;busybox&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;version: &amp;#34;1.33.0&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;golang&#34;&gt;golang&lt;/h2&gt;
+&lt;p&gt;We need now golang in order to build &lt;code&gt;gogs&lt;/code&gt;. Let&amp;rsquo;s declare then a golang package:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;mkdir golang
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;And a build specfile, which is simply fetch golang from &lt;a href=&#34;https://golang.org&#34;&gt;https://golang.org&lt;/a&gt; and installing it in the busybox container:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; golang/build.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;requires:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- category: &amp;#34;distro&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  name: &amp;#34;busybox&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  version: &amp;#34;&amp;gt;=0&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;prelude:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- wget https://golang.org/dl/go{{.Values.version}}.linux-{{.Values.arch}}.tar.gz -O golang.tar.gz
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- mkdir /usr/local
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;steps:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- tar -C /usr/local -xzf golang.tar.gz
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Note how we &lt;code&gt;require&lt;/code&gt; busybox. The Golang container will now be based from busybox, and the &lt;code&gt;prelude&lt;/code&gt; and &lt;code&gt;steps&lt;/code&gt; fields will be executed in that context.&lt;/p&gt;
+&lt;p&gt;And finally let&amp;rsquo;s write the golang metadata files, so we can refer to it from other packages&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; golang/definition.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;name: &amp;#34;go&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;category: &amp;#34;dev-lang&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;version: &amp;#34;1.15.6&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;arch: &amp;#34;amd64&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;gogs&#34;&gt;gogs&lt;/h2&gt;
+&lt;p&gt;Finally we can write the gogs package definition!&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;mkdir gogs
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The build specfile, will just fetch the &lt;code&gt;gogs&lt;/code&gt; sources at a given version (specified in the &lt;code&gt;definition.yaml&lt;/code&gt;) and build the sources with go:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;&amp;#39;EOF&amp;#39; &amp;gt; gogs/build.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;requires:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- category: &amp;#34;dev-lang&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  name: &amp;#34;go&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  version: &amp;#34;&amp;gt;=0&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;env:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- GOPATH=&amp;#34;/go&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- GOGSPATH=&amp;#34;$GOPATH/src/github.com/gogs/gogs&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- PATH=$PATH:/usr/local/go/bin
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- CGO_ENABLED=0
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;prelude:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- mkdir -p $GOPATH/src/github.com/gogs
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- wget https://github.com/gogs/gogs/archive/v{{.Values.version}}.tar.gz -O - | tar -xzf - -C ./  &amp;amp;&amp;amp; mv gogs-{{.Values.version}} $GOGSPATH
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;steps:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- mkdir /usr/bin
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- cd $GOGSPATH &amp;amp;&amp;amp; go build &amp;amp;&amp;amp; mv gogs /usr/bin/gogs
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;excludes:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;# Cache generated by Golang
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- ^/root
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;And the metadata, in this way we can refer to gogs in a Luet tree:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; gogs/definition.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;category: &amp;#34;dev-vcs&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;name: &amp;#34;gogs&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;version: &amp;#34;0.11.91&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h1 id=&#34;build-packages&#34;&gt;Build packages&lt;/h1&gt;
+&lt;p&gt;The simplest and mostly immediate way to build packages, is running &lt;code&gt;luet build &amp;lt;packagename&amp;gt;&lt;/code&gt; in the same folder you have your Luet tree.&lt;/p&gt;
+&lt;p&gt;In this case, to build gogs and its deps, we can do:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;luet build dev-vcs/gogs
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;And that&amp;rsquo;s it! you will find the package archives in &lt;code&gt;build/&lt;/code&gt; in the same folder where you started the command.&lt;/p&gt;
+&lt;p&gt;You will see that Luet generates not only archives with the file resulting to your builds, but it will also generate metadata files (ending with &lt;code&gt;.metadata.yaml&lt;/code&gt;) that contains additional metadata information about your build and the package itself (e.g. checksums).&lt;/p&gt;
+&lt;p&gt;You can use tools like &lt;a href=&#34;https://github.com/mikefarah/yq&#34;&gt;yq&lt;/a&gt; to inspect those:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;yq r build/gogs-dev-vcs-0.11.91.metadata.yaml checksums
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now if you want to consume the artifacts just built with &lt;code&gt;luet install&lt;/code&gt;, you can create a repository with &lt;code&gt;luet create-repo&lt;/code&gt;.&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: Build a package</title>
+      <link>https://luet-lab.github.io/docs/docs/tutorials/build_package/</link>
+      <pubDate>Wed, 04 Jan 2017 00:00:00 +0000</pubDate>
+      
+      <guid>https://luet-lab.github.io/docs/docs/tutorials/build_package/</guid>
+      <description>
+        
+        
+        
+
+&lt;div class=&#34;alert alert-warning&#34; role=&#34;alert&#34;&gt;
+&lt;h4 class=&#34;alert-heading&#34;&gt;Warning&lt;/h4&gt;
+
+    This article contains references to Luet repositories that were deprecated, and needs to be updated.
+Please refer to the &lt;a href=&#34;../../tutorials/hello_world/&#34;&gt;&amp;ldquo;Hello World&amp;rdquo;&lt;/a&gt; tutorial instead.
+
+&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://github.com/BarkyTheDog/catclock/raw/master/catclock.gif&#34; alt=&#34;catclock&#34;&gt;&lt;/p&gt;
+&lt;h1 id=&#34;catclock-example&#34;&gt;Catclock example&lt;/h1&gt;
+&lt;p&gt;In this example, we will build the awesome &lt;a href=&#34;https://github.com/BarkyTheDog/catclock&#34;&gt;CatClock&lt;/a&gt; on containers we will run it locally in a Luet box.&lt;/p&gt;
+&lt;p&gt;We will do this experiment to prove two things:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;how we can build a package with Luet and&lt;/li&gt;
+&lt;li&gt;two packages from different distributions can (sometime) work together.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&#34;prerequisites&#34;&gt;Prerequisites&lt;/h2&gt;
+&lt;p&gt;To build packages with Luet, you must have installed Docker and container-diff, follow our &lt;a href=&#34;../../getting-started&#34;&gt;setup guide&lt;/a&gt;.&lt;/p&gt;
+&lt;h2 id=&#34;1-create-the-package&#34;&gt;1) Create the package&lt;/h2&gt;
+&lt;p&gt;To prove our point, we will build our package from an OpenSUSE image, and later on we will consume
+entropy repositories for runtime dependencies. To note, this is not the main focus of Luet, and this is a restricted example on its features on build-time resolution.  For more syntax examples, see also &lt;a href=&#34;../../concepts/specfile/#build-specs&#34;&gt;Build specs&lt;/a&gt; and &lt;a href=&#34;../../concepts/packages/#package-types&#34;&gt;Package types&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Run this commands in any directory you choose to be your workspace:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;
+&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Let&amp;#39;s create a directory to store our package spec:&lt;/span&gt;
+mkdir -p tree/misc/catclock/
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;11-build-spec&#34;&gt;1.1) Build spec&lt;/h3&gt;
+&lt;p&gt;Now, let&amp;rsquo;s generate our &lt;strong&gt;build&lt;/strong&gt; spec:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Create a build file. We use here opensuse/leap to build the package, as an example&lt;/span&gt;
+cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; tree/misc/catclock/build.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;image: opensuse/leap
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;# Preparation phase
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;prelude:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- zypper in -y git make libXt-devel xmh gcc motif-devel libXext-devel libpulse-devel libaubio-devel
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- git clone https://github.com/BarkyTheDog/catclock
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;# Here we define the steps that Luet will follow
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;steps:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- cd catclock &amp;amp;&amp;amp; make DEFINES=&amp;#34;-Wno-incompatible-pointer-types&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- mv catclock/xclock /usr/bin/xclock
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;# (optional) File list that will be included in the final package
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;# Luet will filter out files that won&amp;#39;t match any entry in the list (regex syntax IS supported)
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;includes:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- /usr/bin/xclock
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;code&gt;build.yaml&lt;/code&gt; is what an ebuild is for Gentoo and for e.g. what PKGBUILD is for Arch.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;image: opensuse/leap&lt;/em&gt; tells luet to use opensuse/leap as a build image. We collect the build time dependencies with &lt;code&gt;zypper&lt;/code&gt; (the openSUSE package manager), and the &lt;a href=&#34;https://github.com/BarkyTheDog/catclock&#34;&gt;CatClock&lt;/a&gt; with &lt;code&gt;git&lt;/code&gt;. When we declare an &lt;code&gt;image&lt;/code&gt; keyword in a spec, it becomes a &lt;em&gt;seed&lt;/em&gt; package ( &lt;a href=&#34;../../concepts/packages/#package-types&#34;&gt;Package types&lt;/a&gt; ) as doesn&amp;rsquo;t depend on any package in build time, we will cover more use cases in other examples.&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;prelude&lt;/em&gt; is a list of commands that will happen during the build phase.
+They might generate binaries, or download sources, but those are not took into consideration when generating the final package.&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;steps&lt;/em&gt; is a list of commands that will happen during the build phase.
+Luet will execute those commands and all the binaries generated from them become part of the final package&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;includes&lt;/em&gt; is a (optional) list of regex that tells to Luet what files to filter out from the final artifact.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;12-runtime-spec&#34;&gt;1.2) Runtime spec&lt;/h3&gt;
+&lt;p&gt;Now we generate the runtime spec, it&amp;rsquo;s the part about the binary end which will be installed in the system. It also holds the metadata relative to the package definition (&lt;code&gt;name&lt;/code&gt;, &lt;code&gt;category&lt;/code&gt;, &lt;code&gt;version&lt;/code&gt;).&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Create a runtime definition.&lt;/span&gt;
+&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# We will leverage packages already present on Sabayon Entropy repositories&lt;/span&gt;
+&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# the end-system needs to have the Luet Sabayon Entropy repositories enabled.&lt;/span&gt;
+cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; tree/misc/catclock/definition.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;category: &amp;#34;misc&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;name: &amp;#34;catclock&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;version: &amp;#34;0.20200318&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;requires:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- category: meta
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  name: users
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  version: &amp;#34;&amp;gt;=0&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- category: x11-libs
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  name: motif
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  version: &amp;#34;&amp;gt;=0.1&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;- category: media-libs
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  name: libjpeg-turbo
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  version: &amp;#34;&amp;gt;=0.1&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;category&lt;/em&gt;, &lt;em&gt;name&lt;/em&gt;, and &lt;em&gt;version&lt;/em&gt;: identifies the package in a Luet tree. This is the unique identifier for a package.&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;requires&lt;/em&gt; it&amp;rsquo;s a list of packages which our &lt;strong&gt;catclock&lt;/strong&gt; depends on during runtime (when we will execute catclock inside a small-container!). To find out what&amp;rsquo;s required by your binaries it can be a try-learn-fail effort. If the package you wish to build is specifying the deps it requires, and those are available in a Luet repository, you are all set, just point them there. Otherwise you have to figure out after you build the binary the first time (for example, with &lt;code&gt;ldd&lt;/code&gt;) to which libraries it depends on.
+In this example we consume the dependencies from the &lt;a href=&#34;https://github.com/Luet-lab/luet-entropy-repo&#34;&gt;Luet Entropy Repo&lt;/a&gt;, that we will enable on the following steps.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;2-build-it&#34;&gt;2) Build it!&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;sudo /usr/bin/luet build &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--tree&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;$PWD&lt;/span&gt;/tree misc/catclock &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--destination &lt;span style=&#34;color:#000&#34;&gt;$PWD&lt;/span&gt;/build &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--compression gzip
+
+sudo chown -R &lt;span style=&#34;color:#000&#34;&gt;$USER&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;$PWD&lt;/span&gt;/build &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# So later on, we can access to the repository with our user&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;We are building the specs in this step.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;tree&lt;/em&gt;: is the path where our specs are, in our case it&amp;rsquo;s &lt;code&gt;tree&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;destination&lt;/em&gt;: is the path where our packages will be stored, in our case this is &lt;code&gt;build&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;compression&lt;/em&gt;: is the compression algorithm used to compress the final artifacts&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Note, we need &lt;em&gt;sudo&lt;/em&gt; to keep the permissions properly mapped in the artifact which is produced
+this is not always the case. Depends on the package content.&lt;/p&gt;
+&lt;h2 id=&#34;3-create-a-local-repository&#34;&gt;3) Create a local repository&lt;/h2&gt;
+&lt;p&gt;We will generate now our repository metadata:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;/usr/bin/luet create-repo --tree &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;tree&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--output &lt;span style=&#34;color:#000&#34;&gt;$PWD&lt;/span&gt;/build &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--packages &lt;span style=&#34;color:#000&#34;&gt;$PWD&lt;/span&gt;/build &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--name &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;test repo&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--descr &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;Test Repo&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--tree-compression gzip &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--meta-compression gzip
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Creating a repository in Luet is about adding metadata and make our spec tree available to other systems running Luet to intall the package.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;output&lt;/strong&gt;: a path which is where Luet will store the repository metadata.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;packages&lt;/strong&gt;: a path containing the packages that were built during the build step&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;name&lt;/strong&gt;: Repository name&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;descr&lt;/strong&gt;: Repository description&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;tree-compression&lt;/strong&gt;: optional, algorithm to use when compression the tree metadata&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;meta-compression&lt;/strong&gt;: optional, algorithm to use when compression the repository metadata&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;4-lets-test-it&#34;&gt;4) Let&amp;rsquo;s test it!&lt;/h2&gt;
+&lt;p&gt;Now we are all set. We have the packages compiled, and we are ready to consume them. We don&amp;rsquo;t want to break our host system, and we want to test this from our user.&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s create a directory, we will try to setup a full running system, and install everything there.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Let&amp;#39;s create a directory for our &amp;#34;fake&amp;#34; rootfilesystem&lt;/span&gt;
+&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# it will be populated with a minimal set of packages needed to run &lt;/span&gt;
+&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# our amazing catclock&lt;/span&gt;
+mkdir -p &lt;span style=&#34;color:#000&#34;&gt;$PWD&lt;/span&gt;/rootfs
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Let&amp;#39;s also create a directory to store our config files&lt;/span&gt;
+mkdir -p &lt;span style=&#34;color:#000&#34;&gt;$PWD&lt;/span&gt;/conf
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;We will generate now a Luet config. The Luet config is used to read where install things from, and in which directory.
+It also lists the repositories that are used by the client to retrieve packages remotely.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# We create here a config file which references the rootfs.&lt;/span&gt;
+&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# In this way, luet instead installing packages to your host system, will populate the rootfs&lt;/span&gt;
+&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# (note, all the steps are run by a user here, no root required!)&lt;/span&gt;
+cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF &amp;gt; conf/luet-dso-local.yaml
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;system:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  rootfs: $PWD/rootfs # our &amp;#34;fake&amp;#34; rootfs that we created before
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  database_path: &amp;#34;/&amp;#34; # this is where our Luet DB will live
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;  database_engine: &amp;#34;boltdb&amp;#34; # this is the Luet DB engine
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;repositories:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;   - name: &amp;#34;main&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     type: &amp;#34;disk&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     priority: 3
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     enable: true
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     urls:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;       - &amp;#34;$PWD/build&amp;#34; # This is the repository we have created before!
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;   - name: &amp;#34;sabayonlinux.org&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     description: &amp;#34;Sabayon Linux Repository&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     type: &amp;#34;http&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     enable: true
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     cached: true
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     priority: 2
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     urls:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;       - &amp;#34;https://dispatcher.sabayon.org/sbi/namespace/luet-entropy-repo&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;   - name: &amp;#34;luet-repo&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     description: &amp;#34;Luet Official Repository&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     type: &amp;#34;http&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     enable: true
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     cached: true
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     priority: 1
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;     urls:
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;       - &amp;#34;https://raw.githubusercontent.com/Luet-lab/luet-repo/gh-pages&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# we have specified an additional repository, one that is luet-entropy-repo (which contains&lt;/span&gt;
+&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# the runtime dependencies we specified in our package)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Let&amp;#39;s populate our rootfs with some minimal things: base-gcc, and bash&lt;/span&gt;
+&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# meta/users is a meta package providing minimal base to run things with a full&lt;/span&gt;
+&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# user-level support.&lt;/span&gt;
+&lt;span style=&#34;color:#204a87&#34;&gt;export&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;LUET_NOLOCK&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;true&lt;/span&gt;
+luet install &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--config &lt;span style=&#34;color:#000&#34;&gt;$PWD&lt;/span&gt;/conf/luet-dso-local.yaml &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;meta/users
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# catclock is a X11 app! we want to be able to play with it locally from our host :)&lt;/span&gt;
+&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Let&amp;#39;s copy the .Xauthority file to allow the X app to communicate with our X server&lt;/span&gt;
+&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Note: This can be achieved in other ways (set up a tcp X server, and so on)&lt;/span&gt;
+cp -rfv &lt;span style=&#34;color:#000&#34;&gt;$HOME&lt;/span&gt;/.Xauthority &lt;span style=&#34;color:#000&#34;&gt;$PWD&lt;/span&gt;/rootfs/                                                        
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;luet install &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--config &lt;span style=&#34;color:#000&#34;&gt;$PWD&lt;/span&gt;/conf/luet-dso-local.yaml &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;misc/catclock
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Let&amp;#39;s run our beautiful catclock :)&lt;/span&gt;
+luet box &lt;span style=&#34;color:#204a87&#34;&gt;exec&lt;/span&gt; --rootfs &lt;span style=&#34;color:#000&#34;&gt;$PWD&lt;/span&gt;/rootfs &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--stdin --stdout --stderr --env &lt;span style=&#34;color:#000&#34;&gt;DISPLAY&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;$DISPLAY&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--env &lt;span style=&#34;color:#000&#34;&gt;XAUTHORITY&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;/.Xauthority --mount /tmp --entrypoint /usr/bin/xclock
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Spawn a bash shell inside our box (with permission to access to our running X):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;luet box &lt;span style=&#34;color:#204a87&#34;&gt;exec&lt;/span&gt; --rootfs &lt;span style=&#34;color:#000&#34;&gt;$PWD&lt;/span&gt;/rootfs &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--stdin --stdout --stderr --env &lt;span style=&#34;color:#000&#34;&gt;DISPLAY&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;$DISPLAY&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&lt;/span&gt;--env &lt;span style=&#34;color:#000&#34;&gt;XAUTHORITY&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;/.Xauthority --mount /tmp --entrypoint /bin/bash
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+      </description>
+    </item>
+    
+  </channel>
+</rss>
