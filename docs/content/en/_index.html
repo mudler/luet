@@ -1,0 +1,81 @@
++++
+title = "Luet docs"
+linkTitle = "luetdocs"
+
++++
+
+{{< blocks/cover title="Luet" image_anchor="top" height="full" color="orange" >}}
+<div class="mx-auto">
+	<a class="btn btn-lg btn-primary mr-3 mb-4" href="{{< relref "/docs" >}}">
+		Documentation <i class="fas fa-arrow-alt-circle-right ml-2"></i>
+	</a>
+	<a class="btn btn-lg btn-secondary mr-3 mb-4" href="https://github.com/mudler/luet/releases">
+		Download <i class="fab fa-github ml-2 "></i>
+	</a>
+	<p class="lead mt-5">Container Package Manager</p>
+	<div class="mx-auto mt-5">
+		{{< blocks/link-down color="info" >}}
+	</div>
+</div>
+{{< /blocks/cover >}}
+
+
+{{% blocks/lead color="primary" %}}
+
+Luet uses Container technologies ( Docker, img ) to build packages.
+It provides an abstraction over the Dockerfile format introducing relation and versioning of images.
+
+{{% /blocks/lead %}}
+
+{{< blocks/section color="dark" >}}
+{{% blocks/feature icon="fa-tree" title="SAT Solver" %}}
+Luet uses SAT Solving techniques to compute the dependencies graph.
+This allows to refer to docker images by using semver constraints.
+
+No Relational db is involved.
+{{% /blocks/feature %}}
+
+
+{{% blocks/feature icon="fab fa-github" title="Contributions welcome!" url="https://github.com/mudler/luet" %}}
+If you like to play with code, check out our issues that are marked as ["good first issue"](https://github.com/mudler/luet/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) and open a [Pull Request](https://github.com/mudler/luet/pulls) on **GitHub**. 
+New users are always welcome, and have fun!
+{{% /blocks/feature %}}
+
+
+{{% blocks/feature icon="fa-terminal" title="Container-based" %}}
+Use container abstraction to define your package repositories
+{{% /blocks/feature %}}
+
+{{< /blocks/section >}}
+
+
+{{< blocks/section >}}
+<div class="col">
+<h1 class="text-center">Releasing is not anymore a nightmare</h1>
+<center>You can carefully pick now dependencies to make your release - release composed of container images or either of a set of packages
+</center>
+</div>
+
+{{< /blocks/section >}}
+
+
+{{< blocks/section >}}
+{{% blocks/feature icon="fa-truck" title="Package Management" %}}
+Build, ship and delivery your software. Faster
+{{% /blocks/feature %}}
+
+
+{{% blocks/feature icon="fa-heartbeat" title="0 dep installer" %}}
+When Luet is used as installer, it has zero dependencies. 
+
+Your system can't break anymore
+{{% /blocks/feature %}}
+
+
+{{% blocks/feature icon="fa-magic" title="Reconstruct images" %}}
+Thanks to its SAT core, Luet can reconstruct images defined by dependencies and version constraints. 
+
+Building a de-facto tree of container images
+{{% /blocks/feature %}}
+
+{{< /blocks/section >}}

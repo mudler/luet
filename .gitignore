@@ -3,3 +3,9 @@ luet
 tests/integration/shunit2
 tests/integration/bin
 release/
+/docs/bin/
+/docs/public/
+/docs/resources/
+/docs/node_modules/
+/docs/package-lock.json
+/docs/package.json
