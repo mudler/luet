@@ -1,12 +1,12 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Luet – Resources</title>
-    <link>https://luet-lab.github.io/docs/docs/resources/</link>
+    <link>https://luet.io/docs/resources/</link>
     <description>Recent content in Resources on Luet</description>
     <generator>Hugo -- gohugo.io</generator>
     <lastBuildDate>Thu, 05 Jan 2017 00:00:00 +0000</lastBuildDate>
     
-	  <atom:link href="https://luet-lab.github.io/docs/docs/resources/index.xml" rel="self" type="application/rss+xml" />
+	  <atom:link href="https://luet.io/docs/resources/index.xml" rel="self" type="application/rss+xml" />
     
     
       
@@ -16,10 +16,10 @@
     
     <item>
       <title>Docs: ARM images</title>
-      <link>https://luet-lab.github.io/docs/docs/resources/arm/</link>
+      <link>https://luet.io/docs/resources/arm/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/resources/arm/</guid>
+      <guid>https://luet.io/docs/resources/arm/</guid>
       <description>
         
         
@@ -70,22 +70,22 @@ $&amp;gt; sudo make build-all
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;At the end of the process, a file &lt;code&gt;luet_os.img&lt;/code&gt;, ready to be flashed to an SD card, should be present in the current directory.&lt;/p&gt;
 &lt;h2 id=&#34;add-packages&#34;&gt;Add packages&lt;/h2&gt;
-&lt;p&gt;In order to build and add &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/&#34;&gt;packages&lt;/a&gt; to the exiting repository, simply add or edit the &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/specfile&#34;&gt;specfiles&lt;/a&gt; under the &lt;code&gt;distro&lt;/code&gt; folder. When doing &lt;code&gt;make rebuild-all&lt;/code&gt; the packages will be automatically compiled and made available to the local repository.&lt;/p&gt;
+&lt;p&gt;In order to build and add &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/&#34;&gt;packages&lt;/a&gt; to the exiting repository, simply add or edit the &lt;a href=&#34;https://luet.io/docs/docs/concepts/specfile&#34;&gt;specfiles&lt;/a&gt; under the &lt;code&gt;distro&lt;/code&gt; folder. When doing &lt;code&gt;make rebuild-all&lt;/code&gt; the packages will be automatically compiled and made available to the local repository.&lt;/p&gt;
 
       </description>
     </item>
     
     <item>
       <title>Docs: Building</title>
-      <link>https://luet-lab.github.io/docs/docs/resources/building/</link>
+      <link>https://luet.io/docs/resources/building/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/resources/building/</guid>
+      <guid>https://luet.io/docs/resources/building/</guid>
       <description>
         
         
         &lt;h2 id=&#34;simple-package-build&#34;&gt;Simple package build&lt;/h2&gt;
-&lt;p&gt;Creating and building a simple &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/&#34;&gt;package&lt;/a&gt;:&lt;/p&gt;
+&lt;p&gt;Creating and building a simple &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/&#34;&gt;package&lt;/a&gt;:&lt;/p&gt;
 &lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;$&amp;gt; mkdir package
 
 $&amp;gt; cat &amp;lt;&amp;lt;EOF &amp;gt; package/build.yaml
@@ -112,7 +112,7 @@ $&amp;gt; luet build --all
  ...
 
 &lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&#34;build-packages&#34;&gt;Build packages&lt;/h3&gt;
-&lt;p&gt;In order to build a specific version, a full &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/&#34;&gt;package&lt;/a&gt; definition (triple of &lt;code&gt;category&lt;/code&gt;, &lt;code&gt;name&lt;/code&gt; and &lt;code&gt;version&lt;/code&gt;) has to be specified.
+&lt;p&gt;In order to build a specific version, a full &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/&#34;&gt;package&lt;/a&gt; definition (triple of &lt;code&gt;category&lt;/code&gt;, &lt;code&gt;name&lt;/code&gt; and &lt;code&gt;version&lt;/code&gt;) has to be specified.
 In this example we will also enable package compression (gzip).&lt;/p&gt;
 &lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;$&amp;gt; mkdir package
 
@@ -146,10 +146,10 @@ $&amp;gt; luet build bar/foo-0.1 --compression gzip
     
     <item>
       <title>Docs: Frequently Asked Questions</title>
-      <link>https://luet-lab.github.io/docs/docs/resources/faq/</link>
+      <link>https://luet.io/docs/resources/faq/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/resources/faq/</guid>
+      <guid>https://luet.io/docs/resources/faq/</guid>
       <description>
         
         
@@ -171,10 +171,10 @@ $&amp;gt; luet build bar/foo-0.1 --compression gzip
     
     <item>
       <title>Docs: Images from scratch</title>
-      <link>https://luet-lab.github.io/docs/docs/resources/scratch/</link>
+      <link>https://luet.io/docs/resources/scratch/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/resources/scratch/</guid>
+      <guid>https://luet.io/docs/resources/scratch/</guid>
       <description>
         
         
@@ -209,10 +209,10 @@ docker run -ti --entrypoint /bin/bash --rm luet-runtime-test-image
     
     <item>
       <title>Docs: References</title>
-      <link>https://luet-lab.github.io/docs/docs/resources/references/</link>
+      <link>https://luet.io/docs/resources/references/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/resources/references/</guid>
+      <guid>https://luet.io/docs/resources/references/</guid>
       <description>
         
         

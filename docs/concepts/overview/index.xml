@@ -1,11 +1,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Luet – Overview</title>
-    <link>https://luet-lab.github.io/docs/docs/concepts/overview/</link>
+    <link>https://luet.io/docs/concepts/overview/</link>
     <description>Recent content in Overview on Luet</description>
     <generator>Hugo -- gohugo.io</generator>
     
-	  <atom:link href="https://luet-lab.github.io/docs/docs/concepts/overview/index.xml" rel="self" type="application/rss+xml" />
+	  <atom:link href="https://luet.io/docs/concepts/overview/index.xml" rel="self" type="application/rss+xml" />
     
     
       
@@ -15,10 +15,10 @@
     
     <item>
       <title>Docs: Building packages</title>
-      <link>https://luet-lab.github.io/docs/docs/concepts/overview/build_packages/</link>
+      <link>https://luet.io/docs/concepts/overview/build_packages/</link>
       <pubDate>Thu, 05 Jan 2017 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/concepts/overview/build_packages/</guid>
+      <guid>https://luet.io/docs/concepts/overview/build_packages/</guid>
       <description>
         
         
@@ -31,12 +31,12 @@
 &lt;h3 id=&#34;building-packages-on-kubernetes&#34;&gt;Building packages on Kubernetes&lt;/h3&gt;
 &lt;p&gt;Luet and img can be used together to orchestrate package builds also on kubernetes. There is available an experimental &lt;a href=&#34;https://github.com/mudler/luet-k8s&#34;&gt;Kubernetes CRD for Luet&lt;/a&gt; which allows to build packages seamelessly in Kubernetes and push package artifacts to an S3 Compatible object storage (e.g. Minio).&lt;/p&gt;
 &lt;h2 id=&#34;building-packages&#34;&gt;Building packages&lt;/h2&gt;
-&lt;p&gt;&lt;img src=&#34;https://luet-lab.github.io/docs/docs/tree.jpg&#34; alt=&#34;Build packages&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://luet.io/docs/tree.jpg&#34; alt=&#34;Build packages&#34;&gt;&lt;/p&gt;
 &lt;p&gt;Luet provides an abstraction layer on top of the container image layer to make the package a first class construct. A package definition and all its dependencies are translated by Luet to Dockerfiles which can then be built anywhere that docker runs.&lt;/p&gt;
 &lt;p&gt;To resolve the dependency tree Luet uses a SAT solver and no database. It is responsible for calculating the dependencies of a package and to prevent conflicts. The Luet core is still young, but it has a comprehensive test suite that we use to validate any future changes.&lt;/p&gt;
-&lt;p&gt;Building a package with Luet requires only a &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile&#34;&gt;definition&lt;/a&gt;. This definition can be self-contained and be only composed of one &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile&#34;&gt;specfile&lt;/a&gt;, or a group of them, forming a Luet tree. For more complex use-cases, see &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/collections&#34;&gt;collections&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Building a package with Luet requires only a &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/specfile&#34;&gt;definition&lt;/a&gt;. This definition can be self-contained and be only composed of one &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/specfile&#34;&gt;specfile&lt;/a&gt;, or a group of them, forming a Luet tree. For more complex use-cases, see &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/collections&#34;&gt;collections&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;Run &lt;code&gt;luet build --help&lt;/code&gt; to get more help for each parameter.&lt;/p&gt;
-&lt;p&gt;Build accepts a list of packages to build, which syntax is in the &lt;code&gt;category/name-version&lt;/code&gt; notation. See also &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile/#refering-to-packages-from-the-cli&#34;&gt;specfile documentation page&lt;/a&gt; to see how to express packages from the CLI.&lt;/p&gt;
+&lt;p&gt;Build accepts a list of packages to build, which syntax is in the &lt;code&gt;category/name-version&lt;/code&gt; notation. See also &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/specfile/#refering-to-packages-from-the-cli&#34;&gt;specfile documentation page&lt;/a&gt; to see how to express packages from the CLI.&lt;/p&gt;
 &lt;h2 id=&#34;environmental-variables&#34;&gt;Environmental variables&lt;/h2&gt;
 &lt;p&gt;Luet builds passes its environment variable at the engine which is called during build, so for example the environment variable &lt;code&gt;DOCKER_HOST&lt;/code&gt; or &lt;code&gt;DOCKER_BUILDKIT&lt;/code&gt; can be setted.&lt;/p&gt;
 &lt;p&gt;Every argument from the CLI can be setted via environment variable too with a &lt;code&gt;LUET_&lt;/code&gt; prefix, for instance the flag &lt;code&gt;--clean&lt;/code&gt;, can be setted via environment with &lt;code&gt;LUET_CLEAN&lt;/code&gt;, &lt;code&gt;--privileged&lt;/code&gt; can be enabled with &lt;code&gt;LUET_PRIVILEGED&lt;/code&gt; and so on.&lt;/p&gt;
@@ -46,7 +46,7 @@
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Will output package compressed in the zstd format.&lt;/p&gt;
 &lt;p&gt;See the &lt;code&gt;--help&lt;/code&gt; of &lt;code&gt;create-repo&lt;/code&gt; and &lt;code&gt;build&lt;/code&gt; to learn all the available options.&lt;/p&gt;
 &lt;h2 id=&#34;example&#34;&gt;Example&lt;/h2&gt;
-&lt;p&gt;A &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile&#34;&gt;package definition&lt;/a&gt; is composed of a &lt;code&gt;build.yaml&lt;/code&gt; and a sibiling &lt;code&gt;definition.yaml&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;A &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/specfile&#34;&gt;package definition&lt;/a&gt; is composed of a &lt;code&gt;build.yaml&lt;/code&gt; and a sibiling &lt;code&gt;definition.yaml&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;In the following example, we are creating a dummy package (&lt;code&gt;bar/foo&lt;/code&gt;). Which ships one file only, &lt;code&gt;/foo&lt;/code&gt;&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$&amp;gt; &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# put yourself in some workdir&lt;/span&gt;
 
@@ -80,8 +80,8 @@ $~/workdir&amp;gt; cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Luet &amp;ldquo;trees&amp;rdquo; are just a group of specfiles, in the above example, our tree was the current directory. You can also specify a directory with the &lt;code&gt;--tree&lt;/code&gt; option. Luet doesn&amp;rsquo;t enforce any tree layout, so they can be nested at any level. The only rule of thumb is that a &lt;code&gt;build.yaml&lt;/code&gt; file needs to have either a &lt;code&gt;definition.yaml&lt;/code&gt; or a &lt;code&gt;collection.yaml&lt;/code&gt; file next to it.&lt;/p&gt;
 &lt;h2 id=&#34;nesting-dependencies&#34;&gt;Nesting dependencies&lt;/h2&gt;
 &lt;p&gt;In the example above we have created a package from a &lt;code&gt;delta&lt;/code&gt;. Luet by default creates packages by analyzing the differences between the generated containers, and extracts the differences as archive, the resulting files then are compressed and can be consumed later on by &lt;code&gt;luet install&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;Luet can create packages from different &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile/#building-strategies&#34;&gt;building strategies&lt;/a&gt;: by delta, by taking a whole container content, or by considering a single directory in the build container.&lt;/p&gt;
-&lt;p&gt;Besides that, &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile/#build-time-dependencies&#34;&gt;a package can reference a strict dependency on others&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Luet can create packages from different &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/specfile/#building-strategies&#34;&gt;building strategies&lt;/a&gt;: by delta, by taking a whole container content, or by considering a single directory in the build container.&lt;/p&gt;
+&lt;p&gt;Besides that, &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/specfile/#build-time-dependencies&#34;&gt;a package can reference a strict dependency on others&lt;/a&gt;.&lt;/p&gt;
 &lt;h3 id=&#34;example-1&#34;&gt;Example&lt;/h3&gt;
 &lt;p&gt;Let&amp;rsquo;s extend the above example with two packages which depends on it during the build phase.&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;
@@ -131,7 +131,7 @@ $~/workdir&amp;gt; cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$&amp;gt; luet build --all
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;As we can see, now Luet generated 3 packages, &lt;code&gt;bar/foo&lt;/code&gt;, &lt;code&gt;bar/ineedfoo&lt;/code&gt; and &lt;code&gt;bar/ineedfooandbar&lt;/code&gt;. They aren&amp;rsquo;t doing anything special than just shipping text files, this is an illustrative example on how build requirements can be combined to form new packages:&lt;/p&gt;
 &lt;p&gt;&lt;code&gt;bar/ineedfooandbar&lt;/code&gt; depends on both &lt;code&gt;bar/ineedfoo&lt;/code&gt; and &lt;code&gt;bar/foo&lt;/code&gt; during build-time, while &lt;code&gt;bar/foo&lt;/code&gt; uses a docker image as a build base.&lt;/p&gt;
-&lt;p&gt;See the &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile/#building-strategies&#34;&gt;package definition documentation page&lt;/a&gt; for more details on how to instruct the Luet compiler to build packages with different strategies.&lt;/p&gt;
+&lt;p&gt;See the &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/specfile/#building-strategies&#34;&gt;package definition documentation page&lt;/a&gt; for more details on how to instruct the Luet compiler to build packages with different strategies.&lt;/p&gt;
 &lt;h2 id=&#34;caching-docker-images&#34;&gt;Caching docker images&lt;/h2&gt;
 &lt;p&gt;Luet can push and pull the docker images that are being generated during the build process. A tree is represented by a single docker image, and each package can have one or more tags attached to it.&lt;/p&gt;
 &lt;p&gt;To push automatically docker images that are built, use the &lt;code&gt;--push&lt;/code&gt; option, to pull, use the &lt;code&gt;--pull&lt;/code&gt; option. An image repository can be specified with &lt;code&gt;--image-repository&lt;/code&gt; flag, and can include also the remote registries where the images are pushed to.&lt;/p&gt;
@@ -149,10 +149,10 @@ $~/workdir&amp;gt; cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt
     
     <item>
       <title>Docs: Creating Luet repositories</title>
-      <link>https://luet-lab.github.io/docs/docs/concepts/overview/repositories/</link>
+      <link>https://luet.io/docs/concepts/overview/repositories/</link>
       <pubDate>Thu, 05 Jan 2017 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/concepts/overview/repositories/</guid>
+      <guid>https://luet.io/docs/concepts/overview/repositories/</guid>
       <description>
         
         
@@ -229,10 +229,10 @@ foo-bar-0.1-builder.image.tar  foo-bar-0.1.image.tar  foo-bar-0.1.metadata.yaml 
     
     <item>
       <title>Docs: CLI usage</title>
-      <link>https://luet-lab.github.io/docs/docs/concepts/overview/usage/</link>
+      <link>https://luet.io/docs/concepts/overview/usage/</link>
       <pubDate>Sat, 14 Dec 2019 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/concepts/overview/usage/</guid>
+      <guid>https://luet.io/docs/concepts/overview/usage/</guid>
       <description>
         
         
@@ -299,15 +299,15 @@ $ luet search --table &amp;lt;regex&amp;gt;
     
     <item>
       <title>Docs: CSP, SAT &amp;&amp; RL</title>
-      <link>https://luet-lab.github.io/docs/docs/concepts/overview/constraints/</link>
+      <link>https://luet.io/docs/concepts/overview/constraints/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/concepts/overview/constraints/</guid>
+      <guid>https://luet.io/docs/concepts/overview/constraints/</guid>
       <description>
         
         
         &lt;p&gt;Under the hood, Luet uses boolean satisfiability problem (&lt;a href=&#34;https://en.wikipedia.org/wiki/Boolean_satisfiability_problem&#34;&gt;SAT&lt;/a&gt;)  &lt;a href=&#34;https://en.wikipedia.org/wiki/Reinforcement_learning&#34;&gt;reinforcement learning&lt;/a&gt; techniques to solve package constraints.&lt;/p&gt;
-&lt;p&gt;Luet allows you to specify 3 types of set of contraints on a &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/&#34;&gt;package&lt;/a&gt; definition:&lt;/p&gt;
+&lt;p&gt;Luet allows you to specify 3 types of set of contraints on a &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/&#34;&gt;package&lt;/a&gt; definition:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;Requires&lt;/li&gt;
 &lt;li&gt;Conflicts&lt;/li&gt;
@@ -315,7 +315,7 @@ $ luet search --table &amp;lt;regex&amp;gt;
 &lt;/ul&gt;
 &lt;p&gt;The package definition in your tree definition, along with its Requires and Conflicts, are turned into Boolean formulas that are consumed by the solver to compute a solution. The solution represent the state of your system after a particular query is asked to the solver (Install, Uninstall, Upgrade).&lt;/p&gt;
 &lt;h2 id=&#34;requires-and-conflicts&#34;&gt;Requires and Conflicts&lt;/h2&gt;
-&lt;p&gt;A list of requires and conflicts, composed of one or more &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/&#34;&gt;packages&lt;/a&gt;, becomes a SAT formula. The formula is then given to the SAT solver to compute a finite state set of packages which must be installed in the system in order to met the requirements.&lt;/p&gt;
+&lt;p&gt;A list of requires and conflicts, composed of one or more &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/&#34;&gt;packages&lt;/a&gt;, becomes a SAT formula. The formula is then given to the SAT solver to compute a finite state set of packages which must be installed in the system in order to met the requirements.&lt;/p&gt;
 &lt;p&gt;As Luet allows to express constraints with selectors ( e.g. &lt;code&gt;A depends on &amp;gt;=B-1.0&lt;/code&gt;) it generates additional constraints to guarantee that at least one package and at most one is picked as dependency (&lt;em&gt;ALO&lt;/em&gt; and &lt;em&gt;AMO&lt;/em&gt;).&lt;/p&gt;
 &lt;h2 id=&#34;provides&#34;&gt;Provides&lt;/h2&gt;
 &lt;p&gt;Provides constraints are not encoded in a SAT formula. Instead, they are &lt;code&gt;expanded&lt;/code&gt; into an in-place substitution of the packages that they have to be replaced with.

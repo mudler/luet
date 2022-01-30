@@ -1,11 +1,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Luet – Concepts</title>
-    <link>https://luet-lab.github.io/docs/docs/concepts/</link>
+    <link>https://luet.io/docs/concepts/</link>
     <description>Recent content in Concepts on Luet</description>
     <generator>Hugo -- gohugo.io</generator>
     
-	  <atom:link href="https://luet-lab.github.io/docs/docs/concepts/index.xml" rel="self" type="application/rss+xml" />
+	  <atom:link href="https://luet.io/docs/concepts/index.xml" rel="self" type="application/rss+xml" />
     
     
       
@@ -15,10 +15,10 @@
     
     <item>
       <title>Docs: Overview</title>
-      <link>https://luet-lab.github.io/docs/docs/concepts/overview/</link>
+      <link>https://luet.io/docs/concepts/overview/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/concepts/overview/</guid>
+      <guid>https://luet.io/docs/concepts/overview/</guid>
       <description>
         
         
@@ -36,7 +36,7 @@
 &lt;p&gt;There is no known package manager with 0-dependency that fully leverages the container ecosystem. This gap forces current package managers to depend on a specific system layout as base of the building process and the corresponding depencies. This can cause situations leading to a broken system. We want to fix that by empowering the user, by building their own packages, and redistribute them.
 Luet allows also to create packages entirely from Docker images content. In this way the user can actually bundle all the files of an image into a package and deliver part of it, or entirely as a layer. All of that, without the package manager depending on a single bit from it.&lt;/p&gt;
 &lt;h2 id=&#34;package-definitions&#34;&gt;Package definitions&lt;/h2&gt;
-&lt;p&gt;Luet uses &lt;a href=&#34;https://en.wikipedia.org/wiki/YAML&#34;&gt;YAML&lt;/a&gt; for the package specification format, Luet parses the &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/overview/constraints&#34;&gt;requirements&lt;/a&gt; to build &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages&#34;&gt;packages&lt;/a&gt;, so Luet can consume them.&lt;/p&gt;
+&lt;p&gt;Luet uses &lt;a href=&#34;https://en.wikipedia.org/wiki/YAML&#34;&gt;YAML&lt;/a&gt; for the package specification format, Luet parses the &lt;a href=&#34;https://luet.io/docs/docs/concepts/overview/constraints&#34;&gt;requirements&lt;/a&gt; to build &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages&#34;&gt;packages&lt;/a&gt;, so Luet can consume them.&lt;/p&gt;
 &lt;p&gt;Below you can find links to tutorials on how to build packages, images and repositories.&lt;/p&gt;
 
       </description>
@@ -44,10 +44,10 @@ Luet allows also to create packages entirely from Docker images content. In this
     
     <item>
       <title>Docs: Packages</title>
-      <link>https://luet-lab.github.io/docs/docs/concepts/packages/</link>
+      <link>https://luet.io/docs/concepts/packages/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/concepts/packages/</guid>
+      <guid>https://luet.io/docs/concepts/packages/</guid>
       <description>
         
         
@@ -86,7 +86,7 @@ distro/raspbian/buster
 &lt;li&gt;Package layers&lt;/li&gt;
 &lt;li&gt;Package with includes&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;Check the &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile&#34;&gt;Specfile concept&lt;/a&gt; page for a full overview of the available keywords in the Luet specfile format.&lt;/p&gt;
+&lt;p&gt;Check the &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/specfile&#34;&gt;Specfile concept&lt;/a&gt; page for a full overview of the available keywords in the Luet specfile format.&lt;/p&gt;
 &lt;h3 id=&#34;seed-packages&#34;&gt;Seed packages&lt;/h3&gt;
 &lt;p&gt;Seed packages denote a parent package (or root) that can be used by other packages as a dependency. Normally, seed packages include just an image (preferably tagged) used as a base for other packages to depend on.&lt;/p&gt;
 &lt;p&gt;It is useful to pin to specific image versions, and to write down in a tree where packages are coming from. There can be as many seed packages as you like in a tree.&lt;/p&gt;
@@ -221,10 +221,10 @@ distro/raspbian/buster
     
     <item>
       <title>Docs: Plugins and Extensions</title>
-      <link>https://luet-lab.github.io/docs/docs/concepts/plugins-and-extensions/</link>
+      <link>https://luet.io/docs/concepts/plugins-and-extensions/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/concepts/plugins-and-extensions/</guid>
+      <guid>https://luet.io/docs/concepts/plugins-and-extensions/</guid>
       <description>
         
         

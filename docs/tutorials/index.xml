@@ -1,12 +1,12 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Luet – Tutorials</title>
-    <link>https://luet-lab.github.io/docs/docs/tutorials/</link>
+    <link>https://luet.io/docs/tutorials/</link>
     <description>Recent content in Tutorials on Luet</description>
     <generator>Hugo -- gohugo.io</generator>
     <lastBuildDate>Wed, 04 Jan 2017 00:00:00 +0000</lastBuildDate>
     
-	  <atom:link href="https://luet-lab.github.io/docs/docs/tutorials/index.xml" rel="self" type="application/rss+xml" />
+	  <atom:link href="https://luet.io/docs/tutorials/index.xml" rel="self" type="application/rss+xml" />
     
     
       
@@ -16,10 +16,10 @@
     
     <item>
       <title>Docs: Hello world!</title>
-      <link>https://luet-lab.github.io/docs/docs/tutorials/hello_world/</link>
+      <link>https://luet.io/docs/tutorials/hello_world/</link>
       <pubDate>Wed, 04 Jan 2017 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/tutorials/hello_world/</guid>
+      <guid>https://luet.io/docs/tutorials/hello_world/</guid>
       <description>
         
         
@@ -112,10 +112,10 @@ For this purpose, we have picked a real-world example: &lt;a href=&#34;https://g
     
     <item>
       <title>Docs: Build a package</title>
-      <link>https://luet-lab.github.io/docs/docs/tutorials/build_package/</link>
+      <link>https://luet.io/docs/tutorials/build_package/</link>
       <pubDate>Wed, 04 Jan 2017 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/tutorials/build_package/</guid>
+      <guid>https://luet.io/docs/tutorials/build_package/</guid>
       <description>
         
         

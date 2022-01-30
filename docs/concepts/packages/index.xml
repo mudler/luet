@@ -1,11 +1,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Luet – Packages</title>
-    <link>https://luet-lab.github.io/docs/docs/concepts/packages/</link>
+    <link>https://luet.io/docs/concepts/packages/</link>
     <description>Recent content in Packages on Luet</description>
     <generator>Hugo -- gohugo.io</generator>
     
-	  <atom:link href="https://luet-lab.github.io/docs/docs/concepts/packages/index.xml" rel="self" type="application/rss+xml" />
+	  <atom:link href="https://luet.io/docs/concepts/packages/index.xml" rel="self" type="application/rss+xml" />
     
     
       
@@ -15,15 +15,15 @@
     
     <item>
       <title>Docs: Specfile</title>
-      <link>https://luet-lab.github.io/docs/docs/concepts/packages/specfile/</link>
+      <link>https://luet.io/docs/concepts/packages/specfile/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/concepts/packages/specfile/</guid>
+      <guid>https://luet.io/docs/concepts/packages/specfile/</guid>
       <description>
         
         
         &lt;h1 id=&#34;specfiles&#34;&gt;Specfiles&lt;/h1&gt;
-&lt;p&gt;Luet &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/&#34;&gt;packages&lt;/a&gt; are defined by specfiles. Specfiles define the runtime and builtime requirements of a package.  There is an hard distinction between runtime and buildtime. A spec is composed at least by the runtime (&lt;code&gt;definition.yaml&lt;/code&gt; or a &lt;code&gt;collection.yaml&lt;/code&gt;) and the buildtime specification (&lt;code&gt;build.yaml&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;Luet &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/&#34;&gt;packages&lt;/a&gt; are defined by specfiles. Specfiles define the runtime and builtime requirements of a package.  There is an hard distinction between runtime and buildtime. A spec is composed at least by the runtime (&lt;code&gt;definition.yaml&lt;/code&gt; or a &lt;code&gt;collection.yaml&lt;/code&gt;) and the buildtime specification (&lt;code&gt;build.yaml&lt;/code&gt;).&lt;/p&gt;
 &lt;p&gt;Luet identifies the package definition by looking at directories that contains a &lt;code&gt;build.yaml&lt;/code&gt; and a &lt;code&gt;definition.yaml&lt;/code&gt; (or &lt;code&gt;collection.yaml&lt;/code&gt;) files. A Luet tree is merely a composition of directories that follows this convention. There is no constriction on either folder naming or hierarchy.&lt;/p&gt;
 &lt;p&gt;&lt;em&gt;Example of a &lt;a href=&#34;https://github.com/Luet-lab/luet-embedded/tree/master/distro&#34;&gt;tree folder hierarchy&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;tree distro                                                      
@@ -155,7 +155,7 @@ The directory must represent exactly how the files will be ultimately installed 
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;- &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;baz&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;category&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;bar&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;version&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;1.0&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;See &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages&#34;&gt;Package concepts&lt;/a&gt; for more information on how to represent a package in a Luet tree.&lt;/p&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;See &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages&#34;&gt;Package concepts&lt;/a&gt; for more information on how to represent a package in a Luet tree.&lt;/p&gt;
 &lt;h3 id=&#34;copy&#34;&gt;&lt;code&gt;copy&lt;/code&gt;&lt;/h3&gt;
 &lt;p&gt;&lt;em&gt;since luet&amp;gt;=0.15.0&lt;/em&gt;&lt;/p&gt;
 &lt;p&gt;(optional) A list of packages/images where to copy files from. It is the &lt;a href=&#34;https://docs.docker.com/develop/develop-images/multistage-build/&#34;&gt;Docker multi-stage build&lt;/a&gt; equivalent but enhanced with tree hashing resolution.&lt;/p&gt;
@@ -233,7 +233,7 @@ The directory must represent exactly how the files will be ultimately installed 
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;- &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;baz&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;category&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;bar&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;version&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;1.0&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;See &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages&#34;&gt;Package concepts&lt;/a&gt; for more information on how to represent a package in a Luet tree.&lt;/p&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;See &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages&#34;&gt;Package concepts&lt;/a&gt; for more information on how to represent a package in a Luet tree.&lt;/p&gt;
 &lt;h4 id=&#34;examples&#34;&gt;Examples&lt;/h4&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;https://github.com/mocaccinoOS/mocaccino-stage3/blob/278e3637cf65761bf01a22c891135e237e4717ad/packages/system/stage3/build.yaml&#34;&gt;https://github.com/mocaccinoOS/mocaccino-stage3/blob/278e3637cf65761bf01a22c891135e237e4717ad/packages/system/stage3/build.yaml&lt;/a&gt;&lt;/li&gt;
@@ -262,7 +262,7 @@ The directory must represent exactly how the files will be ultimately installed 
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;- &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;baz&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;category&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;bar&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;version&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;1.0&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;See &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages&#34;&gt;Package concepts&lt;/a&gt; for more information on how to represent a package in a Luet tree.&lt;/p&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;See &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages&#34;&gt;Package concepts&lt;/a&gt; for more information on how to represent a package in a Luet tree.&lt;/p&gt;
 &lt;h3 id=&#34;requires_final_images&#34;&gt;&lt;code&gt;requires_final_images&lt;/code&gt;&lt;/h3&gt;
 &lt;p&gt;&lt;em&gt;since luet&amp;gt;=0.17.0&lt;/em&gt;&lt;/p&gt;
 &lt;p&gt;(optional) A boolean flag which instruct luet to use the final images in the &lt;code&gt;requires&lt;/code&gt; field.&lt;/p&gt;
@@ -333,7 +333,7 @@ The directory must represent exactly how the files will be ultimately installed 
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;- &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;bar&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;version&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;&amp;lt;1.0&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;...&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;All the fields (also the ones which are not part of the spec) in the &lt;code&gt;definition.yaml&lt;/code&gt; file are available as templating values when rendering the &lt;code&gt;build.yaml&lt;/code&gt; file. When running &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/specfile/#finalizers&#34;&gt;finalizers&lt;/a&gt; instead only the fields belonging to the specs are available.&lt;/p&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;All the fields (also the ones which are not part of the spec) in the &lt;code&gt;definition.yaml&lt;/code&gt; file are available as templating values when rendering the &lt;code&gt;build.yaml&lt;/code&gt; file. When running &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/specfile/#finalizers&#34;&gt;finalizers&lt;/a&gt; instead only the fields belonging to the specs are available.&lt;/p&gt;
 &lt;h3 id=&#34;keywords-1&#34;&gt;Keywords&lt;/h3&gt;
 &lt;p&gt;Here is a list of the full keyword refereces&lt;/p&gt;
 &lt;h3 id=&#34;annotations&#34;&gt;&lt;code&gt;annotations&lt;/code&gt;&lt;/h3&gt;
@@ -354,7 +354,7 @@ The directory must represent exactly how the files will be ultimately installed 
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;- &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;baz&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;category&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;bar&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;version&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;1.0&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;See &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages&#34;&gt;Package concepts&lt;/a&gt; for more information on how to represent a package in a Luet tree.&lt;/p&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;See &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages&#34;&gt;Package concepts&lt;/a&gt; for more information on how to represent a package in a Luet tree.&lt;/p&gt;
 &lt;h3 id=&#34;description&#34;&gt;&lt;code&gt;description&lt;/code&gt;&lt;/h3&gt;
 &lt;p&gt;(optional) A string indicating the package description&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;foo&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
@@ -385,7 +385,7 @@ The directory must represent exactly how the files will be ultimately installed 
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;- &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;baz&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;category&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;bar&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;version&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;1.0&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;See &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages&#34;&gt;Package concepts&lt;/a&gt; for more information on how to represent a package in a Luet tree.&lt;/p&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;See &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages&#34;&gt;Package concepts&lt;/a&gt; for more information on how to represent a package in a Luet tree.&lt;/p&gt;
 &lt;h3 id=&#34;requires-1&#34;&gt;&lt;code&gt;requires&lt;/code&gt;&lt;/h3&gt;
 &lt;p&gt;(optional) List of packages which it depends on in runtime.&lt;/p&gt;
 &lt;p&gt;A list of packages that the current package depends on in &lt;em&gt;runtime&lt;/em&gt;. The determines the resolution tree of the package itself.&lt;/p&gt;
@@ -397,7 +397,7 @@ The directory must represent exactly how the files will be ultimately installed 
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;- &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;baz&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;category&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;bar&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;version&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;1.0&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;See &lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages&#34;&gt;Package concepts&lt;/a&gt; for more information on how to represent a package in a Luet tree.&lt;/p&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;See &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages&#34;&gt;Package concepts&lt;/a&gt; for more information on how to represent a package in a Luet tree.&lt;/p&gt;
 &lt;h3 id=&#34;uri&#34;&gt;&lt;code&gt;uri&lt;/code&gt;&lt;/h3&gt;
 &lt;p&gt;(optional) A list of URI relative to the package ( e.g. the official project pages, wikis, README, etc )&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;uri&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
@@ -429,10 +429,10 @@ The directory must represent exactly how the files will be ultimately installed 
     
     <item>
       <title>Docs: Templated packages</title>
-      <link>https://luet-lab.github.io/docs/docs/concepts/packages/templates/</link>
+      <link>https://luet.io/docs/concepts/packages/templates/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/concepts/packages/templates/</guid>
+      <guid>https://luet.io/docs/concepts/packages/templates/</guid>
       <description>
         
         
@@ -539,10 +539,10 @@ The directory must represent exactly how the files will be ultimately installed 
     
     <item>
       <title>Docs: Collections</title>
-      <link>https://luet-lab.github.io/docs/docs/concepts/packages/collections/</link>
+      <link>https://luet.io/docs/concepts/packages/collections/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/docs/concepts/packages/collections/</guid>
+      <guid>https://luet.io/docs/concepts/packages/collections/</guid>
       <description>
         
         
@@ -572,7 +572,7 @@ The directory must represent exactly how the files will be ultimately installed 
     ... additional files in the build context
 &lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Luet during the build phase, will treat packages of a collection individually. A collection is a way to share the same build process across different packages.&lt;/p&gt;
 &lt;h2 id=&#34;templating&#34;&gt;Templating&lt;/h2&gt;
-&lt;p&gt;&lt;a href=&#34;https://luet-lab.github.io/docs/docs/docs/concepts/packages/templates&#34;&gt;The templating mechanism&lt;/a&gt; can be used in collections as well, and each stanza in &lt;code&gt;packages&lt;/code&gt; is used to interpolate each single package.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/templates&#34;&gt;The templating mechanism&lt;/a&gt; can be used in collections as well, and each stanza in &lt;code&gt;packages&lt;/code&gt; is used to interpolate each single package.&lt;/p&gt;
 &lt;h2 id=&#34;examples&#34;&gt;Examples&lt;/h2&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;https://github.com/mocaccinoOS/mocaccino-musl-universe/tree/master/multi-arch/packages/entities&#34;&gt;https://github.com/mocaccinoOS/mocaccino-musl-universe/tree/master/multi-arch/packages/entities&lt;/a&gt;&lt;/li&gt;

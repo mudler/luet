@@ -1,11 +1,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Luet – Luet Blog</title>
-    <link>https://luet-lab.github.io/docs/blog/</link>
+    <link>https://luet.io/blog/</link>
     <description>Recent content in Luet Blog on Luet</description>
     <generator>Hugo -- gohugo.io</generator>
     
-	  <atom:link href="https://luet-lab.github.io/docs/blog/index.xml" rel="self" type="application/rss+xml" />
+	  <atom:link href="https://luet.io/blog/index.xml" rel="self" type="application/rss+xml" />
     
     
       
@@ -15,10 +15,10 @@
     
     <item>
       <title>Blog: 0.3 Release</title>
-      <link>https://luet-lab.github.io/docs/blog/2019/12/23/0.3-release/</link>
+      <link>https://luet.io/blog/2019/12/23/0.3-release/</link>
       <pubDate>Mon, 23 Dec 2019 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/blog/2019/12/23/0.3-release/</guid>
+      <guid>https://luet.io/blog/2019/12/23/0.3-release/</guid>
       <description>
         
         
@@ -34,10 +34,10 @@
     
     <item>
       <title>Blog: Website is up</title>
-      <link>https://luet-lab.github.io/docs/blog/2019/12/23/website-is-up/</link>
+      <link>https://luet.io/blog/2019/12/23/website-is-up/</link>
       <pubDate>Mon, 23 Dec 2019 00:00:00 +0000</pubDate>
       
-      <guid>https://luet-lab.github.io/docs/blog/2019/12/23/website-is-up/</guid>
+      <guid>https://luet.io/blog/2019/12/23/website-is-up/</guid>
       <description>
         
         
