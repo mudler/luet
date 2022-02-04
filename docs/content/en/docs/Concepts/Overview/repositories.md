@@ -9,6 +9,36 @@ description: >
 
 After a set of packages has been built, a repository must be created in order to make them accessible by Luet clients. A Repository can be served either local files or via http(s) (at the moment of writing). Luet, by default, supports multiple-repositories with priorities.
 
+
+## Repository fields
+
+```yaml
+name: "..."
+description: "..."
+type: "docker"
+cached: true
+enabled: true
+arch: "amd64"
+priority: 3
+urls:
+  - "..."
+```
+
+Repositories have the following fields, notably:
+
+- `name`: Repository name
+- `description`: Repository description
+- `cached`: Enable/disable repository cache
+- `enable`: Enable/disables the repository
+- `urls`: A List of urls where the repository is hosted from
+- `type`: Repository type ( `docker`, `disk`, `http` are currently supported )
+- `arch`:  (optional) Denotes the arch repository. If present, it will enable the repository automatically if the corresponding arch is matching with the host running `luet`. `enable: true` would override this behavior
+- `reference`: (optional) A reference to a repository index file to use to retrieve the repository metadata instead of latest. This can be used to point to a different or an older repository index to act as a "wayback machine". The client will consume the repository state from that snapshot instead of latest.
+  
+{{% alert title="Note" %}}
+The `reference` field has to be a valid tag. For example, if a repository is a docker type, browse the image tags. The repository index snapshots are prefixed with a timestamp, and ending in `repository.yaml`. For example ` 20211027153653-repository.yaml`
+{{% /alert %}}
+
 ## Create a repository
 
 After issuing a `luet build`, the built packages are present in the output build directory. The `create-repo` step is needed to generate a portable tree, which is read by the clients, and a `repository.yaml` which contains the repository metadata.
@@ -88,6 +118,28 @@ It is a repository type which is hosted behind a webserver. When creating a repo
 When specifying the `docker` repository type, `luet` will generate final images from the build results and upload them to the docker reference specified with ```--output```. The images contains the artifact output from the build result, and they are tagged accordingly to their package name. A single image reference needs to be passed, all the packages will be pushed in a single image but with different tags.
 
 The login to the container registry is not handled, the daemon needs to have already proper permissions to push the image to the destination.
+
+## Repositories snapshots
+
+Luet automatically will create repository index snapshots. This allows clients to point to specific references of repositories besides the latest package set published.
+
+`luet create-repo` optionally takes a `--snapshot-id` argument to define the snapshot name, otherwise it defaults to the unix date timestamp.
+
+Combined with `--push-images` with a container repository type, it automatically tags and pushes snapshots images too.
+
+### Consuming repository snapshots
+
+A client can define a repository, with an optional `reference` keyword:
+
+```yaml
+name: "..."
+description: "..."
+type: "docker"
+priority: 3
+reference: 20220204175357-repository.yaml
+urls:
+  - "..."
+```
 
 
 ## Notes
