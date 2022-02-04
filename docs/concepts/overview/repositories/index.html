@@ -27,13 +27,13 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://luet.io/docs/concepts/overview/repositories/" /><meta property="article:section" content="docs" />
 <meta property="article:published_time" content="2017-01-05T00:00:00+00:00" />
-<meta property="article:modified_time" content="2022-01-30T19:44:45+01:00" /><meta property="og:site_name" content="Luet" />
+<meta property="article:modified_time" content="2022-02-04T19:55:03+01:00" /><meta property="og:site_name" content="Luet" />
 
 <meta itemprop="name" content="Creating Luet repositories">
 <meta itemprop="description" content="How to create Luet repositories
 "><meta itemprop="datePublished" content="2017-01-05T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2022-01-30T19:44:45+01:00" />
-<meta itemprop="wordCount" content="640">
+<meta itemprop="dateModified" content="2022-02-04T19:55:03+01:00" />
+<meta itemprop="wordCount" content="883">
 <meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Creating Luet repositories"/>
 <meta name="twitter:description" content="How to create Luet repositories
@@ -146,7 +146,7 @@ if (!doNotTrack) {
   aria-label="Search this site…"
   autocomplete="off"
   
-  data-offline-search-index-json-src="/offline-search-index.7193789b7a973423f5f62b60d4a0340b.json"
+  data-offline-search-index-json-src="/offline-search-index.2d5033d97ec0001a71adb66bf2d6599d.json"
   data-offline-search-base-href="/"
   data-offline-search-max-results="10"
 >
@@ -168,7 +168,7 @@ if (!doNotTrack) {
   aria-label="Search this site…"
   autocomplete="off"
   
-  data-offline-search-index-json-src="/offline-search-index.7193789b7a973423f5f62b60d4a0340b.json"
+  data-offline-search-index-json-src="/offline-search-index.2d5033d97ec0001a71adb66bf2d6599d.json"
   data-offline-search-base-href="/"
   data-offline-search-max-results="10"
 >
@@ -264,6 +264,7 @@ if (!doNotTrack) {
 
 <div class="td-toc"><nav id="TableOfContents">
   <ul>
+    <li><a href="#repository-fields">Repository fields</a></li>
     <li><a href="#create-a-repository">Create a repository</a>
       <ul>
         <li><a href="#flags">Flags</a></li>
@@ -272,6 +273,11 @@ if (!doNotTrack) {
     <li><a href="#example">Example</a>
       <ul>
         <li><a href="#repositories-type">Repositories type</a></li>
+      </ul>
+    </li>
+    <li><a href="#repositories-snapshots">Repositories snapshots</a>
+      <ul>
+        <li><a href="#consuming-repository-snapshots">Consuming repository snapshots</a></li>
       </ul>
     </li>
     <li><a href="#notes">Notes</a></li>
@@ -326,6 +332,36 @@ if (!doNotTrack) {
 		
 	</header>    
 	<p>After a set of packages has been built, a repository must be created in order to make them accessible by Luet clients. A Repository can be served either local files or via http(s) (at the moment of writing). Luet, by default, supports multiple-repositories with priorities.</p>
+<h2 id="repository-fields">Repository fields</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;...&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">description</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;...&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">type</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;docker&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">cached</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">arch</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;amd64&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">priority</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">3</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">urls</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline">  </span>- <span style="color:#4e9a06">&#34;...&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></code></pre></div><p>Repositories have the following fields, notably:</p>
+<ul>
+<li><code>name</code>: Repository name</li>
+<li><code>description</code>: Repository description</li>
+<li><code>cached</code>: Enable/disable repository cache</li>
+<li><code>enable</code>: Enable/disables the repository</li>
+<li><code>urls</code>: A List of urls where the repository is hosted from</li>
+<li><code>type</code>: Repository type ( <code>docker</code>, <code>disk</code>, <code>http</code> are currently supported )</li>
+<li><code>arch</code>:  (optional) Denotes the arch repository. If present, it will enable the repository automatically if the corresponding arch is matching with the host running <code>luet</code>. <code>enable: true</code> would override this behavior</li>
+<li><code>reference</code>: (optional) A reference to a repository index file to use to retrieve the repository metadata instead of latest. This can be used to point to a different or an older repository index to act as a &ldquo;wayback machine&rdquo;. The client will consume the repository state from that snapshot instead of latest.</li>
+</ul>
+
+
+<div class="alert alert-primary" role="alert">
+<h4 class="alert-heading">Note</h4>
+
+    The <code>reference</code> field has to be a valid tag. For example, if a repository is a docker type, browse the image tags. The repository index snapshots are prefixed with a timestamp, and ending in <code>repository.yaml</code>. For example <code> 20211027153653-repository.yaml</code>
+
+</div>
+
 <h2 id="create-a-repository">Create a repository</h2>
 <p>After issuing a <code>luet build</code>, the built packages are present in the output build directory. The <code>create-repo</code> step is needed to generate a portable tree, which is read by the clients, and a <code>repository.yaml</code> which contains the repository metadata.</p>
 <p>Note that the output of <code>create-repo</code> is <em>additive</em> so it integrates with the current build content. The repository is composed by the packages generated by the <code>build</code> command (or <code>pack</code>) and the <code>create-repo</code> generated metadata.</p>
@@ -387,7 +423,20 @@ foo-bar-0.1-builder.image.tar  foo-bar-0.1.image.tar  foo-bar-0.1.metadata.yaml 
 <h4 id="docker"><code>docker</code></h4>
 <p>When specifying the <code>docker</code> repository type, <code>luet</code> will generate final images from the build results and upload them to the docker reference specified with <code>--output</code>. The images contains the artifact output from the build result, and they are tagged accordingly to their package name. A single image reference needs to be passed, all the packages will be pushed in a single image but with different tags.</p>
 <p>The login to the container registry is not handled, the daemon needs to have already proper permissions to push the image to the destination.</p>
-<h2 id="notes">Notes</h2>
+<h2 id="repositories-snapshots">Repositories snapshots</h2>
+<p>Luet automatically will create repository index snapshots. This allows clients to point to specific references of repositories besides the latest package set published.</p>
+<p><code>luet create-repo</code> optionally takes a <code>--snapshot-id</code> argument to define the snapshot name, otherwise it defaults to the unix date timestamp.</p>
+<p>Combined with <code>--push-images</code> with a container repository type, it automatically tags and pushes snapshots images too.</p>
+<h3 id="consuming-repository-snapshots">Consuming repository snapshots</h3>
+<p>A client can define a repository, with an optional <code>reference</code> keyword:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;...&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">description</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;...&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">type</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;docker&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">priority</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">3</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">reference</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">20220204175357</span>-<span style="color:#000">repository.yaml</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">urls</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline">  </span>- <span style="color:#4e9a06">&#34;...&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></code></pre></div><h2 id="notes">Notes</h2>
 <ul>
 <li>The tree of definition being used to build the repository, and the package directories must <strong>not</strong> be symlinks.</li>
 <li>To build a repository is not required to hold the packages artifacts, only the respective <code>metadata.yaml</code> file is required.</li>
@@ -458,7 +507,7 @@ foo-bar-0.1-builder.image.tar  foo-bar-0.1.image.tar  foo-bar-0.1.metadata.yaml 
 	
 	
 	<div class="text-muted mt-5 pt-3 border-top">
-  Last modified January 30, 2022: <a href="https://github.com/mudler/luet/commit/a591a1e44f6ad8081aaf79547102aaa4b4b83ca3">:notebook: Add docs alongside (a591a1e)</a>
+  Last modified February 4, 2022: <a href="https://github.com/mudler/luet/commit/fe504e9802f301795fbe36bddd508deff9a4705f">:notebook: docs: Update repository section (fe504e9)</a>
 </div>
 
 </div>
