@@ -19,3 +19,4 @@ Here is a list of references to projects that are related to Luet (open up a PR 
 | Immutable container OS toolkit                                                                                                                                 | https://github.com/rancher-sandbox/cOS-toolkit     |
 | mocaccinoOS desktop                                                                                                                                 | https://github.com/mocaccinoOS/desktop     |
 | mocaccinoOS extra                                                                                                                                 | https://github.com/mocaccinoOS/mocaccino-extra     |
+| agregOS built with luet/mocaccino | https://interne.agreg.org/agregOS/ |
