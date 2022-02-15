@@ -254,6 +254,10 @@ docker run -ti --entrypoint /bin/bash --rm luet-runtime-test-image
 &lt;td&gt;mocaccinoOS extra&lt;/td&gt;
 &lt;td&gt;&lt;a href=&#34;https://github.com/mocaccinoOS/mocaccino-extra&#34;&gt;https://github.com/mocaccinoOS/mocaccino-extra&lt;/a&gt;&lt;/td&gt;
 &lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;agregOS built with luet/mocaccino&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;https://interne.agreg.org/agregOS/&#34;&gt;https://interne.agreg.org/agregOS/&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
 
