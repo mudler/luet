@@ -10,7 +10,7 @@ require (
 	github.com/Sabayon/pkgs-checker v0.8.4
 	github.com/asdine/storm v0.0.0-20190418133842-e0f77eada154
 	github.com/cavaliercoder/grab v1.0.1-0.20201108051000-98a5bfe305ec
-	github.com/containerd/containerd v1.5.9
+	github.com/containerd/containerd v1.5.10
 	github.com/crillab/gophersat v1.3.2-0.20210701121804-72b19f5b6b38
 	github.com/docker/cli v20.10.10+incompatible
 	github.com/docker/distribution v2.7.1+incompatible
