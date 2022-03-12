@@ -9,7 +9,7 @@ description: >
 
 ## Prerequisites
 
-No dependencies. For building packages [see the Build Packages section](/docs/docs/concepts/overview/build_packages/)
+No dependencies. For building packages [see the Build Packages section](/docs/concepts/overview/build_packages/)
 
 ## Get Luet  
 
