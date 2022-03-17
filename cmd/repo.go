@@ -31,6 +31,8 @@ func init() {
 	RootCmd.AddCommand(repoGroupCmd)
 
 	repoGroupCmd.AddCommand(
+		NewRepoAddCommand(),
+		NewRepoGetCommand(),
 		NewRepoListCommand(),
 		NewRepoUpdateCommand(),
 	)
