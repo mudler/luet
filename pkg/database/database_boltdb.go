@@ -49,7 +49,7 @@ func checkMigrationSchema(path string) {
 	defer b.Close()
 
 	for _, m := range migrations {
-		b.Bolt.Update(m)
+		m(b)
 	}
 }
 

@@ -15,26 +15,55 @@
 
 package database
 
-import "go.etcd.io/bbolt"
+import (
+	storm "github.com/asdine/storm"
+	"github.com/mudler/luet/pkg/api/core/types"
+	"github.com/pkg/errors"
+	"go.etcd.io/bbolt"
+)
 
-type schemaMigration func(tx *bbolt.Tx) error
+type schemaMigration func(*storm.DB) error
 
 var migrations = []schemaMigration{migrateDefaultPackage}
 
-var migrateDefaultPackage schemaMigration = func(tx *bbolt.Tx) error {
-	// previously we had pkg.DefaultPackage
-	// IF it's there, rename it to the proper bucket
-	b := tx.Bucket([]byte("DefaultPackage"))
-	if b != nil {
-		newB, err := tx.CreateBucket([]byte("Package"))
-		if err != nil {
-			return nil
-		}
-		b.ForEach(func(k, v []byte) error {
-			return newB.Put(k, v)
-		})
+var migrateDefaultPackage schemaMigration = func(bs *storm.DB) error {
+	packs := []types.Package{}
 
-		tx.DeleteBucket([]byte("DefaultPackage"))
+	bs.Bolt.View(
+		func(tx *bbolt.Tx) error {
+			// previously we had pkg.DefaultPackage
+			// IF it's there, collect packages to add to the new schema
+			b := tx.Bucket([]byte("DefaultPackage"))
+			if b != nil {
+				b.ForEach(func(k, v []byte) error {
+					p, err := types.PackageFromYaml(v)
+					if err == nil && p.ID != 0 {
+						packs = append(packs, p)
+					}
+					return nil
+				})
+			}
+			return nil
+		},
+	)
+
+	for k := range packs {
+		d := &packs[k]
+		d.ID = 0
+		err := bs.Save(d)
+		if err != nil {
+			return errors.Wrap(err, "Error saving package to "+d.Path)
+		}
 	}
+
+	// Be sure to delete old only if everything was migrated without any error
+	bs.Bolt.Update(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte("DefaultPackage"))
+		if b != nil {
+			return tx.DeleteBucket([]byte("DefaultPackage"))
+		}
+		return nil
+	})
+
 	return nil
 }
