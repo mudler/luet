@@ -49,7 +49,7 @@ import (
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	"github.com/pkg/errors"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 // When compiling, we write also a fingerprint.metadata.yaml file with PackageArtifact. In this way we can have another command to create the repository
@@ -147,6 +147,7 @@ func (a *PackageArtifact) WriteYAML(dst string) error {
 	if err != nil {
 		return errors.Wrap(err, "Generated invalid artifact")
 	}
+
 	//p := a.CompileSpec.GetPackage().GetPath()
 
 	mangle.CompileSpec.GetPackage().SetPath("")

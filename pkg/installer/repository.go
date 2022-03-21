@@ -553,7 +553,7 @@ func (r *LuetSystemRepository) AddMetadata(ctx types.Context, repospec, dst stri
 	// Create repository.meta.yaml file
 	err = meta.WriteFile(repoMetaSpec)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed writing "+repoMetaSpec)
 	}
 
 	a, err := r.AddRepositoryFile(metaTmpDir, REPOFILE_META_KEY, dst, NewDefaultMetaRepositoryFile())
