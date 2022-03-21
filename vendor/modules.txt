@@ -4,12 +4,10 @@ github.com/Azure/go-ansiterm/winterm
 # github.com/DataDog/zstd v1.4.5
 ## explicit
 # github.com/Masterminds/goutils v1.1.1
-## explicit
 github.com/Masterminds/goutils
 # github.com/Masterminds/semver/v3 v3.1.1
-## explicit
 github.com/Masterminds/semver/v3
-# github.com/Masterminds/sprig/v3 v3.1.0
+# github.com/Masterminds/sprig/v3 v3.2.1
 ## explicit
 github.com/Masterminds/sprig/v3
 # github.com/Microsoft/go-winio v0.5.1
@@ -394,6 +392,8 @@ github.com/rogpeppe/go-internal/internal/syscall/windows
 github.com/rogpeppe/go-internal/internal/syscall/windows/sysdll
 github.com/rogpeppe/go-internal/lockedfile
 github.com/rogpeppe/go-internal/lockedfile/internal/filelock
+# github.com/shopspring/decimal v1.2.0
+github.com/shopspring/decimal
 # github.com/sirupsen/logrus v1.8.1
 github.com/sirupsen/logrus
 # github.com/spf13/afero v1.6.0
@@ -549,3 +549,6 @@ gopkg.in/ini.v1
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
+# gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+## explicit
+gopkg.in/yaml.v3
