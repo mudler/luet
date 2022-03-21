@@ -30,12 +30,12 @@ var cfgFile string
 var Verbose bool
 
 const (
-	LuetCLIVersion = "0.30.0"
+	LuetCLIVersion = "0.30.1"
 	LuetEnvPrefix  = "LUET"
 )
 
 var license = []string{
-	"Luet Copyright (C) 2019-2021 Ettore Di Giacinto",
+	"Luet Copyright (C) 2019-2022 Ettore Di Giacinto",
 	"This program comes with ABSOLUTELY NO WARRANTY.",
 	"This is free software, and you are welcome to redistribute it under certain conditions.",
 }
