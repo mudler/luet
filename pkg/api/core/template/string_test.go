@@ -190,5 +190,33 @@ faa: "baz"
 			Expect(res).To(Equal(""))
 
 		})
+
+		It("correctly parses `include`", func() {
+			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(testDir)
+
+			toTemplate := filepath.Join(testDir, "totemplate.yaml")
+			values := filepath.Join(testDir, "values.yaml")
+			d := filepath.Join(testDir, "default.yaml")
+
+			writeFile(toTemplate, `
+{{- define "app" -}}
+app_name: {{if .Values.foo}}{{.Values.foo}}{{end}}
+{{- end -}}
+{{ include "app" . | indent 4 }}
+`)
+			writeFile(values, `
+foo: "bar"
+`)
+			writeFile(d, ``)
+
+			Expect(err).ToNot(HaveOccurred())
+
+			res, err := RenderWithValues([]string{toTemplate}, values, d)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).To(Equal(`    app_name: bar
+`))
+		})
 	})
 })

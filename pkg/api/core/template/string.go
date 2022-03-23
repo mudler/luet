@@ -26,14 +26,23 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/imdario/mergo"
 )
 
 // String templates a string with the interface
 func String(t string, i interface{}) (string, error) {
 	b := bytes.NewBuffer([]byte{})
-	tmpl, err := template.New("").Funcs(sprig.TxtFuncMap()).Parse(t)
+
+	f := funcMap()
+
+	tmpl := template.New("")
+
+	includedNames := make(map[string]int)
+
+	// Add the 'include' function here so we can close over tmpl.
+	f["include"] = includeTemplate(tmpl, includedNames)
+
+	tmpl, err := tmpl.Funcs(f).Parse(t)
 	if err != nil {
 		return "", err
 	}
