@@ -121,7 +121,7 @@ func (ht *ImageHashTree) genBuilderImageTag(p *compilerspec.LuetCompilationSpec,
 // resolve computes the dependency tree of a compilation spec and returns solver assertions
 // in order to be able to compile the spec.
 func (ht *ImageHashTree) resolve(cs *LuetCompiler, p *compilerspec.LuetCompilationSpec) (types.PackagesAssertions, error) {
-	dependencies, err := cs.ComputeDepTree(p)
+	dependencies, err := cs.ComputeDepTree(p, cs.Database)
 	if err != nil {
 		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().HumanReadableString())
 	}

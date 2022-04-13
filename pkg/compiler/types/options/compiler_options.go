@@ -54,6 +54,7 @@ type Compiler struct {
 
 	// Image repository to push to
 	PushFinalImagesRepository string
+	RuntimeDatabase           types.PackageDatabase
 
 	Context types.Context
 }
@@ -89,6 +90,13 @@ func (cfg *Compiler) Apply(opts ...Option) error {
 func WithOptions(opt *Compiler) func(cfg *Compiler) error {
 	return func(cfg *Compiler) error {
 		cfg = opt
+		return nil
+	}
+}
+
+func WithRuntimeDatabase(db types.PackageDatabase) func(cfg *Compiler) error {
+	return func(cfg *Compiler) error {
+		cfg.RuntimeDatabase = db
 		return nil
 	}
 }

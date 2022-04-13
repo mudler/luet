@@ -1108,8 +1108,12 @@ var _ = Describe("Compiler", func() {
 	Context("final images", func() {
 		It("reuses final images", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+			installerRecipe := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
 
 			err := generalRecipe.Load("../../tests/fixtures/join_complex")
+			Expect(err).ToNot(HaveOccurred())
+
+			err = installerRecipe.Load("../../tests/fixtures/join_complex")
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(6))
@@ -1139,7 +1143,7 @@ var _ = Describe("Compiler", func() {
 
 			b := sd.NewSimpleDockerBackend(ctx)
 
-			joinImage := "luet/cache:586b36482e3f238c76d3536e7ca12cc4" //resulting join image
+			joinImage := "luet/cache:08738767caa9a7397fad70ae53db85fa" //resulting join image
 			allImages := []string{
 				joinImage,
 				"test/test:c-test-1.2"}
@@ -1155,6 +1159,7 @@ var _ = Describe("Compiler", func() {
 			compiler := NewLuetCompiler(b, generalRecipe.GetDatabase(),
 				options.WithFinalRepository("test/test"),
 				options.EnableGenerateFinalImages,
+				options.WithRuntimeDatabase(installerRecipe.GetDatabase()),
 				options.PullFirst(true),
 				options.WithContext(c))
 
@@ -1181,6 +1186,7 @@ var _ = Describe("Compiler", func() {
 			))
 
 			Expect(log).ToNot(And(
+				ContainSubstring("No runtime db present, first level join only"),
 				ContainSubstring("Final image already found  test/test:c-test-1.2"),
 			))
 
@@ -1199,11 +1205,13 @@ var _ = Describe("Compiler", func() {
 			readLogs()
 
 			Expect(log).To(And(
-				ContainSubstring("Final image already found  test/test:a-test-1.2"),
+				ContainSubstring("Final image already found  test/test:f-test-1.2"),
 			))
 			Expect(log).ToNot(And(
+				ContainSubstring("No runtime db present, first level join only"),
 				ContainSubstring("build test/c-1.2  compilation starts"),
 				ContainSubstring("Final image not found for  test/c-1.2"),
+				ContainSubstring("a-test-1.2"),
 			))
 		})
 	})

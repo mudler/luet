@@ -805,15 +805,15 @@ func (cs *LuetCompiler) FromDatabase(db types.PackageDatabase, minimum bool, dst
 	}
 }
 
-func (cs *LuetCompiler) ComputeDepTree(p *compilerspec.LuetCompilationSpec) (types.PackagesAssertions, error) {
-	s := solver.NewResolver(cs.Options.SolverOptions.SolverOptions, pkg.NewInMemoryDatabase(false), cs.Database, pkg.NewInMemoryDatabase(false), solver.NewSolverFromOptions(cs.Options.SolverOptions))
+func (cs *LuetCompiler) ComputeDepTree(p *compilerspec.LuetCompilationSpec, db types.PackageDatabase) (types.PackagesAssertions, error) {
+	s := solver.NewResolver(cs.Options.SolverOptions.SolverOptions, pkg.NewInMemoryDatabase(false), db, pkg.NewInMemoryDatabase(false), solver.NewSolverFromOptions(cs.Options.SolverOptions))
 
 	solution, err := s.Install(types.Packages{p.GetPackage()})
 	if err != nil {
 		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().HumanReadableString())
 	}
 
-	dependencies, err := solution.Order(cs.Database, p.GetPackage().GetFingerPrint())
+	dependencies, err := solution.Order(db, p.GetPackage().GetFingerPrint())
 	if err != nil {
 		return nil, errors.Wrap(err, "While order a solution for "+p.GetPackage().HumanReadableString())
 	}
@@ -831,7 +831,7 @@ func (cs *LuetCompiler) BuildTree(compilerSpecs compilerspec.LuetCompilationspec
 	bt := &BuildTree{}
 
 	for _, sp := range compilerSpecs.All() {
-		ass, err := cs.ComputeDepTree(sp)
+		ass, err := cs.ComputeDepTree(sp, cs.Database)
 		if err != nil {
 			return nil, err
 		}
@@ -843,7 +843,7 @@ func (cs *LuetCompiler) BuildTree(compilerSpecs compilerspec.LuetCompilationspec
 			if err != nil {
 				return nil, err
 			}
-			ass, err := cs.ComputeDepTree(spec)
+			ass, err := cs.ComputeDepTree(spec, cs.Database)
 			if err != nil {
 				return nil, err
 			}
@@ -872,7 +872,7 @@ func (cs *LuetCompiler) ComputeMinimumCompilableSet(p ...*compilerspec.LuetCompi
 	allDependencies := types.PackagesAssertions{} // Get all packages that will be in deps
 	result := []*compilerspec.LuetCompilationSpec{}
 	for _, spec := range p {
-		sol, err := cs.ComputeDepTree(spec)
+		sol, err := cs.ComputeDepTree(spec, cs.Database)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed querying hashtree")
 		}
@@ -951,30 +951,33 @@ func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool
 
 	cs.Options.Context.Info(joinTag, "Generating a parent image from final packages")
 
-	//fromPackages = p.Package.GetRequires() // (first level only)
-	pTarget := p
+	if cs.Options.RuntimeDatabase != nil {
+		// Create a fake db from runtime which has the target entry as the compiler view
+		db := pkg.NewInMemoryDatabase(false)
+		cs.Options.RuntimeDatabase.Clone(db)
+		defer db.Clean()
 
-	runtime, err := p.Package.GetRuntimePackage()
-	if err == nil {
-		spec, err := cs.FromPackage(runtime)
-		if err == nil {
-			cs.Options.Context.Info(joinTag, "Using runtime package for deptree computation")
-			pTarget = spec
-		}
-	}
-	// resolve deptree of runtime of p and use it in fromPackages
-	t, err := cs.ComputeDepTree(pTarget)
-	if err != nil {
-		return errors.Wrap(err, "failed querying hashtree")
-	}
-
-	for _, a := range t {
-		if !a.Value || a.Package.Matches(p.Package) {
-			continue
+		if err := db.UpdatePackage(p.Package); err != nil {
+			return err
 		}
 
-		fromPackages = append(fromPackages, a.Package)
-		cs.Options.Context.Infof("Adding dependency '%s'.", a.Package.HumanReadableString())
+		// resolve deptree of runtime of p and use it in fromPackages
+		t, err := cs.ComputeDepTree(p, db)
+		if err != nil {
+			return errors.Wrap(err, "failed querying hashtree")
+		}
+
+		for _, a := range t {
+			if !a.Value || a.Package.Matches(p.Package) {
+				continue
+			}
+
+			fromPackages = append(fromPackages, a.Package)
+			cs.Options.Context.Infof("Adding dependency '%s'.", a.Package.HumanReadableString())
+		}
+	} else {
+		cs.Options.Context.Info(joinTag, "No runtime db present, first level join only")
+		fromPackages = p.Package.GetRequires() // first level only
 	}
 
 	// First compute a hash and check if image is available. if it is, then directly consume that

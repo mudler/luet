@@ -133,11 +133,16 @@ Build packages specifying multiple definition trees:
 		db = pkg.NewInMemoryDatabase(false)
 		defer db.Clean()
 
+		runtimeDB := pkg.NewInMemoryDatabase(false)
+		defer runtimeDB.Clean()
+
+		installerRecipe := tree.NewInstallerRecipe(runtimeDB)
 		generalRecipe := tree.NewCompilerRecipe(db)
 
 		for _, src := range treePaths {
 			util.DefaultContext.Info("Loading tree", src)
 			helpers.CheckErr(generalRecipe.Load(src))
+			helpers.CheckErr(installerRecipe.Load(src))
 		}
 
 		if fromRepo {
@@ -172,6 +177,7 @@ Build packages specifying multiple definition trees:
 			options.WithTemplateFolder(templateFolders),
 			options.WithSolverOptions(opts),
 			options.Wait(wait),
+			options.WithRuntimeDatabase(installerRecipe.GetDatabase()),
 			options.OnlyTarget(onlyTarget),
 			options.PullFirst(pull),
 			options.KeepImg(keepImages),

@@ -22,7 +22,7 @@ testBuild() {
     buildst=$?
     assertEquals 'builds successfully' "$buildst" "0"
     assertTrue 'create package z' "[ -e '$tmpdir/testbuild/z-test-0.1.package.tar.gz' ]"
-    assertTrue 'create package z' "[ -e '$tmpdir/testbuild/x-test-0.1.package.tar.gz' ]"
+    assertTrue 'create package x' "[ -e '$tmpdir/testbuild/x-test-0.1.package.tar.gz' ]"
 
     mkdir $tmpdir/extract
     tar -xvf $tmpdir/testbuild/x-test-0.1.package.tar.gz -C $tmpdir/extract
