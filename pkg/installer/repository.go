@@ -118,6 +118,7 @@ func SystemRepositories(t types.LuetRepositories) Repositories {
 type BuildTreeResult struct {
 	Repositories Repositories
 	TemplatesDir map[*LuetSystemRepository][]string
+	RepoDir      map[*LuetSystemRepository]string
 }
 
 // LoadBuildTree loads to the tree the compilation specs from the system repositories
@@ -125,6 +126,7 @@ func LoadBuildTree(t tree.Builder, db types.PackageDatabase, ctx types.Context) 
 	var reserr error
 	res := &BuildTreeResult{
 		TemplatesDir: make(map[*LuetSystemRepository][]string),
+		RepoDir:      make(map[*LuetSystemRepository]string),
 	}
 
 	repos := SystemRepositories(ctx.GetConfig().SystemRepositories)
@@ -147,6 +149,8 @@ func LoadBuildTree(t tree.Builder, db types.PackageDatabase, ctx types.Context) 
 
 		r.SetTree(generalRecipe)
 		res.TemplatesDir[r] = template.FindPossibleTemplatesDir(repodir)
+		res.RepoDir[r] = ctx.GetConfig().System.GetRepoDatabaseDirPath(r.GetName())
+		ctx.Debugf("Loaded repository '%s' with template dir '%s' and repository dir '%s'", r.Name, res.TemplatesDir[r], res.RepoDir[r])
 	}
 
 	res.Repositories = repos

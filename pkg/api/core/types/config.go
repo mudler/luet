@@ -214,6 +214,7 @@ type LuetConfig struct {
 	FinalizerEnvs Finalizers `json:"finalizer_envs,omitempty" yaml:"finalizer_envs,omitempty" mapstructure:"finalizer_envs,omitempty"`
 
 	ConfigProtectConfFiles []config.ConfigProtectConfFile `yaml:"-" mapstructure:"-"`
+
 }
 
 // AddSystemRepository is just syntax sugar to add a repository in the system set
@@ -295,6 +296,7 @@ func (c *LuetConfig) loadRepositories() error {
 			if r.Name == "" || len(r.Urls) == 0 || r.Type == "" {
 				continue
 			}
+
 
 			c.AddSystemRepository(*r)
 		}

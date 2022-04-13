@@ -150,6 +150,11 @@ Build packages specifying multiple definition trees:
 			if err != nil {
 				util.DefaultContext.Warning("errors while loading trees from repositories", err.Error())
 			}
+
+			for _, r := range bt.RepoDir {
+				helpers.CheckErr(installerRecipe.Load(r))
+			}
+
 			templateFolders = util.TemplateFolders(util.DefaultContext, bt, treePaths)
 		} else {
 			templateFolders = util.TemplateFolders(util.DefaultContext, installer.BuildTreeResult{}, treePaths)
