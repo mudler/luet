@@ -160,7 +160,7 @@ The above keywords cannot be present in the same spec **at the same time**, or t
 
 When specifying `requires_final_images: true` luet builds an artifact for each of the packages listed from their compilation specs and it will later *squash* them together in a new container image which is then used in the build process to create an artifact.
 
-The key difference is about *where* your build is going to run from. By specifying `requires_final_images` it will be constructed a new image with the content of each package - while if setting it to false, it will order the images appropriately and link them together with the Dockerfile `FROM` field. That allows to reuse the same images used to build the packages in the require section - or - create a new one from the result of each package compilation.
+The key difference is about *where* your build is going to run from. By specifying `requires_final_images` it will be constructed a new image with the content of each package specified and its dependencies - while if setting it to false, it will order the images appropriately and link them together with the Dockerfile `FROM` field. That allows to reuse the same images used to build the packages in the require section - or - create a new one from the result of each package compilation.
 
 ## Keywords
 
@@ -365,7 +365,7 @@ _since luet>=0.17.0_
 
 (optional) A boolean flag which instruct luet to use the final images in the `requires` field.
 
-By setting `requires_final_images: true` in the compilation spec, packages in the `requires` section will be first compiled, and afterwards the final packages are squashed together in a new image that will be used during build.
+By setting `requires_final_images: true` in the compilation spec, packages in the `requires` section and its dependencies will be fetched if available or compiled, and afterwards the result is squashed together in a new image that will be used as a source of the build process of the package.
 
 ```yaml
 requires:

@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mudler/luet/pkg/api/core/logger"
 	"github.com/mudler/luet/pkg/api/core/types"
 
 	helpers "github.com/mudler/luet/tests/helpers"
@@ -1101,6 +1102,109 @@ var _ = Describe("Compiler", func() {
 
 			files := art.Files
 			Expect(files).ToNot(ContainElement("bin/busybox"))
+		})
+	})
+
+	Context("final images", func() {
+		It("reuses final images", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err := generalRecipe.Load("../../tests/fixtures/join_complex")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(6))
+			logdir, err := ioutil.TempDir("", "log")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(logdir) // clean up
+
+			logPath := filepath.Join(logdir, "logs")
+			var log string
+			readLogs := func() {
+				d, err := ioutil.ReadFile(logPath)
+				Expect(err).To(BeNil())
+				log = string(d)
+			}
+
+			l, err := logger.New(
+				logger.WithFileLogging(
+					logPath,
+					"",
+				),
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			c := context.NewContext(
+				context.WithLogger(l),
+			)
+
+			b := sd.NewSimpleDockerBackend(ctx)
+
+			joinImage := "luet/cache:586b36482e3f238c76d3536e7ca12cc4" //resulting join image
+			allImages := []string{
+				joinImage,
+				"test/test:c-test-1.2"}
+
+			cleanup := func(imgs ...string) {
+				// Remove the join hash so we force using final images
+				for _, toRemove := range imgs {
+					b.RemoveImage(sd.Options{ImageName: toRemove})
+				}
+			}
+			defer cleanup(allImages...)
+
+			compiler := NewLuetCompiler(b, generalRecipe.GetDatabase(),
+				options.WithFinalRepository("test/test"),
+				options.EnableGenerateFinalImages,
+				options.PullFirst(true),
+				options.WithContext(c))
+
+			spec, err := compiler.FromPackage(&types.Package{Name: "x", Category: "test", Version: "0.1"})
+			Expect(err).ToNot(HaveOccurred())
+			compiler.Options.CompressionType = compression.GZip
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			spec.SetOutputPath(tmpdir)
+
+			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(1))
+
+			readLogs()
+			Expect(log).To(And(
+				ContainSubstring("Generating final image for"),
+				ContainSubstring("Adding dependency"),
+				ContainSubstring("Final image not found for  test/c-1.2"),
+			))
+
+			Expect(log).ToNot(And(
+				ContainSubstring("Final image already found  test/test:c-test-1.2"),
+			))
+
+			os.WriteFile(logPath, []byte{}, os.ModePerm) // cleanup logs
+			// Remove the join hash so we force using final images
+			cleanup(joinImage)
+
+			//compile again
+			By("Recompiling")
+
+			artifacts, errs = compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(1))
+
+			// read logs again
+			readLogs()
+
+			Expect(log).To(And(
+				ContainSubstring("Final image already found  test/test:a-test-1.2"),
+			))
+			Expect(log).ToNot(And(
+				ContainSubstring("build test/c-1.2  compilation starts"),
+				ContainSubstring("Final image not found for  test/c-1.2"),
+			))
 		})
 	})
 })

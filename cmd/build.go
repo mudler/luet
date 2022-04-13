@@ -114,15 +114,18 @@ Build packages specifying multiple definition trees:
 		pushFinalImages, _ := cmd.Flags().GetBool("push-final-images")
 		pushFinalImagesRepository, _ := cmd.Flags().GetString("push-final-images-repository")
 		pushFinalImagesForce, _ := cmd.Flags().GetBool("push-final-images-force")
+		generateImages, _ := cmd.Flags().GetBool("generate-final-images")
 
-		var results Results
 		backendArgs := viper.GetStringSlice("backend-args")
 		out, _ := cmd.Flags().GetString("output")
 		pretend, _ := cmd.Flags().GetBool("pretend")
 		fromRepo, _ := cmd.Flags().GetBool("from-repositories")
 
 		compilerSpecs := compilerspec.NewLuetCompilationspecs()
+
 		var db types.PackageDatabase
+		var results Results
+		var templateFolders []string
 
 		compilerBackend, err := compiler.NewBackend(util.DefaultContext, backendType)
 		helpers.CheckErr(err)
@@ -136,7 +139,6 @@ Build packages specifying multiple definition trees:
 			util.DefaultContext.Info("Loading tree", src)
 			helpers.CheckErr(generalRecipe.Load(src))
 		}
-		templateFolders := []string{}
 
 		if fromRepo {
 			bt, err := installer.LoadBuildTree(generalRecipe, db, util.DefaultContext)
@@ -191,6 +193,10 @@ Build packages specifying multiple definition trees:
 			}
 		}
 
+		if generateImages {
+			compileropts = append(compileropts, options.EnableGenerateFinalImages)
+		}
+
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), compileropts...)
 
 		if full {
@@ -238,7 +244,7 @@ Build packages specifying multiple definition trees:
 			artifact, errs = luetCompiler.CompileWithReverseDeps(privileged, compilerSpecs)
 
 		} else if pretend {
-			toCalculate := []*compilerspec.LuetCompilationSpec{}
+			var toCalculate []*compilerspec.LuetCompilationSpec
 			if full {
 				var err error
 				toCalculate, err = luetCompiler.ComputeMinimumCompilableSet(compilerSpecs.All()...)
@@ -316,6 +322,7 @@ func init() {
 	buildCmd.Flags().Bool("revdeps", false, "Build with revdeps")
 	buildCmd.Flags().Bool("all", false, "Build all specfiles in the tree")
 
+	buildCmd.Flags().Bool("generate-final-images", false, "Generate final images while building")
 	buildCmd.Flags().Bool("push-final-images", false, "Push final images while building")
 	buildCmd.Flags().Bool("push-final-images-force", false, "Override existing images")
 	buildCmd.Flags().String("push-final-images-repository", "", "Repository where to push final images to")

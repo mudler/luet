@@ -481,11 +481,10 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 			return a, errors.Wrap(err, "Failed while writing metadata file")
 		}
 		cs.Options.Context.Success(pkgTag, "   :white_check_mark: done (empty virtual package)")
-		if cs.Options.PushFinalImages {
-			if err := cs.pushFinalArtifact(a, p, keepPermissions); err != nil {
-				return nil, err
-			}
+		if err := cs.finalizeImages(a, p, keepPermissions); err != nil {
+			return nil, err
 		}
+
 		return a, nil
 	}
 
@@ -519,20 +518,49 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 	}
 	cs.Options.Context.Success(pkgTag, "   :white_check_mark: Done building")
 
-	if cs.Options.PushFinalImages {
-		if err := cs.pushFinalArtifact(a, p, keepPermissions); err != nil {
-			return nil, err
-		}
+	if err := cs.finalizeImages(a, p, keepPermissions); err != nil {
+		return nil, err
 	}
 
 	return a, nil
 }
 
-// TODO: A small readaptation of repository_docker.go pushImageFromArtifact()
-//       Move this to a common place
-func (cs *LuetCompiler) pushFinalArtifact(a *artifact.PackageArtifact, p *compilerspec.LuetCompilationSpec, keepPermissions bool) error {
-	cs.Options.Context.Info("Pushing final image for", a.CompileSpec.Package.HumanReadableString())
+// finalizeImages finalizes images and generates final artifacts (push them as well if necessary).
+func (cs *LuetCompiler) finalizeImages(a *artifact.PackageArtifact, p *compilerspec.LuetCompilationSpec, keepPermissions bool) error {
+
+	// TODO: This is a small readaptation of repository_docker.go pushImageFromArtifact().
+	//       Maybe can be moved to a common place.
+
+	// We either check if finalization is needed
+	// and push or generate final images here, anything else we just return successfully
+	if !cs.Options.PushFinalImages && !cs.Options.GenerateFinalImages {
+		return nil
+	}
+
 	imageID := fmt.Sprintf("%s:%s", cs.Options.PushFinalImagesRepository, a.CompileSpec.Package.ImageID())
+	metadataImageID := fmt.Sprintf("%s:%s", cs.Options.PushFinalImagesRepository, helpers.SanitizeImageString(a.CompileSpec.GetPackage().GetMetadataFilePath()))
+
+	// Do generate image only, might be required for local iteration without pushing to remote repository
+	if cs.Options.GenerateFinalImages && !cs.Options.PushFinalImages {
+		cs.Options.Context.Info("Generating final image for", a.CompileSpec.Package.HumanReadableString())
+
+		if err := a.GenerateFinalImage(cs.Options.Context, imageID, cs.GetBackend(), true); err != nil {
+			return errors.Wrap(err, "while creating final image")
+		}
+
+		a := artifact.NewPackageArtifact(filepath.Join(p.GetOutputPath(), a.CompileSpec.GetPackage().GetMetadataFilePath()))
+		metadataArchive, err := artifact.CreateArtifactForFile(cs.Options.Context, a.Path)
+		if err != nil {
+			return errors.Wrap(err, "failed generating checksums for tree")
+		}
+		if err := metadataArchive.GenerateFinalImage(cs.Options.Context, metadataImageID, cs.Backend, keepPermissions); err != nil {
+			return errors.Wrap(err, "Failed generating metadata tree "+metadataImageID)
+		}
+
+		return nil
+	}
+
+	cs.Options.Context.Info("Pushing final image for", a.CompileSpec.Package.HumanReadableString())
 
 	// First push the package image
 	if !cs.Backend.ImageAvailable(imageID) || cs.Options.PushFinalImagesForce {
@@ -547,7 +575,6 @@ func (cs *LuetCompiler) pushFinalArtifact(a *artifact.PackageArtifact, p *compil
 	}
 
 	// Then the image ID
-	metadataImageID := fmt.Sprintf("%s:%s", cs.Options.PushFinalImagesRepository, helpers.SanitizeImageString(a.CompileSpec.GetPackage().GetMetadataFilePath()))
 	if !cs.Backend.ImageAvailable(metadataImageID) || cs.Options.PushFinalImagesForce {
 		cs.Options.Context.Info("Generating metadata image for", a.CompileSpec.Package.HumanReadableString(), metadataImageID)
 
@@ -604,6 +631,10 @@ func (cs *LuetCompiler) findImageHash(imageHash string, p *compilerspec.LuetComp
 	cs.Options.Context.Debug("Resolving image hash for", p.Package.HumanReadableString(), "hash", imageHash, "Pull repositories", p.BuildOptions.PullImageRepository)
 	toChecklist := append([]string{fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, imageHash)},
 		genImageList(p.BuildOptions.PullImageRepository, imageHash)...)
+
+	if cs.Options.PushFinalImagesRepository != "" {
+		toChecklist = append(toChecklist, fmt.Sprintf("%s:%s", cs.Options.PushFinalImagesRepository, imageHash))
+	}
 	if exists, which := oneOfImagesExists(toChecklist, cs.Backend); exists {
 		resolvedImage = which
 	}
@@ -910,16 +941,40 @@ func (cs *LuetCompiler) getSpecHash(pkgs types.Packages, salt string) (string, e
 }
 
 func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) error {
+	if !p.RequiresFinalImages {
+		return nil
+	}
 
 	joinTag := ">:loop: final images<"
+
 	var fromPackages types.Packages
 
-	if p.RequiresFinalImages {
-		cs.Options.Context.Info(joinTag, "Generating a parent image from final packages")
-		fromPackages = p.Package.GetRequires()
-	} else {
-		// No source image to resolve
-		return nil
+	cs.Options.Context.Info(joinTag, "Generating a parent image from final packages")
+
+	//fromPackages = p.Package.GetRequires() // (first level only)
+	pTarget := p
+
+	runtime, err := p.Package.GetRuntimePackage()
+	if err == nil {
+		spec, err := cs.FromPackage(runtime)
+		if err == nil {
+			cs.Options.Context.Info(joinTag, "Using runtime package for deptree computation")
+			pTarget = spec
+		}
+	}
+	// resolve deptree of runtime of p and use it in fromPackages
+	t, err := cs.ComputeDepTree(pTarget)
+	if err != nil {
+		return errors.Wrap(err, "failed querying hashtree")
+	}
+
+	for _, a := range t {
+		if !a.Value || a.Package.Matches(p.Package) {
+			continue
+		}
+
+		fromPackages = append(fromPackages, a.Package)
+		cs.Options.Context.Infof("Adding dependency '%s'.", a.Package.HumanReadableString())
 	}
 
 	// First compute a hash and check if image is available. if it is, then directly consume that
@@ -930,10 +985,9 @@ func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool
 
 	cs.Options.Context.Info(joinTag, "Searching existing image with hash", overallFp)
 
-	image := cs.findImageHash(overallFp, p)
-	if image != "" {
-		cs.Options.Context.Info("Image already found", image)
-		p.SetImage(image)
+	if img := cs.findImageHash(overallFp, p); img != "" {
+		cs.Options.Context.Info("Image already found", img)
+		p.SetImage(img)
 		return nil
 	}
 	cs.Options.Context.Info(joinTag, "Image not found. Generating image join with hash ", overallFp)
@@ -958,28 +1012,58 @@ func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool
 	for _, c := range fromPackages {
 		current++
 		if c != nil && c.Name != "" && c.Version != "" {
-			joinTag2 := fmt.Sprintf("%s %d/%d ⤑ :hammer: build %s", joinTag, current, len(p.Package.GetRequires()), c.HumanReadableString())
+			joinTag2 := fmt.Sprintf("%s %d/%d ⤑ :hammer: build %s", joinTag, current, len(fromPackages), c.HumanReadableString())
 
-			cs.Options.Context.Info(joinTag2, "compilation starts")
-			spec, err := cs.FromPackage(c)
-			if err != nil {
-				return errors.Wrap(err, "while generating images to join from")
+			// Search if we have already a final-image that was already pushed
+			// for this to work on the same repo, it is required to push final images during build
+			if img := cs.findImageHash(c.ImageID(), p); cs.Options.PullFirst && img != "" {
+				cs.Options.Context.Info("Final image already found", img)
+				if !cs.Backend.ImageExists(img) {
+					if err := cs.Backend.DownloadImage(backend.Options{ImageName: img}); err != nil {
+						return errors.Wrap(err, "failed pulling image "+img+" during extraction")
+					}
+				}
+
+				imgRef, err := cs.Backend.ImageReference(img, true)
+				if err != nil {
+					return err
+				}
+
+				ctx := cs.Options.Context.WithLoggingContext(fmt.Sprintf("final image extract %s", img))
+				_, _, err = image.ExtractTo(
+					ctx,
+					imgRef,
+					joinDir,
+					nil,
+				)
+				if err != nil {
+					return err
+				}
+			} else {
+				cs.Options.Context.Info("Final image not found for", c.HumanReadableString())
+
+				// If no image was found, we have to build it from scratch
+				cs.Options.Context.Info(joinTag2, "compilation starts")
+				spec, err := cs.FromPackage(c)
+				if err != nil {
+					return errors.Wrap(err, "while generating images to join from")
+				}
+				wantsArtifact := true
+				genDepsArtifact := !cs.Options.PackageTargetOnly
+
+				spec.SetOutputPath(p.GetOutputPath())
+
+				artifact, err := cs.compile(concurrency, keepPermissions, &wantsArtifact, &genDepsArtifact, spec)
+				if err != nil {
+					return errors.Wrap(err, "failed building join image")
+				}
+
+				err = artifact.Unpack(cs.Options.Context, joinDir, keepPermissions)
+				if err != nil {
+					return errors.Wrap(err, "failed building join image")
+				}
+				cs.Options.Context.Info(joinTag2, ":white_check_mark: Done")
 			}
-			wantsArtifact := true
-			genDepsArtifact := !cs.Options.PackageTargetOnly
-
-			spec.SetOutputPath(p.GetOutputPath())
-
-			artifact, err := cs.compile(concurrency, keepPermissions, &wantsArtifact, &genDepsArtifact, spec)
-			if err != nil {
-				return errors.Wrap(err, "failed building join image")
-			}
-
-			err = artifact.Unpack(cs.Options.Context, joinDir, keepPermissions)
-			if err != nil {
-				return errors.Wrap(err, "failed building join image")
-			}
-			cs.Options.Context.Info(joinTag2, ":white_check_mark: Done")
 		}
 	}
 

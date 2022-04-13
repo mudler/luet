@@ -49,6 +49,9 @@ type Compiler struct {
 	// Tells wether to push final container images after building
 	PushFinalImages      bool
 	PushFinalImagesForce bool
+
+	GenerateFinalImages bool
+
 	// Image repository to push to
 	PushFinalImagesRepository string
 
@@ -97,6 +100,11 @@ func WithFinalRepository(r string) func(cfg *Compiler) error {
 		cfg.PushFinalImagesRepository = r
 		return nil
 	}
+}
+
+func EnableGenerateFinalImages(cfg *Compiler) error {
+	cfg.GenerateFinalImages = true
+	return nil
 }
 
 func EnablePushFinalImages(cfg *Compiler) error {
