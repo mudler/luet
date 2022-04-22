@@ -35,9 +35,10 @@ const (
 )
 
 var license = []string{
-	"Luet Copyright (C) 2019-2022 Ettore Di Giacinto",
+	"Copyright (C) 2019-2022 Ettore Di Giacinto",
 	"This program comes with ABSOLUTELY NO WARRANTY.",
 	"This is free software, and you are welcome to redistribute it under certain conditions.",
+	"For documentation, visit https://luet.io.",
 }
 
 // Build time and commit information.
@@ -56,7 +57,9 @@ func version() string {
 var RootCmd = &cobra.Command{
 	Use:   "luet",
 	Short: "Container based package manager",
-	Long: `Luet is a single-binary package manager based on containers to build packages.
+	Long: `Luet is a single-binary package manager based on containers to build packages. 
+
+For documentation, visit https://luet.io.
 	
 To install a package:
 
@@ -89,7 +92,7 @@ To build a package, from a tree definition:
 
 		util.DefaultContext = ctx
 
-		util.DisplayVersionBanner(util.DefaultContext, util.IntroScreen, version, license)
+		util.DisplayVersionBanner(util.DefaultContext, version, license)
 
 		viper.BindPFlag("plugin", cmd.Flags().Lookup("plugin"))
 
@@ -116,7 +119,7 @@ To build a package, from a tree definition:
 // Execute adds all child commands to the root command sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	util.HandleLock(util.DefaultContext)
+	util.HandleLock()
 
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)

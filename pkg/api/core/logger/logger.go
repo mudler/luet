@@ -334,7 +334,7 @@ func (l *Logger) Spinner() {
 }
 
 func (l *Logger) Screen(text string) {
-	pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgLightBlue)).WithMargin(2).Println(text)
+	l.Infof(":::> %s", text)
 }
 
 func (l *Logger) SpinnerText(suffix, prefix string) {

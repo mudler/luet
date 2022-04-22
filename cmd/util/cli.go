@@ -16,6 +16,7 @@
 package util
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -26,7 +27,6 @@ import (
 
 	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/template"
-	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/installer"
 )
 
@@ -54,38 +54,33 @@ func TemplateFolders(ctx *context.Context, i installer.BuildTreeResult, treePath
 	return templateFolders
 }
 
-func IntroScreen() {
-	luetLogo, _ := pterm.DefaultBigText.WithLetters(
-		pterm.NewLettersFromStringWithStyle("LU", pterm.NewStyle(pterm.FgLightMagenta)),
-		pterm.NewLettersFromStringWithStyle("ET", pterm.NewStyle(pterm.FgLightBlue))).
-		Srender()
+func HandleLock() {
+	if os.Getenv("LUET_NOLOCK") == "true" {
+		return
+	}
 
-	pterm.DefaultCenter.Print(luetLogo)
+	if len(os.Args) == 0 {
+		return
+	}
 
-	pterm.DefaultCenter.Print(pterm.DefaultHeader.WithFullWidth().WithBackgroundStyle(pterm.NewStyle(pterm.BgLightBlue)).WithMargin(10).Sprint("Luet - 0-deps container-based package manager"))
-}
-
-func HandleLock(c types.Context) {
-	if os.Getenv("LUET_NOLOCK") != "true" {
-		if len(os.Args) > 1 {
-			for _, lockedCmd := range lockedCommands {
-				if os.Args[1] == lockedCmd {
-					s := single.New("luet")
-					if err := s.CheckLock(); err != nil && err == single.ErrAlreadyRunning {
-						c.Fatal("another instance of the app is already running, exiting")
-					} else if err != nil {
-						// Another error occurred, might be worth handling it as well
-						c.Fatal("failed to acquire exclusive app lock:", err.Error())
-					}
-					defer s.TryUnlock()
-					break
-				}
+	for _, lockedCmd := range lockedCommands {
+		if os.Args[1] == lockedCmd {
+			s := single.New("luet")
+			if err := s.CheckLock(); err != nil && err == single.ErrAlreadyRunning {
+				fmt.Println("another instance of the app is already running, exiting")
+				os.Exit(1)
+			} else if err != nil {
+				// Another error occurred, might be worth handling it as well
+				fmt.Println("failed to acquire exclusive app lock:", err.Error())
+				os.Exit(1)
 			}
+			defer s.TryUnlock()
+			break
 		}
 	}
 }
 
-func DisplayVersionBanner(c *context.Context, banner func(), version func() string, license []string) {
+func DisplayVersionBanner(c *context.Context, version func() string, license []string) {
 	display := false
 	if len(os.Args) > 1 {
 		for _, c := range bannerCommands {
@@ -95,15 +90,7 @@ func DisplayVersionBanner(c *context.Context, banner func(), version func() stri
 		}
 	}
 	if display {
-		if c.Config.General.Quiet {
-			pterm.Info.Printf("Luet %s\n", version())
-			pterm.Info.Println(strings.Join(license, "\n"))
-		} else {
-			banner()
-			pterm.DefaultCenter.Print(version())
-			for _, l := range license {
-				pterm.DefaultCenter.Print(l)
-			}
-		}
+		pterm.Info.Printf("Luet %s\n", version())
+		pterm.Info.Println(strings.Join(license, "\n"))
 	}
 }
