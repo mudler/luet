@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/mudler/luet/pkg/api/core/config"
 	"github.com/mudler/luet/pkg/api/core/logger"
 	"github.com/mudler/luet/pkg/helpers"
@@ -151,19 +152,23 @@ func (l *LuetInstaller) Upgrade(s *System) error {
 func (l *LuetInstaller) SyncRepositories() (Repositories, error) {
 	l.Options.Context.Spinner()
 	defer l.Options.Context.SpinnerStop()
+
+	var errs error
 	syncedRepos := Repositories{}
+
 	for _, r := range SystemRepositories(l.Options.PackageRepositories) {
 		repo, err := r.Sync(l.Options.Context, false)
-		if err != nil {
-			return nil, errors.Wrap(err, "Failed syncing repository: "+r.GetName())
+		if err == nil {
+			syncedRepos = append(syncedRepos, repo)
+		} else {
+			multierror.Append(errs, fmt.Errorf("failed syncing '%s': %w", r.Name, err))
 		}
-		syncedRepos = append(syncedRepos, repo)
 	}
 
 	// compute what to install and from where
 	sort.Sort(syncedRepos)
 
-	return syncedRepos, nil
+	return syncedRepos, errs
 }
 
 func (l *LuetInstaller) Swap(toRemove types.Packages, toInstall types.Packages, s *System) error {
