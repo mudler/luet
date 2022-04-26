@@ -25,9 +25,7 @@ import (
 	"github.com/mudler/luet/pkg/api/core/types"
 	compiler "github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
-	compression "github.com/mudler/luet/pkg/compiler/types/compression"
 	"github.com/mudler/luet/pkg/compiler/types/options"
-	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	pkg "github.com/mudler/luet/pkg/database"
@@ -230,7 +228,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 
 			treeFile := NewDefaultTreeRepositoryFile()
-			treeFile.SetCompressionType(compression.None)
+			treeFile.SetCompressionType(types.None)
 			repo.SetRepositoryFile(REPOFILE_TREE_KEY, treeFile)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo.GetName()).To(Equal("test"))
@@ -622,7 +620,7 @@ urls:
 			spec2.SetOutputPath(tmpdir)
 			spec3.SetOutputPath(tmpdir)
 
-			_, errs := c.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2, spec3))
+			_, errs := c.CompileParallel(false, types.NewLuetCompilationspecs(spec, spec2, spec3))
 
 			Expect(errs).To(BeEmpty())
 
@@ -738,7 +736,7 @@ urls:
 			spec4.SetOutputPath(tmpdir)
 			spec5.SetOutputPath(tmpdir)
 
-			_, errs := c.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2, spec4, spec5))
+			_, errs := c.CompileParallel(false, types.NewLuetCompilationspecs(spec, spec2, spec4, spec5))
 
 			Expect(errs).To(BeEmpty())
 
@@ -862,7 +860,7 @@ urls:
 			spec3.SetOutputPath(tmpdir)
 			spec6.SetOutputPath(tmpdir)
 
-			_, errs := c.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2, spec3, spec4, spec5, spec6))
+			_, errs := c.CompileParallel(false, types.NewLuetCompilationspecs(spec, spec2, spec3, spec4, spec5, spec6))
 
 			Expect(errs).To(BeEmpty())
 
@@ -995,11 +993,11 @@ urls:
 			spec2.SetOutputPath(tmpdirnewrepo)
 			spec3.SetOutputPath(tmpdir)
 
-			_, errs := c.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec3))
+			_, errs := c.CompileParallel(false, types.NewLuetCompilationspecs(spec, spec3))
 
 			Expect(errs).To(BeEmpty())
 
-			_, errs = c2.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec2))
+			_, errs = c2.CompileParallel(false, types.NewLuetCompilationspecs(spec2))
 			Expect(errs).To(BeEmpty())
 
 			repo, err := stubRepo(tmpdir, "../../tests/fixtures/upgrade_old_repo")
@@ -1110,7 +1108,7 @@ urls:
 				backend.NewSimpleDockerBackend(ctx),
 				generalRecipe.GetDatabase(),
 				options.Concurrency(2),
-				options.WithCompressionType(compression.GZip),
+				options.WithCompressionType(types.GZip),
 			)
 
 			spec, err := c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
@@ -1129,7 +1127,7 @@ urls:
 			spec2.SetOutputPath(tmpdir)
 			spec3.SetOutputPath(tmpdir)
 
-			_, errs := c.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2, spec3))
+			_, errs := c.CompileParallel(false, types.NewLuetCompilationspecs(spec, spec2, spec3))
 
 			Expect(errs).To(BeEmpty())
 
@@ -1274,7 +1272,7 @@ urls:
 
 			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(),
 				options.Concurrency(2),
-				options.WithCompressionType(compression.GZip))
+				options.WithCompressionType(types.GZip))
 
 			spec, err := c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -1291,7 +1289,7 @@ urls:
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
 			spec3.SetOutputPath(tmpdir)
-			_, errs := c.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2, spec3))
+			_, errs := c.CompileParallel(false, types.NewLuetCompilationspecs(spec, spec2, spec3))
 
 			Expect(errs).To(BeEmpty())
 
@@ -1382,7 +1380,7 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
 			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(),
-				options.WithCompressionType(compression.GZip))
+				options.WithCompressionType(types.GZip))
 
 			spec, err := c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -1396,7 +1394,7 @@ urls:
 			defer os.RemoveAll(tmpdir) // clean up
 			spec.SetOutputPath(tmpdir)
 			spec3.SetOutputPath(tmpdir)
-			_, errs := c.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec3))
+			_, errs := c.CompileParallel(false, types.NewLuetCompilationspecs(spec, spec3))
 
 			Expect(errs).To(BeEmpty())
 
@@ -1486,7 +1484,7 @@ urls:
 			defer os.RemoveAll(tmpdir2) // clean up
 			spec.SetOutputPath(tmpdir2)
 
-			_, errs = c.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			_, errs = c.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 
 			Expect(errs).To(BeEmpty())
 

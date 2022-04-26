@@ -32,9 +32,7 @@ import (
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	. "github.com/mudler/luet/pkg/compiler"
 	sd "github.com/mudler/luet/pkg/compiler/backend"
-	"github.com/mudler/luet/pkg/compiler/types/compression"
 	"github.com/mudler/luet/pkg/compiler/types/options"
-	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	pkg "github.com/mudler/luet/pkg/database"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/mudler/luet/pkg/tree"
@@ -174,7 +172,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec, spec2))
 			Expect(errs).To(BeNil())
 			for _, artifact := range artifacts {
 				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
@@ -235,7 +233,7 @@ var _ = Describe("Compiler", func() {
 			spec2.SetOutputPath(tmpdir)
 			spec3.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2, spec3))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec, spec2, spec3))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(3))
 
@@ -281,11 +279,11 @@ var _ = Describe("Compiler", func() {
 			Expect(err).ToNot(HaveOccurred())
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir)
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
-			artifacts2, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec2))
+			artifacts2, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec2))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts2)).To(Equal(1))
 
@@ -324,7 +322,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 			for _, artifact := range artifacts {
@@ -357,7 +355,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
@@ -392,7 +390,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
@@ -426,7 +424,7 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
@@ -459,7 +457,7 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
@@ -492,7 +490,7 @@ var _ = Describe("Compiler", func() {
 			//		Expect(err).ToNot(HaveOccurred())
 
 			spec.SetOutputPath(tmpdir)
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
@@ -530,7 +528,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
@@ -570,7 +568,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
@@ -613,7 +611,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
@@ -654,7 +652,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileWithReverseDeps(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileWithReverseDeps(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(2))
 
@@ -683,7 +681,7 @@ var _ = Describe("Compiler", func() {
 			spec, err := compiler.FromPackage(&types.Package{Name: "vhba", Category: "sys-fs-5.4.2", Version: "20190410"})
 			Expect(err).ToNot(HaveOccurred())
 
-			bt, err := compiler.BuildTree(compilerspec.LuetCompilationspecs{*spec})
+			bt, err := compiler.BuildTree(types.LuetCompilationspecs{*spec})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(bt.AllLevels()).To(Equal([]int{0, 1, 2, 3, 4, 5}))
@@ -716,7 +714,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].Dependencies)).To(Equal(6))
@@ -751,7 +749,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileWithReverseDeps(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileWithReverseDeps(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(4))
 
@@ -810,7 +808,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			for _, a := range artifacts {
 				Expect(fileHelper.Exists(a.Path)).To(BeTrue())
@@ -852,7 +850,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
@@ -889,7 +887,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec, spec2))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(2))
 			//Expect(len(artifacts[0].Dependencies)).To(Equal(1))
@@ -961,7 +959,7 @@ var _ = Describe("Compiler", func() {
 			spec.SetOutputPath(tmpdir)
 			spec2.SetOutputPath(tmpdir2)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec, spec2))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec, spec2))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(2))
 			Expect(len(artifacts[0].Dependencies)).To(Equal(0))
@@ -990,7 +988,7 @@ var _ = Describe("Compiler", func() {
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "runtime", Category: "layer", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
-			compiler.Options.CompressionType = compression.GZip
+			compiler.Options.CompressionType = types.GZip
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
 			tmpdir, err := ioutil.TempDir("", "tree")
@@ -999,7 +997,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
@@ -1044,7 +1042,7 @@ var _ = Describe("Compiler", func() {
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "runtime", Category: "layer", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
-			compiler.Options.CompressionType = compression.GZip
+			compiler.Options.CompressionType = types.GZip
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
 			tmpdir, err := ioutil.TempDir("", "tree")
@@ -1053,7 +1051,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
@@ -1080,7 +1078,7 @@ var _ = Describe("Compiler", func() {
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "runtime", Category: "layer", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
-			compiler.Options.CompressionType = compression.GZip
+			compiler.Options.CompressionType = types.GZip
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
 			tmpdir, err := ioutil.TempDir("", "tree")
@@ -1089,7 +1087,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].Dependencies)).To(Equal(1))
@@ -1143,7 +1141,7 @@ var _ = Describe("Compiler", func() {
 
 			b := sd.NewSimpleDockerBackend(ctx)
 
-			joinImage := "luet/cache:08738767caa9a7397fad70ae53db85fa" //resulting join image
+			joinImage := "luet/cache:c4224fd8279e077727573703b6db70d4" //resulting join image
 			allImages := []string{
 				joinImage,
 				"test/test:c-test-1.2"}
@@ -1165,7 +1163,7 @@ var _ = Describe("Compiler", func() {
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "x", Category: "test", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
-			compiler.Options.CompressionType = compression.GZip
+			compiler.Options.CompressionType = types.GZip
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
 			tmpdir, err := ioutil.TempDir("", "tree")
@@ -1174,7 +1172,7 @@ var _ = Describe("Compiler", func() {
 
 			spec.SetOutputPath(tmpdir)
 
-			artifacts, errs := compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 
@@ -1183,12 +1181,12 @@ var _ = Describe("Compiler", func() {
 				ContainSubstring("Generating final image for"),
 				ContainSubstring("Adding dependency"),
 				ContainSubstring("Final image not found for  test/c-1.2"),
-			))
+			), log)
 
 			Expect(log).ToNot(And(
 				ContainSubstring("No runtime db present, first level join only"),
 				ContainSubstring("Final image already found  test/test:c-test-1.2"),
-			))
+			), log)
 
 			os.WriteFile(logPath, []byte{}, os.ModePerm) // cleanup logs
 			// Remove the join hash so we force using final images
@@ -1197,7 +1195,7 @@ var _ = Describe("Compiler", func() {
 			//compile again
 			By("Recompiling")
 
-			artifacts, errs = compiler.CompileParallel(false, compilerspec.NewLuetCompilationspecs(spec))
+			artifacts, errs = compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
 			Expect(errs).To(BeNil())
 			Expect(len(artifacts)).To(Equal(1))
 

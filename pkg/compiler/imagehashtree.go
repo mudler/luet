@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	"github.com/mudler/luet/pkg/api/core/types"
-	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	"github.com/pkg/errors"
 )
 
@@ -75,7 +74,7 @@ func (ht *PackageImageHashTree) String() string {
 // Query takes a compiler and a compilation spec and returns a PackageImageHashTree tied to it.
 // PackageImageHashTree contains all the informations to resolve the spec build images in order to
 // reproducibly re-build images from packages
-func (ht *ImageHashTree) Query(cs *LuetCompiler, p *compilerspec.LuetCompilationSpec) (*PackageImageHashTree, error) {
+func (ht *ImageHashTree) Query(cs *LuetCompiler, p *types.LuetCompilationSpec) (*PackageImageHashTree, error) {
 	assertions, err := ht.resolve(cs, p)
 	if err != nil {
 		return nil, err
@@ -110,7 +109,7 @@ func (ht *ImageHashTree) Query(cs *LuetCompiler, p *compilerspec.LuetCompilation
 	}, nil
 }
 
-func (ht *ImageHashTree) genBuilderImageTag(p *compilerspec.LuetCompilationSpec, packageImage string) string {
+func (ht *ImageHashTree) genBuilderImageTag(p *types.LuetCompilationSpec, packageImage string) string {
 	// Use packageImage as salt into the fp being used
 	// so the hash is unique also in cases where
 	// some package deps does have completely different
@@ -120,7 +119,7 @@ func (ht *ImageHashTree) genBuilderImageTag(p *compilerspec.LuetCompilationSpec,
 
 // resolve computes the dependency tree of a compilation spec and returns solver assertions
 // in order to be able to compile the spec.
-func (ht *ImageHashTree) resolve(cs *LuetCompiler, p *compilerspec.LuetCompilationSpec) (types.PackagesAssertions, error) {
+func (ht *ImageHashTree) resolve(cs *LuetCompiler, p *types.LuetCompilationSpec) (types.PackagesAssertions, error) {
 	dependencies, err := cs.ComputeDepTree(p, cs.Database)
 	if err != nil {
 		return nil, errors.Wrap(err, "While computing a solution for "+p.GetPackage().HumanReadableString())

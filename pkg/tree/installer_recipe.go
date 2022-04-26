@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mudler/luet/pkg/api/core/template"
 	"github.com/mudler/luet/pkg/api/core/types"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
@@ -36,12 +37,14 @@ const (
 	FinalizerFile = "finalize.yaml"
 )
 
+var DefaultInstallerParsers = []FileParser{
+	RuntimeCollectionParser,
+	RuntimeDefinitionParser,
+}
+
 func NewInstallerRecipe(db types.PackageDatabase, fp ...FileParser) Builder {
 	if len(fp) == 0 {
-		fp = []FileParser{
-			RuntimeCollectionParser,
-			RuntimeDefinitionParser,
-		}
+		fp = DefaultInstallerParsers
 	}
 	return &InstallerRecipe{Database: db, fileParsers: fp}
 }
@@ -87,20 +90,24 @@ func (r *InstallerRecipe) Load(path string) error {
 
 	r.SourcePath = append(r.SourcePath, path)
 
+	c, err := template.FilesInDir(template.FindPossibleTemplatesDir(path))
+	if err != nil {
+		return err
+	}
 	//r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
 	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
 
 	// the function that handles each file or dir
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
 		for _, p := range r.fileParsers {
-			if err := p(path, currentpath, info.Name(), []string{}, r.Database); err != nil {
+			if err := p(path, currentpath, info.Name(), c, r.Database); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
 
-	err := filepath.Walk(path, ff)
+	err = filepath.Walk(path, ff)
 	if err != nil {
 		return err
 	}

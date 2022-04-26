@@ -26,7 +26,6 @@ import (
 	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/compiler"
 	"github.com/mudler/luet/pkg/compiler/backend"
-	"github.com/mudler/luet/pkg/compiler/types/options"
 	"github.com/mudler/luet/pkg/installer"
 
 	pkg "github.com/mudler/luet/pkg/database"
@@ -81,12 +80,12 @@ func NewTreeImageCommand() *cobra.Command {
 			luetCompiler := compiler.NewLuetCompiler(
 				compilerBackend,
 				reciper.GetDatabase(),
-				options.WithBuildValues(values),
-				options.WithContext(util.DefaultContext),
-				options.WithPushRepository(imageRepository),
-				options.WithPullRepositories(pullRepo),
-				options.WithTemplateFolder(util.TemplateFolders(util.DefaultContext, installer.BuildTreeResult{}, treePath)),
-				options.WithSolverOptions(opts),
+				compiler.WithBuildValues(values),
+				compiler.WithContext(util.DefaultContext),
+				compiler.WithPushRepository(imageRepository),
+				compiler.WithPullRepositories(pullRepo),
+				compiler.WithTemplateFolder(util.TemplateFolders(util.DefaultContext, installer.BuildTreeResult{}, treePath)),
+				compiler.WithSolverOptions(opts),
 			)
 
 			a := args[0]

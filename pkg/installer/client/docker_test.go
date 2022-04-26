@@ -24,7 +24,6 @@ import (
 
 	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
-	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	. "github.com/mudler/luet/pkg/installer/client"
@@ -61,7 +60,7 @@ var _ = Describe("Docker client", func() {
 		It("Downloads artifacts", func() {
 			f, err := c.DownloadArtifact(&artifact.PackageArtifact{
 				Path: "test.tar",
-				CompileSpec: &compilerspec.LuetCompilationSpec{
+				CompileSpec: &types.LuetCompilationSpec{
 					Package: &types.Package{
 						Name:     "c",
 						Category: "test",

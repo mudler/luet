@@ -1,4 +1,4 @@
-# github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78
+# github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1
 github.com/Azure/go-ansiterm
 github.com/Azure/go-ansiterm/winterm
 # github.com/DataDog/zstd v1.4.5
@@ -16,7 +16,7 @@ github.com/Microsoft/go-winio/backuptar
 github.com/Microsoft/go-winio/pkg/guid
 github.com/Microsoft/go-winio/pkg/security
 github.com/Microsoft/go-winio/vhd
-# github.com/Microsoft/hcsshim v0.8.23
+# github.com/Microsoft/hcsshim v0.9.2
 github.com/Microsoft/hcsshim
 github.com/Microsoft/hcsshim/computestorage
 github.com/Microsoft/hcsshim/internal/cow
@@ -49,6 +49,9 @@ github.com/asdine/storm/codec/json
 github.com/asdine/storm/index
 github.com/asdine/storm/internal
 github.com/asdine/storm/q
+# github.com/asottile/dockerfile v3.1.0+incompatible
+## explicit
+github.com/asottile/dockerfile
 # github.com/atomicgo/cursor v0.0.1
 github.com/atomicgo/cursor
 # github.com/beorn7/perks v1.0.1
@@ -57,13 +60,13 @@ github.com/beorn7/perks/quantile
 ## explicit
 github.com/cavaliercoder/grab
 github.com/cavaliercoder/grab/bps
-# github.com/cespare/xxhash/v2 v2.1.1
+# github.com/cespare/xxhash/v2 v2.1.2
 github.com/cespare/xxhash/v2
 # github.com/chuckpreslar/emission v0.0.0-20170206194824-a7ddd980baf9
 github.com/chuckpreslar/emission
-# github.com/containerd/cgroups v1.0.1
+# github.com/containerd/cgroups v1.0.3
 github.com/containerd/cgroups/stats/v1
-# github.com/containerd/containerd v1.5.10
+# github.com/containerd/containerd v1.6.3-0.20220401172941-5ff8fce1fcc6
 ## explicit
 github.com/containerd/containerd/archive
 github.com/containerd/containerd/archive/compression
@@ -76,18 +79,20 @@ github.com/containerd/containerd/log
 github.com/containerd/containerd/pkg/userns
 github.com/containerd/containerd/platforms
 github.com/containerd/containerd/sys
-# github.com/containerd/continuity v0.1.0
+# github.com/containerd/continuity v0.2.3-0.20220330195504-d132b287edc8
 github.com/containerd/continuity/fs
 github.com/containerd/continuity/sysx
-# github.com/containerd/stargz-snapshotter/estargz v0.10.0
+# github.com/containerd/stargz-snapshotter/estargz v0.11.3
 github.com/containerd/stargz-snapshotter/estargz
 github.com/containerd/stargz-snapshotter/estargz/errorutil
+# github.com/containerd/typeurl v1.0.2
+github.com/containerd/typeurl
 # github.com/crillab/gophersat v1.3.2-0.20210701121804-72b19f5b6b38
 ## explicit
 github.com/crillab/gophersat/bf
 github.com/crillab/gophersat/explain
 github.com/crillab/gophersat/solver
-# github.com/docker/cli v20.10.10+incompatible
+# github.com/docker/cli v20.10.13+incompatible
 ## explicit
 github.com/docker/cli/cli/config
 github.com/docker/cli/cli/config/configfile
@@ -169,8 +174,9 @@ github.com/ghodss/yaml
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
+github.com/gogo/protobuf/sortkeys
+github.com/gogo/protobuf/types
 # github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
-## explicit
 github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.5.2
 github.com/golang/protobuf/proto
@@ -178,7 +184,7 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
-# github.com/google/btree v1.0.0
+# github.com/google/btree v1.0.1
 github.com/google/btree
 # github.com/google/go-containerregistry v0.7.0
 ## explicit
@@ -212,16 +218,15 @@ github.com/google/go-containerregistry/pkg/v1/types
 ## explicit
 github.com/google/renameio
 # github.com/google/uuid v1.3.0
-## explicit
 github.com/google/uuid
 # github.com/gookit/color v1.5.0
 ## explicit
 github.com/gookit/color
 # github.com/gorilla/mux v1.8.0
 github.com/gorilla/mux
-# github.com/hashicorp/errwrap v1.0.0
+# github.com/hashicorp/errwrap v1.1.0
 github.com/hashicorp/errwrap
-# github.com/hashicorp/go-multierror v1.0.0
+# github.com/hashicorp/go-multierror v1.1.1
 ## explicit
 github.com/hashicorp/go-multierror
 # github.com/hashicorp/go-version v1.3.0
@@ -252,7 +257,7 @@ github.com/ipfs/go-log/v2
 # github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
 ## explicit
 github.com/jinzhu/copier
-# github.com/klauspost/compress v1.13.6
+# github.com/klauspost/compress v1.15.1
 ## explicit
 github.com/klauspost/compress
 github.com/klauspost/compress/flate
@@ -282,12 +287,12 @@ github.com/mattn/go-isatty
 github.com/mattn/go-runewidth
 # github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
 github.com/matttproud/golang_protobuf_extensions/pbutil
-# github.com/miekg/pkcs11 v1.0.3
+# github.com/miekg/pkcs11 v1.1.1
 github.com/miekg/pkcs11
 # github.com/mitchellh/copystructure v1.2.0
 ## explicit
 github.com/mitchellh/copystructure
-# github.com/mitchellh/hashstructure/v2 v2.0.1
+# github.com/mitchellh/hashstructure/v2 v2.0.2
 ## explicit
 github.com/mitchellh/hashstructure/v2
 # github.com/mitchellh/mapstructure v1.4.2
@@ -295,15 +300,20 @@ github.com/mitchellh/hashstructure/v2
 github.com/mitchellh/mapstructure
 # github.com/mitchellh/reflectwalk v1.0.2
 github.com/mitchellh/reflectwalk
+# github.com/moby/buildkit v0.10.1
+## explicit
+github.com/moby/buildkit/frontend/dockerfile/command
+github.com/moby/buildkit/frontend/dockerfile/parser
+github.com/moby/buildkit/frontend/dockerfile/shell
+github.com/moby/buildkit/util/stack
 # github.com/moby/moby v20.10.9+incompatible
 ## explicit
 github.com/moby/moby/pkg/archive
-# github.com/moby/sys/mount v0.2.0
-## explicit
+# github.com/moby/sys/mount v0.3.0
 github.com/moby/sys/mount
-# github.com/moby/sys/mountinfo v0.4.1
+# github.com/moby/sys/mountinfo v0.6.0
 github.com/moby/sys/mountinfo
-# github.com/moby/term v0.0.0-20200312100748-672ec06f55cd
+# github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6
 github.com/moby/term
 github.com/moby/term/windows
 # github.com/morikuni/aec v1.0.0
@@ -343,11 +353,11 @@ github.com/onsi/gomega/types
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit
 github.com/opencontainers/go-digest
-# github.com/opencontainers/image-spec v1.0.2
+# github.com/opencontainers/image-spec v1.0.3-0.20211202183452-c5a74bcca799
 ## explicit
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.0.2
+# github.com/opencontainers/runc v1.1.1
 github.com/opencontainers/runc/libcontainer/user
 # github.com/otiai10/copy v1.2.1-0.20200916181228-26f84a0b1578
 ## explicit
@@ -364,17 +374,17 @@ github.com/philopon/go-toposort
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
-# github.com/prometheus/client_golang v1.7.1
+# github.com/prometheus/client_golang v1.12.1
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/internal
 github.com/prometheus/client_golang/prometheus/promhttp
 # github.com/prometheus/client_model v0.2.0
 github.com/prometheus/client_model/go
-# github.com/prometheus/common v0.10.0
+# github.com/prometheus/common v0.32.1
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
 github.com/prometheus/common/model
-# github.com/prometheus/procfs v0.6.0
+# github.com/prometheus/procfs v0.7.3
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
@@ -434,7 +444,7 @@ github.com/theupdateframework/notary/tuf/validation
 github.com/vbatts/tar-split/archive/tar
 # github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778
 github.com/xo/terminfo
-# go.etcd.io/bbolt v1.3.5
+# go.etcd.io/bbolt v1.3.6
 ## explicit
 go.etcd.io/bbolt
 # go.opencensus.io v0.23.0
@@ -456,8 +466,7 @@ go.uber.org/zap/internal/bufferpool
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
-# golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
-## explicit
+# golang.org/x/crypto v0.0.0-20211202192323-5770296d904e
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/ed25519
@@ -467,7 +476,7 @@ golang.org/x/crypto/scrypt
 # golang.org/x/mod v0.4.2
 ## explicit
 golang.org/x/mod/sumdb/dirhash
-# golang.org/x/net v0.0.0-20211111160137-58aab5ef257a
+# golang.org/x/net v0.0.0-20211216030914-fe4d6282115f
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
@@ -476,7 +485,7 @@ golang.org/x/net/proxy
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20211110154304-99a53858aa08
+# golang.org/x/sys v0.0.0-20220114195835-da31bd327af9
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
@@ -504,11 +513,9 @@ golang.org/x/text/language
 golang.org/x/text/runes
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
-## explicit
-# google.golang.org/genproto v0.0.0-20211111162719-482062a4217b
+# google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.42.0
+# google.golang.org/grpc v1.45.0
 google.golang.org/grpc/codes
 google.golang.org/grpc/internal/status
 google.golang.org/grpc/status

@@ -36,10 +36,7 @@ import (
 
 func NewGeneralRecipe(db types.PackageDatabase, fp ...FileParser) Builder {
 	if len(fp) == 0 {
-		fp = []FileParser{
-			RuntimeCollectionParser,
-			RuntimeDefinitionParser,
-		}
+		fp = DefaultInstallerParsers
 	}
 	return &Recipe{Database: db, fileParsers: fp}
 }

@@ -15,7 +15,7 @@ Luet is written entirely in Go and comes as a single static binary. This has a f
 - Package manager has no dependencies on the packages that it installs. There is no chance of breaking the package manager by installing a conflicting package, or uninstalling one.
 - Portable - it can run on any architecture
 
-Luet brings the containers ecosystem to standard software package management and delivery. It is fully built around the container concept, and leverages the huge catalog already present in the wild. It lets you use Docker images from [Docker Hub](https://hub.docker.com/), or from private registries to build packages, and helps you to redistribute them.
+Luet brings the containers ecosystem to standard software package management and delivery. It is fully built around the container concept, and leverages the huge catalog already present in the wild. It lets you use container images from [Docker Hub](https://hub.docker.com/), or from private registries to build packages, and helps you to redistribute them.
 
 Systems that are using luet as a package manager can consume Luet repositories with only luet itself. No dependency is required by the Package manager, giving you the full control on what you install or not in the system. It can be used to generate *Linux from Scratch* distributions,  also to build Docker images, or to simply build standalone packages that you might want to redistribute.
 

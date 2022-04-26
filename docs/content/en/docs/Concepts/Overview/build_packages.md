@@ -32,11 +32,17 @@ Luet provides an abstraction layer on top of the container image layer to make t
 
 To resolve the dependency tree Luet uses a SAT solver and no database. It is responsible for calculating the dependencies of a package and to prevent conflicts. The Luet core is still young, but it has a comprehensive test suite that we use to validate any future changes.
 
-Building a package with Luet requires only a [definition](/docs/docs/concepts/packages/specfile). This definition can be self-contained and be only composed of one [specfile](/docs/docs/concepts/packages/specfile), or a group of them, forming a Luet tree. For more complex use-cases, see [collections](/docs/docs/concepts/packages/collections).
+Building a package with Luet requires only a [definition](/docs/docs/concepts/packages/specfile). This definition can be self-contained and be only composed of one [specfile](/docs/docs/concepts/packages/specfile), or a group of them, forming a Luet tree. For more complex use-cases, see [collections](/docs/docs/concepts/packages/collections). Luet also supports building packages from standard `Dockerfile` directly.
 
 Run `luet build --help` to get more help for each parameter.
 
 Build accepts a list of packages to build, which syntax is in the `category/name-version` notation. See also [specfile documentation page](/docs/docs/concepts/packages/specfile/#refering-to-packages-from-the-cli) to see how to express packages from the CLI.
+
+## Reproducible builds
+
+Pinning a container build is not easy - there are always so many moving pieces, and sometimes just set `FROM` an image tag might not be enough.
+
+Luet while building a package generates intermediate images that are stored and can be optionally pushed in a registry. Those images can be re-used by Luet if building again the same tree to guarantuee highly reproducible builds.
 
 ## Environmental variables
 
@@ -99,6 +105,25 @@ $> luet build --all
 ```
 
 Luet "trees" are just a group of specfiles, in the above example, our tree was the current directory. You can also specify a directory with the `--tree` option. Luet doesn't enforce any tree layout, so they can be nested at any level. The only rule of thumb is that a `build.yaml` file needs to have either a `definition.yaml` or a `collection.yaml` file next to it.
+
+## Dockerfile example
+
+Luet can seamlessly build packages also from Dockerfiles, consider the following example, that will generate a `curl` package from an `alpine` image:
+
+```bash
+$> # put yourself in some workdir
+
+$~/workdir> mkdir curl
+
+$~/workdir> cat <<EOF > curl/Dockerfile
+FROM alpine
+apk add curl
+EOF
+
+$~/workdir> luet build --all
+
+```
+
 
 ## Nesting dependencies
 

@@ -35,12 +35,14 @@ const (
 	CompilerDefinitionFile = "build.yaml"
 )
 
+var DefaultCompilerParsers = []FileParser{
+	BuildCollectionParser,
+	BuildDefinitionParser,
+}
+
 func NewCompilerRecipe(d types.PackageDatabase, fp ...FileParser) Builder {
 	if len(fp) == 0 {
-		fp = []FileParser{
-			BuildCollectionParser,
-			BuildDefinitionParser,
-		}
+		fp = DefaultCompilerParsers
 	}
 	return &CompilerRecipe{Recipe: Recipe{Database: d}, fileParsers: fp}
 }

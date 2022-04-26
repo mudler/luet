@@ -104,7 +104,7 @@ func ParsePackageStr(p string) (*types.Package, error) {
 		}, nil
 	}
 
-	ver := ">=0"
+	ver := ""
 	cat := ""
 	name := ""
 
@@ -114,6 +114,10 @@ func ParsePackageStr(p string) (*types.Package, error) {
 		cat, name = packageData(packageinfo[0])
 	} else {
 		cat, name = packageData(p)
+	}
+
+	if (cat != "") && ver == "" {
+		ver = ">=0"
 	}
 
 	return &types.Package{

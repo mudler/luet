@@ -22,7 +22,7 @@ linkTitle = "luetdocs"
 
 {{% blocks/lead color="primary" %}}
 
-Luet uses Container technologies ( Docker, img ) to build packages.
+Luet uses Container runtimes to build packages in a reproducible manner.
 It provides an abstraction over the Dockerfile format introducing relation and versioning of images.
 
 {{% /blocks/lead %}}
@@ -42,8 +42,8 @@ New users are always welcome, and have fun!
 {{% /blocks/feature %}}
 
 
-{{% blocks/feature icon="fa-terminal" title="Container-based" %}}
-Use container abstraction to define your package repositories
+{{% blocks/feature icon="fa-terminal" title="Container-based, reproducible builds" %}}
+Use container abstraction to define package repositories. Intermediate build images are pushed along to guarantee reproducible builds.
 {{% /blocks/feature %}}
 
 {{< /blocks/section >}}

@@ -21,9 +21,8 @@ import (
 
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
-	"github.com/mudler/luet/pkg/compiler/types/compression"
-	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -65,9 +64,9 @@ Afterwards, you can use the content generated and associate it with a tree and a
 			util.DefaultContext.Fatal("Invalid package string ", packageName, ": ", err.Error())
 		}
 
-		spec := &compilerspec.LuetCompilationSpec{Package: p}
+		spec := &types.LuetCompilationSpec{Package: p}
 		a := artifact.NewPackageArtifact(filepath.Join(dst, p.GetFingerPrint()+".package.tar"))
-		a.CompressionType = compression.Implementation(compressionType)
+		a.CompressionType = types.CompressionImplementation(compressionType)
 		err = a.Compress(sourcePath, concurrency)
 		if err != nil {
 			util.DefaultContext.Fatal("failed compressing ", packageName, ": ", err.Error())

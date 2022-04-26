@@ -18,6 +18,7 @@ package installer
 import (
 	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/compiler"
+	"github.com/mudler/luet/pkg/tree"
 )
 
 type RepositoryOption func(cfg *RepositoryConfig) error
@@ -34,6 +35,9 @@ type RepositoryConfig struct {
 
 	context                                         types.Context
 	PushImages, Force, FromRepository, FromMetadata bool
+
+	compilerParser []tree.FileParser
+	runtimeParser  []tree.FileParser
 }
 
 // Apply applies the given options to the config, returning the first error
@@ -53,6 +57,20 @@ func (cfg *RepositoryConfig) Apply(opts ...RepositoryOption) error {
 func WithContext(c types.Context) func(cfg *RepositoryConfig) error {
 	return func(cfg *RepositoryConfig) error {
 		cfg.context = c
+		return nil
+	}
+}
+
+func WithRuntimeParser(parsers ...tree.FileParser) RepositoryOption {
+	return func(cfg *RepositoryConfig) error {
+		cfg.runtimeParser = append(cfg.runtimeParser, parsers...)
+		return nil
+	}
+}
+
+func WithCompilerParser(parsers ...tree.FileParser) RepositoryOption {
+	return func(cfg *RepositoryConfig) error {
+		cfg.compilerParser = append(cfg.compilerParser, parsers...)
 		return nil
 	}
 }

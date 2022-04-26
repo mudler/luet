@@ -29,7 +29,6 @@ import (
 
 	"github.com/mudler/luet/pkg/api/core/template"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
-	compression "github.com/mudler/luet/pkg/compiler/types/compression"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"go.uber.org/multierr"
 
@@ -60,9 +59,9 @@ const (
 )
 
 type LuetRepositoryFile struct {
-	FileName        string                     `json:"filename"`
-	CompressionType compression.Implementation `json:"compressiontype,omitempty"`
-	Checksums       artifact.Checksums         `json:"checksums,omitempty"`
+	FileName        string                          `json:"filename"`
+	CompressionType types.CompressionImplementation `json:"compressiontype,omitempty"`
+	Checksums       artifact.Checksums              `json:"checksums,omitempty"`
 }
 
 type LuetSystemRepository struct {
@@ -205,21 +204,21 @@ func (m *LuetSystemRepositoryMetadata) ToArtifactIndex() (ans compiler.ArtifactI
 func NewDefaultTreeRepositoryFile() LuetRepositoryFile {
 	return LuetRepositoryFile{
 		FileName:        TREE_TARBALL,
-		CompressionType: compression.GZip,
+		CompressionType: types.GZip,
 	}
 }
 
 func NewDefaultCompilerTreeRepositoryFile() LuetRepositoryFile {
 	return LuetRepositoryFile{
 		FileName:        COMPILERTREE_TARBALL,
-		CompressionType: compression.GZip,
+		CompressionType: types.GZip,
 	}
 }
 
 func NewDefaultMetaRepositoryFile() LuetRepositoryFile {
 	return LuetRepositoryFile{
 		FileName:        REPOSITORY_METAFILE + ".tar",
-		CompressionType: compression.None,
+		CompressionType: types.None,
 	}
 }
 
@@ -240,14 +239,14 @@ func (f *LuetRepositoryFile) GetFileName() string {
 // SetCompressionType sets the compression type of the repository file.
 // Each repository can ship arbitrary file that will be downloaded by the client
 // in case of need, this sets the compression type that the client will use to uncompress the artifact
-func (f *LuetRepositoryFile) SetCompressionType(c compression.Implementation) {
+func (f *LuetRepositoryFile) SetCompressionType(c types.CompressionImplementation) {
 	f.CompressionType = c
 }
 
 // GetCompressionType gets the compression type of the repository file.
 // Each repository can ship arbitrary file that will be downloaded by the client
 // in case of need, this gets the compression type that the client will use to uncompress the artifact
-func (f *LuetRepositoryFile) GetCompressionType() compression.Implementation {
+func (f *LuetRepositoryFile) GetCompressionType() types.CompressionImplementation {
 	return f.CompressionType
 }
 
@@ -272,11 +271,11 @@ func GenerateRepository(p ...RepositoryOption) (*LuetSystemRepository, error) {
 	c := RepositoryConfig{}
 	c.Apply(p...)
 
-	btr := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+	btr := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false), c.compilerParser...)
 	runtimeTree := pkg.NewInMemoryDatabase(false)
 
 	tempTree := pkg.NewInMemoryDatabase(false)
-	temptr := tree.NewInstallerRecipe(tempTree)
+	temptr := tree.NewInstallerRecipe(tempTree, c.runtimeParser...)
 
 	for _, treeDir := range c.Tree {
 		if err := temptr.Load(treeDir); err != nil {
@@ -291,7 +290,7 @@ func GenerateRepository(p ...RepositoryOption) (*LuetSystemRepository, error) {
 	// instead of local tree
 
 	repodb := pkg.NewInMemoryDatabase(false)
-	generalRecipe := tree.NewCompilerRecipe(repodb)
+	generalRecipe := tree.NewCompilerRecipe(repodb, c.compilerParser...)
 
 	if c.FromRepository {
 		if _, err := LoadBuildTree(generalRecipe, repodb, c.context); err != nil {
@@ -354,7 +353,7 @@ func GenerateRepository(p ...RepositoryOption) (*LuetSystemRepository, error) {
 
 	repo := &LuetSystemRepository{
 		LuetRepository:  types.NewLuetRepository(c.Name, c.Type, c.Description, c.Urls, c.Priority, true, false),
-		Tree:            tree.NewInstallerRecipe(runtimeTree),
+		Tree:            tree.NewInstallerRecipe(runtimeTree, c.runtimeParser...),
 		BuildTree:       btr,
 		RepositoryFiles: map[string]LuetRepositoryFile{},
 		PushImages:      c.PushImages,

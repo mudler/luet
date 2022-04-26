@@ -29,7 +29,7 @@ var _ = Describe("CLI Helpers", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(pack.GetName()).To(Equal("foo"))
 			Expect(pack.GetCategory()).To(Equal(""))
-			Expect(pack.GetVersion()).To(Equal(">=0"))
+			Expect(pack.GetVersion()).To(Equal(""))
 		})
 		It("accept unversioned packages with category", func() {
 			pack, err := ParsePackageStr("cat/foo")

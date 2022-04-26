@@ -43,8 +43,6 @@ import (
 	"github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/api/core/types"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
-	compression "github.com/mudler/luet/pkg/compiler/types/compression"
-	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
@@ -58,17 +56,17 @@ import (
 type PackageArtifact struct {
 	Path string `json:"path"`
 
-	Dependencies      []*PackageArtifact                `json:"dependencies"`
-	CompileSpec       *compilerspec.LuetCompilationSpec `json:"compilationspec"`
-	Checksums         Checksums                         `json:"checksums"`
-	SourceAssertion   types.PackagesAssertions          `json:"-"`
-	CompressionType   compression.Implementation        `json:"compressiontype"`
-	Files             []string                          `json:"files"`
-	PackageCacheImage string                            `json:"package_cacheimage"`
-	Runtime           *types.Package                    `json:"runtime,omitempty"`
+	Dependencies      []*PackageArtifact              `json:"dependencies"`
+	CompileSpec       *types.LuetCompilationSpec      `json:"compilationspec"`
+	Checksums         Checksums                       `json:"checksums"`
+	SourceAssertion   types.PackagesAssertions        `json:"-"`
+	CompressionType   types.CompressionImplementation `json:"compressiontype"`
+	Files             []string                        `json:"files"`
+	PackageCacheImage string                          `json:"package_cacheimage"`
+	Runtime           *types.Package                  `json:"runtime,omitempty"`
 }
 
-func ImageToArtifact(ctx types.Context, img v1.Image, t compression.Implementation, output string, filter func(h *tar.Header) (bool, error)) (*PackageArtifact, error) {
+func ImageToArtifact(ctx types.Context, img v1.Image, t types.CompressionImplementation, output string, filter func(h *tar.Header) (bool, error)) (*PackageArtifact, error) {
 	_, tmpdiffs, err := image.Extract(ctx, img, filter)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error met while creating tempdir for rootfs")
@@ -90,17 +88,12 @@ func (p *PackageArtifact) ShallowCopy() *PackageArtifact {
 }
 
 func NewPackageArtifact(path string) *PackageArtifact {
-	return &PackageArtifact{Path: path, Dependencies: []*PackageArtifact{}, Checksums: Checksums{}, CompressionType: compression.None}
+	return &PackageArtifact{Path: path, Dependencies: []*PackageArtifact{}, Checksums: Checksums{}, CompressionType: types.None}
 }
 
 func NewPackageArtifactFromYaml(data []byte) (*PackageArtifact, error) {
 	p := &PackageArtifact{Checksums: Checksums{}}
-	err := yaml.Unmarshal(data, p)
-	if err != nil {
-		return p, err
-	}
-
-	return p, err
+	return p, yaml.Unmarshal(data, p)
 }
 
 func (a *PackageArtifact) Hash() error {
@@ -147,7 +140,6 @@ func (a *PackageArtifact) WriteYAML(dst string) error {
 	if err != nil {
 		return errors.Wrap(err, "Generated invalid artifact")
 	}
-
 	//p := a.CompileSpec.GetPackage().GetPath()
 
 	mangle.CompileSpec.GetPackage().SetPath("")
@@ -233,7 +225,7 @@ func (a *PackageArtifact) GenerateFinalImage(ctx types.Context, imageName string
 func (a *PackageArtifact) Compress(src string, concurrency int) error {
 	switch a.CompressionType {
 
-	case compression.Zstandard:
+	case types.Zstandard:
 		err := helpers.Tar(src, a.Path)
 		if err != nil {
 			return err
@@ -271,7 +263,7 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 
 		a.Path = zstdFile
 		return nil
-	case compression.GZip:
+	case types.GZip:
 		err := helpers.Tar(src, a.Path)
 		if err != nil {
 			return err
@@ -315,10 +307,10 @@ func (a *PackageArtifact) Compress(src string, concurrency int) error {
 
 func (a *PackageArtifact) getCompressedName() string {
 	switch a.CompressionType {
-	case compression.Zstandard:
+	case types.Zstandard:
 		return a.Path + ".zst"
 
-	case compression.GZip:
+	case types.GZip:
 		return a.Path + ".gz"
 	}
 	return a.Path
@@ -327,7 +319,7 @@ func (a *PackageArtifact) getCompressedName() string {
 // GetUncompressedName returns the artifact path without the extension suffix
 func (a *PackageArtifact) GetUncompressedName() string {
 	switch a.CompressionType {
-	case compression.Zstandard, compression.GZip:
+	case types.Zstandard, types.GZip:
 		return strings.TrimSuffix(a.Path, filepath.Ext(a.Path))
 	}
 	return a.Path

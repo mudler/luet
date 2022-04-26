@@ -30,7 +30,6 @@ import (
 	"github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/compiler/types/options"
-	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	pkg "github.com/mudler/luet/pkg/database"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/installer"
@@ -536,7 +535,7 @@ urls:
 
 			a, err = c.DownloadArtifact(&artifact.PackageArtifact{
 				Path: "test.tar",
-				CompileSpec: &compilerspec.LuetCompilationSpec{
+				CompileSpec: &types.LuetCompilationSpec{
 					Package: &types.Package{
 						Name:     "b",
 						Category: "test",
@@ -608,7 +607,7 @@ urls:
 
 			a, err = c.DownloadArtifact(&artifact.PackageArtifact{
 				Path: "test.tar",
-				CompileSpec: &compilerspec.LuetCompilationSpec{
+				CompileSpec: &types.LuetCompilationSpec{
 					Package: &types.Package{
 						Name:     "a",
 						Category: "test",
@@ -629,7 +628,7 @@ urls:
 				&LuetSystemRepository{
 					Index: compiler.ArtifactIndex{
 						&artifact.PackageArtifact{
-							CompileSpec: &compilerspec.LuetCompilationSpec{
+							CompileSpec: &types.LuetCompilationSpec{
 								Package: &types.Package{},
 							},
 							Path:  "bar",
@@ -653,7 +652,7 @@ urls:
 				Index: compiler.ArtifactIndex{
 					&artifact.PackageArtifact{
 						Path: "foo",
-						CompileSpec: &compilerspec.LuetCompilationSpec{
+						CompileSpec: &types.LuetCompilationSpec{
 							Package: &types.Package{
 								Name:     "foo",
 								Category: "bar",
@@ -663,7 +662,7 @@ urls:
 					},
 					&artifact.PackageArtifact{
 						Path: "baz",
-						CompileSpec: &compilerspec.LuetCompilationSpec{
+						CompileSpec: &types.LuetCompilationSpec{
 							Package: &types.Package{
 								Name:     "foo",
 								Category: "baz",

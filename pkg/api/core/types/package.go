@@ -245,6 +245,8 @@ type Package struct {
 	Labels map[string]string `json:"labels,omitempty"` // Affects YAML field names too.
 
 	TreeDir string `json:"treedir,omitempty"`
+
+	OriginDockerfile string `json:"dockerfile,omitempty"`
 }
 
 // State represent the package state
@@ -267,6 +269,17 @@ func (p *Package) SetTreeDir(s string) {
 func (p *Package) GetTreeDir() string {
 	return p.TreeDir
 }
+
+func (p *Package) SetOriginalDockerfile(s string) error {
+	dat, err := ioutil.ReadFile(s)
+	if err != nil {
+		return errors.Wrap(err, "Error reading file "+s)
+	}
+
+	p.OriginDockerfile = string(dat)
+	return nil
+}
+
 func (p *Package) String() string {
 	b, err := p.JSON()
 	if err != nil {
@@ -712,6 +725,10 @@ func (p *Package) GetRuntimePackage() (*Package, error) {
 				break
 			}
 		}
+	} else if p.OriginDockerfile != "" {
+		// XXX: There are no runtime metadata at the moment available except package name in this case
+		// This needs to be adapted and aligned up with the tree parser
+		return &Package{Name: p.Name}, nil
 	} else {
 		definitionFile := filepath.Join(p.Path, PackageDefinitionFile)
 		dat, err := ioutil.ReadFile(definitionFile)

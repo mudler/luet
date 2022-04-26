@@ -25,11 +25,8 @@ import (
 	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler"
-	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	"github.com/mudler/luet/pkg/installer"
 
-	"github.com/mudler/luet/pkg/compiler/types/compression"
-	"github.com/mudler/luet/pkg/compiler/types/options"
 	pkg "github.com/mudler/luet/pkg/database"
 	fileHelpers "github.com/mudler/luet/pkg/helpers/file"
 	tree "github.com/mudler/luet/pkg/tree"
@@ -120,8 +117,9 @@ Build packages specifying multiple definition trees:
 		out, _ := cmd.Flags().GetString("output")
 		pretend, _ := cmd.Flags().GetBool("pretend")
 		fromRepo, _ := cmd.Flags().GetBool("from-repositories")
+		fromDockerfiles, _ := cmd.Flags().GetBool("dockerfiles")
 
-		compilerSpecs := compilerspec.NewLuetCompilationspecs()
+		compilerSpecs := types.NewLuetCompilationspecs()
 
 		var db types.PackageDatabase
 		var results Results
@@ -136,8 +134,16 @@ Build packages specifying multiple definition trees:
 		runtimeDB := pkg.NewInMemoryDatabase(false)
 		defer runtimeDB.Clean()
 
-		installerRecipe := tree.NewInstallerRecipe(runtimeDB)
-		generalRecipe := tree.NewCompilerRecipe(db)
+		installerRecipeParsers := tree.DefaultInstallerParsers
+		generalRecipeParsers := tree.DefaultCompilerParsers
+
+		if fromDockerfiles {
+			installerRecipeParsers = append(installerRecipeParsers, tree.RuntimeDockerfileParser)
+			generalRecipeParsers = append(generalRecipeParsers, tree.BuildDockerfileParser)
+		}
+
+		installerRecipe := tree.NewInstallerRecipe(runtimeDB, installerRecipeParsers...)
+		generalRecipe := tree.NewCompilerRecipe(db, generalRecipeParsers...)
 
 		for _, src := range treePaths {
 			util.DefaultContext.Info("Loading tree", src)
@@ -172,40 +178,40 @@ Build packages specifying multiple definition trees:
 
 		util.DefaultContext.Debug("Solver", opts.CompactString())
 
-		compileropts := []options.Option{options.NoDeps(nodeps),
-			options.WithBackendType(backendType),
-			options.PushImages(push),
-			options.WithBuildValues(values),
-			options.WithPullRepositories(pullRepo),
-			options.WithPushRepository(imageRepository),
-			options.Rebuild(rebuild),
-			options.WithTemplateFolder(templateFolders),
-			options.WithSolverOptions(opts),
-			options.Wait(wait),
-			options.WithRuntimeDatabase(installerRecipe.GetDatabase()),
-			options.OnlyTarget(onlyTarget),
-			options.PullFirst(pull),
-			options.KeepImg(keepImages),
-			options.OnlyDeps(onlydeps),
-			options.WithContext(util.DefaultContext),
-			options.BackendArgs(backendArgs),
-			options.Concurrency(concurrency),
-			options.WithCompressionType(compression.Implementation(compressionType))}
+		compileropts := []types.CompilerOption{compiler.NoDeps(nodeps),
+			compiler.WithBackendType(backendType),
+			compiler.PushImages(push),
+			compiler.WithBuildValues(values),
+			compiler.WithPullRepositories(pullRepo),
+			compiler.WithPushRepository(imageRepository),
+			compiler.Rebuild(rebuild),
+			compiler.WithTemplateFolder(templateFolders),
+			compiler.WithSolverOptions(opts),
+			compiler.Wait(wait),
+			compiler.WithRuntimeDatabase(installerRecipe.GetDatabase()),
+			compiler.OnlyTarget(onlyTarget),
+			compiler.PullFirst(pull),
+			compiler.KeepImg(keepImages),
+			compiler.OnlyDeps(onlydeps),
+			compiler.WithContext(util.DefaultContext),
+			compiler.BackendArgs(backendArgs),
+			compiler.Concurrency(concurrency),
+			compiler.WithCompressionType(types.CompressionImplementation(compressionType))}
 
 		if pushFinalImages {
-			compileropts = append(compileropts, options.EnablePushFinalImages)
+			compileropts = append(compileropts, compiler.EnablePushFinalImages)
 			if pushFinalImagesForce {
-				compileropts = append(compileropts, options.ForcePushFinalImages)
+				compileropts = append(compileropts, compiler.ForcePushFinalImages)
 			}
 			if pushFinalImagesRepository != "" {
-				compileropts = append(compileropts, options.WithFinalRepository(pushFinalImagesRepository))
+				compileropts = append(compileropts, compiler.WithFinalRepository(pushFinalImagesRepository))
 			} else if imageRepository != "" {
-				compileropts = append(compileropts, options.WithFinalRepository(imageRepository))
+				compileropts = append(compileropts, compiler.WithFinalRepository(imageRepository))
 			}
 		}
 
 		if generateImages {
-			compileropts = append(compileropts, options.EnableGenerateFinalImages)
+			compileropts = append(compileropts, compiler.EnableGenerateFinalImages)
 		}
 
 		luetCompiler := compiler.NewLuetCompiler(compilerBackend, generalRecipe.GetDatabase(), compileropts...)
@@ -255,7 +261,7 @@ Build packages specifying multiple definition trees:
 			artifact, errs = luetCompiler.CompileWithReverseDeps(privileged, compilerSpecs)
 
 		} else if pretend {
-			var toCalculate []*compilerspec.LuetCompilationSpec
+			var toCalculate []*types.LuetCompilationSpec
 			if full {
 				var err error
 				toCalculate, err = luetCompiler.ComputeMinimumCompilableSet(compilerSpecs.All()...)
@@ -337,7 +343,7 @@ func init() {
 	buildCmd.Flags().Bool("push-final-images", false, "Push final images while building")
 	buildCmd.Flags().Bool("push-final-images-force", false, "Override existing images")
 	buildCmd.Flags().String("push-final-images-repository", "", "Repository where to push final images to")
-
+	buildCmd.Flags().Bool("dockerfiles", false, "Source packages also from dockerfiles")
 	buildCmd.Flags().Bool("full", false, "Build all packages (optimized)")
 	buildCmd.Flags().StringSlice("values", []string{}, "Build values file to interpolate with each package")
 	buildCmd.Flags().StringSliceP("backend-args", "a", []string{}, "Backend args")

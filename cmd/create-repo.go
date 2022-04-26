@@ -20,9 +20,10 @@ import (
 
 	helpers "github.com/mudler/luet/cmd/helpers"
 	"github.com/mudler/luet/cmd/util"
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/compiler"
-	"github.com/mudler/luet/pkg/compiler/types/compression"
 	installer "github.com/mudler/luet/pkg/installer"
+	"github.com/mudler/luet/pkg/tree"
 
 	//	. "github.com/mudler/luet/pkg/logger"
 	pkg "github.com/mudler/luet/pkg/database"
@@ -93,6 +94,7 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		source_repo := viper.GetString("repo")
 		backendType := viper.GetString("backend")
 		fromRepo, _ := cmd.Flags().GetBool("from-repositories")
+		dockerFiles, _ := cmd.Flags().GetBool("dockerfiles")
 
 		treeFile := installer.NewDefaultTreeRepositoryFile()
 		metaFile := installer.NewDefaultMetaRepositoryFile()
@@ -112,6 +114,11 @@ Create a repository from the metadata description defined in the luet.yaml confi
 			installer.WithCompilerBackend(compilerBackend),
 			installer.FromMetadata(viper.GetBool("from-metadata")),
 			installer.WithContext(util.DefaultContext),
+		}
+
+		if dockerFiles {
+			opts = append(opts, installer.WithCompilerParser(append(tree.DefaultCompilerParsers, tree.BuildDockerfileParser)...))
+			opts = append(opts, installer.WithRuntimeParser(append(tree.DefaultInstallerParsers, tree.RuntimeDockerfileParser)...))
 		}
 
 		if source_repo != "" {
@@ -150,7 +157,7 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		helpers.CheckErr(err)
 
 		if treetype != "" {
-			treeFile.SetCompressionType(compression.Implementation(treetype))
+			treeFile.SetCompressionType(types.CompressionImplementation(treetype))
 		}
 
 		if treeName != "" {
@@ -158,7 +165,7 @@ Create a repository from the metadata description defined in the luet.yaml confi
 		}
 
 		if metatype != "" {
-			metaFile.SetCompressionType(compression.Implementation(metatype))
+			metaFile.SetCompressionType(types.CompressionImplementation(metatype))
 		}
 
 		if metaName != "" {
@@ -188,6 +195,7 @@ func init() {
 	createrepoCmd.Flags().Bool("reset-revision", false, "Reset repository revision.")
 	createrepoCmd.Flags().String("repo", "", "Use repository defined in configuration.")
 	createrepoCmd.Flags().String("backend", "docker", "backend used (docker,img)")
+	createrepoCmd.Flags().Bool("dockerfiles", false, "Read dockerfiles in tree as packages.")
 
 	createrepoCmd.Flags().Bool("force-push", false, "Force overwrite of docker images if already present online")
 	createrepoCmd.Flags().Bool("push-images", false, "Enable/Disable docker image push for docker repositories")

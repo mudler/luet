@@ -24,7 +24,6 @@ import (
 
 	"github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/mudler/luet/pkg/api/core/types/artifact"
-	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -77,13 +76,13 @@ var _ = Describe("Cache", func() {
 			_, err = cache.Get(a)
 			Expect(err).To(HaveOccurred())
 
-			a.CompileSpec = &compilerspec.LuetCompilationSpec{Package: &types.Package{Name: "foo", Category: "bar"}}
+			a.CompileSpec = &types.LuetCompilationSpec{Package: &types.Package{Name: "foo", Category: "bar"}}
 			_, _, err = cache.Put(a)
 			Expect(err).ToNot(HaveOccurred())
 
 			c := NewPackageArtifact(filepath.Join(tmpdir, "foo.tar.gz"))
 			c.Hash()
-			c.CompileSpec = &compilerspec.LuetCompilationSpec{Package: &types.Package{Name: "foo", Category: "bar"}}
+			c.CompileSpec = &types.LuetCompilationSpec{Package: &types.Package{Name: "foo", Category: "bar"}}
 			_, err = cache.Get(c)
 			Expect(err).ToNot(HaveOccurred())
 		})

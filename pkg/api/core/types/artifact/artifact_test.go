@@ -21,14 +21,12 @@ import (
 	"path/filepath"
 
 	"github.com/mudler/luet/pkg/api/core/types"
+	"github.com/mudler/luet/pkg/compiler"
 
 	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/image"
 	. "github.com/mudler/luet/pkg/api/core/types/artifact"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
-	compression "github.com/mudler/luet/pkg/compiler/types/compression"
-	"github.com/mudler/luet/pkg/compiler/types/options"
-	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 
 	. "github.com/mudler/luet/pkg/compiler"
 	pkg "github.com/mudler/luet/pkg/database"
@@ -50,7 +48,7 @@ var _ = Describe("Artifact", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 
-			cc := NewLuetCompiler(nil, generalRecipe.GetDatabase(), options.WithContext(context.NewContext()))
+			cc := NewLuetCompiler(nil, generalRecipe.GetDatabase(), compiler.WithContext(context.NewContext()))
 			lspec, err := cc.FromPackage(&types.Package{Name: "enman", Category: "app-admin", Version: "1.4.0"})
 			Expect(err).ToNot(HaveOccurred())
 
@@ -142,7 +140,7 @@ RUN echo bar > /test2`))
 			Expect(err).ToNot(HaveOccurred())
 
 			a := NewPackageArtifact(filepath.Join(tmpWork, "fake.tar"))
-			a.CompileSpec = &compilerspec.LuetCompilationSpec{Package: &types.Package{Name: "foo", Version: "1.0"}}
+			a.CompileSpec = &types.LuetCompilationSpec{Package: &types.Package{Name: "foo", Version: "1.0"}}
 
 			err = a.Compress(tmpdir, 1)
 			Expect(err).ToNot(HaveOccurred())
@@ -190,7 +188,7 @@ RUN echo bar > /test2`))
 			defer os.RemoveAll(tmpWork) // clean up
 
 			a := NewPackageArtifact(filepath.Join(tmpWork, "fake.tar"))
-			a.CompileSpec = &compilerspec.LuetCompilationSpec{Package: &types.Package{Name: "foo", Version: "1.0"}}
+			a.CompileSpec = &types.LuetCompilationSpec{Package: &types.Package{Name: "foo", Version: "1.0"}}
 
 			err = a.Compress(tmpdir, 1)
 			Expect(err).ToNot(HaveOccurred())
@@ -219,15 +217,15 @@ RUN echo bar > /test2`))
 
 		It("Retrieves uncompressed name", func() {
 			a := NewPackageArtifact("foo.tar.gz")
-			a.CompressionType = (compression.GZip)
+			a.CompressionType = (types.GZip)
 			Expect(a.GetUncompressedName()).To(Equal("foo.tar"))
 
 			a = NewPackageArtifact("foo.tar.zst")
-			a.CompressionType = compression.Zstandard
+			a.CompressionType = types.Zstandard
 			Expect(a.GetUncompressedName()).To(Equal("foo.tar"))
 
 			a = NewPackageArtifact("foo.tar")
-			a.CompressionType = compression.None
+			a.CompressionType = types.None
 			Expect(a.GetUncompressedName()).To(Equal("foo.tar"))
 		})
 	})

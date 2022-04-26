@@ -16,6 +16,7 @@
 package compiler
 
 import (
+	"bytes"
 	"crypto/md5"
 	"fmt"
 	"io"
@@ -29,6 +30,8 @@ import (
 	"sync"
 	"time"
 
+	dockerfile "github.com/asottile/dockerfile"
+	"github.com/imdario/mergo"
 	bus "github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/image"
@@ -36,14 +39,10 @@ import (
 	"github.com/mudler/luet/pkg/api/core/types"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler/backend"
-	"github.com/mudler/luet/pkg/compiler/types/options"
-	compilerspec "github.com/mudler/luet/pkg/compiler/types/spec"
 	pkg "github.com/mudler/luet/pkg/database"
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/mudler/luet/pkg/solver"
-
-	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -68,17 +67,17 @@ type LuetCompiler struct {
 	//*tree.CompilerRecipe
 	Backend  CompilerBackend
 	Database types.PackageDatabase
-	Options  options.Compiler
+	Options  types.CompilerOptions
 }
 
-func NewCompiler(p ...options.Option) *LuetCompiler {
-	c := options.NewDefaultCompiler()
+func NewCompiler(p ...types.CompilerOption) *LuetCompiler {
+	c := newDefaultCompiler()
 	c.Apply(p...)
 
 	return &LuetCompiler{Options: *c}
 }
 
-func NewLuetCompiler(backend CompilerBackend, db types.PackageDatabase, compilerOpts ...options.Option) *LuetCompiler {
+func NewLuetCompiler(backend CompilerBackend, db types.PackageDatabase, compilerOpts ...types.CompilerOption) *LuetCompiler {
 	// The CompilerRecipe will gives us a tree with only build deps listed.
 
 	c := NewCompiler(compilerOpts...)
@@ -92,7 +91,7 @@ func NewLuetCompiler(backend CompilerBackend, db types.PackageDatabase, compiler
 	return c
 }
 
-func (cs *LuetCompiler) compilerWorker(i int, wg *sync.WaitGroup, cspecs chan *compilerspec.LuetCompilationSpec, a *[]*artifact.PackageArtifact, m *sync.Mutex, concurrency int, keepPermissions bool, errors chan error) {
+func (cs *LuetCompiler) compilerWorker(i int, wg *sync.WaitGroup, cspecs chan *types.LuetCompilationSpec, a *[]*artifact.PackageArtifact, m *sync.Mutex, concurrency int, keepPermissions bool, errors chan error) {
 	defer wg.Done()
 
 	for s := range cspecs {
@@ -108,14 +107,14 @@ func (cs *LuetCompiler) compilerWorker(i int, wg *sync.WaitGroup, cspecs chan *c
 }
 
 // CompileWithReverseDeps compiles the supplied compilationspecs and their reverse dependencies
-func (cs *LuetCompiler) CompileWithReverseDeps(keepPermissions bool, ps *compilerspec.LuetCompilationspecs) ([]*artifact.PackageArtifact, []error) {
+func (cs *LuetCompiler) CompileWithReverseDeps(keepPermissions bool, ps *types.LuetCompilationspecs) ([]*artifact.PackageArtifact, []error) {
 	artifacts, err := cs.CompileParallel(keepPermissions, ps)
 	if len(err) != 0 {
 		return artifacts, err
 	}
 
 	cs.Options.Context.Info(":ant: Resolving reverse dependencies")
-	toCompile := compilerspec.NewLuetCompilationspecs()
+	toCompile := types.NewLuetCompilationspecs()
 	for _, a := range artifacts {
 
 		revdeps := a.CompileSpec.GetPackage().Revdeps(cs.Database)
@@ -141,8 +140,8 @@ func (cs *LuetCompiler) CompileWithReverseDeps(keepPermissions bool, ps *compile
 
 // CompileParallel compiles the supplied compilationspecs in parallel
 // to note, no specific heuristic is implemented, and the specs are run in parallel as they are.
-func (cs *LuetCompiler) CompileParallel(keepPermissions bool, ps *compilerspec.LuetCompilationspecs) ([]*artifact.PackageArtifact, []error) {
-	all := make(chan *compilerspec.LuetCompilationSpec)
+func (cs *LuetCompiler) CompileParallel(keepPermissions bool, ps *types.LuetCompilationspecs) ([]*artifact.PackageArtifact, []error) {
+	all := make(chan *types.LuetCompilationSpec)
 	artifacts := []*artifact.PackageArtifact{}
 	mutex := &sync.Mutex{}
 	errors := make(chan error, ps.Len())
@@ -227,7 +226,7 @@ func (cs *LuetCompiler) stripFromRootfs(includes []string, rootfs string, includ
 	return nil
 }
 
-func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec, runnerOpts backend.Options) (*artifact.PackageArtifact, error) {
+func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *types.LuetCompilationSpec, runnerOpts backend.Options) (*artifact.PackageArtifact, error) {
 
 	if !cs.Backend.ImageExists(runnerOpts.ImageName) {
 		if err := cs.Backend.DownloadImage(runnerOpts); err != nil {
@@ -274,7 +273,7 @@ func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *compi
 	return a, nil
 }
 
-func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec, builderOpts, runnerOpts backend.Options) (*artifact.PackageArtifact, error) {
+func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p *types.LuetCompilationSpec, builderOpts, runnerOpts backend.Options) (*artifact.PackageArtifact, error) {
 
 	rootfs, err := cs.Options.Context.TempDir("rootfs")
 	if err != nil {
@@ -339,7 +338,7 @@ func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p *co
 
 func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImage string,
 	concurrency int, keepPermissions bool,
-	p *compilerspec.LuetCompilationSpec) (backend.Options, backend.Options, error) {
+	p *types.LuetCompilationSpec) (backend.Options, backend.Options, error) {
 
 	var runnerOpts, builderOpts backend.Options
 
@@ -449,7 +448,7 @@ func (cs *LuetCompiler) buildPackageImage(image, buildertaggedImage, packageImag
 	return builderOpts, runnerOpts, nil
 }
 
-func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builderOpts, runnerOpts backend.Options, concurrency int, keepPermissions bool) (*artifact.PackageArtifact, error) {
+func (cs *LuetCompiler) genArtifact(p *types.LuetCompilationSpec, builderOpts, runnerOpts backend.Options, concurrency int, keepPermissions bool) (*artifact.PackageArtifact, error) {
 
 	// generate *artifact.PackageArtifact
 	var a *artifact.PackageArtifact
@@ -526,7 +525,7 @@ func (cs *LuetCompiler) genArtifact(p *compilerspec.LuetCompilationSpec, builder
 }
 
 // finalizeImages finalizes images and generates final artifacts (push them as well if necessary).
-func (cs *LuetCompiler) finalizeImages(a *artifact.PackageArtifact, p *compilerspec.LuetCompilationSpec, keepPermissions bool) error {
+func (cs *LuetCompiler) finalizeImages(a *artifact.PackageArtifact, p *types.LuetCompilationSpec, keepPermissions bool) error {
 
 	// TODO: This is a small readaptation of repository_docker.go pushImageFromArtifact().
 	//       Maybe can be moved to a common place.
@@ -626,7 +625,7 @@ func oneOfImagesAvailable(images []string, b CompilerBackend) (bool, string) {
 	return false, ""
 }
 
-func (cs *LuetCompiler) findImageHash(imageHash string, p *compilerspec.LuetCompilationSpec) string {
+func (cs *LuetCompiler) findImageHash(imageHash string, p *types.LuetCompilationSpec) string {
 	var resolvedImage string
 	cs.Options.Context.Debug("Resolving image hash for", p.Package.HumanReadableString(), "hash", imageHash, "Pull repositories", p.BuildOptions.PullImageRepository)
 	toChecklist := append([]string{fmt.Sprintf("%s:%s", cs.Options.PushImageRepository, imageHash)},
@@ -646,7 +645,7 @@ func (cs *LuetCompiler) findImageHash(imageHash string, p *compilerspec.LuetComp
 	return resolvedImage
 }
 
-func (cs *LuetCompiler) resolveExistingImageHash(imageHash string, p *compilerspec.LuetCompilationSpec) string {
+func (cs *LuetCompiler) resolveExistingImageHash(imageHash string, p *types.LuetCompilationSpec) string {
 	resolvedImage := cs.findImageHash(imageHash, p)
 
 	if resolvedImage == "" {
@@ -655,7 +654,7 @@ func (cs *LuetCompiler) resolveExistingImageHash(imageHash string, p *compilersp
 	return resolvedImage
 }
 
-func LoadArtifactFromYaml(spec *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
+func LoadArtifactFromYaml(spec *types.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
 	metaFile := spec.GetPackage().GetMetadataFilePath()
 	dat, err := ioutil.ReadFile(spec.Rel(metaFile))
 	if err != nil {
@@ -670,7 +669,7 @@ func LoadArtifactFromYaml(spec *compilerspec.LuetCompilationSpec) (*artifact.Pac
 	return art, nil
 }
 
-func (cs *LuetCompiler) getImageArtifact(hash string, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
+func (cs *LuetCompiler) getImageArtifact(hash string, p *types.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
 	// we check if there is an available image with the given hash and
 	// we return a full artifact if can be loaded locally.
 	cs.Options.Context.Debug("Get image artifact for", p.Package.HumanReadableString(), "hash", hash, "Pull repositories", p.BuildOptions.PullImageRepository)
@@ -700,7 +699,7 @@ func (cs *LuetCompiler) getImageArtifact(hash string, p *compilerspec.LuetCompil
 func (cs *LuetCompiler) compileWithImage(image, builderHash string, packageTagHash string,
 	concurrency int,
 	keepPermissions, keepImg bool,
-	p *compilerspec.LuetCompilationSpec, generateArtifact bool) (*artifact.PackageArtifact, error) {
+	p *types.LuetCompilationSpec, generateArtifact bool) (*artifact.PackageArtifact, error) {
 
 	// If it is a virtual, check if we have to generate an empty artifact or not.
 	if generateArtifact && p.IsVirtual() {
@@ -781,8 +780,8 @@ func (cs *LuetCompiler) compileWithImage(image, builderHash string, packageTagHa
 
 // FromDatabase returns all the available compilation specs from a database. If the minimum flag is returned
 // it will be computed a minimal subset that will guarantees that all packages are built ( if not targeting a single package explictly )
-func (cs *LuetCompiler) FromDatabase(db types.PackageDatabase, minimum bool, dst string) ([]*compilerspec.LuetCompilationSpec, error) {
-	compilerSpecs := compilerspec.NewLuetCompilationspecs()
+func (cs *LuetCompiler) FromDatabase(db types.PackageDatabase, minimum bool, dst string) ([]*types.LuetCompilationSpec, error) {
+	compilerSpecs := types.NewLuetCompilationspecs()
 
 	w := db.World()
 
@@ -805,7 +804,7 @@ func (cs *LuetCompiler) FromDatabase(db types.PackageDatabase, minimum bool, dst
 	}
 }
 
-func (cs *LuetCompiler) ComputeDepTree(p *compilerspec.LuetCompilationSpec, db types.PackageDatabase) (types.PackagesAssertions, error) {
+func (cs *LuetCompiler) ComputeDepTree(p *types.LuetCompilationSpec, db types.PackageDatabase) (types.PackagesAssertions, error) {
 	s := solver.NewResolver(cs.Options.SolverOptions.SolverOptions, pkg.NewInMemoryDatabase(false), db, pkg.NewInMemoryDatabase(false), solver.NewSolverFromOptions(cs.Options.SolverOptions))
 
 	solution, err := s.Install(types.Packages{p.GetPackage()})
@@ -826,7 +825,7 @@ func (cs *LuetCompiler) ComputeDepTree(p *compilerspec.LuetCompilationSpec, db t
 // for _, l := range bt.AllLevels() {
 //	fmt.Println(strings.Join(bt.AllInLevel(l), " "))
 // }
-func (cs *LuetCompiler) BuildTree(compilerSpecs compilerspec.LuetCompilationspecs) (*BuildTree, error) {
+func (cs *LuetCompiler) BuildTree(compilerSpecs types.LuetCompilationspecs) (*BuildTree, error) {
 	compilationTree := map[string]map[string]interface{}{}
 	bt := &BuildTree{}
 
@@ -866,11 +865,11 @@ func (cs *LuetCompiler) BuildTree(compilerSpecs compilerspec.LuetCompilationspec
 }
 
 // ComputeMinimumCompilableSet strips specs that are eventually compiled by leafs
-func (cs *LuetCompiler) ComputeMinimumCompilableSet(p ...*compilerspec.LuetCompilationSpec) ([]*compilerspec.LuetCompilationSpec, error) {
+func (cs *LuetCompiler) ComputeMinimumCompilableSet(p ...*types.LuetCompilationSpec) ([]*types.LuetCompilationSpec, error) {
 	// Generate a set with all the deps of the provided specs
 	// we will use that set to remove the deps from the list of provided compilation specs
 	allDependencies := types.PackagesAssertions{} // Get all packages that will be in deps
-	result := []*compilerspec.LuetCompilationSpec{}
+	result := []*types.LuetCompilationSpec{}
 	for _, spec := range p {
 		sol, err := cs.ComputeDepTree(spec, cs.Database)
 		if err != nil {
@@ -889,7 +888,7 @@ func (cs *LuetCompiler) ComputeMinimumCompilableSet(p ...*compilerspec.LuetCompi
 
 // Compile is a non-parallel version of CompileParallel. It builds the compilation specs and generates
 // an artifact
-func (cs *LuetCompiler) Compile(keepPermissions bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
+func (cs *LuetCompiler) Compile(keepPermissions bool, p *types.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
 	return cs.compile(cs.Options.Concurrency, keepPermissions, nil, nil, p)
 }
 
@@ -901,7 +900,7 @@ func genImageList(refs []string, hash string) []string {
 	return res
 }
 
-func (cs *LuetCompiler) inheritSpecBuildOptions(p *compilerspec.LuetCompilationSpec) {
+func (cs *LuetCompiler) inheritSpecBuildOptions(p *types.LuetCompilationSpec) {
 	cs.Options.Context.Debug(p.GetPackage().HumanReadableString(), "Build options before inherit", p.BuildOptions)
 
 	// Append push repositories from buildpsec buildoptions as pull if found.
@@ -940,7 +939,7 @@ func (cs *LuetCompiler) getSpecHash(pkgs types.Packages, salt string) (string, e
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
-func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) error {
+func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool, p *types.LuetCompilationSpec) error {
 	if !p.RequiresFinalImages {
 		return nil
 	}
@@ -1102,8 +1101,8 @@ func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool
 	return nil
 }
 
-func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions bool, p *compilerspec.LuetCompilationSpec) error {
-	resolvedCopyFields := []compilerspec.CopyField{}
+func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions bool, p *types.LuetCompilationSpec) error {
+	resolvedCopyFields := []types.CopyField{}
 	copyTag := ">:droplet: copy<"
 
 	if len(p.Copy) != 0 {
@@ -1131,7 +1130,7 @@ func (cs *LuetCompiler) resolveMultiStageImages(concurrency int, keepPermissions
 				return errors.Wrap(err, "failed building multi-stage image")
 			}
 
-			resolvedCopyFields = append(resolvedCopyFields, compilerspec.CopyField{
+			resolvedCopyFields = append(resolvedCopyFields, types.CopyField{
 				Image:       cs.resolveExistingImageHash(artifact.PackageCacheImage, spec),
 				Source:      c.Source,
 				Destination: c.Destination,
@@ -1175,7 +1174,7 @@ func CompilerFinalImages(cs *LuetCompiler) (*LuetCompiler, error) {
 	return copy, nil
 }
 
-func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateFinalArtifact *bool, generateDependenciesFinalArtifact *bool, p *compilerspec.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
+func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateFinalArtifact *bool, generateDependenciesFinalArtifact *bool, p *types.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
 	cs.Options.Context.Info(":package: Compiling", p.GetPackage().HumanReadableString(), ".... :coffee:")
 
 	//Before multistage : join - same as multistage, but keep artifacts, join them, create a new one and generate a final image.
@@ -1212,7 +1211,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 	targetAssertion := packageHashTree.Target
 
 	bus.Manager.Publish(bus.EventPackagePreBuild, struct {
-		CompileSpec     *compilerspec.LuetCompilationSpec
+		CompileSpec     *types.LuetCompilationSpec
 		Assert          types.PackageAssert
 		PackageHashTree *PackageImageHashTree
 	}{
@@ -1282,7 +1281,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 			compileSpec.SetOutputPath(p.GetOutputPath())
 
 			bus.Manager.Publish(bus.EventPackagePreBuild, struct {
-				CompileSpec *compilerspec.LuetCompilationSpec
+				CompileSpec *types.LuetCompilationSpec
 				Assert      types.PackageAssert
 			}{
 				CompileSpec: compileSpec,
@@ -1337,7 +1336,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 			cs.Options.Context.Success(pkgTag, ":white_check_mark: Done")
 
 			bus.Manager.Publish(bus.EventPackagePostBuild, struct {
-				CompileSpec *compilerspec.LuetCompilationSpec
+				CompileSpec *types.LuetCompilationSpec
 				Artifact    *artifact.PackageArtifact
 			}{
 				CompileSpec: compileSpec,
@@ -1364,7 +1363,7 @@ func (cs *LuetCompiler) compile(concurrency int, keepPermissions bool, generateF
 		a.SourceAssertion = p.GetSourceAssertion()
 		a.PackageCacheImage = targetAssertion.Hash.PackageHash
 		bus.Manager.Publish(bus.EventPackagePostBuild, struct {
-			CompileSpec *compilerspec.LuetCompilationSpec
+			CompileSpec *types.LuetCompilationSpec
 			Artifact    *artifact.PackageArtifact
 		}{
 			CompileSpec: p,
@@ -1463,14 +1462,14 @@ func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack *typ
 }
 
 // FromPackage returns a compilation spec from a package definition
-func (cs *LuetCompiler) FromPackage(p *types.Package) (*compilerspec.LuetCompilationSpec, error) {
-
+func (cs *LuetCompiler) FromPackage(p *types.Package) (*types.LuetCompilationSpec, error) {
+	// This would be nice to move it out from the compiler, but it is strictly tight to it given the build options
 	pack, err := cs.Database.FindPackageCandidate(p)
 	if err != nil {
 		return nil, err
 	}
 
-	opts := options.Compiler{}
+	opts := types.CompilerOptions{}
 
 	artifactMetadataFile := filepath.Join(pack.GetTreeDir(), "..", pack.GetMetadataFilePath())
 	cs.Options.Context.Debug("Checking if metadata file is present", artifactMetadataFile)
@@ -1498,6 +1497,31 @@ func (cs *LuetCompiler) FromPackage(p *types.Package) (*compilerspec.LuetCompila
 		cs.Options.Context.Debug("metadata file not present, skipping", artifactMetadataFile)
 	}
 
+	// If the input is a dockerfile, just consume it and parse any image source from it
+	if pack.OriginDockerfile != "" {
+		img := ""
+		// TODO: Carry this info and parse Dockerfile from somewhere else?
+		cmds, err := dockerfile.ParseReader(bytes.NewBufferString(pack.OriginDockerfile))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not decode Dockerfile")
+		}
+		for _, c := range cmds {
+			if c.Cmd == "FROM" &&
+				len(c.Value) > 0 && !strings.Contains(strings.ToLower(fmt.Sprint(c.Value)), "as") {
+				img = c.Value[0]
+			}
+		}
+
+		compilationSpec := &types.LuetCompilationSpec{
+			Image:        img,
+			Package:      pack,
+			BuildOptions: &types.CompilerOptions{},
+		}
+		cs.inheritSpecBuildOptions(compilationSpec)
+
+		return compilationSpec, nil
+	}
+
 	// Update processed build values
 	dst, err := template.UnMarshalValues(cs.Options.BuildValuesFile)
 	if err != nil {
@@ -1510,7 +1534,7 @@ func (cs *LuetCompiler) FromPackage(p *types.Package) (*compilerspec.LuetCompila
 		return nil, errors.Wrap(err, "while rendering package template")
 	}
 
-	newSpec, err := compilerspec.NewLuetCompilationSpec(bytes, pack)
+	newSpec, err := types.NewLuetCompilationSpec(bytes, pack)
 	if err != nil {
 		return nil, err
 	}
