@@ -36,14 +36,21 @@ const (
 	FinalizerFile = "finalize.yaml"
 )
 
-func NewInstallerRecipe(db types.PackageDatabase) Builder {
-	return &InstallerRecipe{Database: db}
+func NewInstallerRecipe(db types.PackageDatabase, fp ...FileParser) Builder {
+	if len(fp) == 0 {
+		fp = []FileParser{
+			RuntimeCollectionParser,
+			RuntimeDefinitionParser,
+		}
+	}
+	return &InstallerRecipe{Database: db, fileParsers: fp}
 }
 
 // InstallerRecipe is the "general" reciper for Trees
 type InstallerRecipe struct {
-	SourcePath []string
-	Database   types.PackageDatabase
+	SourcePath  []string
+	Database    types.PackageDatabase
+	fileParsers []FileParser
 }
 
 func (r *InstallerRecipe) Save(path string) error {
@@ -85,46 +92,11 @@ func (r *InstallerRecipe) Load(path string) error {
 
 	// the function that handles each file or dir
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
-
-		if info.Name() != types.PackageDefinitionFile && info.Name() != types.PackageCollectionFile {
-			return nil // Skip with no errors
+		for _, p := range r.fileParsers {
+			if err := p(path, currentpath, info.Name(), []string{}, r.Database); err != nil {
+				return err
+			}
 		}
-
-		dat, err := ioutil.ReadFile(currentpath)
-		if err != nil {
-			return errors.Wrap(err, "Error reading file "+currentpath)
-		}
-
-		switch info.Name() {
-		case types.PackageDefinitionFile:
-			pack, err := types.PackageFromYaml(dat)
-			if err != nil {
-				return errors.Wrap(err, "Error reading yaml "+currentpath)
-			}
-
-			// Path is set only internally when tree is loaded from disk
-			pack.SetPath(filepath.Dir(currentpath))
-			_, err = r.Database.CreatePackage(&pack)
-			if err != nil {
-				return errors.Wrap(err, "Error creating package "+pack.GetName())
-			}
-
-		case types.PackageCollectionFile:
-			packs, err := types.PackagesFromYAML(dat)
-			if err != nil {
-				return errors.Wrap(err, "Error reading yaml "+currentpath)
-			}
-			for _, p := range packs {
-				// Path is set only internally when tree is loaded from disk
-				p.SetPath(filepath.Dir(currentpath))
-				_, err = r.Database.CreatePackage(&p)
-				if err != nil {
-					return errors.Wrap(err, "Error creating package "+p.GetName())
-				}
-			}
-
-		}
-
 		return nil
 	}
 

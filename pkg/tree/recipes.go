@@ -34,10 +34,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewGeneralRecipe(db types.PackageDatabase) Builder { return &Recipe{Database: db} }
+func NewGeneralRecipe(db types.PackageDatabase, fp ...FileParser) Builder {
+	if len(fp) == 0 {
+		fp = []FileParser{
+			RuntimeCollectionParser,
+			RuntimeDefinitionParser,
+		}
+	}
+	return &Recipe{Database: db, fileParsers: fp}
+}
 
 // Recipe is the "general" reciper for Trees
 type Recipe struct {
+	fileParsers []FileParser
+
 	SourcePath []string
 	Database   types.PackageDatabase
 }
@@ -86,53 +96,14 @@ func (r *Recipe) Load(path string) error {
 		r.Database = pkg.NewInMemoryDatabase(false)
 	}
 
-	//r.Tree().SetPackageSet(pkg.NewBoltDatabase(tmpfile.Name()))
-	// TODO: Handle cleaning after? Cleanup implemented in GetPackageSet().Clean()
-
-	// the function that handles each file or dir
 	var ff = func(currentpath string, info os.FileInfo, err error) error {
-
-		if info.Name() != types.PackageDefinitionFile && info.Name() != types.PackageCollectionFile {
-			return nil // Skip with no errors
+		for _, p := range r.fileParsers {
+			if err := p(path, currentpath, info.Name(), []string{}, r.Database); err != nil {
+				return err
+			}
 		}
-
-		dat, err := ioutil.ReadFile(currentpath)
-		if err != nil {
-			return errors.Wrap(err, "Error reading file "+currentpath)
-		}
-
-		switch info.Name() {
-		case types.PackageDefinitionFile:
-			pack, err := types.PackageFromYaml(dat)
-			if err != nil {
-				return errors.Wrap(err, "Error reading yaml "+currentpath)
-			}
-
-			// Path is set only internally when tree is loaded from disk
-			pack.SetPath(filepath.Dir(currentpath))
-			_, err = r.Database.CreatePackage(&pack)
-			if err != nil {
-				return errors.Wrap(err, "Error creating package "+pack.GetName())
-			}
-		case types.PackageCollectionFile:
-			packs, err := types.PackagesFromYAML(dat)
-			if err != nil {
-				return errors.Wrap(err, "Error reading yaml "+currentpath)
-			}
-			for _, p := range packs {
-				// Path is set only internally when tree is loaded from disk
-				p.SetPath(filepath.Dir(currentpath))
-				_, err = r.Database.CreatePackage(&p)
-				if err != nil {
-					return errors.Wrap(err, "Error creating package "+p.GetName())
-				}
-			}
-
-		}
-
 		return nil
 	}
-
 	err := filepath.Walk(path, ff)
 	if err != nil {
 		return err

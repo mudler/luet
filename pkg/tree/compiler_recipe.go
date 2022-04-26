@@ -35,8 +35,14 @@ const (
 	CompilerDefinitionFile = "build.yaml"
 )
 
-func NewCompilerRecipe(d types.PackageDatabase) Builder {
-	return &CompilerRecipe{Recipe: Recipe{Database: d}}
+func NewCompilerRecipe(d types.PackageDatabase, fp ...FileParser) Builder {
+	if len(fp) == 0 {
+		fp = []FileParser{
+			BuildCollectionParser,
+			BuildDefinitionParser,
+		}
+	}
+	return &CompilerRecipe{Recipe: Recipe{Database: d}, fileParsers: fp}
 }
 
 func ReadDefinitionFile(path string) (types.Package, error) {
@@ -55,6 +61,7 @@ func ReadDefinitionFile(path string) (types.Package, error) {
 
 // Recipe is the "general" reciper for Trees
 type CompilerRecipe struct {
+	fileParsers []FileParser
 	Recipe
 }
 
@@ -84,100 +91,12 @@ func (r *CompilerRecipe) Load(path string) error {
 			return errors.Wrap(err, "Error on walk path "+currentpath)
 		}
 
-		if info.Name() != types.PackageDefinitionFile && info.Name() != types.PackageCollectionFile {
-			return nil // Skip with no errors
-		}
-
-		switch info.Name() {
-		case types.PackageDefinitionFile:
-
-			pack, err := ReadDefinitionFile(currentpath)
-			if err != nil {
+		for _, p := range r.fileParsers {
+			if err := p(path, currentpath, info.Name(), c, r.Database); err != nil {
 				return err
 			}
-			// Path is set only internally when tree is loaded from disk
-			pack.SetPath(filepath.Dir(currentpath))
-			pack.SetTreeDir(path)
-
-			// Instead of rdeps, have a different tree for build deps.
-			compileDefPath := pack.Rel(CompilerDefinitionFile)
-			if fileHelper.Exists(compileDefPath) {
-				dat, err := template.RenderWithValues(append(c, compileDefPath), currentpath)
-				if err != nil {
-					return errors.Wrap(err,
-						"Error templating file "+CompilerDefinitionFile+" from "+
-							filepath.Dir(currentpath))
-				}
-
-				packbuild, err := types.PackageFromYaml([]byte(dat))
-				if err != nil {
-					return errors.Wrap(err,
-						"Error reading yaml "+CompilerDefinitionFile+" from "+
-							filepath.Dir(currentpath))
-				}
-				pack.Requires(packbuild.GetRequires())
-				pack.Conflicts(packbuild.GetConflicts())
-			}
-
-			_, err = r.Database.CreatePackage(&pack)
-			if err != nil {
-				return errors.Wrap(err, "Error creating package "+pack.GetName())
-			}
-
-		case types.PackageCollectionFile:
-
-			dat, err := ioutil.ReadFile(currentpath)
-			if err != nil {
-				return errors.Wrap(err, "Error reading file "+currentpath)
-			}
-
-			packs, err := types.PackagesFromYAML(dat)
-			if err != nil {
-				return errors.Wrap(err, "Error reading yaml "+currentpath)
-			}
-
-			packsRaw, err := types.GetRawPackages(dat)
-			if err != nil {
-				return errors.Wrap(err, "Error reading raw packages from "+currentpath)
-			}
-
-			for _, pack := range packs {
-				pack.SetPath(filepath.Dir(currentpath))
-				pack.SetTreeDir(path)
-
-				// Instead of rdeps, have a different tree for build deps.
-				compileDefPath := pack.Rel(CompilerDefinitionFile)
-				if fileHelper.Exists(compileDefPath) {
-
-					raw := packsRaw.Find(pack.GetName(), pack.GetCategory(), pack.GetVersion())
-					buildyaml, err := ioutil.ReadFile(compileDefPath)
-					if err != nil {
-						return errors.Wrap(err, "Error reading file "+currentpath)
-					}
-					dat, err := template.Render(append(template.ReadFiles(c...), string(buildyaml)), raw, map[string]interface{}{})
-					if err != nil {
-						return errors.Wrap(err,
-							"Error templating file "+CompilerDefinitionFile+" from "+
-								filepath.Dir(currentpath))
-					}
-
-					packbuild, err := types.PackageFromYaml([]byte(dat))
-					if err != nil {
-						return errors.Wrap(err,
-							"Error reading yaml "+CompilerDefinitionFile+" from "+
-								filepath.Dir(currentpath))
-					}
-					pack.Requires(packbuild.GetRequires())
-
-					pack.Conflicts(packbuild.GetConflicts())
-				}
-
-				_, err = r.Database.CreatePackage(&pack)
-				if err != nil {
-					return errors.Wrap(err, "Error creating package "+pack.GetName())
-				}
-			}
 		}
+
 		return nil
 	}
 

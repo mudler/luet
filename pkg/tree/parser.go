@@ -15,9 +15,13 @@
 
 package tree
 
-import "github.com/mudler/luet/pkg/api/core/types"
+import (
+	"github.com/mudler/luet/pkg/api/core/types"
+)
 
 // parses ebuilds (?) and generates data which is readable by the builder
 type Parser interface {
 	Generate(string) (types.PackageDatabase, error) // Generate scannable luet tree (by builder)
 }
+
+type FileParser func(string, string, string, []string, types.PackageDatabase) error
