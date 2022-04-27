@@ -1,4 +1,4 @@
-// Copyright © 2019-2021 Ettore Di Giacinto <mudler@gentoo.org>
+// Copyright © 2019-2022 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@ import (
 	"github.com/mudler/luet/pkg/api/core/config"
 	"github.com/mudler/luet/pkg/api/core/logger"
 	"github.com/mudler/luet/pkg/helpers"
+	"github.com/mudler/luet/pkg/tree"
 
 	"github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/mudler/luet/pkg/api/core/types"
@@ -801,6 +802,9 @@ func (l *LuetInstaller) getFinalizers(allRepos types.PackageDatabase, solution t
 	if !nodeps {
 		// TODO: Lower those errors as l.Options.Context.Warning
 		for _, w := range toInstall {
+			if !fileHelper.Exists(w.Package.Rel(tree.FinalizerFile)) {
+				continue
+			}
 			// Finalizers needs to run in order and in sequence.
 			ordered, err := solution.Order(allRepos, w.Package.GetFingerPrint())
 			if err != nil {
@@ -822,10 +826,12 @@ func (l *LuetInstaller) getFinalizers(allRepos types.PackageDatabase, solution t
 					toFinalize = append(toFinalize, treePackage)
 				}
 			}
-
 		}
 	} else {
 		for _, c := range toInstall {
+			if !fileHelper.Exists(c.Package.Rel(tree.FinalizerFile)) {
+				continue
+			}
 			treePackage, err := c.Repository.GetTree().GetDatabase().FindPackage(c.Package)
 			if err != nil {
 				return toFinalize, errors.Wrap(err, "Error getting package "+c.Package.HumanReadableString())

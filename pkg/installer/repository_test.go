@@ -29,7 +29,6 @@ import (
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
-	"github.com/mudler/luet/pkg/compiler/types/options"
 	pkg "github.com/mudler/luet/pkg/database"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	. "github.com/mudler/luet/pkg/installer"
@@ -139,11 +138,11 @@ var _ = Describe("Repository", func() {
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(1))
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), options.WithContext(context.NewContext()))
+			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), compiler.WithContext(context.NewContext()))
 			spec2, err := compiler2.FromPackage(&types.Package{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(context.NewContext()))
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.WithContext(context.NewContext()))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -236,11 +235,11 @@ urls:
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(1))
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), options.WithContext(ctx))
+			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), compiler.WithContext(ctx))
 			spec2, err := compiler2.FromPackage(&types.Package{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(ctx))
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.WithContext(ctx))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -354,11 +353,11 @@ urls:
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(1))
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), options.WithContext(ctx))
+			compiler2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), compiler.WithContext(ctx))
 			spec2, err := compiler2.FromPackage(&types.Package{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
 
-			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(ctx))
+			compiler := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.WithContext(ctx))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -488,7 +487,7 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
 			localcompiler := compiler.NewLuetCompiler(
-				backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(ctx))
+				backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.WithContext(ctx))
 
 			spec, err := localcompiler.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -563,7 +562,7 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(5))
 
 			localcompiler := compiler.NewLuetCompiler(
-				backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(ctx))
+				backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.WithContext(ctx))
 
 			spec, err := localcompiler.FromPackage(&types.Package{Name: "a", Category: "test", Version: "1.99"})
 			Expect(err).ToNot(HaveOccurred())

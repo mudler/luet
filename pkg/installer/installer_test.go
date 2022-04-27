@@ -25,7 +25,6 @@ import (
 	"github.com/mudler/luet/pkg/api/core/types"
 	compiler "github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
-	"github.com/mudler/luet/pkg/compiler/types/options"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	pkg "github.com/mudler/luet/pkg/database"
@@ -73,7 +72,7 @@ var _ = Describe("Installer", func() {
 
 			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx),
 				generalRecipe.GetDatabase(),
-				options.Concurrency(2))
+				compiler.Concurrency(2))
 
 			spec, err := c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -190,7 +189,7 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
 			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx),
-				generalRecipe.GetDatabase(), options.Concurrency(2))
+				generalRecipe.GetDatabase(), compiler.Concurrency(2))
 
 			spec, err := c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -313,7 +312,7 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
 			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(),
-				options.Concurrency(2))
+				compiler.Concurrency(2))
 
 			spec, err := c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -442,7 +441,7 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
 			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(),
-				options.Concurrency(2))
+				compiler.Concurrency(2))
 
 			spec, err := c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -540,7 +539,7 @@ urls:
 
 			Expect(len(generalRecipe2.GetDatabase().GetPackages())).To(Equal(1))
 
-			c = compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), options.Concurrency(2))
+			c = compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe2.GetDatabase(), compiler.Concurrency(2))
 
 			spec, err = c.FromPackage(&types.Package{Name: "alpine", Category: "seed", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -601,7 +600,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2))
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.Concurrency(2))
 
 			spec, err := c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -714,7 +713,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2))
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.Concurrency(2))
 
 			spec, err := c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -831,7 +830,7 @@ urls:
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(6))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2))
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.Concurrency(2))
 
 			spec, err := c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -969,7 +968,7 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 			Expect(len(generalRecipeNewRepo.GetDatabase().GetPackages())).To(Equal(3))
 
-			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2))
+			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.Concurrency(2))
 			c2 := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipeNewRepo.GetDatabase())
 
 			spec, err := c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
@@ -1107,8 +1106,8 @@ urls:
 			c := compiler.NewLuetCompiler(
 				backend.NewSimpleDockerBackend(ctx),
 				generalRecipe.GetDatabase(),
-				options.Concurrency(2),
-				options.WithCompressionType(types.GZip),
+				compiler.Concurrency(2),
+				compiler.WithCompressionType(types.GZip),
 			)
 
 			spec, err := c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
@@ -1271,8 +1270,8 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
 			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(),
-				options.Concurrency(2),
-				options.WithCompressionType(types.GZip))
+				compiler.Concurrency(2),
+				compiler.WithCompressionType(types.GZip))
 
 			spec, err := c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -1380,7 +1379,7 @@ urls:
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
 			c := compiler.NewLuetCompiler(backend.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(),
-				options.WithCompressionType(types.GZip))
+				compiler.WithCompressionType(types.GZip))
 
 			spec, err := c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())

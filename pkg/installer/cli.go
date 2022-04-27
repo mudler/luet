@@ -87,7 +87,7 @@ func printMatches(artefacts map[string]ArtifactMatch) {
 	d := pterm.TableData{{"Program Name", "Version", "License", "Repository"}}
 	for _, m := range artefacts {
 		d = append(d, []string{
-			fmt.Sprintf("%s/%s", m.Package.GetCategory(), m.Package.GetName()),
+			m.Package.HumanReadableString(),
 			pterm.LightGreen(m.Package.GetVersion()), m.Package.GetLicense(), m.Repository.GetName()})
 	}
 	pterm.DefaultTable.WithHasHeader().WithData(d).Render()

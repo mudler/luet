@@ -134,10 +134,10 @@ func (db *InMemoryDatabase) GetAllPackages(packages chan *types.Package) error {
 
 func (db *InMemoryDatabase) getRevdeps(p *types.Package, visited map[string]interface{}) (types.Packages, error) {
 	var versionsInWorld types.Packages
-	if _, ok := visited[p.HumanReadableString()]; ok {
+	if _, ok := visited[p.GetFingerPrint()]; ok {
 		return versionsInWorld, nil
 	}
-	visited[p.HumanReadableString()] = true
+	visited[p.GetFingerPrint()] = true
 
 	var res types.Packages
 	packs, err := db.FindPackages(p)
@@ -443,7 +443,9 @@ func (db *InMemoryDatabase) RemovePackageFiles(p *types.Package) error {
 func (db *InMemoryDatabase) RemovePackage(p *types.Package) error {
 	db.Lock()
 	defer db.Unlock()
-
+	if _, exists := db.CacheNoVersion[p.GetPackageName()]; exists {
+		delete(db.CacheNoVersion[p.GetPackageName()], p.GetVersion())
+	}
 	delete(db.Database, p.GetFingerPrint())
 	return nil
 }

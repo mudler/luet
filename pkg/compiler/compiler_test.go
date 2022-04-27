@@ -24,6 +24,7 @@ import (
 
 	"github.com/mudler/luet/pkg/api/core/logger"
 	"github.com/mudler/luet/pkg/api/core/types"
+	"github.com/mudler/luet/pkg/compiler"
 
 	helpers "github.com/mudler/luet/tests/helpers"
 
@@ -32,7 +33,6 @@ import (
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	. "github.com/mudler/luet/pkg/compiler"
 	sd "github.com/mudler/luet/pkg/compiler/backend"
-	"github.com/mudler/luet/pkg/compiler/types/options"
 	pkg "github.com/mudler/luet/pkg/database"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/mudler/luet/pkg/tree"
@@ -52,7 +52,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2), options.WithContext(context.NewContext()))
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.Concurrency(2), compiler.WithContext(context.NewContext()))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -95,7 +95,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2), options.WithContext(context.NewContext()))
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.Concurrency(2), compiler.WithContext(context.NewContext()))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "c", Category: "test", Version: "1.2"})
 			Expect(err).ToNot(HaveOccurred())
@@ -125,7 +125,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2), options.WithContext(context.NewContext()))
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.Concurrency(2), compiler.WithContext(context.NewContext()))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "c", Category: "test", Version: "1.2"})
 			Expect(err).ToNot(HaveOccurred())
@@ -157,7 +157,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(1), options.WithContext(context.NewContext()))
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.Concurrency(1), compiler.WithContext(context.NewContext()))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -191,7 +191,7 @@ var _ = Describe("Compiler", func() {
 
 			err = generalRecipe.Load("../../tests/fixtures/templates")
 			Expect(err).ToNot(HaveOccurred())
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(context.NewContext()))
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.WithContext(context.NewContext()))
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
 			pkg, err := generalRecipe.GetDatabase().FindPackage(&types.Package{Name: "b", Category: "test", Version: "1.0"})
@@ -215,7 +215,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(4))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2), options.WithContext(context.NewContext()))
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.Concurrency(2), compiler.WithContext(context.NewContext()))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "c", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -271,7 +271,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(1), options.WithContext(context.NewContext()))
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.Concurrency(1), compiler.WithContext(context.NewContext()))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "extra", Category: "layer", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -795,7 +795,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(3))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.Concurrency(2), options.WithContext(context.NewContext()))
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.Concurrency(2), compiler.WithContext(context.NewContext()))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "c", Category: "test", Version: "1.0"})
 			Expect(err).ToNot(HaveOccurred())
@@ -873,7 +873,7 @@ var _ = Describe("Compiler", func() {
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
 			compiler := NewLuetCompiler(b, generalRecipe.GetDatabase(),
-				options.EnablePushFinalImages, options.ForcePushFinalImages, options.WithFinalRepository(imageName))
+				compiler.EnablePushFinalImages, compiler.ForcePushFinalImages, compiler.WithFinalRepository(imageName))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "runtime", Category: "layer", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
@@ -984,7 +984,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(context.NewContext()))
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.WithContext(context.NewContext()))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "runtime", Category: "layer", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
@@ -1019,7 +1019,7 @@ var _ = Describe("Compiler", func() {
 			err := generalRecipe.Load("../../tests/fixtures/includeimage")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(context.NewContext()))
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.WithContext(context.NewContext()))
 
 			specs, err := compiler.FromDatabase(generalRecipe.GetDatabase(), true, "")
 			Expect(err).ToNot(HaveOccurred())
@@ -1038,7 +1038,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(context.NewContext()))
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.WithContext(context.NewContext()))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "runtime", Category: "layer", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
@@ -1074,7 +1074,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
 
-			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), options.WithContext(context.NewContext()))
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase(), compiler.WithContext(context.NewContext()))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "runtime", Category: "layer", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())
@@ -1155,11 +1155,11 @@ var _ = Describe("Compiler", func() {
 			defer cleanup(allImages...)
 
 			compiler := NewLuetCompiler(b, generalRecipe.GetDatabase(),
-				options.WithFinalRepository("test/test"),
-				options.EnableGenerateFinalImages,
-				options.WithRuntimeDatabase(installerRecipe.GetDatabase()),
-				options.PullFirst(true),
-				options.WithContext(c))
+				compiler.WithFinalRepository("test/test"),
+				compiler.EnableGenerateFinalImages,
+				compiler.WithRuntimeDatabase(installerRecipe.GetDatabase()),
+				compiler.PullFirst(true),
+				compiler.WithContext(c))
 
 			spec, err := compiler.FromPackage(&types.Package{Name: "x", Category: "test", Version: "0.1"})
 			Expect(err).ToNot(HaveOccurred())

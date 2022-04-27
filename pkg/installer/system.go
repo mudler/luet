@@ -45,29 +45,31 @@ func (s *System) ExecuteFinalizers(ctx types.Context, packs []*types.Package) er
 	var errs error
 	executedFinalizer := map[string]bool{}
 	for _, p := range packs {
-		if fileHelper.Exists(p.Rel(tree.FinalizerFile)) {
-			out, err := template.RenderWithValues([]string{p.Rel(tree.FinalizerFile)}, p.Rel(types.PackageDefinitionFile))
+		if !fileHelper.Exists(p.Rel(tree.FinalizerFile)) {
+			continue
+		}
+
+		out, err := template.RenderWithValues([]string{p.Rel(tree.FinalizerFile)}, p.Rel(types.PackageDefinitionFile))
+		if err != nil {
+			ctx.Warning("Failed rendering finalizer for ", p.HumanReadableString(), err.Error())
+			errs = multierror.Append(errs, err)
+			continue
+		}
+
+		if _, exists := executedFinalizer[p.GetFingerPrint()]; !exists {
+			executedFinalizer[p.GetFingerPrint()] = true
+			ctx.Info("Executing finalizer for " + p.HumanReadableString())
+			finalizer, err := NewLuetFinalizerFromYaml([]byte(out))
 			if err != nil {
-				ctx.Warning("Failed rendering finalizer for ", p.HumanReadableString(), err.Error())
+				ctx.Warning("Failed reading finalizer for ", p.HumanReadableString(), err.Error())
 				errs = multierror.Append(errs, err)
 				continue
 			}
-
-			if _, exists := executedFinalizer[p.GetFingerPrint()]; !exists {
-				executedFinalizer[p.GetFingerPrint()] = true
-				ctx.Info("Executing finalizer for " + p.HumanReadableString())
-				finalizer, err := NewLuetFinalizerFromYaml([]byte(out))
-				if err != nil {
-					ctx.Warning("Failed reading finalizer for ", p.HumanReadableString(), err.Error())
-					errs = multierror.Append(errs, err)
-					continue
-				}
-				err = finalizer.RunInstall(ctx, s)
-				if err != nil {
-					ctx.Warning("Failed running finalizer for ", p.HumanReadableString(), err.Error())
-					errs = multierror.Append(errs, err)
-					continue
-				}
+			err = finalizer.RunInstall(ctx, s)
+			if err != nil {
+				ctx.Warning("Failed running finalizer for ", p.HumanReadableString(), err.Error())
+				errs = multierror.Append(errs, err)
+				continue
 			}
 		}
 	}

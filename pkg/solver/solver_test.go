@@ -1213,7 +1213,7 @@ var _ = Describe("Solver", func() {
 			}
 
 			val, err := s.Conflicts(A, dbInstalled.World())
-			Expect(err.Error()).To(Equal("\n/B-"))
+			Expect(err.Error()).To(Equal("\nB"))
 			Expect(val).To(BeTrue())
 
 		})
@@ -1237,7 +1237,7 @@ var _ = Describe("Solver", func() {
 			}
 
 			val, err := s.Conflicts(D, dbInstalled.World())
-			Expect(err.Error()).To(Or(Equal("\n/A-\n/B-"), Equal("\n/B-\n/A-")))
+			Expect(err.Error()).To(Or(Equal("\nA\nB"), Equal("\nB\nA")))
 			Expect(val).To(BeTrue())
 		})
 

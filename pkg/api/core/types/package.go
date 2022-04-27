@@ -301,7 +301,16 @@ func (p *Package) HashFingerprint(salt string) string {
 }
 
 func (p *Package) HumanReadableString() string {
-	return fmt.Sprintf("%s/%s-%s", p.Category, p.Name, p.Version)
+	switch {
+	case p.Category != "" && p.Name != "" && p.Version == "":
+		return fmt.Sprintf("%s/%s", p.Category, p.Name)
+	case p.Category == "" && p.Name != "" && p.Version == "":
+		return p.Name
+	case p.Category == "" && p.Name != "" && p.Version != "":
+		return fmt.Sprintf("%s@%s", p.Category, p.Name)
+	default:
+		return fmt.Sprintf("%s/%s-%s", p.Category, p.Name, p.Version)
+	}
 }
 
 func PackageFromString(s string) *Package {
@@ -571,10 +580,10 @@ func (p *Package) Revdeps(definitiondb PackageDatabase) Packages {
 
 func walkPackage(p *Package, definitiondb PackageDatabase, visited map[string]interface{}) Packages {
 	var versionsInWorld Packages
-	if _, ok := visited[p.HumanReadableString()]; ok {
+	if _, ok := visited[p.GetFingerPrint()]; ok {
 		return versionsInWorld
 	}
-	visited[p.HumanReadableString()] = true
+	visited[p.GetFingerPrint()] = true
 
 	revdeps, _ := definitiondb.GetRevdeps(p)
 	for _, r := range revdeps {
@@ -628,10 +637,10 @@ func DecodePackage(ID string, db PackageDatabase) (*Package, error) {
 }
 
 func (pack *Package) scanRequires(definitiondb PackageDatabase, s *Package, visited map[string]interface{}) (bool, error) {
-	if _, ok := visited[pack.HumanReadableString()]; ok {
+	if _, ok := visited[pack.GetFingerPrint()]; ok {
 		return false, nil
 	}
-	visited[pack.HumanReadableString()] = true
+	visited[pack.GetFingerPrint()] = true
 	p, err := definitiondb.FindPackage(pack)
 	if err != nil {
 		p = pack //relax things
@@ -745,10 +754,10 @@ func (p *Package) GetRuntimePackage() (*Package, error) {
 }
 
 func (pack *Package) buildFormula(definitiondb PackageDatabase, db PackageDatabase, visited map[string]interface{}) ([]bf.Formula, error) {
-	if _, ok := visited[pack.HumanReadableString()]; ok {
+	if _, ok := visited[pack.GetFingerPrint()]; ok {
 		return nil, nil
 	}
-	visited[pack.HumanReadableString()] = true
+	visited[pack.GetFingerPrint()] = true
 	p, err := definitiondb.FindPackage(pack)
 	if err != nil {
 		p = pack // Relax failures and trust the def
