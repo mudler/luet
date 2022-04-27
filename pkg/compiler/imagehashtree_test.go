@@ -149,5 +149,4 @@ var _ = Describe("ImageHashTree", func() {
 			Expect(hashB).To(Equal("9ece11c782e862e366ab4b42fdaaea9d89abe41ff4d9ed1bd24c81f6041bc9da"), hashB)
 		})
 	})
-
 })

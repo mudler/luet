@@ -113,7 +113,23 @@ func (a *PackageArtifact) Verify() error {
 	return nil
 }
 
-func (a *PackageArtifact) WriteYAML(dst string) error {
+type opts struct {
+	runtimePackage *types.Package
+}
+
+func WithRuntimePackage(p *types.Package) func(o *opts) {
+	return func(o *opts) {
+		o.runtimePackage = p
+	}
+}
+
+func (a *PackageArtifact) WriteYAML(dst string, o ...func(o *opts)) error {
+	opts := &opts{}
+
+	for _, oo := range o {
+		oo(opts)
+	}
+
 	// First compute checksum of artifact. When we write the yaml we want to write up-to-date informations.
 	err := a.Hash()
 	if err != nil {
@@ -121,12 +137,14 @@ func (a *PackageArtifact) WriteYAML(dst string) error {
 	}
 
 	// Update runtime package information
-	if a.CompileSpec != nil && a.CompileSpec.Package != nil {
+	if a.CompileSpec != nil && a.CompileSpec.Package != nil && opts.runtimePackage == nil {
 		runtime, err := a.CompileSpec.Package.GetRuntimePackage()
 		if err != nil {
 			return errors.Wrapf(err, "getting runtime package for '%s'", a.CompileSpec.Package.HumanReadableString())
 		}
 		a.Runtime = runtime
+	} else if opts.runtimePackage != nil {
+		a.Runtime = opts.runtimePackage
 	}
 
 	data, err := yaml.Marshal(a)
@@ -507,10 +525,24 @@ func (a *PackageArtifact) GetProtectFiles(ctx types.Context) (res []string) {
 }
 
 // Unpack Untar and decompress (TODO) to the given path
-func (a *PackageArtifact) Unpack(ctx types.Context, dst string, keepPerms bool) error {
+func (a *PackageArtifact) Unpack(ctx types.Context, dst string, keepPerms bool, filters ...func(h *tar.Header) (bool, error)) error {
 
 	if !strings.HasPrefix(dst, string(os.PathSeparator)) {
 		return errors.New("destination must be an absolute path")
+	}
+
+	var filter func(h *tar.Header) (bool, error)
+	if len(filters) > 0 {
+		filter = func(h *tar.Header) (bool, error) {
+			for _, f := range filters {
+				b, err := f(h)
+				if !b || err != nil {
+					return b, err
+				}
+			}
+
+			return true, nil
+		}
 	}
 
 	// Create
@@ -546,7 +578,7 @@ func (a *PackageArtifact) Unpack(ctx types.Context, dst string, keepPerms bool) 
 	// 	//	tarModifier.Modifier()
 	// 	return true, nil
 	// },
-	_, _, err = image.ExtractReader(ctx, replacerArchive, dst, nil)
+	_, _, err = image.ExtractReader(ctx, replacerArchive, dst, filter)
 	return err
 }
 

@@ -1,0 +1,9 @@
+packages:
+- category: "test"
+  name: "alpine"
+  version: "1.0"
+  test: "yup"
+- category: "test"
+  name: "debian"
+  version: "1.0"
+  test: "yup"

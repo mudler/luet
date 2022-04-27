@@ -1213,4 +1213,152 @@ var _ = Describe("Compiler", func() {
 			))
 		})
 	})
+
+	Context("Sub packages", func() {
+		It("Compiles from a single package", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err := generalRecipe.Load("../../tests/fixtures/subpackage")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
+
+			installerRecipe := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err = installerRecipe.Load("../../tests/fixtures/subpackage")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(1))
+			Expect(len(installerRecipe.GetDatabase().GetPackages())).To(Equal(4))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase())
+
+			spec, err := compiler.FromPackage(&types.Package{Name: "alpine", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			spec.SetOutputPath(tmpdir)
+
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(1))
+			Expect(len(artifacts[0].Dependencies)).To(Equal(0))
+
+			tmpdir2, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir2) // clean up
+
+			Expect(artifact.NewPackageArtifact(filepath.Join(tmpdir, "alpine-test-1.0.package.tar")).Unpack(ctx, tmpdir2, false)).ToNot(HaveOccurred())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "bin/busybox"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "var"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "usr"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "root"))).To(BeTrue())
+
+			tmpdir3, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir3) // clean up
+
+			Expect(artifact.NewPackageArtifact(filepath.Join(tmpdir, "foo-test-1.1.package.tar")).Unpack(ctx, tmpdir3, false)).ToNot(HaveOccurred())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir3, "bin/busybox"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir3, "var"))).To(BeFalse())
+
+			tmpdir4, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir4) // clean up
+
+			Expect(artifact.NewPackageArtifact(filepath.Join(tmpdir, "bar-test-1.1.package.tar")).Unpack(ctx, tmpdir4, false)).ToNot(HaveOccurred())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir4, "bin/busybox"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir4, "usr/bin/cksum"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir4, "usr"))).To(BeFalse())
+
+			tmpdir5, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir5) // clean up
+
+			Expect(artifact.NewPackageArtifact(filepath.Join(tmpdir, "baz-test-1.1.package.tar")).Unpack(ctx, tmpdir5, false)).ToNot(HaveOccurred())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir5, "usr/bin/cksum"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir5, "bin/busybox"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir5, "var"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir5, "root"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir5, "etc"))).ToNot(BeTrue())
+		})
+
+		It("Compiles in collections", func() {
+			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err := generalRecipe.Load("../../tests/fixtures/subpackage_collection")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
+
+			installerRecipe := tree.NewInstallerRecipe(pkg.NewInMemoryDatabase(false))
+
+			err = installerRecipe.Load("../../tests/fixtures/subpackage_collection")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(2))
+			Expect(len(installerRecipe.GetDatabase().GetPackages())).To(Equal(8))
+
+			compiler := NewLuetCompiler(sd.NewSimpleDockerBackend(ctx), generalRecipe.GetDatabase())
+
+			spec, err := compiler.FromPackage(&types.Package{Name: "debian", Category: "test", Version: "1.0"})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
+
+			tmpdir, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			spec.SetOutputPath(tmpdir)
+
+			artifacts, errs := compiler.CompileParallel(false, types.NewLuetCompilationspecs(spec))
+			Expect(errs).To(BeNil())
+			Expect(len(artifacts)).To(Equal(1))
+			Expect(len(artifacts[0].Dependencies)).To(Equal(0))
+
+			tmpdir2, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir2) // clean up
+
+			Expect(artifact.NewPackageArtifact(filepath.Join(tmpdir, "debian-test-1.0.package.tar")).Unpack(ctx, tmpdir2, false)).ToNot(HaveOccurred())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "bin/busybox"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "var"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "usr"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "root"))).To(BeTrue())
+
+			tmpdir3, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir3) // clean up
+
+			Expect(artifact.NewPackageArtifact(filepath.Join(tmpdir, "foo-debian-test-1.1.package.tar")).Unpack(ctx, tmpdir3, false)).ToNot(HaveOccurred())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir3, "bin/busybox"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir3, "var"))).To(BeFalse())
+
+			tmpdir4, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir4) // clean up
+
+			Expect(artifact.NewPackageArtifact(filepath.Join(tmpdir, "bar-debian-test-1.1.package.tar")).Unpack(ctx, tmpdir4, false)).ToNot(HaveOccurred())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir4, "bin/busybox"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir4, "usr/bin/cksum"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir4, "usr"))).To(BeFalse())
+
+			tmpdir5, err := ioutil.TempDir("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir5) // clean up
+
+			Expect(artifact.NewPackageArtifact(filepath.Join(tmpdir, "baz-debian-test-1.1.package.tar")).Unpack(ctx, tmpdir5, false)).ToNot(HaveOccurred())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir5, "usr/bin/cksum"))).To(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir5, "bin/busybox"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir5, "var"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir5, "root"))).ToNot(BeTrue())
+			Expect(fileHelper.Exists(filepath.Join(tmpdir5, "etc"))).ToNot(BeTrue())
+		})
+	})
 })

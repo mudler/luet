@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/ghodss/yaml"
 	"github.com/mudler/luet/pkg/api/core/template"
 	"github.com/mudler/luet/pkg/api/core/types"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
@@ -97,12 +98,45 @@ func RuntimeCollectionParser(srcDir, currentpath, name string, templates []strin
 	if err != nil {
 		return errors.Wrap(err, "Error reading yaml "+currentpath)
 	}
+
+	packsRaw, err := types.GetRawPackages(dat)
+	if err != nil {
+		return errors.Wrap(err, "Error reading raw packages from "+currentpath)
+	}
 	for _, p := range packs {
 		// Path is set only internally when tree is loaded from disk
 		p.SetPath(filepath.Dir(currentpath))
 		_, err = db.CreatePackage(&p)
 		if err != nil {
 			return errors.Wrap(err, "Error creating package "+p.GetName())
+		}
+
+		compileDefPath := p.Rel(CompilerDefinitionFile)
+		if fileHelper.Exists(compileDefPath) {
+			raw := packsRaw.Find(p.GetName(), p.GetCategory(), p.GetVersion())
+			buildyaml, err := ioutil.ReadFile(compileDefPath)
+			if err != nil {
+				return errors.Wrap(err, "Error reading file "+currentpath)
+			}
+			dat, err := template.Render(append(template.ReadFiles(templates...), string(buildyaml)), raw, map[string]interface{}{})
+			if err != nil {
+				return errors.Wrap(err,
+					"Error templating file "+CompilerDefinitionFile+" from "+
+						filepath.Dir(currentpath))
+			}
+
+			spec := &types.LuetCompilationSpec{}
+			if err := yaml.Unmarshal([]byte(dat), spec); err != nil {
+				return err
+			}
+
+			for _, s := range spec.SubPackages {
+
+				_, err = db.CreatePackage(s.Package)
+				if err != nil {
+					return errors.Wrap(err, "Error creating package "+p.GetName())
+				}
+			}
 		}
 	}
 	return nil

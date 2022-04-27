@@ -1,0 +1,21 @@
+image: "alpine"
+unpack: true
+
+subpackages:
+- name: "baz-{{.Values.name}}"
+  category: "test"
+  version: "1.1"
+  includes:
+  - usr/bin/cksum
+- name: "bar-{{.Values.name}}"
+  category: "test"
+  version: "1.1"
+  excludes:
+  - ^/usr
+{{ if eq .Values.test "yup" }}
+- name: "foo-{{.Values.name}}"
+  category: "test"
+  version: "1.1"
+  excludes:
+  - ^/var
+{{end}}

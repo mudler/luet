@@ -402,6 +402,34 @@ unpack: true
 
 It indicates that the package content **is** the whole container content.
 
+### `subpackages`
+
+_since luet>=0.32.0_
+
+(optional) A list of packages to create with the result of the current package definition.
+
+```yaml
+subpackages:
+- name: "foo"
+  category: "bar"
+  version: "1.0"
+  includes: 
+  - ...
+  excludes:
+  - ...
+- name: "baz"
+  category: "bar"
+  version: "1.0"
+```
+
+After generating the main package, `luet` will create split packages from the resulting one from the list.
+
+Every subpackage stanza supports `excludes` and `includes` to selectively exclude and include files in every resulting package.
+
+Note, subpackages support is available for collection, standard packages and templated packages.
+
+See [Package concepts](/docs/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
+
 ## Rutime specs
 
 Runtime specification are denoted in a `definition.yaml` or a `collection.yaml` sibiling file. It identifies the package and the runtime contraints attached to it.

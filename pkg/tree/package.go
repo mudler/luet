@@ -23,6 +23,8 @@ import (
 	"github.com/mudler/luet/pkg/api/core/types"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/pkg/errors"
+
+	"github.com/ghodss/yaml"
 )
 
 func RuntimeDefinitionParser(srcDir, currentpath, name string, templates []string, db types.PackageDatabase) error {
@@ -45,6 +47,33 @@ func RuntimeDefinitionParser(srcDir, currentpath, name string, templates []strin
 	if err != nil {
 		return errors.Wrap(err, "Error creating package "+pack.GetName())
 	}
+
+	// slurp subpackages here
+	compileDefPath := pack.Rel(CompilerDefinitionFile)
+	if fileHelper.Exists(compileDefPath) {
+		dat, err := template.RenderWithValues(append(templates, compileDefPath), currentpath)
+		if err != nil {
+			return errors.Wrap(err,
+				"Error templating file "+CompilerDefinitionFile+" from "+
+					filepath.Dir(currentpath))
+		}
+
+		spec := &types.LuetCompilationSpec{}
+
+		if err := yaml.Unmarshal([]byte(dat), spec); err != nil {
+			return err
+		}
+		for i, _ := range spec.SubPackages {
+			d := spec.SubPackages[i]
+			d.SetPath(filepath.Dir(currentpath))
+
+			_, err = db.CreatePackage(d.Package)
+			if err != nil {
+				return errors.Wrap(err, "Error creating package "+pack.GetName())
+			}
+		}
+	}
+
 	return nil
 }
 

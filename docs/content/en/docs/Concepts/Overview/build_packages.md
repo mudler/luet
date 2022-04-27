@@ -64,6 +64,26 @@ See the `--help` of `create-repo` and `build` to learn all the available options
 
 ## Example
 
+
+Luet can seamlessly build packages also from Dockerfiles (_since luet>=0.32.0_), consider the following example, that will generate a `curl` package from an `alpine` image:
+
+```bash
+$> # put yourself in some workdir
+
+$~/workdir> mkdir curl
+
+$~/workdir> cat <<EOF > curl/Dockerfile
+FROM alpine
+apk add curl
+EOF
+
+$~/workdir> luet build --all
+```
+
+However, `luet` supports an extended syntax that allows to define packages with a more fine-grained control, templating support, and several other features that makes creation batch images much faster.
+
+### The extended syntax
+
 A [package definition](/docs/docs/concepts/packages/specfile) is composed of a `build.yaml` and a sibiling `definition.yaml`.
 
 In the following example, we are creating a dummy package (`bar/foo`). Which ships one file only, `/foo`
@@ -105,25 +125,6 @@ $> luet build --all
 ```
 
 Luet "trees" are just a group of specfiles, in the above example, our tree was the current directory. You can also specify a directory with the `--tree` option. Luet doesn't enforce any tree layout, so they can be nested at any level. The only rule of thumb is that a `build.yaml` file needs to have either a `definition.yaml` or a `collection.yaml` file next to it.
-
-## Dockerfile example
-
-Luet can seamlessly build packages also from Dockerfiles, consider the following example, that will generate a `curl` package from an `alpine` image:
-
-```bash
-$> # put yourself in some workdir
-
-$~/workdir> mkdir curl
-
-$~/workdir> cat <<EOF > curl/Dockerfile
-FROM alpine
-apk add curl
-EOF
-
-$~/workdir> luet build --all
-
-```
-
 
 ## Nesting dependencies
 

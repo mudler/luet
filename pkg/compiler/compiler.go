@@ -521,7 +521,59 @@ func (cs *LuetCompiler) genArtifact(p *types.LuetCompilationSpec, builderOpts, r
 		return nil, err
 	}
 
+	// Write sub packages
+	if len(a.CompileSpec.SubPackages) > 0 {
+		cs.Options.Context.Success(pkgTag, "   :gear: Creating sub packages")
+		for _, sub := range a.CompileSpec.SubPackages {
+			if err := cs.buildSubPackage(a, sub, p, keepPermissions, concurrency); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return a, nil
+}
+
+func (cs *LuetCompiler) buildSubPackage(a *artifact.PackageArtifact, sub *types.SubPackage, spec *types.LuetCompilationSpec, keepPermissions bool, concurrency int) error {
+	sub.SetPath(spec.Package.Path)
+
+	cs.Options.Context.Info(":arrow_right: Creating sub package", sub.HumanReadableString())
+	subArtifactDir, err := cs.Options.Context.TempDir("subpackage")
+	if err != nil {
+		return errors.Wrap(err, "could not create tempdir for final artifact")
+	}
+	defer os.RemoveAll(subArtifactDir)
+
+	err = a.Unpack(cs.Options.Context, subArtifactDir, keepPermissions, image.ExtractFiles(cs.Options.Context, "", sub.Includes, sub.Excludes))
+	if err != nil {
+		return errors.Wrap(err, "while unpack sub package")
+	}
+
+	subP := spec.Rel(sub.GetFingerPrint() + ".package.tar")
+
+	subArtifact := artifact.NewPackageArtifact(subP)
+	subArtifact.CompressionType = cs.Options.CompressionType
+
+	if err := subArtifact.Compress(subArtifactDir, concurrency); err != nil {
+		return errors.Wrap(err, "Error met while creating package archive")
+	}
+
+	subArtifact.CompileSpec = spec
+	subArtifact.CompileSpec.Package = sub.Package
+	subArtifact.Runtime = sub.Package
+	subArtifact.CompileSpec.GetPackage().SetBuildTimestamp(time.Now().String())
+
+	err = subArtifact.WriteYAML(spec.GetOutputPath(), artifact.WithRuntimePackage(sub.Package))
+	if err != nil {
+		return errors.Wrap(err, "Failed while writing metadata file")
+	}
+	cs.Options.Context.Success("   :white_check_mark: done (subpackage)", sub.HumanReadableString())
+
+	if err := cs.finalizeImages(subArtifact, spec, keepPermissions); err != nil {
+		return errors.Wrap(err, "Failed while writing finalizing images")
+	}
+
+	return nil
 }
 
 // finalizeImages finalizes images and generates final artifacts (push them as well if necessary).

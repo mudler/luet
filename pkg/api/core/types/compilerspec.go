@@ -100,8 +100,14 @@ const (
 	Zstandard CompressionImplementation = "zstd"
 )
 
+type SubPackage struct {
+	*Package
+	Includes []string `json:"includes,omitempty" yaml:"includes,omitempty"`
+	Excludes []string `json:"excludes,omitempty" yaml:"excludes,omitempty"`
+}
+
 type LuetCompilationSpec struct {
-	Steps           []string           `json:"steps"` // Are run inside a container and the result layer diff is saved
+	Steps           []string           `json:"steps" yaml:"steps,omitempty"` // Are run inside a container and the result layer diff is saved
 	Env             []string           `json:"env"`
 	Prelude         []string           `json:"prelude"` // Are run inside the image which will be our builder
 	Image           string             `json:"image"`
@@ -109,6 +115,8 @@ type LuetCompilationSpec struct {
 	Package         *Package           `json:"package"`
 	SourceAssertion PackagesAssertions `json:"-"`
 	PackageDir      string             `json:"package_dir" yaml:"package_dir"`
+
+	SubPackages []*SubPackage `json:"subpackages,omitempty" yaml:"subpackages,omitempty"`
 
 	Retrieve []string `json:"retrieve"`
 
