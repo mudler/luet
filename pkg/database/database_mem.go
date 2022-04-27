@@ -134,10 +134,10 @@ func (db *InMemoryDatabase) GetAllPackages(packages chan *types.Package) error {
 
 func (db *InMemoryDatabase) getRevdeps(p *types.Package, visited map[string]interface{}) (types.Packages, error) {
 	var versionsInWorld types.Packages
-	if _, ok := visited[p.GetFingerPrint()]; ok {
+	if _, ok := visited[p.FullString()]; ok {
 		return versionsInWorld, nil
 	}
-	visited[p.GetFingerPrint()] = true
+	visited[p.FullString()] = true
 
 	var res types.Packages
 	packs, err := db.FindPackages(p)
