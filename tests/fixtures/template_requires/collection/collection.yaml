@@ -1,0 +1,5 @@
+packages:
+- name: "foo"
+  value: "bar"
+- name: "baz"
+  value: "foobar"

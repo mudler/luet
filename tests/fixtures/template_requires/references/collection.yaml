@@ -1,0 +1,3 @@
+packages:
+- name: "foobar"
+- name: "bar"

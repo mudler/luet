@@ -1,0 +1,7 @@
+packages:
+- name: "foo"
+  category: "test"
+  value: "bar"
+- name: "baz"
+  value: "foobar"
+  category: "test"

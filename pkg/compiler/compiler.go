@@ -1461,7 +1461,7 @@ func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack *typ
 			return nil, errors.Wrap(err, "getting raw packages")
 		}
 
-		raw := packsRaw.Find(pack.GetName(), pack.GetCategory(), pack.GetVersion())
+		raw := packsRaw.Find(*pack)
 		td := templatedata{}
 		if len(vals) > 0 {
 			for _, bv := range vals {

@@ -146,9 +146,12 @@ func PackageFromYaml(yml []byte) (Package, error) {
 
 type rawPackages []map[string]interface{}
 
-func (r rawPackages) Find(name, category, version string) map[string]interface{} {
+func (r rawPackages) Find(wanted Package) map[string]interface{} {
 	for _, v := range r {
-		if v["name"] == name && v["category"] == category && v["version"] == version {
+		p := &Package{}
+		dat, _ := json.Marshal(v)
+		json.Unmarshal(dat, p)
+		if wanted.Matches(p) {
 			return v
 		}
 	}

@@ -1,0 +1,7 @@
+requires:
+{{ if eq .Values.value "bar" }}
+- name: "bar"
+{{ end }}
+{{ if eq .Values.value "foobar" }}
+- name: "foobar"
+{{ end }}

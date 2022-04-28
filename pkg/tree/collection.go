@@ -54,7 +54,7 @@ func BuildCollectionParser(srcDir, currentpath, name string, templates []string,
 		compileDefPath := pack.Rel(CompilerDefinitionFile)
 		if fileHelper.Exists(compileDefPath) {
 
-			raw := packsRaw.Find(pack.GetName(), pack.GetCategory(), pack.GetVersion())
+			raw := packsRaw.Find(pack)
 			buildyaml, err := ioutil.ReadFile(compileDefPath)
 			if err != nil {
 				return errors.Wrap(err, "Error reading file "+currentpath)
@@ -113,7 +113,7 @@ func RuntimeCollectionParser(srcDir, currentpath, name string, templates []strin
 
 		compileDefPath := p.Rel(CompilerDefinitionFile)
 		if fileHelper.Exists(compileDefPath) {
-			raw := packsRaw.Find(p.GetName(), p.GetCategory(), p.GetVersion())
+			raw := packsRaw.Find(p)
 			buildyaml, err := ioutil.ReadFile(compileDefPath)
 			if err != nil {
 				return errors.Wrap(err, "Error reading file "+currentpath)
