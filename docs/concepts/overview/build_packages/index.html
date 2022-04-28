@@ -27,13 +27,13 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://luet.io/docs/concepts/overview/build_packages/" /><meta property="article:section" content="docs" />
 <meta property="article:published_time" content="2017-01-05T00:00:00+00:00" />
-<meta property="article:modified_time" content="2022-04-26T18:20:31+02:00" /><meta property="og:site_name" content="Luet" />
+<meta property="article:modified_time" content="2022-04-28T01:00:58+02:00" /><meta property="og:site_name" content="Luet" />
 
 <meta itemprop="name" content="Building packages">
 <meta itemprop="description" content="How to build packages with Luet
 "><meta itemprop="datePublished" content="2017-01-05T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2022-04-26T18:20:31+02:00" />
-<meta itemprop="wordCount" content="1195">
+<meta itemprop="dateModified" content="2022-04-28T01:00:58+02:00" />
+<meta itemprop="wordCount" content="1351">
 <meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Building packages"/>
 <meta name="twitter:description" content="How to build packages with Luet
@@ -146,7 +146,7 @@ if (!doNotTrack) {
   aria-label="Search this site…"
   autocomplete="off"
   
-  data-offline-search-index-json-src="/offline-search-index.0f51bd7fc3def1dd029df014c676d0d3.json"
+  data-offline-search-index-json-src="/offline-search-index.408c7cf1c85393f6caef1f2ba0bf93af.json"
   data-offline-search-base-href="/"
   data-offline-search-max-results="10"
 >
@@ -168,7 +168,7 @@ if (!doNotTrack) {
   aria-label="Search this site…"
   autocomplete="off"
   
-  data-offline-search-index-json-src="/offline-search-index.0f51bd7fc3def1dd029df014c676d0d3.json"
+  data-offline-search-index-json-src="/offline-search-index.408c7cf1c85393f6caef1f2ba0bf93af.json"
   data-offline-search-base-href="/"
   data-offline-search-max-results="10"
 >
@@ -272,9 +272,14 @@ if (!doNotTrack) {
       </ul>
     </li>
     <li><a href="#building-packages">Building packages</a></li>
+    <li><a href="#reproducible-builds">Reproducible builds</a></li>
     <li><a href="#environmental-variables">Environmental variables</a></li>
     <li><a href="#supported-compression-format">Supported compression format</a></li>
-    <li><a href="#example">Example</a></li>
+    <li><a href="#example">Example</a>
+      <ul>
+        <li><a href="#the-extended-syntax">The extended syntax</a></li>
+      </ul>
+    </li>
     <li><a href="#nesting-dependencies">Nesting dependencies</a>
       <ul>
         <li><a href="#example-1">Example</a></li>
@@ -348,9 +353,12 @@ if (!doNotTrack) {
 <p><img src="/docs/tree.jpg" alt="Build packages"></p>
 <p>Luet provides an abstraction layer on top of the container image layer to make the package a first class construct. A package definition and all its dependencies are translated by Luet to Dockerfiles which can then be built anywhere that docker runs.</p>
 <p>To resolve the dependency tree Luet uses a SAT solver and no database. It is responsible for calculating the dependencies of a package and to prevent conflicts. The Luet core is still young, but it has a comprehensive test suite that we use to validate any future changes.</p>
-<p>Building a package with Luet requires only a <a href="/docs/docs/concepts/packages/specfile">definition</a>. This definition can be self-contained and be only composed of one <a href="/docs/docs/concepts/packages/specfile">specfile</a>, or a group of them, forming a Luet tree. For more complex use-cases, see <a href="/docs/docs/concepts/packages/collections">collections</a>.</p>
+<p>Building a package with Luet requires only a <a href="/docs/docs/concepts/packages/specfile">definition</a>. This definition can be self-contained and be only composed of one <a href="/docs/docs/concepts/packages/specfile">specfile</a>, or a group of them, forming a Luet tree. For more complex use-cases, see <a href="/docs/docs/concepts/packages/collections">collections</a>. Luet also supports building packages from standard <code>Dockerfile</code> directly.</p>
 <p>Run <code>luet build --help</code> to get more help for each parameter.</p>
 <p>Build accepts a list of packages to build, which syntax is in the <code>category/name-version</code> notation. See also <a href="/docs/docs/concepts/packages/specfile/#refering-to-packages-from-the-cli">specfile documentation page</a> to see how to express packages from the CLI.</p>
+<h2 id="reproducible-builds">Reproducible builds</h2>
+<p>Pinning a container build is not easy - there are always so many moving pieces, and sometimes just set <code>FROM</code> an image tag might not be enough.</p>
+<p>Luet while building a package generates intermediate images that are stored and can be optionally pushed in a registry. Those images can be re-used by Luet if building again the same tree to guarantuee highly reproducible builds.</p>
 <h2 id="environmental-variables">Environmental variables</h2>
 <p>Luet builds passes its environment variable at the engine which is called during build, so for example the environment variable <code>DOCKER_HOST</code> or <code>DOCKER_BUILDKIT</code> can be setted.</p>
 <p>Every argument from the CLI can be setted via environment variable too with a <code>LUET_</code> prefix, for instance the flag <code>--clean</code>, can be setted via environment with <code>LUET_CLEAN</code>, <code>--privileged</code> can be enabled with <code>LUET_PRIVILEGED</code> and so on.</p>
@@ -360,6 +368,19 @@ if (!doNotTrack) {
 </code></pre></div><p>Will output package compressed in the zstd format.</p>
 <p>See the <code>--help</code> of <code>create-repo</code> and <code>build</code> to learn all the available options.</p>
 <h2 id="example">Example</h2>
+<p>Luet can seamlessly build packages also from Dockerfiles (<em>since luet&gt;=0.32.0</em>), consider the following example, that will generate a <code>curl</code> package from an <code>alpine</code> image:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$&gt; <span style="color:#8f5902;font-style:italic"># put yourself in some workdir</span>
+
+$~/workdir&gt; mkdir curl
+
+$~/workdir&gt; cat <span style="color:#4e9a06">&lt;&lt;EOF &gt; curl/Dockerfile
+</span><span style="color:#4e9a06">FROM alpine
+</span><span style="color:#4e9a06">apk add curl
+</span><span style="color:#4e9a06">EOF</span>
+
+$~/workdir&gt; luet build --all
+</code></pre></div><p>However, <code>luet</code> supports an extended syntax that allows to define packages with a more fine-grained control, templating support, and several other features that makes creation batch images much faster.</p>
+<h3 id="the-extended-syntax">The extended syntax</h3>
 <p>A <a href="/docs/docs/concepts/packages/specfile">package definition</a> is composed of a <code>build.yaml</code> and a sibiling <code>definition.yaml</code>.</p>
 <p>In the following example, we are creating a dummy package (<code>bar/foo</code>). Which ships one file only, <code>/foo</code></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$&gt; <span style="color:#8f5902;font-style:italic"># put yourself in some workdir</span>
@@ -523,7 +544,7 @@ $~/workdir&gt; cat <span style="color:#4e9a06">&lt;&lt;EOF &gt; package3/definit
 	
 	
 	<div class="text-muted mt-5 pt-3 border-top">
-  Last modified April 26, 2022: <a href="https://github.com/mudler/luet/commit/4e2a2adfc1b6971e2dc1bf50e8367687a513f917">:art: refactor out common code in tree builder (4e2a2ad)</a>
+  Last modified April 28, 2022: <a href="https://github.com/mudler/luet/commit/2aa4c8a42ed13682b4820f3ca5e6d2388a5e2c24">:gear: Keep full string around, helps debugging (2aa4c8a)</a>
 </div>
 
 </div>

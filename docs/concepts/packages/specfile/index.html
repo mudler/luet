@@ -27,13 +27,13 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://luet.io/docs/concepts/packages/specfile/" /><meta property="article:section" content="docs" />
 
-<meta property="article:modified_time" content="2022-04-26T18:20:31+02:00" /><meta property="og:site_name" content="Luet" />
+<meta property="article:modified_time" content="2022-04-28T01:00:58+02:00" /><meta property="og:site_name" content="Luet" />
 
 <meta itemprop="name" content="Specfile">
 <meta itemprop="description" content="Luet specfile syntax
 ">
-<meta itemprop="dateModified" content="2022-04-26T18:20:31+02:00" />
-<meta itemprop="wordCount" content="2350">
+<meta itemprop="dateModified" content="2022-04-28T01:00:58+02:00" />
+<meta itemprop="wordCount" content="2434">
 <meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Specfile"/>
 <meta name="twitter:description" content="Luet specfile syntax
@@ -146,7 +146,7 @@ if (!doNotTrack) {
   aria-label="Search this site…"
   autocomplete="off"
   
-  data-offline-search-index-json-src="/offline-search-index.0f51bd7fc3def1dd029df014c676d0d3.json"
+  data-offline-search-index-json-src="/offline-search-index.408c7cf1c85393f6caef1f2ba0bf93af.json"
   data-offline-search-base-href="/"
   data-offline-search-max-results="10"
 >
@@ -168,7 +168,7 @@ if (!doNotTrack) {
   aria-label="Search this site…"
   autocomplete="off"
   
-  data-offline-search-index-json-src="/offline-search-index.0f51bd7fc3def1dd029df014c676d0d3.json"
+  data-offline-search-index-json-src="/offline-search-index.408c7cf1c85393f6caef1f2ba0bf93af.json"
   data-offline-search-base-href="/"
   data-offline-search-max-results="10"
 >
@@ -287,6 +287,7 @@ if (!doNotTrack) {
         <li><a href="#requires_final_images"><code>requires_final_images</code></a></li>
         <li><a href="#step"><code>step</code></a></li>
         <li><a href="#unpack"><code>unpack</code></a></li>
+        <li><a href="#subpackages"><code>subpackages</code></a></li>
       </ul>
     </li>
     <li><a href="#rutime-specs">Rutime specs</a>
@@ -624,6 +625,24 @@ The directory must represent exactly how the files will be ultimately installed 
 <p>(optional) Boolean flag. It indicates to use the unpacking strategy while building a package</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#204a87;font-weight:bold">unpack</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></code></pre></div><p>It indicates that the package content <strong>is</strong> the whole container content.</p>
+<h3 id="subpackages"><code>subpackages</code></h3>
+<p><em>since luet&gt;=0.32.0</em></p>
+<p>(optional) A list of packages to create with the result of the current package definition.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#204a87;font-weight:bold">subpackages</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;foo&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">category</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;bar&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;1.0&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">includes</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> 
+</span><span style="color:#f8f8f8;text-decoration:underline">  </span>- <span style="color:#000">...</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">excludes</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline">  </span>- <span style="color:#000">...</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;baz&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">category</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;bar&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;1.0&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></code></pre></div><p>After generating the main package, <code>luet</code> will create split packages from the resulting one from the list.</p>
+<p>Every subpackage stanza supports <code>excludes</code> and <code>includes</code> to selectively exclude and include files in every resulting package.</p>
+<p>Note, subpackages support is available for collection, standard packages and templated packages.</p>
+<p>See <a href="/docs/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
 <h2 id="rutime-specs">Rutime specs</h2>
 <p>Runtime specification are denoted in a <code>definition.yaml</code> or a <code>collection.yaml</code> sibiling file. It identifies the package and the runtime contraints attached to it.</p>
 <p><em>definition.yaml</em>:</p>
@@ -826,7 +845,7 @@ The directory must represent exactly how the files will be ultimately installed 
 	
 	
 	<div class="text-muted mt-5 pt-3 border-top">
-  Last modified April 26, 2022: <a href="https://github.com/mudler/luet/commit/4e2a2adfc1b6971e2dc1bf50e8367687a513f917">:art: refactor out common code in tree builder (4e2a2ad)</a>
+  Last modified April 28, 2022: <a href="https://github.com/mudler/luet/commit/2aa4c8a42ed13682b4820f3ca5e6d2388a5e2c24">:gear: Keep full string around, helps debugging (2aa4c8a)</a>
 </div>
 
 </div>
