@@ -29,6 +29,6 @@ func TestImageApi(t *testing.T) {
 	b := backend.NewSimpleDockerBackend(context.NewContext())
 	b.DownloadImage(backend.Options{ImageName: "alpine"})
 	b.DownloadImage(backend.Options{ImageName: "golang:alpine"})
-
+	b.DownloadImage(backend.Options{ImageName: "golang:1.16-alpine3.14"})
 	RunSpecs(t, "Image API Suite")
 }

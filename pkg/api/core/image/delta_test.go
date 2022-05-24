@@ -53,17 +53,18 @@ var _ = Describe("Delta", func() {
 			var img, img2 v1.Image
 			var err error
 
-			ref, _ = name.ParseReference("alpine")
-			ref2, _ = name.ParseReference("golang:alpine")
-			img, _ = daemon.Image(ref)
-			img2, _ = daemon.Image(ref2)
-
 			BeforeEach(func() {
 				ctx = context.NewContext()
+				ctx.Config.General.Debug = true
 
 				tmpfile, err = ioutil.TempFile("", "delta")
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpfile.Name()) // clean up
+
+				ref, _ = name.ParseReference("alpine")
+				ref2, _ = name.ParseReference("golang:1.16-alpine3.14")
+				img, _ = daemon.Image(ref)
+				img2, _ = daemon.Image(ref2)
 			})
 
 			It("Extract all deltas", func() {
