@@ -57,11 +57,39 @@ EOF
 }
 
 testInstall() {
+    luet install -y --config $tmpdir/luet.yaml test/foobar
+    installst=$?
+    assertEquals 'install test fails' "$installst" "2"
+
+    luet install -y --config $tmpdir/luet.yaml test/foobar test/c
+    installst=$?
+    assertEquals 'install test fails' "$installst" "2"
+
+    luet install -y --config $tmpdir/luet.yaml test/foobar@1.0
+    installst=$?
+    assertEquals 'install test fails' "$installst" "2"
+
+    luet install -y --config $tmpdir/luet.yaml test/foobar@1.0 test/c@1.0
+    installst=$?
+    assertEquals 'install test fails' "$installst" "2"
+
+    luet install -y --config $tmpdir/luet.yaml test/foobar@1.0 test/c
+    installst=$?
+    assertEquals 'install test fails' "$installst" "2"
+
     luet install -y --config $tmpdir/luet.yaml test/c
-    #luet install -y --config $tmpdir/luet.yaml test/c@1.0 > /dev/null
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
     assertTrue 'package installed' "[ -e '$tmpdir/testrootfs/c' ]"
+
+    luet install -y --config $tmpdir/luet.yaml test/foobar test/c
+    installst=$?
+    assertEquals 'install test fails' "$installst" "2"
+
+    # Already installed
+    luet install -y --config $tmpdir/luet.yaml test/c@1.0
+    installst=$?
+    assertEquals 'install test fails' "$installst" "0"
 }
 
 testReInstall() {

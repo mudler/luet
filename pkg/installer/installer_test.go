@@ -26,6 +26,7 @@ import (
 	compiler "github.com/mudler/luet/pkg/compiler"
 	backend "github.com/mudler/luet/pkg/compiler/backend"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
+	"github.com/mudler/luet/pkg/solver"
 
 	pkg "github.com/mudler/luet/pkg/database"
 	. "github.com/mudler/luet/pkg/installer"
@@ -1161,6 +1162,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 
 			inst := NewLuetInstaller(LuetInstallerOptions{
+				Relaxed:     true,
 				Concurrency: 1, Context: ctx,
 				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
 			})
@@ -1174,6 +1176,28 @@ urls:
 
 			systemDB := pkg.NewBoltDatabase(filepath.Join(bolt, "db.db"))
 			system := &System{Database: systemDB, Target: fakeroot}
+
+			err = inst.Install([]*types.Package{&types.Package{Name: "b", Category: "test", Version: "1.0"}}, system)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = inst.Install([]*types.Package{&types.Package{Name: "b", Category: "foo", Version: "1.0"}}, system)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("where are definitions coming from"))
+
+			err = inst.Install([]*types.Package{&types.Package{Name: "b", Category: "foo", Version: ">=0"}}, system)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("package 'foo/b->=0' not found"))
+
+			inst2 := NewLuetInstaller(LuetInstallerOptions{
+				SolverOptions: types.LuetSolverOptions{Type: solver.QLearningResolverType},
+				Relaxed:       true,
+				Concurrency:   1, Context: ctx,
+				PackageRepositories: types.LuetRepositories{*repo2.LuetRepository},
+			})
+			err = inst2.Install([]*types.Package{&types.Package{Name: "b"}, &types.Package{Name: "b", Category: "test", Version: ">=0"}}, system)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("where are definitions coming from"))
+
 			err = inst.Install([]*types.Package{&types.Package{Name: "b", Category: "test", Version: "1.0"}}, system)
 			Expect(err).ToNot(HaveOccurred())
 
