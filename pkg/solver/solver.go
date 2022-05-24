@@ -40,6 +40,13 @@ type Solver struct {
 	Resolver types.PackageResolver
 }
 
+// IsRelaxedResolver returns true wether a solver might
+// take action on user side, by removing some installation constraints
+// or taking automated actions (e.g. qlearning)
+func IsRelaxedResolver(t types.LuetSolverOptions) bool {
+	return t.Type == QLearningResolverType
+}
+
 // NewSolver accepts as argument two lists of packages, the first is the initial set,
 // the second represent all the known packages.
 func NewSolver(t types.SolverOptions, installed types.PackageDatabase, definitiondb types.PackageDatabase, solverdb types.PackageDatabase) types.PackageSolver {

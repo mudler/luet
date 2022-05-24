@@ -291,6 +291,11 @@ func (p *Package) String() string {
 	return fmt.Sprintf("%s", string(b))
 }
 
+// HasVersionDefined returns true when a specific version of a package is implied
+func (p *Package) HasVersionDefined() bool {
+	return p.Version != ">=0"
+}
+
 // GetFingerPrint returns a UUID of the package.
 // FIXME: this needs to be unique, now just name is generalized
 func (p *Package) GetFingerPrint() string {

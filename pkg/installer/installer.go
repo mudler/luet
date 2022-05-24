@@ -552,21 +552,28 @@ func (l *LuetInstaller) Install(cp types.Packages, s *System) error {
 		return err
 	}
 
-	// Check if we have to process something, or return to the user an error
-	if len(match) == 0 {
-		l.Options.Context.Info("No packages to install")
-		return nil
-	}
+	allInstalled := true
+
 	// Resolvers might decide to remove some packages from being installed
-	if l.Options.SolverOptions.Type != solver.QLearningResolverType {
+	if !solver.IsRelaxedResolver(l.Options.SolverOptions) {
 		for _, p := range cp {
 			found := false
-			vers, _ := s.Database.FindPackageVersions(p) // If was installed, it is found, as it was filtered
-			if len(vers) >= 1 {
-				found = true
-				continue
+
+			if p.HasVersionDefined() {
+				f, err := s.Database.FindPackage(p)
+				if f != nil && err == nil {
+					found = true
+					continue
+				}
+			} else {
+				vers, _ := s.Database.FindPackageVersions(p) // If was installed, it is found, as it was filtered
+				if len(vers) >= 1 {
+					found = true
+					continue
+				}
 			}
 
+			allInstalled = false
 			for _, m := range match {
 				if m.Package.GetName() == p.GetName() {
 					found = true
@@ -583,8 +590,17 @@ func (l *LuetInstaller) Install(cp types.Packages, s *System) error {
 			}
 		}
 	}
+
+	// Check if we have to process something, or return to the user an error
+	if len(match) == 0 {
+		l.Options.Context.Info("No packages to install")
+		if !solver.IsRelaxedResolver(l.Options.SolverOptions) && !allInstalled {
+			return fmt.Errorf("could not find packages to install from the repositories in the system")
+		}
+		return nil
+	}
+
 	l.Options.Context.Info("Packages that are going to be installed in the system:")
-	//l.Options.Context.Info("Packages that are going to be installed in the system: \n ", Green(matchesToList(match)).BgBlack().String())
 
 	printMatches(match)
 
