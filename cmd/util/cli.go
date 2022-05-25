@@ -55,11 +55,7 @@ func TemplateFolders(ctx *context.Context, i installer.BuildTreeResult, treePath
 }
 
 func HandleLock() {
-	if os.Getenv("LUET_NOLOCK") == "true" {
-		return
-	}
-
-	if len(os.Args) == 0 {
+	if os.Getenv("LUET_NOLOCK") == "true" || len(os.Args) < 2 {
 		return
 	}
 
