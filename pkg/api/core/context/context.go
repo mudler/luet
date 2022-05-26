@@ -51,7 +51,7 @@ func (c *Context) GetAnnotation(s string) interface{} {
 type ContextOption func(c *Context) error
 
 // WithLogger sets the logger
-func WithLogger(l *logger.Logger) ContextOption {
+func WithLogger(l types.Logger) ContextOption {
 	return func(c *Context) error {
 		c.Logger = l
 		return nil
