@@ -30,7 +30,7 @@ import (
 )
 
 type Context struct {
-	*logger.Logger
+	types.Logger
 	context.Context
 	types.GarbageCollector
 	Config      *types.LuetConfig
@@ -122,13 +122,14 @@ func (c *Context) WithLoggingContext(name string) types.Context {
 	ctxCopy.Config = &configCopy
 	ctxCopy.annotations = ctx.annotations
 
-	ctxCopy.Logger, _ = c.Logger.Copy(logger.WithContext(name))
+	ctxCopy.Logger, _ = c.Logger.Copy()
+	ctxCopy.Logger.SetContext(name)
 
 	return ctxCopy
 }
 
 // Copy returns a context copy with a reset logging context
-func (c *Context) Copy() types.Context {
+func (c *Context) Clone() types.Context {
 	return c.WithLoggingContext("")
 }
 

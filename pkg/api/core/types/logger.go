@@ -33,7 +33,8 @@ type Logger interface {
 	Fatalf(string, ...interface{})
 	Panicf(string, ...interface{})
 	Tracef(string, ...interface{})
-
+	Copy() (Logger, error)
+	SetContext(string)
 	SpinnerStop()
 	Spinner()
 	Ask() bool

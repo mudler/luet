@@ -25,6 +25,7 @@ import (
 
 	log "github.com/ipfs/go-log/v2"
 	"github.com/kyokomi/emoji"
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/pterm/pterm"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -114,16 +115,17 @@ func New(opts ...LoggerOptions) (*Logger, error) {
 	return l, nil
 }
 
-func (l *Logger) Copy(opts ...LoggerOptions) (*Logger, error) {
+// Copy returns a copy of the logger
+func (l *Logger) Copy() (types.Logger, error) {
 	c := *l
 	copy := &c
-	for _, o := range opts {
-		if err := o(copy); err != nil {
-			return nil, err
-		}
-	}
 
 	return copy, nil
+}
+
+// SetContext sets the logger context, used to prefix log lines
+func (l *Logger) SetContext(name string) {
+	l.context = name
 }
 
 func joinMsg(args ...interface{}) (message string) {

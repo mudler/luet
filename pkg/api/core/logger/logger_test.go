@@ -21,7 +21,6 @@ import (
 	"os"
 
 	"github.com/gookit/color"
-	"github.com/mudler/luet/pkg/api/core/logger"
 	. "github.com/mudler/luet/pkg/api/core/logger"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -84,11 +83,12 @@ var _ = Describe("Context and logging", func() {
 
 		It("returns copies with logged context", func() {
 			l, err := New(WithLevel("debug"))
-			l, _ = l.Copy(logger.WithContext("bazzz"))
+			l2, _ := l.Copy()
+			l2.SetContext("bazzz")
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(captureStdout(func(w io.Writer) {
-				l.Debug("bar")
+				l2.Debug("bar")
 			})).To(ContainSubstring("(bazzz)  bar"))
 		})
 

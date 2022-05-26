@@ -638,7 +638,7 @@ func (l *LuetInstaller) download(syncedRepos Repositories, toDownload map[string
 
 	var wg = new(sync.WaitGroup)
 
-	ctx := l.Options.Context.Copy()
+	ctx := l.Options.Context.Clone()
 
 	// Check if the terminal is big enough to display a progress bar
 	// https://github.com/pterm/pterm/blob/4c725e56bfd9eb38e1c7b9dec187b50b93baa8bd/progressbar_printer.go#L190

@@ -19,7 +19,7 @@ type Context interface {
 	Logger
 	GarbageCollector
 	GetConfig() LuetConfig
-	Copy() Context
+	Clone() Context
 	// SetAnnotation sets generic annotations to hold in a context
 	SetAnnotation(s string, i interface{})
 
