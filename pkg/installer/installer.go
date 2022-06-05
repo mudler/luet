@@ -816,33 +816,7 @@ func (l *LuetInstaller) computeInstall(o Option, syncedRepos Repositories, cp ty
 func (l *LuetInstaller) getFinalizers(allRepos types.PackageDatabase, solution types.PackagesAssertions, toInstall map[string]ArtifactMatch, nodeps bool) ([]*types.Package, error) {
 	var toFinalize []*types.Package
 	if !nodeps {
-		// TODO: Lower those errors as l.Options.Context.Warning
-		for _, w := range toInstall {
-			if !fileHelper.Exists(w.Package.Rel(tree.FinalizerFile)) {
-				continue
-			}
-			// Finalizers needs to run in order and in sequence.
-			ordered, err := solution.Order(allRepos, w.Package.GetFingerPrint())
-			if err != nil {
-				return toFinalize, errors.Wrap(err, "While order a solution for "+w.Package.HumanReadableString())
-			}
-		ORDER:
-			for _, ass := range ordered {
-				if ass.Value {
-					installed, ok := toInstall[ass.Package.GetFingerPrint()]
-					if !ok {
-						// It was a dep already installed in the system, so we can skip it safely
-						continue ORDER
-					}
-					treePackage, err := installed.Repository.GetTree().GetDatabase().FindPackage(ass.Package)
-					if err != nil {
-						return toFinalize, errors.Wrap(err, "Error getting package "+ass.Package.HumanReadableString())
-					}
-
-					toFinalize = append(toFinalize, treePackage)
-				}
-			}
-		}
+		return OrderFinalizers(allRepos, toInstall, solution)
 	} else {
 		for _, c := range toInstall {
 			if !fileHelper.Exists(c.Package.Rel(tree.FinalizerFile)) {

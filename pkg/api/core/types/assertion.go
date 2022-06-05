@@ -30,7 +30,7 @@ func (a *PackageAssert) String() string {
 	return fmt.Sprintf("%s/%s %s %s", a.Package.GetCategory(), a.Package.GetName(), a.Package.GetVersion(), msg)
 }
 
-func (assertions PackagesAssertions) EnsureOrder() PackagesAssertions {
+func (assertions PackagesAssertions) EnsureOrder() (PackagesAssertions, error) {
 
 	orderedAssertions := PackagesAssertions{}
 	unorderedAssertions := PackagesAssertions{}
@@ -62,19 +62,19 @@ func (assertions PackagesAssertions) EnsureOrder() PackagesAssertions {
 	}
 	result, ok := graph.Toposort()
 	if !ok {
-		panic("Cycle found")
+		return nil, fmt.Errorf("cycle found")
 	}
 	for _, res := range result {
 		a, ok := tmpMap[res]
 		if !ok {
-			panic("fail")
-			//	continue
+			return nil, fmt.Errorf("cycle found")
+
 		}
 		orderedAssertions = append(orderedAssertions, a)
 		//	orderedAssertions = append(PackagesAssertions{a}, orderedAssertions...) // push upfront
 	}
 	//helpers.ReverseAny(orderedAssertions)
-	return orderedAssertions
+	return orderedAssertions, nil
 }
 
 // SearchByName searches a string matching a package in the assetion list
