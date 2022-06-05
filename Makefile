@@ -81,6 +81,12 @@ test-docker:
 				--workdir /go/src/github.com/mudler/luet -ti golang:latest \
 				bash -c "make test"
 
+.PHONY: test-integration-docker
+test-integration-docker:
+	docker run -v $(ROOT_DIR):/go/src/github.com/mudler/luet -v /var/run/docker.sock:/var/run/docker.sock \
+				--workdir /go/src/github.com/mudler/luet -ti golang:latest \
+				bash -c "apt-get update && apt-get install docker.io && make test-integration"
+
 multiarch-build:
 	goreleaser build --snapshot --rm-dist
 
