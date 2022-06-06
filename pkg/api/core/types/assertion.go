@@ -6,9 +6,10 @@ import (
 	"sort"
 	"unicode"
 
+	"github.com/mudler/luet/pkg/helpers"
 	"github.com/mudler/topsort"
-	"github.com/philopon/go-toposort"
 	"github.com/pkg/errors"
+	toposort "github.com/scrohde/go-toposort"
 )
 
 // PackageAssert represent a package assertion.
@@ -30,50 +31,47 @@ func (a *PackageAssert) String() string {
 	return fmt.Sprintf("%s/%s %s %s", a.Package.GetCategory(), a.Package.GetName(), a.Package.GetVersion(), msg)
 }
 
-func (assertions PackagesAssertions) EnsureOrder() (PackagesAssertions, error) {
+func (assertions PackagesAssertions) EnsureOrder(definitiondb PackageDatabase) (PackagesAssertions, error) {
 
+	allAssertions := assertions
 	orderedAssertions := PackagesAssertions{}
-	unorderedAssertions := PackagesAssertions{}
-	fingerprints := []string{}
-
 	tmpMap := map[string]PackageAssert{}
 
-	for _, a := range assertions {
-		tmpMap[a.Package.GetFingerPrint()] = a
-		fingerprints = append(fingerprints, a.Package.GetFingerPrint())
-		unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
+	graph := toposort.NewGraph(len(allAssertions))
 
-		if a.Value {
-			unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
-		} else {
-			orderedAssertions = append(orderedAssertions, a) // Keep last the ones which are not meant to be installed
-		}
+	for _, a := range assertions {
+		tmpMap[a.Package.GetPackageName()] = a
+		graph.AddNode(a.Package.GetPackageName())
 	}
 
-	sort.Sort(unorderedAssertions)
+	edges := map[string]string{}
 
 	// Build a topological graph
-	graph := toposort.NewGraph(len(unorderedAssertions))
-	graph.AddNodes(fingerprints...)
-	for _, a := range unorderedAssertions {
+	for _, a := range allAssertions {
 		for _, req := range a.Package.GetRequires() {
-			graph.AddEdge(a.Package.GetFingerPrint(), req.GetFingerPrint())
+			if def, err := definitiondb.FindPackage(req); err == nil { // Provides: Get a chance of being override here
+				req = def
+			}
+			edges[a.Package.GetPackageName()] = req.GetPackageName()
+			graph.AddNode(req.GetPackageName())
 		}
 	}
-	result, ok := graph.Toposort()
+
+	for k, v := range edges {
+		graph.AddEdge(k, v)
+	}
+
+	result, ok := graph.ToposortStable()
 	if !ok {
 		return nil, fmt.Errorf("cycle found")
 	}
 	for _, res := range result {
 		a, ok := tmpMap[res]
-		if !ok {
-			return nil, fmt.Errorf("cycle found")
-
+		if ok {
+			orderedAssertions = append(orderedAssertions, a)
 		}
-		orderedAssertions = append(orderedAssertions, a)
-		//	orderedAssertions = append(PackagesAssertions{a}, orderedAssertions...) // push upfront
 	}
-	//helpers.ReverseAny(orderedAssertions)
+	helpers.ReverseAny(orderedAssertions)
 	return orderedAssertions, nil
 }
 

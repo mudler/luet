@@ -53,6 +53,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.32-0.20211002183613-ada9ef6790c3
 	github.com/rancher-sandbox/gofilecache v0.0.0-20210330135715-becdeff5df15
+	github.com/scrohde/go-toposort v0.0.0-20170629203416-a9a902e065a3 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.8.1
