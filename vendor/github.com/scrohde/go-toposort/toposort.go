@@ -1,5 +1,7 @@
 package toposort
 
+import "sort"
+
 type Graph struct {
 	nodes   []string
 	outputs map[string]map[string]int
@@ -59,7 +61,7 @@ func (g *Graph) RemoveEdge(from, to string) bool {
 	return true
 }
 
-func (g *Graph) Toposort() ([]string, bool) {
+func (g *Graph) toposort(stable bool) ([]string, bool) {
 	L := make([]string, 0, len(g.nodes))
 	S := make([]string, 0, len(g.nodes))
 
@@ -67,6 +69,10 @@ func (g *Graph) Toposort() ([]string, bool) {
 		if g.inputs[n] == 0 {
 			S = append(S, n)
 		}
+	}
+
+	if stable {
+		sort.Strings(S)
 	}
 
 	for len(S) > 0 {
@@ -77,6 +83,10 @@ func (g *Graph) Toposort() ([]string, bool) {
 		ms := make([]string, len(g.outputs[n]))
 		for m, i := range g.outputs[n] {
 			ms[i-1] = m
+		}
+
+		if stable {
+			sort.Strings(ms)
 		}
 
 		for _, m := range ms {
@@ -98,4 +108,12 @@ func (g *Graph) Toposort() ([]string, bool) {
 	}
 
 	return L, true
+}
+
+func (g *Graph) Toposort() ([]string, bool) {
+	return g.toposort(false)
+}
+
+func (g *Graph) ToposortStable() ([]string, bool) {
+	return g.toposort(true)
 }

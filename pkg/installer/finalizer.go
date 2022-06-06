@@ -122,7 +122,7 @@ func OrderFinalizers(allRepos types.PackageDatabase, toInstall map[string]Artifa
 			}
 		}
 	} else {
-		assertions, err := solution.EnsureOrder()
+		assertions, err := solution.EnsureOrder(allRepos)
 		if err != nil {
 			return toFinalize, err
 		}
