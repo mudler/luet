@@ -255,7 +255,7 @@ func (l *Logger) Tracef(t string, args ...interface{}) {
 
 func (l *Logger) Fatal(args ...interface{}) {
 	l.send(log.LevelFatal, "", args...)
-	os.Exit(1)
+	os.Exit(2)
 }
 
 func (l *Logger) Info(args ...interface{}) {
