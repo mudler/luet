@@ -457,6 +457,14 @@ func (r *LuetSystemRepository) SetVerify(p bool) {
 	r.LuetRepository.Verify = p
 }
 
+func (r *LuetSystemRepository) GetReferenceID() string {
+	return r.LuetRepository.ReferenceID
+}
+
+func (r *LuetSystemRepository) SetReferenceID(ref string) {
+	r.LuetRepository.ReferenceID = ref
+}
+
 func (r *LuetSystemRepository) GetBackend() compiler.CompilerBackend {
 	return r.Backend
 }
@@ -1051,6 +1059,7 @@ func (r *LuetSystemRepository) fill(r2 *LuetSystemRepository) {
 	r2.SetPriority(r.GetPriority())
 	r2.SetName(r.GetName())
 	r2.SetVerify(r.GetVerify())
+	r2.SetReferenceID(r.GetReferenceID())
 }
 
 func (r *LuetSystemRepository) Serialize() (*LuetSystemRepositoryMetadata, LuetSystemRepository) {
