@@ -44,21 +44,6 @@ var _ = Describe("Assertions", func() {
 			Expect(ordered[0].Package.Name).To(Equal("bar"))
 		})
 
-		It("errors on cycles", func() {
-			foo := &types.Package{Name: "foo", PackageRequires: []*types.Package{{Name: "bar"}}}
-			assertions := types.PackagesAssertions{
-				{Package: foo},
-				{Package: &types.Package{Name: "baz", PackageRequires: []*types.Package{{Name: "bar"}}}},
-				{Package: &types.Package{Name: "bar", PackageRequires: []*types.Package{{Name: "baz"}}}},
-			}
-
-			_, err := assertions.Order(database.NewInMemoryDatabase(false), foo.GetFingerPrint())
-			Expect(err).Should(HaveOccurred())
-
-			_, err = assertions.EnsureOrder(database.NewInMemoryDatabase(false))
-			Expect(err).Should(HaveOccurred())
-		})
-
 		It("orders them correctly", func() {
 			foo := &types.Package{Name: "foo", PackageRequires: []*types.Package{{Name: "bar"}}}
 			assertions := types.PackagesAssertions{
