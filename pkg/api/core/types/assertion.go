@@ -6,10 +6,9 @@ import (
 	"sort"
 	"unicode"
 
-	"github.com/mudler/luet/pkg/helpers"
+	"github.com/kendru/darwin/go/depgraph"
 	"github.com/mudler/topsort"
 	"github.com/pkg/errors"
-	toposort "github.com/scrohde/go-toposort"
 )
 
 // PackageAssert represent a package assertion.
@@ -36,15 +35,11 @@ func (assertions PackagesAssertions) EnsureOrder(definitiondb PackageDatabase) (
 	allAssertions := assertions
 	orderedAssertions := PackagesAssertions{}
 	tmpMap := map[string]PackageAssert{}
-
-	graph := toposort.NewGraph(len(allAssertions))
+	g := depgraph.New()
 
 	for _, a := range assertions {
 		tmpMap[a.Package.GetPackageName()] = a
-		graph.AddNode(a.Package.GetPackageName())
 	}
-
-	edges := map[string]string{}
 
 	// Build a topological graph
 	for _, a := range allAssertions {
@@ -52,26 +47,19 @@ func (assertions PackagesAssertions) EnsureOrder(definitiondb PackageDatabase) (
 			if def, err := definitiondb.FindPackage(req); err == nil { // Provides: Get a chance of being override here
 				req = def
 			}
-			edges[a.Package.GetPackageName()] = req.GetPackageName()
-			graph.AddNode(req.GetPackageName())
+			g.DependOn(a.Package.GetPackageName(), req.GetPackageName())
 		}
 	}
 
-	for k, v := range edges {
-		graph.AddEdge(k, v)
-	}
-
-	result, ok := graph.ToposortStable()
-	if !ok {
-		return nil, fmt.Errorf("cycle found")
-	}
-	for _, res := range result {
-		a, ok := tmpMap[res]
-		if ok {
-			orderedAssertions = append(orderedAssertions, a)
+	for _, res := range g.TopoSortedLayers() {
+		for _, r := range res {
+			a, ok := tmpMap[r]
+			if ok {
+				orderedAssertions = append(orderedAssertions, a)
+			}
 		}
 	}
-	helpers.ReverseAny(orderedAssertions)
+	//	helpers.ReverseAny(orderedAssertions)
 	return orderedAssertions, nil
 }
 

@@ -82,5 +82,35 @@ var _ = Describe("Assertions", func() {
 			Expect(ordered[0].Package.Name).To(Equal("bar"))
 			Expect(ordered[1].Package.Name).To(Equal("foobaz"))
 		})
+
+		It("orders them correctly", func() {
+			foo := &types.Package{Name: "foo", PackageRequires: []*types.Package{{Name: "bar"}}}
+			assertions := types.PackagesAssertions{
+				{Package: foo},
+				{Package: &types.Package{Name: "bazbaz2", PackageRequires: []*types.Package{{Name: "baz2"}}}},
+				{Package: &types.Package{Name: "baz2", PackageRequires: []*types.Package{{Name: "foobaz"}, {Name: "baz"}}}},
+				{Package: &types.Package{Name: "baz", PackageRequires: []*types.Package{{Name: "bar"}}}},
+				{Package: &types.Package{Name: "bar", PackageRequires: []*types.Package{{}}}},
+				{Package: &types.Package{Name: "foobaz", PackageRequires: []*types.Package{{}}}},
+			}
+
+			ordered_old, err := assertions.Order(database.NewInMemoryDatabase(false), foo.GetFingerPrint())
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(ordered_old[0].Package.Name).To(Equal("bar"))
+			Expect(ordered_old[1].Package.Name).ToNot(Equal("foobaz"))
+
+			ordered, err := assertions.EnsureOrder(database.NewInMemoryDatabase(false))
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(ordered)).To(Equal(6))
+
+			Expect(ordered[0].Package.Name).To(Or(Equal("foobaz"), Equal("bar")))
+			Expect(ordered[1].Package.Name).To(Or(Equal("foobaz"), Equal("bar")))
+			Expect(ordered[2].Package.Name).To(Or(Equal("foo"), Equal("baz")))
+			Expect(ordered[3].Package.Name).To(Or(Equal("foo"), Equal("baz")))
+			Expect(ordered[4].Package.Name).To(Equal("baz2"))
+			Expect(ordered[5].Package.Name).To(Equal("bazbaz2"))
+
+		})
 	})
 })

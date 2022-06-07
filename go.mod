@@ -28,6 +28,7 @@ require (
 	github.com/imdario/mergo v0.3.12
 	github.com/ipfs/go-log/v2 v2.4.0
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
+	github.com/kendru/darwin/go/depgraph v0.0.0-20220319173517-8abc3541da93
 	github.com/klauspost/compress v1.15.1
 	github.com/klauspost/pgzip v1.2.5
 	github.com/knqyf263/go-deb-version v0.0.0-20190517075300-09fca494f03d
@@ -49,11 +50,9 @@ require (
 	github.com/otiai10/copy v1.2.1-0.20200916181228-26f84a0b1578
 	github.com/pelletier/go-toml v1.9.4
 	github.com/peterbourgon/diskv v2.0.1+incompatible
-	github.com/philopon/go-toposort v0.0.0-20170620085441-9be86dbd762f
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.32-0.20211002183613-ada9ef6790c3
 	github.com/rancher-sandbox/gofilecache v0.0.0-20210330135715-becdeff5df15
-	github.com/scrohde/go-toposort v0.0.0-20170629203416-a9a902e065a3 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.8.1
