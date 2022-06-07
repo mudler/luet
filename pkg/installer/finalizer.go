@@ -95,6 +95,27 @@ func NewLuetFinalizerFromYaml(data []byte) (*LuetFinalizer, error) {
 
 func OrderFinalizers(allRepos types.PackageDatabase, toInstall map[string]ArtifactMatch, solution types.PackagesAssertions) ([]*types.Package, error) {
 	var toFinalize []*types.Package
+
+	populate := func(ordered types.PackagesAssertions) error {
+		for _, ass := range ordered {
+			if ass.Value {
+				installed, ok := toInstall[ass.Package.GetFingerPrint()]
+				if !ok {
+					// It was a dep already installed in the system, so we can skip it safely
+					continue
+				}
+				treePackage, err := installed.Repository.GetTree().GetDatabase().FindPackage(ass.Package)
+				if err != nil {
+					return errors.Wrap(err, "Error getting package "+ass.Package.HumanReadableString())
+				}
+
+				toFinalize = append(toFinalize, treePackage)
+				return nil
+			}
+		}
+		return nil
+	}
+
 	if len(toInstall) == 1 {
 		for _, w := range toInstall {
 			if fileHelper.Exists(w.Package.Rel(tree.FinalizerFile)) {
@@ -103,21 +124,8 @@ func OrderFinalizers(allRepos types.PackageDatabase, toInstall map[string]Artifa
 				if err != nil {
 					return toFinalize, errors.Wrap(err, "While order a solution for "+w.Package.HumanReadableString())
 				}
-			ORDER:
-				for _, ass := range ordered {
-					if ass.Value {
-						installed, ok := toInstall[ass.Package.GetFingerPrint()]
-						if !ok {
-							// It was a dep already installed in the system, so we can skip it safely
-							continue ORDER
-						}
-						treePackage, err := installed.Repository.GetTree().GetDatabase().FindPackage(ass.Package)
-						if err != nil {
-							return toFinalize, errors.Wrap(err, "Error getting package "+ass.Package.HumanReadableString())
-						}
-
-						toFinalize = append(toFinalize, treePackage)
-					}
+				if err := populate(ordered); err != nil {
+					return toFinalize, err
 				}
 			}
 		}
@@ -127,10 +135,8 @@ func OrderFinalizers(allRepos types.PackageDatabase, toInstall map[string]Artifa
 			return toFinalize, err
 		}
 
-		for _, o := range assertions {
-			if o.Value {
-				toFinalize = append(toFinalize, o.Package)
-			}
+		if err := populate(assertions); err != nil {
+			return toFinalize, err
 		}
 	}
 
