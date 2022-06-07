@@ -110,7 +110,6 @@ func OrderFinalizers(allRepos types.PackageDatabase, toInstall map[string]Artifa
 				}
 
 				toFinalize = append(toFinalize, treePackage)
-				return nil
 			}
 		}
 		return nil
