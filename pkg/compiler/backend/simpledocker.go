@@ -18,11 +18,13 @@ package backend
 import (
 	"io"
 	"os/exec"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+
 	bus "github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/api/core/types"
@@ -47,6 +49,7 @@ func (s *SimpleDocker) BuildImage(opts Options) error {
 
 	buildarg := genBuildCommand(opts)
 	s.ctx.Info(":whale2: Building image " + name)
+	s.ctx.Debug(":whale2: Command: docker " + strings.Join(buildarg, " "))
 	cmd := exec.Command("docker", buildarg...)
 	cmd.Dir = opts.SourcePath
 	err := runCommand(s.ctx, cmd)
@@ -207,8 +210,8 @@ func (s *SimpleDocker) imageFromDisk(a string) (v1.Image, error) {
 	return crane.Load(f.Name())
 }
 
-func (s *SimpleDocker) ImageReference(a string, ondisk bool) (v1.Image, error) {
-	if ondisk {
+func (s *SimpleDocker) ImageReference(a string) (v1.Image, error) {
+	if s.ImageExists(a) {
 		return s.imageFromDisk(a)
 	}
 

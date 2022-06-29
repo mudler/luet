@@ -20,13 +20,14 @@ import (
 	"path/filepath"
 	"runtime"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	"github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/helpers/file"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Create", func() {
@@ -43,8 +44,9 @@ var _ = Describe("Create", func() {
 
 			b := backend.NewSimpleDockerBackend(ctx)
 
-			b.DownloadImage(backend.Options{ImageName: "alpine"})
-			img, err := b.ImageReference("alpine", false)
+			err = b.DownloadImage(backend.Options{ImageName: "alpine"})
+			Expect(err).ToNot(HaveOccurred())
+			img, err := b.ImageReference("alpine")
 			Expect(err).ToNot(HaveOccurred())
 
 			_, dir, err := Extract(ctx, img, nil)
@@ -66,7 +68,7 @@ var _ = Describe("Create", func() {
 
 			Expect(b.ImageExists("testimage")).To(BeTrue())
 
-			img, err = b.ImageReference("testimage", false)
+			img, err = b.ImageReference("testimage")
 			Expect(err).ToNot(HaveOccurred())
 
 			_, dir, err = Extract(ctx, img, nil)

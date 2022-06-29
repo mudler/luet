@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+
 	bus "github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/api/core/types"
@@ -76,8 +77,7 @@ func (s *SimpleImg) RemoveImage(opts Options) error {
 	return nil
 }
 
-func (s *SimpleImg) ImageReference(a string, ondisk bool) (v1.Image, error) {
-
+func (s *SimpleImg) ImageReference(a string) (v1.Image, error) {
 	f, err := s.ctx.TempFile("snapshot")
 	if err != nil {
 		return nil, err

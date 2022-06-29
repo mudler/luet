@@ -32,6 +32,9 @@ import (
 
 	dockerfile "github.com/asottile/dockerfile"
 	"github.com/imdario/mergo"
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
+
 	bus "github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/image"
@@ -43,8 +46,6 @@ import (
 	"github.com/mudler/luet/pkg/helpers"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/mudler/luet/pkg/solver"
-	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 )
 
 const BuildFile = "build.yaml"
@@ -234,7 +235,7 @@ func (cs *LuetCompiler) unpackFs(concurrency int, keepPermissions bool, p *types
 		}
 	}
 
-	img, err := cs.Backend.ImageReference(runnerOpts.ImageName, true)
+	img, err := cs.Backend.ImageReference(runnerOpts.ImageName)
 	if err != nil {
 		return nil, err
 	}
@@ -301,14 +302,14 @@ func (cs *LuetCompiler) unpackDelta(concurrency int, keepPermissions bool, p *ty
 
 	cs.Options.Context.Debug(pkgTag, ":hammer: Retrieving reference for", builderOpts.ImageName)
 
-	ref, err := cs.Backend.ImageReference(builderOpts.ImageName, true)
+	ref, err := cs.Backend.ImageReference(builderOpts.ImageName)
 	if err != nil {
 		return nil, err
 	}
 
 	cs.Options.Context.Debug(pkgTag, ":hammer: Retrieving reference for", runnerOpts.ImageName)
 
-	ref2, err := cs.Backend.ImageReference(runnerOpts.ImageName, true)
+	ref2, err := cs.Backend.ImageReference(runnerOpts.ImageName)
 	if err != nil {
 		return nil, err
 	}
@@ -1078,7 +1079,7 @@ func (cs *LuetCompiler) resolveFinalImages(concurrency int, keepPermissions bool
 					}
 				}
 
-				imgRef, err := cs.Backend.ImageReference(img, true)
+				imgRef, err := cs.Backend.ImageReference(img)
 				if err != nil {
 					return err
 				}

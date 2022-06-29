@@ -28,6 +28,9 @@ import (
 
 	helpers "github.com/mudler/luet/tests/helpers"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	"github.com/mudler/luet/pkg/api/core/context"
 	"github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
@@ -36,8 +39,6 @@ import (
 	pkg "github.com/mudler/luet/pkg/database"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/mudler/luet/pkg/tree"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Compiler", func() {
@@ -898,7 +899,7 @@ var _ = Describe("Compiler", func() {
 			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", imageName, artifacts[1].Runtime.ImageID()))).To(BeTrue())
 			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", imageName, artifacts[1].Runtime.GetMetadataFilePath()))).To(BeTrue())
 
-			img, err := b.ImageReference(fmt.Sprintf("%s:%s", imageName, artifacts[0].Runtime.ImageID()), true)
+			img, err := b.ImageReference(fmt.Sprintf("%s:%s", imageName, artifacts[0].Runtime.ImageID()))
 			Expect(err).ToNot(HaveOccurred())
 			_, path, err := image.Extract(ctx, img, nil)
 			Expect(err).ToNot(HaveOccurred())
@@ -906,7 +907,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(fileHelper.Exists(filepath.Join(path, "bin/busybox"))).To(BeTrue())
 
-			img, err = b.ImageReference(fmt.Sprintf("%s:%s", imageName, artifacts[1].Runtime.GetMetadataFilePath()), true)
+			img, err = b.ImageReference(fmt.Sprintf("%s:%s", imageName, artifacts[1].Runtime.GetMetadataFilePath()))
 			Expect(err).ToNot(HaveOccurred())
 			_, path, err = image.Extract(ctx, img, nil)
 			Expect(err).ToNot(HaveOccurred())

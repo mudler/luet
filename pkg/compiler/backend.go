@@ -3,9 +3,10 @@ package compiler
 import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
+	"github.com/pkg/errors"
+
 	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/compiler/backend"
-	"github.com/pkg/errors"
 )
 
 func NewBackend(ctx types.Context, s string) (CompilerBackend, error) {
@@ -36,6 +37,6 @@ type CompilerBackend interface {
 	Push(opts backend.Options) error
 	ImageAvailable(string) bool
 
-	ImageReference(img1 string, ondisk bool) (v1.Image, error)
+	ImageReference(img1 string) (v1.Image, error)
 	ImageExists(string) bool
 }
