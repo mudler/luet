@@ -23,11 +23,12 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	daemon "github.com/google/go-containerregistry/pkg/v1/daemon"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	"github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/helpers/file"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Extract", func() {
@@ -61,10 +62,10 @@ var _ = Describe("Extract", func() {
 					ExtractFiles(ctx, "", []string{}, []string{}),
 				)
 				Expect(err).ToNot(HaveOccurred())
-				defer os.RemoveAll(tmpdir) // clean up
+				// defer os.RemoveAll(tmpdir) // clean up
 
-				Expect(file.Exists(filepath.Join(tmpdir, "usr", "bin"))).To(BeTrue())
-				Expect(file.Exists(filepath.Join(tmpdir, "bin", "sh"))).To(BeTrue())
+				Expect(filepath.Join(tmpdir, "usr", "bin")).To(BeADirectory())
+				Expect(filepath.Join(tmpdir, "bin", "busybox")).To(BeARegularFile())
 			})
 
 			It("Extract specific dir", func() {
@@ -75,9 +76,9 @@ var _ = Describe("Extract", func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
-				Expect(file.Exists(filepath.Join(tmpdir, "usr", "sbin"))).To(BeTrue())
-				Expect(file.Exists(filepath.Join(tmpdir, "usr", "bin"))).To(BeTrue())
-				Expect(file.Exists(filepath.Join(tmpdir, "bin", "sh"))).To(BeFalse())
+				Expect(filepath.Join(tmpdir, "usr", "sbin")).To(BeADirectory())
+				Expect(filepath.Join(tmpdir, "usr", "bin")).To(BeADirectory())
+				Expect(filepath.Join(tmpdir, "bin", "busybox")).ToNot(BeARegularFile())
 			})
 
 			It("Extract a dir with includes/excludes", func() {
@@ -103,8 +104,8 @@ var _ = Describe("Extract", func() {
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
 
-				Expect(file.Exists(filepath.Join(tmpdir, "usr", "bin"))).To(BeTrue())
-				Expect(file.Exists(filepath.Join(tmpdir, "bin", "sh"))).To(BeFalse())
+				Expect(filepath.Join(tmpdir, "usr", "bin")).To(BeADirectory())
+				Expect(filepath.Join(tmpdir, "bin", "busybox")).ToNot(BeARegularFile())
 			})
 		})
 	})
