@@ -25,10 +25,13 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-multierror"
+
 	"github.com/mudler/luet/pkg/api/core/config"
 	"github.com/mudler/luet/pkg/api/core/logger"
 	"github.com/mudler/luet/pkg/helpers"
 	"github.com/mudler/luet/pkg/tree"
+
+	"github.com/pterm/pterm"
 
 	"github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/mudler/luet/pkg/api/core/types"
@@ -36,7 +39,6 @@ import (
 	pkg "github.com/mudler/luet/pkg/database"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/mudler/luet/pkg/solver"
-	"github.com/pterm/pterm"
 
 	"github.com/pkg/errors"
 )
@@ -556,6 +558,8 @@ func (l *LuetInstaller) Install(cp types.Packages, s *System) error {
 
 	// Resolvers might decide to remove some packages from being installed
 	if !solver.IsRelaxedResolver(l.Options.SolverOptions) {
+		var packagesNotFound []string
+
 		for _, p := range cp {
 			found := false
 
@@ -577,17 +581,28 @@ func (l *LuetInstaller) Install(cp types.Packages, s *System) error {
 			for _, m := range match {
 				if m.Package.GetName() == p.GetName() {
 					found = true
+					break
 				}
 				for _, pack := range m.Package.GetProvides() {
 					if pack.GetName() == p.GetName() {
 						found = true
+						break
 					}
 				}
 			}
 
 			if !found {
-				return fmt.Errorf("package '%s' not found", p.HumanReadableString())
+				packagesNotFound = append(packagesNotFound, p.HumanReadableString())
 			}
+		}
+
+		if len(packagesNotFound) > 0 {
+			prefix := "package"
+			if len(packagesNotFound) > 1 {
+				prefix = "packages"
+			}
+
+			return fmt.Errorf("%s '%s' not found", prefix, strings.Join(packagesNotFound, "', '"))
 		}
 	}
 

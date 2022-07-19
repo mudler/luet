@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/mudler/luet/pkg/api/core/types"
+
 	"github.com/mudler/luet/pkg/compiler"
 
 	"github.com/mudler/luet/pkg/api/core/context"
@@ -91,7 +92,7 @@ ENV PACKAGE_CATEGORY=app-admin`))
 			}
 			Expect(b.BuildImage(opts)).ToNot(HaveOccurred())
 			Expect(b.ExportImage(opts)).ToNot(HaveOccurred())
-			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "output1.tar"))).To(BeTrue())
+			Expect(filepath.Join(tmpdir2, "output1.tar")).To(BeARegularFile())
 			Expect(b.BuildImage(opts)).ToNot(HaveOccurred())
 
 			err = lspec.WriteStepImageDefinition(lspec.Image, filepath.Join(tmpdir, "LuetDockerfile"))
