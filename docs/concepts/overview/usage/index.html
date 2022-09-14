@@ -27,13 +27,13 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://luet.io/docs/concepts/overview/usage/" /><meta property="article:section" content="docs" />
 <meta property="article:published_time" content="2019-12-14T00:00:00+00:00" />
-<meta property="article:modified_time" content="2022-07-20T00:29:24+02:00" /><meta property="og:site_name" content="Luet" />
+<meta property="article:modified_time" content="2022-09-14T17:02:01+02:00" /><meta property="og:site_name" content="Luet" />
 
 <meta itemprop="name" content="CLI usage">
 <meta itemprop="description" content="How to install packages, manage repositories, ...
 "><meta itemprop="datePublished" content="2019-12-14T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2022-07-20T00:29:24+02:00" />
-<meta itemprop="wordCount" content="288">
+<meta itemprop="dateModified" content="2022-09-14T17:02:01+02:00" />
+<meta itemprop="wordCount" content="335">
 <meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="CLI usage"/>
 <meta name="twitter:description" content="How to install packages, manage repositories, ...
@@ -42,8 +42,8 @@
 
 
 
-<link rel="preload" href="/scss/main.min.bcf2db7206bb54bfcc572831ded22c807dfa05fb5e212721d71fffcb24513ec8.css" as="style">
-<link href="/scss/main.min.bcf2db7206bb54bfcc572831ded22c807dfa05fb5e212721d71fffcb24513ec8.css" rel="stylesheet" integrity="">
+<link rel="preload" href="/scss/main.min.25f420e728397fc7def0aa8401e8de1036d3ec3ca15db11c65bb7e0427442abb.css" as="style">
+<link href="/scss/main.min.25f420e728397fc7def0aa8401e8de1036d3ec3ca15db11c65bb7e0427442abb.css" rel="stylesheet" integrity="">
 
 <script
   src="https://code.jquery.com/jquery-3.6.0.min.js"
@@ -146,7 +146,7 @@ if (!doNotTrack) {
   aria-label="Search this site…"
   autocomplete="off"
   
-  data-offline-search-index-json-src="/offline-search-index.408c7cf1c85393f6caef1f2ba0bf93af.json"
+  data-offline-search-index-json-src="/offline-search-index.54d26642acd21db9481ce04552f6e2b5.json"
   data-offline-search-base-href="/"
   data-offline-search-max-results="10"
 >
@@ -168,7 +168,7 @@ if (!doNotTrack) {
   aria-label="Search this site…"
   autocomplete="off"
   
-  data-offline-search-index-json-src="/offline-search-index.408c7cf1c85393f6caef1f2ba0bf93af.json"
+  data-offline-search-index-json-src="/offline-search-index.54d26642acd21db9481ce04552f6e2b5.json"
   data-offline-search-base-href="/"
   data-offline-search-max-results="10"
 >
@@ -269,7 +269,8 @@ if (!doNotTrack) {
     <li><a href="#upgrading-the-system">Upgrading the system</a></li>
     <li><a href="#refreshing-repositories">Refreshing repositories</a></li>
     <li><a href="#searching-a-package">Searching a package</a></li>
-    <li><a href="#search-file-belonging-to-packages">Search file belonging to packages</a>
+    <li><a href="#search-file-belonging-to-packages">Search file belonging to packages</a></li>
+    <li><a href="#show-package-files">Show package files</a>
       <ul>
         <li><a href="#search-output">Search output</a></li>
       </ul>
@@ -365,6 +366,19 @@ $ luet search --installed &lt;regex&gt;
 </code></pre></div><p>Note: the regex argument is optional</p>
 <h2 id="search-file-belonging-to-packages">Search file belonging to packages</h2>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ luet search --file &lt;file_pattern&gt;
+</code></pre></div><h2 id="show-package-files">Show package files</h2>
+<p>Files are displayed when visualizing output of search in json or in yaml, for instance, consider the following example:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ luet search -o yaml system/luet-0.32.5
+packages:                                                                                           
+- category: system
+  files:
+  - usr/bin/luet
+  hidden: <span style="color:#204a87">false</span>
+  installed: <span style="color:#204a87">true</span>
+  name: luet
+  repository: luet
+  target: <span style="color:#4e9a06">&#34;&#34;</span>
+  version: 0.32.5
 </code></pre></div><h3 id="search-output">Search output</h3>
 <p>Search can return results in the terminal in different ways: as terminal output, as json or as yaml.</p>
 <h4 id="json">JSON</h4>
@@ -448,7 +462,7 @@ $ luet search --table &lt;regex&gt;
 	
 	
 	<div class="text-muted mt-5 pt-3 border-top">
-  Last modified July 20, 2022: <a href="https://github.com/mudler/luet/commit/556e46daeb2bff8a7f8857f3fd205e00e6b0023c">Print all not-found packages (#304) (556e46d)</a>
+  Last modified September 14, 2022: <a href="https://github.com/mudler/luet/commit/f5115e6ce3b779228afbf128e22acc655e7d885b">Update docs (f5115e6)</a>
 </div>
 
 </div>
