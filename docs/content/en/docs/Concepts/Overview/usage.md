@@ -102,6 +102,24 @@ Note: the regex argument is optional
 $ luet search --file <file_pattern>
 ```
 
+## Show package files
+
+Files are displayed when visualizing output of search in json or in yaml, for instance, consider the following example:
+
+```bash
+$ luet search -o yaml system/luet-0.32.5
+packages:                                                                                           
+- category: system
+  files:
+  - usr/bin/luet
+  hidden: false
+  installed: true
+  name: luet
+  repository: luet
+  target: ""
+  version: 0.32.5
+```
+
 ### Search output
 
 Search can return results in the terminal in different ways: as terminal output, as json or as yaml.
