@@ -18,6 +18,7 @@ package docker
 import (
 	"context"
 	"encoding/hex"
+	"net/http"
 	"os"
 
 	"github.com/containerd/containerd/images"
@@ -32,8 +33,8 @@ import (
 	"github.com/docker/docker/registry"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
@@ -148,7 +149,7 @@ func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, au
 		return nil, err
 	}
 
-	img, err := remote.Image(ref, remote.WithAuth(staticAuth{auth}))
+	img, err := remote.Image(ref, remote.WithAuth(staticAuth{auth}), remote.WithTransport(http.DefaultTransport))
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +195,7 @@ func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, au
 	}, nil
 }
 
-func ExtractDockerImage(ctx luettypes.Context, local, dest string)(*images.Image, error) {
+func ExtractDockerImage(ctx luettypes.Context, local, dest string) (*images.Image, error) {
 	if !fileHelper.Exists(dest) {
 		if err := os.MkdirAll(dest, os.ModePerm); err != nil {
 			return nil, errors.Wrapf(err, "cannot create destination directory")
