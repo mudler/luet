@@ -43,8 +43,8 @@ require (
 	github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
 	github.com/mudler/go-pluggable v0.0.0-20211206135551-9263b05c562e
 	github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290
-	github.com/onsi/ginkgo/v2 v2.0.0
-	github.com/onsi/gomega v1.17.0
+	github.com/onsi/ginkgo/v2 v2.3.1
+	github.com/onsi/gomega v1.22.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.0.3-0.20211202183452-c5a74bcca799
 	github.com/otiai10/copy v1.2.1-0.20200916181228-26f84a0b1578
@@ -60,10 +60,10 @@ require (
 	go.etcd.io/bbolt v1.3.6
 	go.uber.org/multierr v1.6.0
 	go.uber.org/zap v1.17.0
-	golang.org/x/mod v0.4.2
+	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	gopkg.in/ini.v1 v1.63.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gopkg.in/yaml.v3 v3.0.1
 
 )
