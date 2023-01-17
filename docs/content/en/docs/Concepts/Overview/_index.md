@@ -28,6 +28,6 @@ Luet allows also to create packages entirely from Docker images content. In this
 
 ## Package definitions
 
-Luet uses [YAML](https://en.wikipedia.org/wiki/YAML) for the package specification format, Luet parses the [requirements](/docs/docs/concepts/overview/constraints) to build [packages](/docs/docs/concepts/packages), so Luet can consume them.
+Luet uses [YAML](https://en.wikipedia.org/wiki/YAML) for the package specification format, Luet parses the [requirements](/docs/concepts/overview/constraints) to build [packages](/docs/concepts/packages), so Luet can consume them.
 
 Below you can find links to tutorials on how to build packages, images and repositories.

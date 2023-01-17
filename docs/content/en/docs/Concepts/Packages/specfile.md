@@ -9,7 +9,7 @@ description: >
 
 # Specfiles
 
-Luet [packages](/docs/docs/concepts/packages/) are defined by specfiles. Specfiles define the runtime and builtime requirements of a package.  There is an hard distinction between runtime and buildtime. A spec is composed at least by the runtime (`definition.yaml` or a `collection.yaml`) and the buildtime specification (`build.yaml`).
+Luet [packages](/docs/concepts/packages/) are defined by specfiles. Specfiles define the runtime and builtime requirements of a package.  There is an hard distinction between runtime and buildtime. A spec is composed at least by the runtime (`definition.yaml` or a `collection.yaml`) and the buildtime specification (`build.yaml`).
 
 Luet identifies the package definition by looking at directories that contains a `build.yaml` and a `definition.yaml` (or `collection.yaml`) files. A Luet tree is merely a composition of directories that follows this convention. There is no constriction on either folder naming or hierarchy.
 
@@ -181,7 +181,7 @@ conflicts:
   version: "1.0"
 ```
 
-See [Package concepts](/docs/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
+See [Package concepts](/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
 
 ### `copy`
 
@@ -309,7 +309,7 @@ join:
   version: "1.0"
 ```
 
-See [Package concepts](/docs/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
+See [Package concepts](/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
 
 #### Examples
 
@@ -357,7 +357,7 @@ requires:
   version: "1.0"
 ```
 
-See [Package concepts](/docs/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
+See [Package concepts](/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
 
 ### `requires_final_images`
 
@@ -428,7 +428,7 @@ Every subpackage stanza supports `excludes` and `includes` to selectively exclud
 
 Note, subpackages support is available for collection, standard packages and templated packages.
 
-See [Package concepts](/docs/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
+See [Package concepts](/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
 
 ## Rutime specs
 
@@ -485,7 +485,7 @@ packages:
 ...
 ```
 
-All the fields (also the ones which are not part of the spec) in the `definition.yaml` file are available as templating values when rendering the `build.yaml` file. When running [finalizers](/docs/docs/concepts/packages/specfile/#finalizers) instead only the fields belonging to the specs are available.
+All the fields (also the ones which are not part of the spec) in the `definition.yaml` file are available as templating values when rendering the `build.yaml` file. When running [finalizers](/docs/concepts/packages/specfile/#finalizers) instead only the fields belonging to the specs are available.
 
 ### Keywords
 
@@ -525,7 +525,7 @@ conflicts:
   version: "1.0"
 ```
 
-See [Package concepts](/docs/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
+See [Package concepts](/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
 
 ### `description`
 
@@ -592,7 +592,7 @@ conflicts:
   version: "1.0"
 ```
 
-See [Package concepts](/docs/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
+See [Package concepts](/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
 
 ### `requires`
 
@@ -611,7 +611,7 @@ requires:
   version: "1.0"
 ```
 
-See [Package concepts](/docs/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
+See [Package concepts](/docs/concepts/packages) for more information on how to represent a package in a Luet tree.
 
 ### `uri`
 

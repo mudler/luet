@@ -32,11 +32,11 @@ Luet provides an abstraction layer on top of the container image layer to make t
 
 To resolve the dependency tree Luet uses a SAT solver and no database. It is responsible for calculating the dependencies of a package and to prevent conflicts. The Luet core is still young, but it has a comprehensive test suite that we use to validate any future changes.
 
-Building a package with Luet requires only a [definition](/docs/docs/concepts/packages/specfile). This definition can be self-contained and be only composed of one [specfile](/docs/docs/concepts/packages/specfile), or a group of them, forming a Luet tree. For more complex use-cases, see [collections](/docs/docs/concepts/packages/collections). Luet also supports building packages from standard `Dockerfile` directly.
+Building a package with Luet requires only a [definition](/docs/concepts/packages/specfile). This definition can be self-contained and be only composed of one [specfile](/docs/concepts/packages/specfile), or a group of them, forming a Luet tree. For more complex use-cases, see [collections](/docs/concepts/packages/collections). Luet also supports building packages from standard `Dockerfile` directly.
 
 Run `luet build --help` to get more help for each parameter.
 
-Build accepts a list of packages to build, which syntax is in the `category/name-version` notation. See also [specfile documentation page](/docs/docs/concepts/packages/specfile/#refering-to-packages-from-the-cli) to see how to express packages from the CLI.
+Build accepts a list of packages to build, which syntax is in the `category/name-version` notation. See also [specfile documentation page](/docs/concepts/packages/specfile/#refering-to-packages-from-the-cli) to see how to express packages from the CLI.
 
 ## Reproducible builds
 
@@ -84,7 +84,7 @@ However, `luet` supports an extended syntax that allows to define packages with 
 
 ### The extended syntax
 
-A [package definition](/docs/docs/concepts/packages/specfile) is composed of a `build.yaml` and a sibiling `definition.yaml`.
+A [package definition](/docs/concepts/packages/specfile) is composed of a `build.yaml` and a sibiling `definition.yaml`.
 
 In the following example, we are creating a dummy package (`bar/foo`). Which ships one file only, `/foo`
 

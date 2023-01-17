@@ -8,7 +8,7 @@ description: >
 
 Under the hood, Luet uses boolean satisfiability problem ([SAT](https://en.wikipedia.org/wiki/Boolean_satisfiability_problem))  [reinforcement learning](https://en.wikipedia.org/wiki/Reinforcement_learning) techniques to solve package constraints.
 
-Luet allows you to specify 3 types of set of contraints on a [package](/docs/docs/concepts/packages/) definition:
+Luet allows you to specify 3 types of set of contraints on a [package](/docs/concepts/packages/) definition:
 
 - Requires
 - Conflicts
@@ -18,7 +18,7 @@ The package definition in your tree definition, along with its Requires and Conf
 
 ## Requires and Conflicts
 
-A list of requires and conflicts, composed of one or more [packages](/docs/docs/concepts/packages/), becomes a SAT formula. The formula is then given to the SAT solver to compute a finite state set of packages which must be installed in the system in order to met the requirements.
+A list of requires and conflicts, composed of one or more [packages](/docs/concepts/packages/), becomes a SAT formula. The formula is then given to the SAT solver to compute a finite state set of packages which must be installed in the system in order to met the requirements.
 
 As Luet allows to express constraints with selectors ( e.g. `A depends on >=B-1.0`) it generates additional constraints to guarantee that at least one package and at most one is picked as dependency (*ALO* and *AMO*).
 
