@@ -61,7 +61,7 @@ By a combination of keywords in `build.yaml`, you end up with categories of pack
 - Package layers
 - Package with includes
 
-Check the [Specfile concept](/docs/docs/concepts/packages/specfile) page for a full overview of the available keywords in the Luet specfile format.
+Check the [Specfile concept](/docs/concepts/packages/specfile) page for a full overview of the available keywords in the Luet specfile format.
 
 ### Seed packages
 

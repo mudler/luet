@@ -63,4 +63,4 @@ At the end of the process, a file `luet_os.img`, ready to be flashed to an SD ca
 
 ## Add packages
 
-In order to build and add [packages](/docs/docs/concepts/packages/) to the exiting repository, simply add or edit the [specfiles](/docs/docs/concepts/specfile) under the `distro` folder. When doing ```make rebuild-all``` the packages will be automatically compiled and made available to the local repository.
+In order to build and add [packages](/docs/concepts/packages/) to the exiting repository, simply add or edit the [specfiles](/docs/concepts/packages/specfile) under the `distro` folder. When doing ```make rebuild-all``` the packages will be automatically compiled and made available to the local repository.

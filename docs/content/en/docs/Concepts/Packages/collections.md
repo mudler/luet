@@ -24,7 +24,7 @@ Luet during the build phase, will treat packages of a collection individually. A
 
 ## Templating
 
-[The templating mechanism](/docs/docs/concepts/packages/templates) can be used in collections as well, and each stanza in `packages` is used to interpolate each single package. 
+[The templating mechanism](/docs/concepts/packages/templates) can be used in collections as well, and each stanza in `packages` is used to interpolate each single package. 
 
 ## Examples
 
