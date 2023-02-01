@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/go-units"
@@ -32,6 +33,10 @@ import (
 	"github.com/mudler/luet/pkg/helpers/docker"
 
 	"github.com/spf13/cobra"
+)
+
+const (
+	filePrefix = "file://"
 )
 
 func pack(ctx *context.Context, p, dst, imageName, arch, OS string) error {
@@ -126,7 +131,7 @@ func NewUnpackCommand() *cobra.Command {
 				RegistryToken: registryToken,
 			}
 
-			if !local {
+			if !local && !strings.HasPrefix(image, filePrefix) {
 				info, err := docker.DownloadAndExtractDockerImage(util.DefaultContext, image, destination, auth, verify)
 				if err != nil {
 					util.DefaultContext.Error(err.Error())

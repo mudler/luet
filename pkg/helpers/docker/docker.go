@@ -20,6 +20,10 @@ import (
 	"encoding/hex"
 	"net/http"
 	"os"
+	"strings"
+
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 
 	"github.com/containerd/containerd/images"
 	luetimages "github.com/mudler/luet/pkg/api/core/image"
@@ -40,6 +44,11 @@ import (
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"github.com/theupdateframework/notary/tuf/data"
+)
+
+const (
+	filePrefix         = "file://"
+	fileImageSeparator = ":/"
 )
 
 // See also https://github.com/docker/cli/blob/88c6089300a82d3373892adf6845a4fed1a4ba8d/cli/command/image/trust.go#L171
@@ -196,18 +205,26 @@ func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, au
 }
 
 func ExtractDockerImage(ctx luettypes.Context, local, dest string) (*images.Image, error) {
+	var img v1.Image
 	if !fileHelper.Exists(dest) {
 		if err := os.MkdirAll(dest, os.ModePerm); err != nil {
 			return nil, errors.Wrapf(err, "cannot create destination directory")
 		}
 	}
 
-	ref, err := name.ParseReference(local)
-	if err != nil {
-		return nil, err
+	var err error
+	if strings.HasPrefix(local, filePrefix) {
+		parts := strings.Split(local, fileImageSeparator)
+		if len(parts) == 2 && parts[1] != "" {
+			img, err = tarball.ImageFromPath(parts[1], nil)
+		}
+	} else {
+		ref, err := name.ParseReference(local)
+		if err != nil {
+			return nil, err
+		}
+		img, err = daemon.Image(ref)
 	}
-
-	img, err := daemon.Image(ref)
 	if err != nil {
 		return nil, err
 	}
