@@ -50,8 +50,7 @@ deps:
 	# Installing dependencies...
 	GO111MODULE=off go get golang.org/x/lint/golint
 	GO111MODULE=off go get github.com/mitchellh/gox
-	GO111MODULE=off go get github.com/onsi/ginkgo/ginkgo
-	GO111MODULE=off go get github.com/onsi/gomega/...
+	go install -mod=mod github.com/onsi/ginkgo/ginkgo
 
 .PHONY: build
 build:
