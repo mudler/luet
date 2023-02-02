@@ -34,9 +34,9 @@
 &lt;p&gt;&lt;img src=&#34;https://luet.io/docs/tree.jpg&#34; alt=&#34;Build packages&#34;&gt;&lt;/p&gt;
 &lt;p&gt;Luet provides an abstraction layer on top of the container image layer to make the package a first class construct. A package definition and all its dependencies are translated by Luet to Dockerfiles which can then be built anywhere that docker runs.&lt;/p&gt;
 &lt;p&gt;To resolve the dependency tree Luet uses a SAT solver and no database. It is responsible for calculating the dependencies of a package and to prevent conflicts. The Luet core is still young, but it has a comprehensive test suite that we use to validate any future changes.&lt;/p&gt;
-&lt;p&gt;Building a package with Luet requires only a &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/specfile&#34;&gt;definition&lt;/a&gt;. This definition can be self-contained and be only composed of one &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/specfile&#34;&gt;specfile&lt;/a&gt;, or a group of them, forming a Luet tree. For more complex use-cases, see &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/collections&#34;&gt;collections&lt;/a&gt;. Luet also supports building packages from standard &lt;code&gt;Dockerfile&lt;/code&gt; directly.&lt;/p&gt;
+&lt;p&gt;Building a package with Luet requires only a &lt;a href=&#34;https://luet.io/docs/concepts/packages/specfile&#34;&gt;definition&lt;/a&gt;. This definition can be self-contained and be only composed of one &lt;a href=&#34;https://luet.io/docs/concepts/packages/specfile&#34;&gt;specfile&lt;/a&gt;, or a group of them, forming a Luet tree. For more complex use-cases, see &lt;a href=&#34;https://luet.io/docs/concepts/packages/collections&#34;&gt;collections&lt;/a&gt;. Luet also supports building packages from standard &lt;code&gt;Dockerfile&lt;/code&gt; directly.&lt;/p&gt;
 &lt;p&gt;Run &lt;code&gt;luet build --help&lt;/code&gt; to get more help for each parameter.&lt;/p&gt;
-&lt;p&gt;Build accepts a list of packages to build, which syntax is in the &lt;code&gt;category/name-version&lt;/code&gt; notation. See also &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/specfile/#refering-to-packages-from-the-cli&#34;&gt;specfile documentation page&lt;/a&gt; to see how to express packages from the CLI.&lt;/p&gt;
+&lt;p&gt;Build accepts a list of packages to build, which syntax is in the &lt;code&gt;category/name-version&lt;/code&gt; notation. See also &lt;a href=&#34;https://luet.io/docs/concepts/packages/specfile/#refering-to-packages-from-the-cli&#34;&gt;specfile documentation page&lt;/a&gt; to see how to express packages from the CLI.&lt;/p&gt;
 &lt;h2 id=&#34;reproducible-builds&#34;&gt;Reproducible builds&lt;/h2&gt;
 &lt;p&gt;Pinning a container build is not easy - there are always so many moving pieces, and sometimes just set &lt;code&gt;FROM&lt;/code&gt; an image tag might not be enough.&lt;/p&gt;
 &lt;p&gt;Luet while building a package generates intermediate images that are stored and can be optionally pushed in a registry. Those images can be re-used by Luet if building again the same tree to guarantuee highly reproducible builds.&lt;/p&gt;
@@ -62,7 +62,7 @@ $~/workdir&amp;gt; cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt
 $~/workdir&amp;gt; luet build --all
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;However, &lt;code&gt;luet&lt;/code&gt; supports an extended syntax that allows to define packages with a more fine-grained control, templating support, and several other features that makes creation batch images much faster.&lt;/p&gt;
 &lt;h3 id=&#34;the-extended-syntax&#34;&gt;The extended syntax&lt;/h3&gt;
-&lt;p&gt;A &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/specfile&#34;&gt;package definition&lt;/a&gt; is composed of a &lt;code&gt;build.yaml&lt;/code&gt; and a sibiling &lt;code&gt;definition.yaml&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;A &lt;a href=&#34;https://luet.io/docs/concepts/packages/specfile&#34;&gt;package definition&lt;/a&gt; is composed of a &lt;code&gt;build.yaml&lt;/code&gt; and a sibiling &lt;code&gt;definition.yaml&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;In the following example, we are creating a dummy package (&lt;code&gt;bar/foo&lt;/code&gt;). Which ships one file only, &lt;code&gt;/foo&lt;/code&gt;&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$&amp;gt; &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# put yourself in some workdir&lt;/span&gt;
 
@@ -379,7 +379,7 @@ $ luet search --table &amp;lt;regex&amp;gt;
         
         
         &lt;p&gt;Under the hood, Luet uses boolean satisfiability problem (&lt;a href=&#34;https://en.wikipedia.org/wiki/Boolean_satisfiability_problem&#34;&gt;SAT&lt;/a&gt;)  &lt;a href=&#34;https://en.wikipedia.org/wiki/Reinforcement_learning&#34;&gt;reinforcement learning&lt;/a&gt; techniques to solve package constraints.&lt;/p&gt;
-&lt;p&gt;Luet allows you to specify 3 types of set of contraints on a &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/&#34;&gt;package&lt;/a&gt; definition:&lt;/p&gt;
+&lt;p&gt;Luet allows you to specify 3 types of set of contraints on a &lt;a href=&#34;https://luet.io/docs/concepts/packages/&#34;&gt;package&lt;/a&gt; definition:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;Requires&lt;/li&gt;
 &lt;li&gt;Conflicts&lt;/li&gt;
@@ -387,7 +387,7 @@ $ luet search --table &amp;lt;regex&amp;gt;
 &lt;/ul&gt;
 &lt;p&gt;The package definition in your tree definition, along with its Requires and Conflicts, are turned into Boolean formulas that are consumed by the solver to compute a solution. The solution represent the state of your system after a particular query is asked to the solver (Install, Uninstall, Upgrade).&lt;/p&gt;
 &lt;h2 id=&#34;requires-and-conflicts&#34;&gt;Requires and Conflicts&lt;/h2&gt;
-&lt;p&gt;A list of requires and conflicts, composed of one or more &lt;a href=&#34;https://luet.io/docs/docs/concepts/packages/&#34;&gt;packages&lt;/a&gt;, becomes a SAT formula. The formula is then given to the SAT solver to compute a finite state set of packages which must be installed in the system in order to met the requirements.&lt;/p&gt;
+&lt;p&gt;A list of requires and conflicts, composed of one or more &lt;a href=&#34;https://luet.io/docs/concepts/packages/&#34;&gt;packages&lt;/a&gt;, becomes a SAT formula. The formula is then given to the SAT solver to compute a finite state set of packages which must be installed in the system in order to met the requirements.&lt;/p&gt;
 &lt;p&gt;As Luet allows to express constraints with selectors ( e.g. &lt;code&gt;A depends on &amp;gt;=B-1.0&lt;/code&gt;) it generates additional constraints to guarantee that at least one package and at most one is picked as dependency (&lt;em&gt;ALO&lt;/em&gt; and &lt;em&gt;AMO&lt;/em&gt;).&lt;/p&gt;
 &lt;h2 id=&#34;provides&#34;&gt;Provides&lt;/h2&gt;
 &lt;p&gt;Provides constraints are not encoded in a SAT formula. Instead, they are &lt;code&gt;expanded&lt;/code&gt; into an in-place substitution of the packages that they have to be replaced with.

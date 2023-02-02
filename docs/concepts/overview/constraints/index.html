@@ -27,12 +27,12 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://luet.io/docs/concepts/overview/constraints/" /><meta property="article:section" content="docs" />
 
-<meta property="article:modified_time" content="2022-10-18T08:22:08+00:00" /><meta property="og:site_name" content="Luet" />
+<meta property="article:modified_time" content="2023-02-02T11:59:57+01:00" /><meta property="og:site_name" content="Luet" />
 
 <meta itemprop="name" content="CSP, SAT &amp;&amp; RL">
 <meta itemprop="description" content="How Luet turns Image resolution into CSP
 ">
-<meta itemprop="dateModified" content="2022-10-18T08:22:08+00:00" />
+<meta itemprop="dateModified" content="2023-02-02T11:59:57+01:00" />
 <meta itemprop="wordCount" content="241">
 <meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="CSP, SAT &amp;&amp; RL"/>
@@ -318,7 +318,7 @@ if (!doNotTrack) {
 		
 	</header>    
 	<p>Under the hood, Luet uses boolean satisfiability problem (<a href="https://en.wikipedia.org/wiki/Boolean_satisfiability_problem">SAT</a>)  <a href="https://en.wikipedia.org/wiki/Reinforcement_learning">reinforcement learning</a> techniques to solve package constraints.</p>
-<p>Luet allows you to specify 3 types of set of contraints on a <a href="/docs/docs/concepts/packages/">package</a> definition:</p>
+<p>Luet allows you to specify 3 types of set of contraints on a <a href="/docs/concepts/packages/">package</a> definition:</p>
 <ul>
 <li>Requires</li>
 <li>Conflicts</li>
@@ -326,7 +326,7 @@ if (!doNotTrack) {
 </ul>
 <p>The package definition in your tree definition, along with its Requires and Conflicts, are turned into Boolean formulas that are consumed by the solver to compute a solution. The solution represent the state of your system after a particular query is asked to the solver (Install, Uninstall, Upgrade).</p>
 <h2 id="requires-and-conflicts">Requires and Conflicts</h2>
-<p>A list of requires and conflicts, composed of one or more <a href="/docs/docs/concepts/packages/">packages</a>, becomes a SAT formula. The formula is then given to the SAT solver to compute a finite state set of packages which must be installed in the system in order to met the requirements.</p>
+<p>A list of requires and conflicts, composed of one or more <a href="/docs/concepts/packages/">packages</a>, becomes a SAT formula. The formula is then given to the SAT solver to compute a finite state set of packages which must be installed in the system in order to met the requirements.</p>
 <p>As Luet allows to express constraints with selectors ( e.g. <code>A depends on &gt;=B-1.0</code>) it generates additional constraints to guarantee that at least one package and at most one is picked as dependency (<em>ALO</em> and <em>AMO</em>).</p>
 <h2 id="provides">Provides</h2>
 <p>Provides constraints are not encoded in a SAT formula. Instead, they are <code>expanded</code> into an in-place substitution of the packages that they have to be replaced with.
@@ -403,7 +403,7 @@ They share the same SAT logic of expansion, allowing to swap entire version rang
 	
 	
 	<div class="text-muted mt-5 pt-3 border-top">
-  Last modified October 18, 2022: <a href="https://github.com/mudler/luet/commit/2513760b00de6aebb0444e6a7221ac8967d62b6c">Tag 0.33.0 (2513760)</a>
+  Last modified February 2, 2023: <a href="https://github.com/mudler/luet/commit/5ee1ff6d5aee5e5bb6d98382ff232b5d828afd36">:arrow_up: Bump to go 1.19 as requirement for building (#319) (5ee1ff6)</a>
 </div>
 
 </div>
@@ -445,7 +445,7 @@ They share the same SAT logic of expansion, allowing to swap entire version rang
         
       </div>
       <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
-        <small class="text-white">&copy; 2022 Ettore Di Giacinto All Rights Reserved</small>
+        <small class="text-white">&copy; 2023 Ettore Di Giacinto All Rights Reserved</small>
         <small class="ml-1"><a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacy Policy</a></small>
 	
 		<p class="mt-2"><a href="/about/">About Luet</a></p>

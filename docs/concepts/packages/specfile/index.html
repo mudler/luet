@@ -27,12 +27,12 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://luet.io/docs/concepts/packages/specfile/" /><meta property="article:section" content="docs" />
 
-<meta property="article:modified_time" content="2022-10-18T08:22:08+00:00" /><meta property="og:site_name" content="Luet" />
+<meta property="article:modified_time" content="2023-02-02T11:59:57+01:00" /><meta property="og:site_name" content="Luet" />
 
 <meta itemprop="name" content="Specfile">
 <meta itemprop="description" content="Luet specfile syntax
 ">
-<meta itemprop="dateModified" content="2022-10-18T08:22:08+00:00" />
+<meta itemprop="dateModified" content="2023-02-02T11:59:57+01:00" />
 <meta itemprop="wordCount" content="2434">
 <meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Specfile"/>
@@ -361,7 +361,7 @@ if (!doNotTrack) {
 		
 	</header>    
 	<h1 id="specfiles">Specfiles</h1>
-<p>Luet <a href="/docs/docs/concepts/packages/">packages</a> are defined by specfiles. Specfiles define the runtime and builtime requirements of a package.  There is an hard distinction between runtime and buildtime. A spec is composed at least by the runtime (<code>definition.yaml</code> or a <code>collection.yaml</code>) and the buildtime specification (<code>build.yaml</code>).</p>
+<p>Luet <a href="/docs/concepts/packages/">packages</a> are defined by specfiles. Specfiles define the runtime and builtime requirements of a package.  There is an hard distinction between runtime and buildtime. A spec is composed at least by the runtime (<code>definition.yaml</code> or a <code>collection.yaml</code>) and the buildtime specification (<code>build.yaml</code>).</p>
 <p>Luet identifies the package definition by looking at directories that contains a <code>build.yaml</code> and a <code>definition.yaml</code> (or <code>collection.yaml</code>) files. A Luet tree is merely a composition of directories that follows this convention. There is no constriction on either folder naming or hierarchy.</p>
 <p><em>Example of a <a href="https://github.com/Luet-lab/luet-embedded/tree/master/distro">tree folder hierarchy</a></em></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">tree distro                                                      
@@ -493,7 +493,7 @@ The directory must represent exactly how the files will be ultimately installed 
 </span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;baz&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">category</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;bar&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;1.0&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></code></pre></div><p>See <a href="/docs/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
+</span></code></pre></div><p>See <a href="/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
 <h3 id="copy"><code>copy</code></h3>
 <p><em>since luet&gt;=0.15.0</em></p>
 <p>(optional) A list of packages/images where to copy files from. It is the <a href="https://docs.docker.com/develop/develop-images/multistage-build/">Docker multi-stage build</a> equivalent but enhanced with tree hashing resolution.</p>
@@ -571,7 +571,7 @@ The directory must represent exactly how the files will be ultimately installed 
 </span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;baz&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">category</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;bar&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;1.0&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></code></pre></div><p>See <a href="/docs/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
+</span></code></pre></div><p>See <a href="/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
 <h4 id="examples">Examples</h4>
 <ul>
 <li><a href="https://github.com/mocaccinoOS/mocaccino-stage3/blob/278e3637cf65761bf01a22c891135e237e4717ad/packages/system/stage3/build.yaml">https://github.com/mocaccinoOS/mocaccino-stage3/blob/278e3637cf65761bf01a22c891135e237e4717ad/packages/system/stage3/build.yaml</a></li>
@@ -600,7 +600,7 @@ The directory must represent exactly how the files will be ultimately installed 
 </span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;baz&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">category</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;bar&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;1.0&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></code></pre></div><p>See <a href="/docs/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
+</span></code></pre></div><p>See <a href="/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
 <h3 id="requires_final_images"><code>requires_final_images</code></h3>
 <p><em>since luet&gt;=0.17.0</em></p>
 <p>(optional) A boolean flag which instruct luet to use the final images in the <code>requires</code> field.</p>
@@ -642,7 +642,7 @@ The directory must represent exactly how the files will be ultimately installed 
 </span></code></pre></div><p>After generating the main package, <code>luet</code> will create split packages from the resulting one from the list.</p>
 <p>Every subpackage stanza supports <code>excludes</code> and <code>includes</code> to selectively exclude and include files in every resulting package.</p>
 <p>Note, subpackages support is available for collection, standard packages and templated packages.</p>
-<p>See <a href="/docs/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
+<p>See <a href="/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
 <h2 id="rutime-specs">Rutime specs</h2>
 <p>Runtime specification are denoted in a <code>definition.yaml</code> or a <code>collection.yaml</code> sibiling file. It identifies the package and the runtime contraints attached to it.</p>
 <p><em>definition.yaml</em>:</p>
@@ -689,7 +689,7 @@ The directory must represent exactly how the files will be ultimately installed 
 </span><span style="color:#f8f8f8;text-decoration:underline">  </span>- <span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;bar&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;&lt;1.0&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">...</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></code></pre></div><p>All the fields (also the ones which are not part of the spec) in the <code>definition.yaml</code> file are available as templating values when rendering the <code>build.yaml</code> file. When running <a href="/docs/docs/concepts/packages/specfile/#finalizers">finalizers</a> instead only the fields belonging to the specs are available.</p>
+</span></code></pre></div><p>All the fields (also the ones which are not part of the spec) in the <code>definition.yaml</code> file are available as templating values when rendering the <code>build.yaml</code> file. When running <a href="/docs/concepts/packages/specfile/#finalizers">finalizers</a> instead only the fields belonging to the specs are available.</p>
 <h3 id="keywords-1">Keywords</h3>
 <p>Here is a list of the full keyword refereces</p>
 <h3 id="annotations"><code>annotations</code></h3>
@@ -710,7 +710,7 @@ The directory must represent exactly how the files will be ultimately installed 
 </span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;baz&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">category</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;bar&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;1.0&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></code></pre></div><p>See <a href="/docs/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
+</span></code></pre></div><p>See <a href="/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
 <h3 id="description"><code>description</code></h3>
 <p>(optional) A string indicating the package description</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;foo&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -741,7 +741,7 @@ The directory must represent exactly how the files will be ultimately installed 
 </span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;baz&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">category</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;bar&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;1.0&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></code></pre></div><p>See <a href="/docs/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
+</span></code></pre></div><p>See <a href="/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
 <h3 id="requires-1"><code>requires</code></h3>
 <p>(optional) List of packages which it depends on in runtime.</p>
 <p>A list of packages that the current package depends on in <em>runtime</em>. The determines the resolution tree of the package itself.</p>
@@ -753,7 +753,7 @@ The directory must represent exactly how the files will be ultimately installed 
 </span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;baz&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">category</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;bar&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;1.0&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></code></pre></div><p>See <a href="/docs/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
+</span></code></pre></div><p>See <a href="/docs/concepts/packages">Package concepts</a> for more information on how to represent a package in a Luet tree.</p>
 <h3 id="uri"><code>uri</code></h3>
 <p>(optional) A list of URI relative to the package ( e.g. the official project pages, wikis, README, etc )</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#204a87;font-weight:bold">uri</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -845,7 +845,7 @@ The directory must represent exactly how the files will be ultimately installed 
 	
 	
 	<div class="text-muted mt-5 pt-3 border-top">
-  Last modified October 18, 2022: <a href="https://github.com/mudler/luet/commit/2513760b00de6aebb0444e6a7221ac8967d62b6c">Tag 0.33.0 (2513760)</a>
+  Last modified February 2, 2023: <a href="https://github.com/mudler/luet/commit/5ee1ff6d5aee5e5bb6d98382ff232b5d828afd36">:arrow_up: Bump to go 1.19 as requirement for building (#319) (5ee1ff6)</a>
 </div>
 
 </div>
@@ -887,7 +887,7 @@ The directory must represent exactly how the files will be ultimately installed 
         
       </div>
       <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
-        <small class="text-white">&copy; 2022 Ettore Di Giacinto All Rights Reserved</small>
+        <small class="text-white">&copy; 2023 Ettore Di Giacinto All Rights Reserved</small>
         <small class="ml-1"><a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacy Policy</a></small>
 	
 		<p class="mt-2"><a href="/about/">About Luet</a></p>
