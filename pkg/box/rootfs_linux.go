@@ -1,3 +1,5 @@
+//go:build linux
+
 // Copyright © 2020 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify

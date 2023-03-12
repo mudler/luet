@@ -1,3 +1,5 @@
+//go:build darwin
+
 // Copyright © 2020 Ettore Di Giacinto <mudler@gentoo.org>
 //
 // This program is free software; you can redistribute it and/or modify
@@ -15,30 +17,9 @@
 
 package box
 
-type Box interface {
-	Run() error
-	Exec() error
+func (b *DefaultBox) Exec() error {
+	panic("not implemented")
 }
-
-type DefaultBox struct {
-	Name                  string
-	Root                  string
-	Env                   []string
-	Cmd                   string
-	Args                  []string
-	HostMounts            []string
-	Stdin, Stdout, Stderr bool
-}
-
-func NewBox(cmd string, args, hostmounts, env []string, rootfs string, stdin, stdout, stderr bool) Box {
-	return &DefaultBox{
-		Stdin:      stdin,
-		Stdout:     stdout,
-		Stderr:     stderr,
-		Cmd:        cmd,
-		Args:       args,
-		Root:       rootfs,
-		HostMounts: hostmounts,
-		Env:        env,
-	}
+func (b *DefaultBox) Run() error {
+	panic("not implemented")
 }
