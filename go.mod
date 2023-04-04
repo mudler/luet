@@ -12,7 +12,7 @@ require (
 	github.com/crillab/gophersat v1.3.2-0.20210701121804-72b19f5b6b38
 	github.com/docker/cli v20.10.13+incompatible
 	github.com/docker/distribution v2.8.0+incompatible
-	github.com/docker/docker v20.10.10+incompatible
+	github.com/docker/docker v20.10.24+incompatible
 	github.com/docker/go-units v0.4.0
 	github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
 	github.com/ghodss/yaml v1.0.0
