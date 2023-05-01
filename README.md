@@ -34,21 +34,24 @@ It is written entirely in Golang and where used as package manager, it can run i
 
 ## Install
 
-To install luet, you can grab a release on the [Release page](https://github.com/mudler/luet/releases) or to install it in your system:
+- **Using official installer script:**
 
-```bash
-$ curl https://luet.io/install.sh | sudo sh
+    ```console
+    $ curl https://luet.io/install.sh | sudo sh
+    ```
+
+- **Or using [`bin`](https://github.com/marcosnils/bin)**
+
+    ```console
+    $ bin i github.com/mudler/luet
+    ```
+
+### Test installation:
+
+```console
+$ luet --help
 $ luet search ...
 $ luet install ..
-$ luet --help
-```
-
-## Build from source
-
-```bash
-$ git clone https://github.com/mudler/luet.git
-$ cd luet
-$ make build
 ```
 
 ## Documentation
