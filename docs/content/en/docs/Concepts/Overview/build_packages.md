@@ -208,6 +208,14 @@ Luet doesn't handle login to registries, so that has to be handled separately wi
 
 When packages are cached, for iterating locally it's particularly useful to jump straight to the image that you want to build. You can use ```--only-target-package``` to jump directly to the image you are interested in. Luet will take care of checking if the images are present in the remote registry, and would build them if any of those are missing.
 
+## Building for a different platform
+
+Sometimes you need to build a package for a different platform than the one running on your host machine. For example, you may want to build an arm64 package, but your machine is x86. To do this, all you need to do is pass the following arguments:
+
+```
+luet --backend-args --load --backend-args --platform --backend-args linux/arm64 build PACKAGE_NAME
+```
+
 ## Notes
 
 - All the files which are next to a `build.yaml` are copied in the container which is running your build, so they are always accessible during build time.
