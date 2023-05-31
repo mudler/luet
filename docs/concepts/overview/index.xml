@@ -154,7 +154,10 @@ $~/workdir&amp;gt; cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt
 &lt;p&gt;Luet doesn&amp;rsquo;t handle login to registries, so that has to be handled separately with &lt;code&gt;docker login&lt;/code&gt; or &lt;code&gt;img login&lt;/code&gt; before the build process starts.&lt;/p&gt;
 &lt;h3 id=&#34;build-faster&#34;&gt;Build faster&lt;/h3&gt;
 &lt;p&gt;When packages are cached, for iterating locally it&amp;rsquo;s particularly useful to jump straight to the image that you want to build. You can use &lt;code&gt;--only-target-package&lt;/code&gt; to jump directly to the image you are interested in. Luet will take care of checking if the images are present in the remote registry, and would build them if any of those are missing.&lt;/p&gt;
-&lt;h2 id=&#34;notes&#34;&gt;Notes&lt;/h2&gt;
+&lt;h2 id=&#34;building-for-a-different-platform&#34;&gt;Building for a different platform&lt;/h2&gt;
+&lt;p&gt;Sometimes you need to build a package for a different platform than the one running on your host machine. For example, you may want to build an arm64 package, but your machine is x86. To do this, all you need to do is pass the following arguments:&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;luet --backend-args --load --backend-args --platform --backend-args linux/arm64 build PACKAGE_NAME
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&#34;notes&#34;&gt;Notes&lt;/h2&gt;
 &lt;ul&gt;
 &lt;li&gt;All the files which are next to a &lt;code&gt;build.yaml&lt;/code&gt; are copied in the container which is running your build, so they are always accessible during build time.&lt;/li&gt;
 &lt;li&gt;If you notice errors about disk space, mind to set the &lt;code&gt;TMPDIR&lt;/code&gt; env variable to a different folder. By default luet respects the O.S. default (which in the majority of system is &lt;code&gt;/tmp&lt;/code&gt;).&lt;/li&gt;
