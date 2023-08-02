@@ -79,7 +79,7 @@ mv .luet.yaml /etc/luet/luet.yaml
 
 Luet stores its configuration files in `/etc/luet`. If you wish to override its default settings, create a file `/etc/luet/luet.yaml`.
 
-A example of a `luet.yaml` file can be found [here](https://github.com/mudler/luet/blob/master/contrib/config/luet.yaml).
+An example of a configuration file can be found [here](https://github.com/mudler/luet/blob/master/contrib/config/luet.yaml).
 
 There are a bunch of configuration settings available, but the most relevant are:
 
@@ -96,50 +96,4 @@ system:
   tmpdir_base: "/var/tmp/luet" # The temporary directory to be used
 ```
 
-### Adding repositories
-
-To add repositories, you can either add a `repositories` stanza in your `/etc/luet/luet.yaml` or either add one or more yaml files in `/etc/luet/repos.conf.d/`.
-
-
-#### Configuration in `/etc/luet/luet.yaml`
-```yaml
-logging:
-  color: true # Enable/Disable colored output
-  enable_emoji: true # Enable/Disable emoji from output
-general:
-  debug: false # Enable/Disable debug
-system:
-  rootfs: "/" # What's our rootfs. Luet can install packages outside of "/"
-  database_path: "/var/db/luet" # Where to store DB files
-  database_engine: "boltdb"
-  tmpdir_base: "/var/tmp/luet" # The temporary directory to be used
-repositories:
-- name: "some-repository-name" # Repository name
-  description: "A beautiful description"
-  type: "http" # Repository type, disk or http are supported (disk for local path)
-  enable: true # Enable/Disable repo
-  cached: true # Enable cache for repository
-  priority: 3 # Cache priority
-  urls: # Repository URLs
-    - "...."
-```
-
-#### Configuration in `/etc/luet/repos.conf.d/`
-
-A repository file can be for example:
-
-```yaml
-name: "..." # Repository name
-description: "..."
-type: "http" # Repository type, disk or http are supported (disk for local path)
-enable: true # Enable/Disable repo
-cached: true # Enable cache for repository
-priority: 3 # Cache priority
-urls: # Repository URLs
-  - "..."
-```
-
-
-There is available a [collection of repositories](https://packages.mocaccino.org/repository-index), which is containing a list of repositories that can be installed in the system with `luet install`.
-
-If you installed Luet from the curl command, you just need to run `luet search repository` to see a list of all the available repository, and you can install them singularly by running `luet install repository/<name>`. Otherwise, add the repository stanzas you need to `/etc/luet/luet.yaml`.
+To learn more about how to configure luet, [see the configuration section](/docs/concepts/overview/configuration/)
