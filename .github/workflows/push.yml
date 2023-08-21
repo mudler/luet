@@ -18,7 +18,7 @@ jobs:
         run: echo ${{ secrets.DOCKER_TESTING_PASSWORD }} | sudo -E docker login -u ${{ secrets.DOCKER_TESTING_USERNAME }} --password-stdin quay.io
       - name: Install deps
         run: |
-            sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
+            sudo apt-get update && sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
             sudo curl -fSL "https://github.com/genuinetools/img/releases/download/v0.5.11/img-linux-amd64" -o "/usr/bin/img"
             sudo chmod a+x "/usr/bin/img"
       - name: Login to quay with img
@@ -42,7 +42,7 @@ jobs:
         run: echo ${{ secrets.DOCKER_TESTING_PASSWORD }} | sudo -E docker login -u ${{ secrets.DOCKER_TESTING_USERNAME }} --password-stdin quay.io
       - name: Install deps
         run: |
-            sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
+            sudo apt-get update && sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
       - name: Tests
         run: |
               sudo -E \
@@ -66,7 +66,7 @@ jobs:
         run: echo ${{ secrets.DOCKER_TESTING_PASSWORD }} | sudo -E docker login -u ${{ secrets.DOCKER_TESTING_USERNAME }} --password-stdin quay.io
       - name: Install deps
         run: |
-            sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
+            sudo apt-get update && sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
             sudo curl -fSL "https://github.com/genuinetools/img/releases/download/v0.5.11/img-linux-amd64" -o "/usr/bin/img"
             sudo chmod a+x "/usr/bin/img"
             sudo make build
