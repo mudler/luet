@@ -38,5 +38,6 @@ func init() {
 		NewDatabaseCreateCommand(),
 		NewDatabaseGetCommand(),
 		NewDatabaseRemoveCommand(),
+		NewDatabaseShowAllCommand(),
 	)
 }
