@@ -16,11 +16,15 @@ package authn
 
 import (
 	"os"
+	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/docker/cli/cli/config"
+	"github.com/docker/cli/cli/config/configfile"
 	"github.com/docker/cli/cli/config/types"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/mitchellh/go-homedir"
 )
 
 // Resource represents a registry or repository that can be authenticated against.
@@ -49,7 +53,7 @@ type defaultKeychain struct {
 
 var (
 	// DefaultKeychain implements Keychain by interpreting the docker config file.
-	DefaultKeychain Keychain = &defaultKeychain{}
+	DefaultKeychain = &defaultKeychain{}
 )
 
 const (
@@ -62,28 +66,76 @@ const (
 func (dk *defaultKeychain) Resolve(target Resource) (Authenticator, error) {
 	dk.mu.Lock()
 	defer dk.mu.Unlock()
-	cf, err := config.Load(os.Getenv("DOCKER_CONFIG"))
-	if err != nil {
-		return nil, err
+
+	// Podman users may have their container registry auth configured in a
+	// different location, that Docker packages aren't aware of.
+	// If the Docker config file isn't found, we'll fallback to look where
+	// Podman configures it, and parse that as a Docker auth config instead.
+
+	// First, check $HOME/.docker/config.json
+	foundDockerConfig := false
+	home, err := homedir.Dir()
+	if err == nil {
+		foundDockerConfig = fileExists(filepath.Join(home, ".docker/config.json"))
+	}
+	// If $HOME/.docker/config.json isn't found, check $DOCKER_CONFIG (if set)
+	if !foundDockerConfig && os.Getenv("DOCKER_CONFIG") != "" {
+		foundDockerConfig = fileExists(filepath.Join(os.Getenv("DOCKER_CONFIG"), "config.json"))
+	}
+	// If either of those locations are found, load it using Docker's
+	// config.Load, which may fail if the config can't be parsed.
+	//
+	// If neither was found, look for Podman's auth at
+	// $XDG_RUNTIME_DIR/containers/auth.json and attempt to load it as a
+	// Docker config.
+	//
+	// If neither are found, fallback to Anonymous.
+	var cf *configfile.ConfigFile
+	if foundDockerConfig {
+		cf, err = config.Load(os.Getenv("DOCKER_CONFIG"))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		f, err := os.Open(filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "containers/auth.json"))
+		if err != nil {
+			return Anonymous, nil
+		}
+		defer f.Close()
+		cf, err = config.LoadFromReader(f)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// See:
 	// https://github.com/google/ko/issues/90
 	// https://github.com/moby/moby/blob/fc01c2b481097a6057bec3cd1ab2d7b4488c50c4/registry/config.go#L397-L404
-	key := target.RegistryStr()
-	if key == name.DefaultRegistry {
-		key = DefaultAuthKey
-	}
+	var cfg, empty types.AuthConfig
+	for _, key := range []string{
+		target.String(),
+		target.RegistryStr(),
+	} {
+		if key == name.DefaultRegistry {
+			key = DefaultAuthKey
+		}
 
-	cfg, err := cf.GetAuthConfig(key)
-	if err != nil {
-		return nil, err
+		cfg, err = cf.GetAuthConfig(key)
+		if err != nil {
+			return nil, err
+		}
+		// cf.GetAuthConfig automatically sets the ServerAddress attribute. Since
+		// we don't make use of it, clear the value for a proper "is-empty" test.
+		// See: https://github.com/google/go-containerregistry/issues/1510
+		cfg.ServerAddress = ""
+		if cfg != empty {
+			break
+		}
 	}
-
-	empty := types.AuthConfig{}
 	if cfg == empty {
 		return Anonymous, nil
 	}
+
 	return FromConfig(AuthConfig{
 		Username:      cfg.Username,
 		Password:      cfg.Password,
@@ -91,4 +143,107 @@ func (dk *defaultKeychain) Resolve(target Resource) (Authenticator, error) {
 		IdentityToken: cfg.IdentityToken,
 		RegistryToken: cfg.RegistryToken,
 	}), nil
+}
+
+// fileExists returns true if the given path exists and is not a directory.
+func fileExists(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && !fi.IsDir()
+}
+
+// Helper is a subset of the Docker credential helper credentials.Helper
+// interface used by NewKeychainFromHelper.
+//
+// See:
+// https://pkg.go.dev/github.com/docker/docker-credential-helpers/credentials#Helper
+type Helper interface {
+	Get(serverURL string) (string, string, error)
+}
+
+// NewKeychainFromHelper returns a Keychain based on a Docker credential helper
+// implementation that can Get username and password credentials for a given
+// server URL.
+func NewKeychainFromHelper(h Helper) Keychain { return wrapper{h} }
+
+type wrapper struct{ h Helper }
+
+func (w wrapper) Resolve(r Resource) (Authenticator, error) {
+	u, p, err := w.h.Get(r.RegistryStr())
+	if err != nil {
+		return Anonymous, nil
+	}
+	// If the secret being stored is an identity token, the Username should be set to <token>
+	// ref: https://docs.docker.com/engine/reference/commandline/login/#credential-helper-protocol
+	if u == "<token>" {
+		return FromConfig(AuthConfig{Username: u, IdentityToken: p}), nil
+	}
+	return FromConfig(AuthConfig{Username: u, Password: p}), nil
+}
+
+func RefreshingKeychain(inner Keychain, duration time.Duration) Keychain {
+	return &refreshingKeychain{
+		keychain: inner,
+		duration: duration,
+	}
+}
+
+type refreshingKeychain struct {
+	keychain Keychain
+	duration time.Duration
+	clock    func() time.Time
+}
+
+func (r *refreshingKeychain) Resolve(target Resource) (Authenticator, error) {
+	last := time.Now()
+	auth, err := r.keychain.Resolve(target)
+	if err != nil || auth == Anonymous {
+		return auth, err
+	}
+	return &refreshing{
+		target:   target,
+		keychain: r.keychain,
+		last:     last,
+		cached:   auth,
+		duration: r.duration,
+		clock:    r.clock,
+	}, nil
+}
+
+type refreshing struct {
+	sync.Mutex
+	target   Resource
+	keychain Keychain
+
+	duration time.Duration
+
+	last   time.Time
+	cached Authenticator
+
+	// for testing
+	clock func() time.Time
+}
+
+func (r *refreshing) Authorization() (*AuthConfig, error) {
+	r.Lock()
+	defer r.Unlock()
+	if r.cached == nil || r.expired() {
+		r.last = r.now()
+		auth, err := r.keychain.Resolve(r.target)
+		if err != nil {
+			return nil, err
+		}
+		r.cached = auth
+	}
+	return r.cached.Authorization()
+}
+
+func (r *refreshing) now() time.Time {
+	if r.clock == nil {
+		return time.Now()
+	}
+	return r.clock()
+}
+
+func (r *refreshing) expired() bool {
+	return r.now().Sub(r.last) > r.duration
 }

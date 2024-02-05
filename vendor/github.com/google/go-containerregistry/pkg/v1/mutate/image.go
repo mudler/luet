@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"strings"
+	"sync"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
@@ -38,6 +38,9 @@ type image struct {
 	configMediaType *types.MediaType
 	diffIDMap       map[v1.Hash]v1.Layer
 	digestMap       map[v1.Hash]v1.Layer
+	subject         *v1.Descriptor
+
+	sync.Mutex
 }
 
 var _ v1.Image = (*image)(nil)
@@ -50,6 +53,9 @@ func (i *image) MediaType() (types.MediaType, error) {
 }
 
 func (i *image) compute() error {
+	i.Lock()
+	defer i.Unlock()
+
 	// Don't re-compute if already computed.
 	if i.computed {
 		return nil
@@ -141,14 +147,8 @@ func (i *image) compute() error {
 		manifest.Config.MediaType = *i.configMediaType
 	}
 
-	// With OCI media types, this should not be set, see discussion:
-	// https://github.com/opencontainers/image-spec/pull/795
 	if i.mediaType != nil {
-		if strings.Contains(string(*i.mediaType), types.OCIVendorPrefix) {
-			manifest.MediaType = ""
-		} else if strings.Contains(string(*i.mediaType), types.DockerVendorPrefix) {
-			manifest.MediaType = *i.mediaType
-		}
+		manifest.MediaType = *i.mediaType
 	}
 
 	if i.annotations != nil {
@@ -160,6 +160,7 @@ func (i *image) compute() error {
 			manifest.Annotations[k] = v
 		}
 	}
+	manifest.Subject = i.subject
 
 	i.configFile = configFile
 	i.manifest = manifest

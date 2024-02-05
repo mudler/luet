@@ -17,24 +17,37 @@ package image
 
 import (
 	"crypto/tls"
-	"net/http"
-
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"net"
+	"net/http"
+	"time"
 )
 
 // Available checks if the image is available in the remote endpoint.
 func Available(image string, opt ...crane.Option) bool {
 	// We use crane.insecure as we just check if the image is available
 	// It's the daemon duty to use it or not based on the host settings
-	transport := remote.DefaultTransport.Clone()
-	transport.TLSClientConfig = &tls.Config{
-		InsecureSkipVerify: true, //nolint: gosec
+
+	// Dupe of the remote.DefaultTransport but with InsecureSkipVerify: true for the TLS config
+	// They no longer provide a Clone method, so we have to copy the whole thing manually
+	tr := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		// We usually are dealing with 2 hosts (at most), split MaxIdleConns between them.
+		MaxIdleConnsPerHost: 50,
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
 	}
 
-	var rt http.RoundTripper = transport
 	if len(opt) == 0 {
-		opt = append(opt, crane.Insecure, crane.WithTransport(rt))
+		opt = append(opt, crane.Insecure, crane.WithTransport(tr))
 	}
 
 	_, err := crane.Digest(image, opt...)

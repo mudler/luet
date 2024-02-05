@@ -17,7 +17,6 @@ package daemon
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -41,6 +40,24 @@ func Write(tag name.Tag, img v1.Image, options ...Option) (string, error) {
 		return "", err
 	}
 
+	// If we already have this image by this image ID, we can skip loading it.
+	id, err := img.ConfigName()
+	if err != nil {
+		return "", fmt.Errorf("computing image ID: %w", err)
+	}
+	if resp, _, err := o.client.ImageInspectWithRaw(o.ctx, id.String()); err == nil {
+		want := tag.String()
+
+		// If we already have this tag, we can skip tagging it.
+		for _, have := range resp.RepoTags {
+			if have == want {
+				return "", nil
+			}
+		}
+
+		return "", o.client.ImageTag(o.ctx, id.String(), want)
+	}
+
 	pr, pw := io.Pipe()
 	go func() {
 		pw.CloseWithError(tarball.Write(tag, img, pw))
@@ -52,7 +69,7 @@ func Write(tag name.Tag, img v1.Image, options ...Option) (string, error) {
 		return "", fmt.Errorf("error loading image: %w", err)
 	}
 	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	response := string(b)
 	if err != nil {
 		return response, fmt.Errorf("error reading load response body: %w", err)
