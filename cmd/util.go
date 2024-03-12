@@ -22,7 +22,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/docker/docker/api/types"
+	registrytypes "github.com/docker/docker/api/types/registry"
 	"github.com/docker/go-units"
 	"github.com/mudler/luet/pkg/api/core/image"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
@@ -122,7 +122,7 @@ func NewUnpackCommand() *cobra.Command {
 			registryToken, _ := cmd.Flags().GetString("auth-registry-token")
 
 			util.DefaultContext.Info("Downloading", image, "to", destination)
-			auth := &types.AuthConfig{
+			auth := &registrytypes.AuthConfig{
 				Username:      user,
 				Password:      pass,
 				ServerAddress: server,
