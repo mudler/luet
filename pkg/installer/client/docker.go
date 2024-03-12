@@ -22,7 +22,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/docker/docker/api/types"
+	registrytypes "github.com/docker/docker/api/types/registry"
 	"github.com/docker/go-units"
 	luettypes "github.com/mudler/luet/pkg/api/core/types"
 	"github.com/pkg/errors"
@@ -40,13 +40,13 @@ const (
 
 type DockerClient struct {
 	RepoData RepoData
-	auth     *types.AuthConfig
+	auth     *registrytypes.AuthConfig
 	Cache    *artifact.ArtifactCache
 	context  luettypes.Context
 }
 
 func NewDockerClient(r RepoData, ctx luettypes.Context) *DockerClient {
-	auth := &types.AuthConfig{}
+	auth := &registrytypes.AuthConfig{}
 
 	dat, _ := json.Marshal(r.Authentication)
 	json.Unmarshal(dat, auth)

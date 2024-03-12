@@ -33,7 +33,7 @@ import (
 
 	"github.com/docker/cli/cli/trust"
 	"github.com/docker/distribution/reference"
-	"github.com/docker/docker/api/types"
+	registrytypes "github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/registry"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -53,7 +53,7 @@ const (
 
 // See also https://github.com/docker/cli/blob/88c6089300a82d3373892adf6845a4fed1a4ba8d/cli/command/image/trust.go#L171
 
-func verifyImage(image string, authConfig *types.AuthConfig) (string, error) {
+func verifyImage(image string, authConfig *registrytypes.AuthConfig) (string, error) {
 	ref, err := reference.ParseAnyReference(image)
 	if err != nil {
 		return "", errors.Wrapf(err, "invalid reference %s", image)
@@ -82,7 +82,7 @@ func verifyImage(image string, authConfig *types.AuthConfig) (string, error) {
 	return "", nil
 }
 
-func trustedResolveDigest(ctx context.Context, ref reference.NamedTagged, authConfig *types.AuthConfig, useragent string) (reference.Canonical, error) {
+func trustedResolveDigest(ctx context.Context, ref reference.NamedTagged, authConfig *registrytypes.AuthConfig, useragent string) (reference.Canonical, error) {
 	repoInfo, err := registry.ParseRepositoryInfo(ref)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func trustedResolveDigest(ctx context.Context, ref reference.NamedTagged, authCo
 }
 
 type staticAuth struct {
-	auth *types.AuthConfig
+	auth *registrytypes.AuthConfig
 }
 
 func (s staticAuth) Authorization() (*authn.AuthConfig, error) {
@@ -138,7 +138,7 @@ type UnpackEventData struct {
 }
 
 // DownloadAndExtractDockerImage extracts a container image natively. It supports privileged/unprivileged mode
-func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, auth *types.AuthConfig, verify bool) (*images.Image, error) {
+func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, auth *registrytypes.AuthConfig, verify bool) (*images.Image, error) {
 	if verify {
 		img, err := verifyImage(image, auth)
 		if err != nil {
