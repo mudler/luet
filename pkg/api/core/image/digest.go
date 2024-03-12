@@ -27,7 +27,6 @@ import (
 func Available(image string, opt ...crane.Option) bool {
 	// We use crane.insecure as we just check if the image is available
 	// It's the daemon duty to use it or not based on the host settings
-
 	transport := remote.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true, //nolint: gosec
