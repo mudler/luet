@@ -80,8 +80,6 @@ github.com/containerd/containerd/pkg/epoch
 github.com/containerd/containerd/pkg/randutil
 github.com/containerd/containerd/pkg/userns
 github.com/containerd/containerd/platforms
-github.com/containerd/containerd/sys
-github.com/containerd/containerd/tracing
 # github.com/containerd/continuity v0.4.3
 ## explicit; go 1.19
 github.com/containerd/continuity/fs
@@ -150,7 +148,6 @@ github.com/docker/docker/client
 github.com/docker/docker/errdefs
 github.com/docker/docker/image/spec/specs-go/v1
 github.com/docker/docker/internal/multierror
-github.com/docker/docker/pkg/fileutils
 github.com/docker/docker/pkg/homedir
 github.com/docker/docker/pkg/idtools
 github.com/docker/docker/pkg/ioutils
@@ -363,9 +360,12 @@ github.com/moby/buildkit/frontend/dockerfile/command
 github.com/moby/buildkit/frontend/dockerfile/parser
 github.com/moby/buildkit/frontend/dockerfile/shell
 github.com/moby/buildkit/util/stack
-# github.com/moby/moby v20.10.9+incompatible
+# github.com/moby/moby v25.0.4+incompatible
 ## explicit
 github.com/moby/moby/pkg/archive
+# github.com/moby/patternmatcher v0.6.0
+## explicit; go 1.19
+github.com/moby/patternmatcher
 # github.com/moby/sys/sequential v0.5.0
 ## explicit; go 1.17
 github.com/moby/sys/sequential
@@ -534,7 +534,6 @@ go.opentelemetry.io/otel/internal/baggage
 go.opentelemetry.io/otel/internal/global
 go.opentelemetry.io/otel/propagation
 go.opentelemetry.io/otel/semconv/v1.17.0
-go.opentelemetry.io/otel/semconv/v1.21.0
 # go.opentelemetry.io/otel/metric v1.21.0
 ## explicit; go 1.20
 go.opentelemetry.io/otel/metric
