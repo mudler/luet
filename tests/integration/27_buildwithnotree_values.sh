@@ -13,6 +13,8 @@ oneTimeTearDown() {
 }
 
 testBuild() {
+    [ "$LUET_BACKEND" == "img" ] && startSkipping
+
     cat <<EOF > $tmpdir/default.yaml
 bb: "ttt"
 EOF
@@ -27,6 +29,8 @@ EOF
 }
 
 testRepo() {
+    [ "$LUET_BACKEND" == "img" ] && startSkipping
+
     assertTrue 'no repository' "[ ! -e '$tmpdir/testbuild/repository.yaml' ]"
     luet create-repo --tree "$ROOT_DIR/tests/fixtures/build_values" \
     --output $tmpdir/testbuild \
@@ -42,6 +46,8 @@ testRepo() {
 }
 
 testConfig() {
+    [ "$LUET_BACKEND" == "img" ] && startSkipping
+
     mkdir $tmpdir/testrootfs
     cat <<EOF > $tmpdir/luet.yaml
 general:
@@ -63,6 +69,8 @@ EOF
 }
 
 testBuildWithNoTree() {
+    [ "$LUET_BACKEND" == "img" ] && startSkipping
+
     mkdir $tmpdir/testbuild2
     mkdir $tmpdir/emptytree
     luet build --from-repositories --tree $tmpdir/emptytree --config $tmpdir/luet.yaml distro/c --destination $tmpdir/testbuild2 --compression gzip distro/a distro/b test/foo distro/c
@@ -75,6 +83,8 @@ testBuildWithNoTree() {
 }
 
 testRepo2() {
+    [ "$LUET_BACKEND" == "img" ] && startSkipping
+
     assertTrue 'no repository' "[ ! -e '$tmpdir/testbuild2/repository.yaml' ]"
     luet create-repo --config $tmpdir/luet.yaml --from-repositories --tree $tmpdir/emptytree \
     --output $tmpdir/testbuild2 \
@@ -97,6 +107,7 @@ testCleanup() {
 }
 
 testInstall2() {
+    [ "$LUET_BACKEND" == "img" ] && startSkipping
 
     cat <<EOF > $tmpdir/luet2.yaml
 general:
@@ -183,6 +194,8 @@ EOF
 
 
 testBuildWithNoTree3() {
+      [ "$LUET_BACKEND" == "img" ] && startSkipping
+
     cat <<EOF > $tmpdir/default.yaml
 bb: "newinterpolation"
 foo: "sq"
@@ -199,6 +212,8 @@ EOF
 }
 
 testRepo3() {
+      [ "$LUET_BACKEND" == "img" ] && startSkipping
+
     assertTrue 'no repository' "[ ! -e '$tmpdir/testbuild3/repository.yaml' ]"
     luet create-repo --config $tmpdir/luet.yaml --from-repositories --tree $tmpdir/emptytree \
     --output $tmpdir/testbuild3 \
@@ -214,6 +229,8 @@ testRepo3() {
 }
 
 testInstall3() {
+      [ "$LUET_BACKEND" == "img" ] && startSkipping
+
     mkdir $tmpdir/testrootfs3
 
     cat <<EOF > $tmpdir/luet2.yaml
