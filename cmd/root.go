@@ -30,8 +30,7 @@ var cfgFile string
 var Verbose bool
 
 const (
-	LuetCLIVersion = "0.34.0"
-	LuetEnvPrefix  = "LUET"
+	LuetEnvPrefix = "LUET"
 )
 
 var license = []string{
@@ -45,12 +44,12 @@ var license = []string{
 //
 // ⚠️ WARNING: should only be set by "-ldflags".
 var (
-	BuildTime   string
-	BuildCommit string
+	BuildTime string
+	Version   = "0.0.0"
 )
 
 func version() string {
-	return fmt.Sprintf("%s-g%s %s", LuetCLIVersion, BuildCommit, BuildTime)
+	return fmt.Sprintf("%s (Build time: %s)", Version, BuildTime)
 }
 
 // RootCmd represents the base command when called without any subcommands
