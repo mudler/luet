@@ -11,7 +11,7 @@ require (
 	github.com/containerd/containerd v1.7.13
 	github.com/crillab/gophersat v1.3.2-0.20210701121804-72b19f5b6b38
 	github.com/docker/cli v25.0.3+incompatible
-	github.com/docker/distribution v2.8.1+incompatible
+	github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/docker v25.0.3+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/ecooper/qlearning v0.0.0-20160612200101-3075011a69fd
