@@ -1,5 +1,5 @@
 FROM golang:bookworm as builder
-RUN apt-get update && apt-get install -y upx
+RUN apt-get update && apt-get install -y upx-ucl
 ADD . /luet
 RUN cd /luet && make build
 
