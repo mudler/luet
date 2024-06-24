@@ -25,11 +25,11 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://luet.io/index.json" /><meta property="article:section" content="" />
 
-<meta property="article:modified_time" content="2024-04-19T10:06:27+00:00" /><meta property="og:site_name" content="Luet" />
+<meta property="article:modified_time" content="2024-06-24T15:13:44+02:00" /><meta property="og:site_name" content="Luet" />
 
 <meta itemprop="name" content="">
 <meta itemprop="description" content="">
-<meta itemprop="dateModified" content="2024-04-19T10:06:27+00:00" />
+<meta itemprop="dateModified" content="2024-06-24T15:13:44+02:00" />
 <meta itemprop="wordCount" content="0">
 <meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content=""/>
@@ -38,8 +38,8 @@
 
 
 
-<link rel="preload" href="/scss/main.min.0cb933646f7a5fcbdc4408957af61d9cdcccb2a9bfff09fa97d7e2120e6dc058.css" as="style">
-<link href="/scss/main.min.0cb933646f7a5fcbdc4408957af61d9cdcccb2a9bfff09fa97d7e2120e6dc058.css" rel="stylesheet" integrity="">
+<link rel="preload" href="/scss/main.min.f944e6adf1b7822650022e3aa7789905c53fc9e2e8a936de4e5294f297b5677c.css" as="style">
+<link href="/scss/main.min.f944e6adf1b7822650022e3aa7789905c53fc9e2e8a936de4e5294f297b5677c.css" rel="stylesheet" integrity="">
 
 <script
   src="https://code.jquery.com/jquery-3.6.0.min.js"
