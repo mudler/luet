@@ -87,7 +87,7 @@ test-integration-docker:
 				bash -c "apt-get update && apt-get install docker.io && make test-integration"
 
 multiarch-build:
-	goreleaser build --snapshot --rm-dist
+	goreleaser build --snapshot --clean
 
 multiarch-build-small:
 	@$(MAKE) multiarch-build
