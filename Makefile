@@ -48,10 +48,10 @@ clean:
 deps:
 	go env
 	# Installing dependencies...
-	GO111MODULE=off go get golang.org/x/lint/golint
-	GO111MODULE=off go get github.com/mitchellh/gox
-	GO111MODULE=off go get github.com/onsi/ginkgo/ginkgo
-	GO111MODULE=off go get github.com/onsi/gomega/...
+	go get golang.org/x/lint/golint
+	go get github.com/mitchellh/gox
+	go get github.com/onsi/ginkgo/ginkgo
+	go get github.com/onsi/gomega/...
 
 .PHONY: build
 build:
