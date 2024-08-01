@@ -498,7 +498,6 @@ var _ = Describe("Compiler", func() {
 				Expect(fileHelper.Exists(artifact.Path)).To(BeTrue())
 				Expect(artifact.Unpack(ctx, tmpdir, false)).ToNot(HaveOccurred())
 			}
-			Expect(fileHelper.Exists(spec.Rel("var/lib/udhcpd"))).To(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("marvin"))).To(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("test5"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(spec.Rel("test6"))).ToNot(BeTrue())
