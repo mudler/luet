@@ -17,10 +17,7 @@ fmt:
 
 .PHONY: test
 test:
-	go get github.com/onsi/ginkgo/v2
-	go install github.com/onsi/ginkgo/v2/ginkgo
-	go get github.com/onsi/gomega/...
-	ginkgo -r --flake-attempts=3 ./...
+	go run github.com/onsi/ginkgo/v2/ginkgo -r --flake-attempts=3 ./...
 
 .PHONY: test-integration
 test-integration:
@@ -28,7 +25,7 @@ test-integration:
 
 .PHONY: coverage
 coverage:
-	ginkgo --flake-attempts=3 --fail-fast -cover -covermode=atomic -coverprofile=coverage.txt -r .
+	go run github.com/onsi/ginkgo/v2/ginkgo --flake-attempts=3 --fail-fast -cover -covermode=atomic -coverprofile=coverage.txt -r .
 
 .PHONY: help
 help:
@@ -50,8 +47,6 @@ deps:
 	# Installing dependencies...
 	go get golang.org/x/lint/golint
 	go get github.com/mitchellh/gox
-	go get github.com/onsi/ginkgo/ginkgo
-	go get github.com/onsi/gomega/...
 
 .PHONY: build
 build:
