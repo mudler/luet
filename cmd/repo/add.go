@@ -45,9 +45,9 @@ Adds a repository to the system. URLs, local files or inline repo can be specifi
 
  luet repo add ... --name "foo"
 
-# Inline:
+# Inline (provided you have $PASSWORD environent variable set):
 
- luet repo add testfo --description "Bar" --url "FOZZ" --type "ff"
+ luet repo add testfo --description "Bar" --url "FOZZ" --type "ff" --username "user" --passwd $(echo "$PASSWORD")
 
  `,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -61,6 +61,8 @@ Adds a repository to the system. URLs, local files or inline repo can be specifi
 			url, _ := cmd.Flags().GetString("url")
 			ref, _ := cmd.Flags().GetString("reference")
 			prio, _ := cmd.Flags().GetInt("priority")
+			username, _ := cmd.Flags().GetString("username")
+			passwd, _ := cmd.Flags().GetString("passwd")
 
 			if len(util.DefaultContext.Config.RepositoriesConfDir) == 0 && d == "" {
 				util.DefaultContext.Fatal("No repository dirs defined")
@@ -82,6 +84,10 @@ Adds a repository to the system. URLs, local files or inline repo can be specifi
 					Type:        t,
 					Urls:        []string{url},
 					Priority:    prio,
+					Authentication: map[string]string{
+						"username": username,
+						"password": passwd,
+					},
 				}
 			} else {
 				r, err = types.LoadRepository([]byte(str))
@@ -102,6 +108,12 @@ Adds a repository to the system. URLs, local files or inline repo can be specifi
 				}
 				if prio != 0 {
 					r.Priority = prio
+				}
+				if username != "" && passwd != "" {
+					r.Authentication = map[string]string{
+						"username": username,
+						"password": passwd,
+					}
 				}
 			}
 
@@ -133,5 +145,7 @@ Adds a repository to the system. URLs, local files or inline repo can be specifi
 	cmd.Flags().String("url", "", "Repository URL")
 	cmd.Flags().String("reference", "", "Repository Reference ID")
 	cmd.Flags().IntP("priority", "p", 99, "repository prio")
+	cmd.Flags().String("username", "", "repository username")
+	cmd.Flags().String("passwd", "", "repository password")
 	return cmd
 }
