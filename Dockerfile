@@ -1,4 +1,4 @@
-FROM golang:bullseye as builder
+FROM golang:bullseye AS builder
 RUN apt-get update && apt-get install -y upx
 ADD . /luet
 RUN cd /luet && make build
