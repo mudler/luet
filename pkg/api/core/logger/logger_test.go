@@ -17,7 +17,6 @@ package logger_test
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/gookit/color"
@@ -34,7 +33,7 @@ func captureStdout(f func(w io.Writer)) string {
 	f(w)
 
 	_ = w.Close()
-	out, _ := ioutil.ReadAll(r)
+	out, _ := io.ReadAll(r)
 	os.Stdout = originalStdout
 	color.SetOutput(os.Stdout)
 
@@ -94,7 +93,7 @@ var _ = Describe("Context and logging", func() {
 
 		It("logs to file", func() {
 
-			t, err := ioutil.TempFile("", "tree")
+			t, err := os.CreateTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(t.Name()) // clean up
 
@@ -119,7 +118,7 @@ var _ = Describe("Context and logging", func() {
 				l.Warning("foowarn")
 			})).To(And(ContainSubstring("WARNING"), ContainSubstring("foowarn")))
 
-			ll, err := ioutil.ReadFile(t.Name())
+			ll, err := os.ReadFile(t.Name())
 			Expect(err).ToNot(HaveOccurred())
 			logs := string(ll)
 			Expect(logs).To(ContainSubstring("foot"))

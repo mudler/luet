@@ -16,7 +16,6 @@
 package template_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -27,7 +26,7 @@ import (
 )
 
 func writeFile(path string, content string) {
-	err := ioutil.WriteFile(path, []byte(content), 0644)
+	err := os.WriteFile(path, []byte(content), 0644)
 	Expect(err).ToNot(HaveOccurred())
 }
 
@@ -62,7 +61,7 @@ var _ = Describe("Templates", func() {
 		})
 
 		It("Render files default overrides", func() {
-			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			testDir, err := os.MkdirTemp(os.TempDir(), "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(testDir)
 
@@ -87,7 +86,7 @@ foo: "baz"
 		})
 
 		It("Render files from values", func() {
-			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			testDir, err := os.MkdirTemp(os.TempDir(), "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(testDir)
 
@@ -112,7 +111,7 @@ faa: "baz"
 		})
 
 		It("Render files from values if no default", func() {
-			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			testDir, err := os.MkdirTemp(os.TempDir(), "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(testDir)
 
@@ -132,7 +131,7 @@ foo: "bar"
 		})
 
 		It("Render files merging defaults", func() {
-			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			testDir, err := os.MkdirTemp(os.TempDir(), "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(testDir)
 
@@ -167,7 +166,7 @@ bar: "nei"
 		})
 
 		It("doesn't interpolate if no one provides the values", func() {
-			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			testDir, err := os.MkdirTemp(os.TempDir(), "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(testDir)
 
@@ -192,7 +191,7 @@ faa: "baz"
 		})
 
 		It("correctly parses `include`", func() {
-			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			testDir, err := os.MkdirTemp(os.TempDir(), "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(testDir)
 

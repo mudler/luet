@@ -16,7 +16,7 @@
 package tree
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
@@ -31,7 +31,7 @@ func BuildCollectionParser(srcDir, currentpath, name string, templates []string,
 		return nil
 	}
 
-	dat, err := ioutil.ReadFile(currentpath)
+	dat, err := os.ReadFile(currentpath)
 	if err != nil {
 		return errors.Wrap(err, "Error reading file "+currentpath)
 	}
@@ -55,7 +55,7 @@ func BuildCollectionParser(srcDir, currentpath, name string, templates []string,
 		if fileHelper.Exists(compileDefPath) {
 
 			raw := packsRaw.Find(pack)
-			buildyaml, err := ioutil.ReadFile(compileDefPath)
+			buildyaml, err := os.ReadFile(compileDefPath)
 			if err != nil {
 				return errors.Wrap(err, "Error reading file "+currentpath)
 			}
@@ -90,7 +90,7 @@ func RuntimeCollectionParser(srcDir, currentpath, name string, templates []strin
 		return nil
 	}
 
-	dat, err := ioutil.ReadFile(currentpath)
+	dat, err := os.ReadFile(currentpath)
 	if err != nil {
 		return errors.Wrap(err, "Error reading file "+currentpath)
 	}
@@ -114,7 +114,7 @@ func RuntimeCollectionParser(srcDir, currentpath, name string, templates []strin
 		compileDefPath := p.Rel(CompilerDefinitionFile)
 		if fileHelper.Exists(compileDefPath) {
 			raw := packsRaw.Find(p)
-			buildyaml, err := ioutil.ReadFile(compileDefPath)
+			buildyaml, err := os.ReadFile(compileDefPath)
 			if err != nil {
 				return errors.Wrap(err, "Error reading file "+currentpath)
 			}

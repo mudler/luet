@@ -16,7 +16,6 @@
 package artifact_test
 
 import (
-	"io/ioutil"
 	"os"
 
 	. "github.com/mudler/luet/pkg/api/core/types/artifact"
@@ -29,7 +28,7 @@ var _ = Describe("Checksum", func() {
 	Context("Generation", func() {
 		It("Compares successfully", func() {
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 			buildsum := Checksums{}

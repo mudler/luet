@@ -17,7 +17,6 @@ package solver_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 
@@ -147,7 +146,7 @@ var _ = Describe("Solver Benchmarks", func() {
 	Context("Complex data sets - Parallel Upgrades", func() {
 		BeforeEach(func() {
 			db = pkg.NewInMemoryDatabase(false)
-			tmpfile, _ := ioutil.TempFile(os.TempDir(), "tests")
+			tmpfile, _ := os.CreateTemp(os.TempDir(), "tests")
 			defer os.Remove(tmpfile.Name())              // clean up
 			dbInstalled = pkg.NewInMemoryDatabase(false) // pkg.NewBoltDatabase(tmpfile.Name())
 

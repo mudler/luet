@@ -22,7 +22,6 @@ package tree
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -66,7 +65,7 @@ func (r *InstallerRecipe) Save(path string) error {
 		if err != nil {
 			return err
 		}
-		err = ioutil.WriteFile(filepath.Join(dir, types.PackageDefinitionFile), data, 0644)
+		err = os.WriteFile(filepath.Join(dir, types.PackageDefinitionFile), data, 0644)
 		if err != nil {
 			return err
 		}

@@ -16,7 +16,6 @@
 package types_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -148,7 +147,7 @@ var _ = ginkgo.Describe("Spec", func() {
 			Expect(lspec.Steps).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 			Expect(lspec.Image).To(Equal("luet/base"))
 			Expect(lspec.Seed).To(Equal("alpine"))
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -200,7 +199,7 @@ RUN echo bar > /test2`))
 		Expect(lspec.Steps).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 		Expect(lspec.Image).To(Equal("luet/base"))
 		Expect(lspec.Seed).To(Equal("alpine"))
-		tmpdir, err := ioutil.TempDir("", "tree")
+		tmpdir, err := os.MkdirTemp("", "tree")
 		Expect(err).ToNot(HaveOccurred())
 		defer os.RemoveAll(tmpdir) // clean up
 

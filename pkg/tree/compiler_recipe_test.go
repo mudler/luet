@@ -21,7 +21,6 @@
 package tree_test
 
 import (
-	"io/ioutil"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -37,7 +36,7 @@ var _ = Describe("Templated tree", func() {
 		It("interpolates correctly templated requires", func() {
 			db := pkg.NewInMemoryDatabase(false)
 			generalRecipe := NewCompilerRecipe(db)
-			tmpdir, err := ioutil.TempDir("", "package")
+			tmpdir, err := os.MkdirTemp("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 

@@ -23,7 +23,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -170,7 +169,7 @@ func (a *PackageArtifact) WriteYAML(dst string, o ...func(o *opts)) error {
 		return errors.Wrap(err, "While marshalling for PackageArtifact YAML")
 	}
 
-	err = ioutil.WriteFile(filepath.Join(dst, a.CompileSpec.GetPackage().GetMetadataFilePath()), data, os.ModePerm)
+	err = os.WriteFile(filepath.Join(dst, a.CompileSpec.GetPackage().GetMetadataFilePath()), data, os.ModePerm)
 	if err != nil {
 		return errors.Wrap(err, "While writing PackageArtifact YAML")
 	}

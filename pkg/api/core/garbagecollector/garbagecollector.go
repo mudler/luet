@@ -16,7 +16,6 @@
 package gc
 
 import (
-	"io/ioutil"
 	"os"
 )
 
@@ -47,7 +46,7 @@ func (c GarbageCollector) TempDir(pattern string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return ioutil.TempDir(string(c), pattern)
+	return os.MkdirTemp(string(c), pattern)
 }
 
 func (c GarbageCollector) TempFile(s string) (*os.File, error) {
@@ -55,5 +54,5 @@ func (c GarbageCollector) TempFile(s string) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ioutil.TempFile(string(c), s)
+	return os.CreateTemp(string(c), s)
 }

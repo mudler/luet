@@ -17,7 +17,7 @@ package types
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/mitchellh/hashstructure/v2"
@@ -442,7 +442,7 @@ func (cs *LuetCompilationSpec) WriteBuildImageDefinition(path string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(path, []byte(data), 0644)
+	return os.WriteFile(path, []byte(data), 0644)
 }
 
 func (cs *LuetCompilationSpec) WriteStepImageDefinition(fromimage, path string) error {
@@ -458,5 +458,5 @@ func (cs *LuetCompilationSpec) WriteStepImageDefinition(fromimage, path string) 
 		}
 	}
 
-	return ioutil.WriteFile(path, []byte(data), 0644)
+	return os.WriteFile(path, []byte(data), 0644)
 }

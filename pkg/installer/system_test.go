@@ -19,7 +19,6 @@ import (
 
 	//	. "github.com/mudler/luet/pkg/installer"
 
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -75,14 +74,14 @@ var _ = Describe("System", func() {
 		})
 
 		It("detect missing files", func() {
-			dir, err := ioutil.TempDir("", "test")
+			dir, err := os.MkdirTemp("", "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(dir)
 			s.Target = dir
 			notfound := s.OSCheck(ctx)
 			Expect(len(notfound)).To(Equal(2))
-			ioutil.WriteFile(filepath.Join(dir, "f"), []byte{}, os.ModePerm)
-			ioutil.WriteFile(filepath.Join(dir, "foo"), []byte{}, os.ModePerm)
+			os.WriteFile(filepath.Join(dir, "f"), []byte{}, os.ModePerm)
+			os.WriteFile(filepath.Join(dir, "foo"), []byte{}, os.ModePerm)
 			notfound = s.OSCheck(ctx)
 			Expect(len(notfound)).To(Equal(1))
 		})

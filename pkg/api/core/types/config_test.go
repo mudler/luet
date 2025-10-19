@@ -17,7 +17,6 @@
 package types_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,7 +31,7 @@ import (
 var _ = Describe("Config", func() {
 
 	Context("Inits paths", func() {
-		t, _ := ioutil.TempDir("", "tests")
+		t, _ := os.MkdirTemp("", "tests")
 		defer os.RemoveAll(t)
 		c := &types.LuetConfig{
 			System: types.LuetSystemConfig{

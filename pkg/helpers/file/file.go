@@ -18,7 +18,6 @@ package file
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -161,7 +160,7 @@ func Exists(name string) bool {
 }
 
 func Read(file string) (string, error) {
-	dat, err := ioutil.ReadFile(file)
+	dat, err := os.ReadFile(file)
 	if err != nil {
 		return "", err
 	}

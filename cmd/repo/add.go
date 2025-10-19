@@ -17,7 +17,6 @@ package cmd_repo
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -133,7 +132,7 @@ Adds a repository to the system. URLs, local files or inline repo can be specifi
 				return
 			}
 
-			if err := ioutil.WriteFile(file, b, os.ModePerm); err != nil {
+			if err := os.WriteFile(file, b, os.ModePerm); err != nil {
 				util.DefaultContext.Fatal(err)
 			}
 		},

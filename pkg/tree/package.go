@@ -16,7 +16,7 @@
 package tree
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/mudler/luet/pkg/api/core/template"
@@ -31,7 +31,7 @@ func RuntimeDefinitionParser(srcDir, currentpath, name string, templates []strin
 	if name != types.PackageDefinitionFile {
 		return nil
 	}
-	dat, err := ioutil.ReadFile(currentpath)
+	dat, err := os.ReadFile(currentpath)
 	if err != nil {
 		return errors.Wrap(err, "Error reading file "+currentpath)
 	}

@@ -16,7 +16,6 @@
 package image_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -44,7 +43,7 @@ var _ = Describe("Extract", func() {
 			BeforeEach(func() {
 				ctx = context.NewContext()
 
-				tmpfile, err = ioutil.TempFile("", "extract")
+				tmpfile, err = os.CreateTemp("", "extract")
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpfile.Name()) // clean up
 

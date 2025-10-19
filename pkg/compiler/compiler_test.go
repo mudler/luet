@@ -17,7 +17,6 @@ package compiler_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,7 +58,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -102,7 +101,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -132,7 +131,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -166,7 +165,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -185,7 +184,7 @@ var _ = Describe("Compiler", func() {
 	Context("Templated packages", func() {
 		It("Renders", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "package")
+			tmpdir, err := os.MkdirTemp("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -206,7 +205,7 @@ var _ = Describe("Compiler", func() {
 	Context("Reconstruct image tree", func() {
 		It("Compiles it", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "package")
+			tmpdir, err := os.MkdirTemp("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -262,7 +261,7 @@ var _ = Describe("Compiler", func() {
 
 		It("unpacks images when needed", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "package")
+			tmpdir, err := os.MkdirTemp("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -303,7 +302,7 @@ var _ = Describe("Compiler", func() {
 
 		It("Compiles and includes ony wanted files", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "package")
+			tmpdir, err := os.MkdirTemp("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -336,7 +335,7 @@ var _ = Describe("Compiler", func() {
 
 		It("Compiles and excludes files", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "package")
+			tmpdir, err := os.MkdirTemp("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -371,7 +370,7 @@ var _ = Describe("Compiler", func() {
 
 		It("Compiles includes and excludes files", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "package")
+			tmpdir, err := os.MkdirTemp("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -406,7 +405,7 @@ var _ = Describe("Compiler", func() {
 
 		It("Compiles and excludes ony wanted files also from unpacked packages", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "package")
+			tmpdir, err := os.MkdirTemp("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -439,7 +438,7 @@ var _ = Describe("Compiler", func() {
 
 		It("Compiles includes and excludes ony wanted files also from unpacked packages", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "package")
+			tmpdir, err := os.MkdirTemp("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -472,7 +471,7 @@ var _ = Describe("Compiler", func() {
 
 		It("Compiles and includes ony wanted files also from unpacked packages", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "package")
+			tmpdir, err := os.MkdirTemp("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -508,7 +507,7 @@ var _ = Describe("Compiler", func() {
 
 		It("Compiles a more complex tree", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "package")
+			tmpdir, err := os.MkdirTemp("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -548,7 +547,7 @@ var _ = Describe("Compiler", func() {
 
 		It("Compiles with provides support", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "package")
+			tmpdir, err := os.MkdirTemp("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -591,7 +590,7 @@ var _ = Describe("Compiler", func() {
 		It("Compiles with provides and selectors support", func() {
 			// Same test as before, but fixtures differs
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "package")
+			tmpdir, err := os.MkdirTemp("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -632,7 +631,7 @@ var _ = Describe("Compiler", func() {
 		})
 		It("Compiles revdeps", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "revdep")
+			tmpdir, err := os.MkdirTemp("", "revdep")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -694,7 +693,7 @@ var _ = Describe("Compiler", func() {
 
 		It("Compiles complex dependencies trees with best matches", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "complex")
+			tmpdir, err := os.MkdirTemp("", "complex")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -733,7 +732,7 @@ var _ = Describe("Compiler", func() {
 
 		It("Compiles revdeps with seeds", func() {
 			generalRecipe := tree.NewCompilerRecipe(pkg.NewInMemoryDatabase(false))
-			tmpdir, err := ioutil.TempDir("", "package")
+			tmpdir, err := os.MkdirTemp("", "package")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -801,7 +800,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -843,7 +842,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -880,7 +879,7 @@ var _ = Describe("Compiler", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -914,7 +913,7 @@ var _ = Describe("Compiler", func() {
 			meta := filepath.Join(path, artifacts[1].Runtime.GetMetadataFilePath())
 			Expect(fileHelper.Exists(meta)).To(BeTrue())
 
-			d, err := ioutil.ReadFile(meta)
+			d, err := os.ReadFile(meta)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(string(d)).To(ContainSubstring(artifacts[1].CompileSpec.GetPackage().GetName()))
@@ -948,10 +947,10 @@ var _ = Describe("Compiler", func() {
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
-			tmpdir2, err := ioutil.TempDir("", "tree2")
+			tmpdir2, err := os.MkdirTemp("", "tree2")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir2) // clean up
 
@@ -990,7 +989,7 @@ var _ = Describe("Compiler", func() {
 			compiler.Options.CompressionType = types.GZip
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -1044,7 +1043,7 @@ var _ = Describe("Compiler", func() {
 			compiler.Options.CompressionType = types.GZip
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -1080,7 +1079,7 @@ var _ = Describe("Compiler", func() {
 			compiler.Options.CompressionType = types.GZip
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -1114,14 +1113,14 @@ var _ = Describe("Compiler", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(len(generalRecipe.GetDatabase().GetPackages())).To(Equal(6))
-			logdir, err := ioutil.TempDir("", "log")
+			logdir, err := os.MkdirTemp("", "log")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(logdir) // clean up
 
 			logPath := filepath.Join(logdir, "logs")
 			var log string
 			readLogs := func() {
-				d, err := ioutil.ReadFile(logPath)
+				d, err := os.ReadFile(logPath)
 				Expect(err).To(BeNil())
 				log = string(d)
 			}
@@ -1165,7 +1164,7 @@ var _ = Describe("Compiler", func() {
 			compiler.Options.CompressionType = types.GZip
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -1237,7 +1236,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -1248,7 +1247,7 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].Dependencies)).To(Equal(0))
 
-			tmpdir2, err := ioutil.TempDir("", "tree")
+			tmpdir2, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir2) // clean up
 
@@ -1258,7 +1257,7 @@ var _ = Describe("Compiler", func() {
 			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "usr"))).To(BeTrue())
 			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "root"))).To(BeTrue())
 
-			tmpdir3, err := ioutil.TempDir("", "tree")
+			tmpdir3, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir3) // clean up
 
@@ -1266,7 +1265,7 @@ var _ = Describe("Compiler", func() {
 			Expect(fileHelper.Exists(filepath.Join(tmpdir3, "bin/busybox"))).To(BeTrue())
 			Expect(fileHelper.Exists(filepath.Join(tmpdir3, "var"))).To(BeFalse())
 
-			tmpdir4, err := ioutil.TempDir("", "tree")
+			tmpdir4, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir4) // clean up
 
@@ -1275,7 +1274,7 @@ var _ = Describe("Compiler", func() {
 			Expect(fileHelper.Exists(filepath.Join(tmpdir4, "usr/bin/cksum"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(filepath.Join(tmpdir4, "usr"))).To(BeFalse())
 
-			tmpdir5, err := ioutil.TempDir("", "tree")
+			tmpdir5, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir5) // clean up
 
@@ -1310,7 +1309,7 @@ var _ = Describe("Compiler", func() {
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -1321,7 +1320,7 @@ var _ = Describe("Compiler", func() {
 			Expect(len(artifacts)).To(Equal(1))
 			Expect(len(artifacts[0].Dependencies)).To(Equal(0))
 
-			tmpdir2, err := ioutil.TempDir("", "tree")
+			tmpdir2, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir2) // clean up
 
@@ -1331,7 +1330,7 @@ var _ = Describe("Compiler", func() {
 			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "usr"))).To(BeTrue())
 			Expect(fileHelper.Exists(filepath.Join(tmpdir2, "root"))).To(BeTrue())
 
-			tmpdir3, err := ioutil.TempDir("", "tree")
+			tmpdir3, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir3) // clean up
 
@@ -1339,7 +1338,7 @@ var _ = Describe("Compiler", func() {
 			Expect(fileHelper.Exists(filepath.Join(tmpdir3, "bin/busybox"))).To(BeTrue())
 			Expect(fileHelper.Exists(filepath.Join(tmpdir3, "var"))).To(BeFalse())
 
-			tmpdir4, err := ioutil.TempDir("", "tree")
+			tmpdir4, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir4) // clean up
 
@@ -1348,7 +1347,7 @@ var _ = Describe("Compiler", func() {
 			Expect(fileHelper.Exists(filepath.Join(tmpdir4, "usr/bin/cksum"))).ToNot(BeTrue())
 			Expect(fileHelper.Exists(filepath.Join(tmpdir4, "usr"))).To(BeFalse())
 
-			tmpdir5, err := ioutil.TempDir("", "tree")
+			tmpdir5, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir5) // clean up
 
