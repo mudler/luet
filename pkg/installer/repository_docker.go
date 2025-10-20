@@ -17,7 +17,6 @@ package installer
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -63,7 +62,7 @@ func (l *dockerRepositoryGenerator) Initialize(path string, db types.PackageData
 			return errors.Wrap(err, "while pushing metadata file associated to the artifact")
 		}
 
-		dat, err := ioutil.ReadFile(currentpath)
+		dat, err := os.ReadFile(currentpath)
 		if err != nil {
 			return errors.Wrap(err, "Error reading file "+currentpath)
 		}

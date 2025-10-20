@@ -16,7 +16,6 @@
 package image_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -57,7 +56,7 @@ var _ = Describe("Delta", func() {
 				ctx = context.NewContext()
 				ctx.Config.General.Debug = true
 
-				tmpfile, err = ioutil.TempFile("", "delta")
+				tmpfile, err = os.CreateTemp("", "delta")
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpfile.Name()) // clean up
 

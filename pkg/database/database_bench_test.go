@@ -16,7 +16,6 @@
 package database_test
 
 import (
-	"io/ioutil"
 	"os"
 	"strconv"
 
@@ -32,13 +31,13 @@ var _ = Describe("Database  benchmark", func() {
 
 		a := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
 
-		tmpfile, _ := ioutil.TempFile(os.TempDir(), "tests")
+		tmpfile, _ := os.CreateTemp(os.TempDir(), "tests")
 		defer os.Remove(tmpfile.Name()) // clean up
 		var db types.PackageSet
 
 		BeforeEach(func() {
 
-			tmpfile, _ = ioutil.TempFile(os.TempDir(), "tests")
+			tmpfile, _ = os.CreateTemp(os.TempDir(), "tests")
 			defer os.Remove(tmpfile.Name()) // clean up
 			db = NewBoltDatabase(tmpfile.Name())
 			if os.Getenv("BENCHMARK_TESTS") != "true" {
@@ -83,13 +82,13 @@ var _ = Describe("Database  benchmark", func() {
 
 		a := types.NewPackage("A", ">=1.0", []*types.Package{}, []*types.Package{})
 
-		tmpfile, _ := ioutil.TempFile(os.TempDir(), "tests")
+		tmpfile, _ := os.CreateTemp(os.TempDir(), "tests")
 		defer os.Remove(tmpfile.Name()) // clean up
 		var db types.PackageSet
 
 		BeforeEach(func() {
 
-			tmpfile, _ = ioutil.TempFile(os.TempDir(), "tests")
+			tmpfile, _ = os.CreateTemp(os.TempDir(), "tests")
 			defer os.Remove(tmpfile.Name()) // clean up
 			db = NewInMemoryDatabase(false)
 			if os.Getenv("BENCHMARK_TESTS") != "true" {

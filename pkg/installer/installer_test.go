@@ -16,7 +16,6 @@
 package installer_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -60,7 +59,7 @@ var _ = Describe("Installer", func() {
 		It("Writes a repo and can install packages from it", func() {
 			//repo:=NewLuetSystemRepository()
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -80,7 +79,7 @@ var _ = Describe("Installer", func() {
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -122,7 +121,7 @@ var _ = Describe("Installer", func() {
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			fakeroot, err := os.MkdirTemp("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
@@ -178,7 +177,7 @@ urls:
 		It("Writes a repo and can install packages from it", func() {
 			//repo:=NewLuetSystemRepository()
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -197,7 +196,7 @@ urls:
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -244,7 +243,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			fakeroot, err := os.MkdirTemp("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
@@ -301,7 +300,7 @@ urls:
 		It("Installs in a system with a persistent db", func() {
 			//repo:=NewLuetSystemRepository()
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -320,7 +319,7 @@ urls:
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -371,7 +370,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			fakeroot, err := os.MkdirTemp("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
@@ -390,7 +389,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			bolt, err := ioutil.TempDir("", "db")
+			bolt, err := os.MkdirTemp("", "db")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(bolt) // clean up
 
@@ -430,7 +429,7 @@ urls:
 		It("Installs new packages from a syste with others installed", func() {
 			//repo:=NewLuetSystemRepository()
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -449,7 +448,7 @@ urls:
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -500,7 +499,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			fakeroot, err := os.MkdirTemp("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
@@ -520,7 +519,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			bolt, err := ioutil.TempDir("", "db")
+			bolt, err := os.MkdirTemp("", "db")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(bolt) // clean up
 
@@ -529,7 +528,7 @@ urls:
 			err = inst.Install([]*types.Package{&types.Package{Name: "b", Category: "test", Version: "1.0"}}, system)
 			Expect(err).ToNot(HaveOccurred())
 
-			tmpdir2, err := ioutil.TempDir("", "tree2")
+			tmpdir2, err := os.MkdirTemp("", "tree2")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -558,7 +557,7 @@ urls:
 			err = repo.Write(ctx, tmpdir2, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
-			fakeroot, err = ioutil.TempDir("", "fakeroot")
+			fakeroot, err = os.MkdirTemp("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
@@ -590,7 +589,7 @@ urls:
 		It("Installs packages and Upgrades a system with a persistent db", func() {
 			//repo:=NewLuetSystemRepository()
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -612,7 +611,7 @@ urls:
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -639,7 +638,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			fakeroot, err := os.MkdirTemp("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
@@ -659,7 +658,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			bolt, err := ioutil.TempDir("", "db")
+			bolt, err := os.MkdirTemp("", "db")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(bolt) // clean up
 
@@ -703,7 +702,7 @@ urls:
 		})
 
 		It("Compute the correct upgrade order", func() {
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -727,7 +726,7 @@ urls:
 			Expect(err).ToNot(HaveOccurred())
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -755,7 +754,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			fakeroot, err := os.MkdirTemp("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
@@ -775,7 +774,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			bolt, err := ioutil.TempDir("", "db")
+			bolt, err := os.MkdirTemp("", "db")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(bolt) // clean up
 
@@ -820,7 +819,7 @@ urls:
 		})
 
 		It("Compute the correct upgrade order with a package replacing multiple ones", func() {
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -849,7 +848,7 @@ urls:
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -879,7 +878,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			fakeroot, err := os.MkdirTemp("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
@@ -899,7 +898,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			bolt, err := ioutil.TempDir("", "db")
+			bolt, err := os.MkdirTemp("", "db")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(bolt) // clean up
 
@@ -953,7 +952,7 @@ urls:
 		It("Handles package drops", func() {
 			//repo:=NewLuetSystemRepository()
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -982,10 +981,10 @@ urls:
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
-			tmpdirnewrepo, err := ioutil.TempDir("", "tree2")
+			tmpdirnewrepo, err := os.MkdirTemp("", "tree2")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdirnewrepo) // clean up
 
@@ -1014,7 +1013,7 @@ urls:
 			err = repoupgrade.Write(ctx, tmpdirnewrepo, false, false)
 			Expect(err).ToNot(HaveOccurred())
 
-			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			fakeroot, err := os.MkdirTemp("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
@@ -1042,7 +1041,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			bolt, err := ioutil.TempDir("", "db")
+			bolt, err := os.MkdirTemp("", "db")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(bolt) // clean up
 
@@ -1093,7 +1092,7 @@ urls:
 		It("Installs", func() {
 			//repo:=NewLuetSystemRepository()
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -1120,7 +1119,7 @@ urls:
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 			spec.SetOutputPath(tmpdir)
@@ -1148,7 +1147,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			fakeroot, err := os.MkdirTemp("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
@@ -1170,7 +1169,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			bolt, err := ioutil.TempDir("", "db")
+			bolt, err := os.MkdirTemp("", "db")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(bolt) // clean up
 
@@ -1240,10 +1239,10 @@ urls:
 	Context("Uninstallation", func() {
 		It("fails if package is required by others which are installed", func() {
 
-			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			fakeroot, err := os.MkdirTemp("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
-			bolt, err := ioutil.TempDir("", "db")
+			bolt, err := os.MkdirTemp("", "db")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(bolt) // clean up
 
@@ -1282,7 +1281,7 @@ urls:
 		It("Reclaims them", func() {
 			//repo:=NewLuetSystemRepository()
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -1306,7 +1305,7 @@ urls:
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 			spec.SetOutputPath(tmpdir)
@@ -1333,7 +1332,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			fakeroot, err := os.MkdirTemp("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
@@ -1354,7 +1353,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			bolt, err := ioutil.TempDir("", "db")
+			bolt, err := os.MkdirTemp("", "db")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(bolt) // clean up
 
@@ -1391,7 +1390,7 @@ urls:
 		It("Upgrades reclaimed packages", func() {
 			//repo:=NewLuetSystemRepository()
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -1412,7 +1411,7 @@ urls:
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 			spec.SetOutputPath(tmpdir)
@@ -1436,7 +1435,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			fakeroot, err := ioutil.TempDir("", "fakeroot")
+			fakeroot, err := os.MkdirTemp("", "fakeroot")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(fakeroot) // clean up
 
@@ -1457,7 +1456,7 @@ urls:
 			Expect(repo.GetUrls()[0]).To(Equal(tmpdir))
 			Expect(repo.GetType()).To(Equal("disk"))
 
-			bolt, err := ioutil.TempDir("", "db")
+			bolt, err := os.MkdirTemp("", "db")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(bolt) // clean up
 
@@ -1502,7 +1501,7 @@ urls:
 			spec, err = c.FromPackage(&types.Package{Name: "b", Category: "test", Version: "1.1"})
 			Expect(err).ToNot(HaveOccurred())
 
-			tmpdir2, err := ioutil.TempDir("", "tree")
+			tmpdir2, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir2) // clean up
 			spec.SetOutputPath(tmpdir2)

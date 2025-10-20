@@ -16,7 +16,6 @@
 package client_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -69,7 +68,7 @@ var _ = Describe("Docker client", func() {
 				},
 			})
 			Expect(err).ToNot(HaveOccurred())
-			tmpdir, err := ioutil.TempDir("", "test")
+			tmpdir, err := os.MkdirTemp("", "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 

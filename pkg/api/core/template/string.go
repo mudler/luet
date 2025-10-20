@@ -17,7 +17,7 @@ package template
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -106,7 +106,7 @@ func FilesInDir(path []string) (res []string, err error) {
 // containing the raw content and the file name for each file
 func ReadFiles(s ...string) (res []string) {
 	for _, c := range s {
-		raw, err := ioutil.ReadFile(c)
+		raw, err := os.ReadFile(c)
 		if err != nil {
 			return
 		}
@@ -126,7 +126,7 @@ func UnMarshalValues(values []string) (templatedata, error) {
 		for _, bv := range reverse(values) {
 			current := templatedata{}
 
-			defBuild, err := ioutil.ReadFile(bv)
+			defBuild, err := os.ReadFile(bv)
 			if err != nil {
 				return nil, errors.Wrap(err, "rendering file "+bv)
 			}
@@ -154,7 +154,7 @@ func RenderWithValues(rawFiles []string, valuesFile string, defaultFile ...strin
 	if !fileHelper.Exists(valuesFile) {
 		return "", errors.New("file does not exist: " + valuesFile)
 	}
-	val, err := ioutil.ReadFile(valuesFile)
+	val, err := os.ReadFile(valuesFile)
 	if err != nil {
 		return "", errors.Wrap(err, "reading file: "+valuesFile)
 	}

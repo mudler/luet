@@ -16,7 +16,7 @@
 package cmd_database
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/mudler/luet/cmd/util"
 	"github.com/mudler/luet/pkg/api/core/types"
@@ -46,7 +46,7 @@ For reference, inspect a "metadata.yaml" file generated while running "luet buil
 			systemDB := util.SystemDB(util.DefaultContext.Config)
 
 			for _, a := range args {
-				dat, err := ioutil.ReadFile(a)
+				dat, err := os.ReadFile(a)
 				if err != nil {
 					util.DefaultContext.Fatal("Failed reading ", a, ": ", err.Error())
 				}

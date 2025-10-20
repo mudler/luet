@@ -16,7 +16,6 @@
 package client_test
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -36,13 +35,13 @@ var _ = Describe("Http client", func() {
 
 		It("Downloads single files", func() {
 			// setup small staticfile webserver with content
-			tmpdir, err := ioutil.TempDir("", "test")
+			tmpdir, err := os.MkdirTemp("", "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 			Expect(err).ToNot(HaveOccurred())
 			ts := httptest.NewServer(http.FileServer(http.Dir(tmpdir)))
 			defer ts.Close()
-			err = ioutil.WriteFile(filepath.Join(tmpdir, "test.txt"), []byte(`test`), os.ModePerm)
+			err = os.WriteFile(filepath.Join(tmpdir, "test.txt"), []byte(`test`), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())
 
 			c := NewHttpClient(RepoData{Urls: []string{ts.URL}}, ctx)
@@ -54,13 +53,13 @@ var _ = Describe("Http client", func() {
 
 		It("Downloads artifacts", func() {
 			// setup small staticfile webserver with content
-			tmpdir, err := ioutil.TempDir("", "test")
+			tmpdir, err := os.MkdirTemp("", "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 			Expect(err).ToNot(HaveOccurred())
 			ts := httptest.NewServer(http.FileServer(http.Dir(tmpdir)))
 			defer ts.Close()
-			err = ioutil.WriteFile(filepath.Join(tmpdir, "test.txt"), []byte(`test`), os.ModePerm)
+			err = os.WriteFile(filepath.Join(tmpdir, "test.txt"), []byte(`test`), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())
 
 			c := NewHttpClient(RepoData{Urls: []string{ts.URL}}, ctx)

@@ -708,7 +708,7 @@ func (cs *LuetCompiler) resolveExistingImageHash(imageHash string, p *types.Luet
 
 func LoadArtifactFromYaml(spec *types.LuetCompilationSpec) (*artifact.PackageArtifact, error) {
 	metaFile := spec.GetPackage().GetMetadataFilePath()
-	dat, err := ioutil.ReadFile(spec.Rel(metaFile))
+	dat, err := os.ReadFile(spec.Rel(metaFile))
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading file "+metaFile)
 	}
@@ -874,9 +874,10 @@ func (cs *LuetCompiler) ComputeDepTree(p *types.LuetCompilationSpec, db types.Pa
 // BuildTree returns a BuildTree which represent the order in which specs should be compiled.
 // It places specs into levels, and each level can be built in parallel. The root nodes starting from the top.
 // A BuildTree can be marshaled into JSON or walked like:
-// for _, l := range bt.AllLevels() {
-//	fmt.Println(strings.Join(bt.AllInLevel(l), " "))
-// }
+//
+//	for _, l := range bt.AllLevels() {
+//		fmt.Println(strings.Join(bt.AllInLevel(l), " "))
+//	}
 func (cs *LuetCompiler) BuildTree(compilerSpecs types.LuetCompilationspecs) (*BuildTree, error) {
 	compilationTree := map[string]map[string]interface{}{}
 	bt := &BuildTree{}
@@ -1446,12 +1447,12 @@ func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack *typ
 	if _, err := os.Stat(pack.Rel(CollectionFile)); err == nil {
 		val = pack.Rel(CollectionFile)
 
-		data, err := ioutil.ReadFile(val)
+		data, err := os.ReadFile(val)
 		if err != nil {
 			return nil, errors.Wrap(err, "rendering file "+val)
 		}
 
-		dataBuild, err := ioutil.ReadFile(pack.Rel(BuildFile))
+		dataBuild, err := os.ReadFile(pack.Rel(BuildFile))
 		if err != nil {
 			return nil, errors.Wrap(err, "rendering file "+val)
 		}
@@ -1496,7 +1497,7 @@ func (cs *LuetCompiler) templatePackage(vals []map[string]interface{}, pack *typ
 					return nil, errors.Wrap(err, "while marshalling values file")
 				}
 				f := filepath.Join(valuesdir, fileHelper.RandStringRunes(20))
-				if err := ioutil.WriteFile(f, out, os.ModePerm); err != nil {
+				if err := os.WriteFile(f, out, os.ModePerm); err != nil {
 					return nil, errors.Wrap(err, "while writing temporary values file")
 				}
 				bv = append([]string{f}, bv...)

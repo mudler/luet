@@ -1,5 +1,6 @@
 // Copyright © 2019 Ettore Di Giacinto <mudler@gentoo.org>
-//                  Daniele Rondina <geaaru@sabayonlinux.org>
+//
+//	Daniele Rondina <geaaru@sabayonlinux.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,7 +18,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -37,7 +37,7 @@ var cleanupCmd = &cobra.Command{
 		// Check if cache dir exists
 		if fileHelper.Exists(util.DefaultContext.Config.System.PkgsCachePath) {
 
-			files, err := ioutil.ReadDir(util.DefaultContext.Config.System.PkgsCachePath)
+			files, err := os.ReadDir(util.DefaultContext.Config.System.PkgsCachePath)
 			if err != nil {
 				util.DefaultContext.Fatal("Error on read cachedir ", err.Error())
 			}

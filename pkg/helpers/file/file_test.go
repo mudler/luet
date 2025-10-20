@@ -16,7 +16,6 @@
 package file_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -36,13 +35,13 @@ var _ = Describe("Helpers", func() {
 
 	Context("DirectoryIsEmpty", func() {
 		It("Detects empty directory", func() {
-			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			testDir, err := os.MkdirTemp(os.TempDir(), "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(testDir)
 			Expect(fileHelper.DirectoryIsEmpty(testDir)).To(BeTrue())
 		})
 		It("Detects directory with files", func() {
-			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			testDir, err := os.MkdirTemp(os.TempDir(), "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(testDir)
 			err = fileHelper.Touch(filepath.Join(testDir, "foo"))
@@ -53,24 +52,24 @@ var _ = Describe("Helpers", func() {
 
 	Context("Orders dir and files correctly", func() {
 		It("puts files first and folders at end", func() {
-			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			testDir, err := os.MkdirTemp(os.TempDir(), "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(testDir)
 
-			err = ioutil.WriteFile(filepath.Join(testDir, "foo"), []byte("test\n"), 0644)
+			err = os.WriteFile(filepath.Join(testDir, "foo"), []byte("test\n"), 0644)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = ioutil.WriteFile(filepath.Join(testDir, "baz"), []byte("test\n"), 0644)
+			err = os.WriteFile(filepath.Join(testDir, "baz"), []byte("test\n"), 0644)
 			Expect(err).ToNot(HaveOccurred())
 
 			err = os.MkdirAll(filepath.Join(testDir, "bar"), 0755)
 			Expect(err).ToNot(HaveOccurred())
-			err = ioutil.WriteFile(filepath.Join(testDir, "bar", "foo"), []byte("test\n"), 0644)
+			err = os.WriteFile(filepath.Join(testDir, "bar", "foo"), []byte("test\n"), 0644)
 			Expect(err).ToNot(HaveOccurred())
 
 			err = os.MkdirAll(filepath.Join(testDir, "baz2"), 0755)
 			Expect(err).ToNot(HaveOccurred())
-			err = ioutil.WriteFile(filepath.Join(testDir, "baz2", "foo"), []byte("test\n"), 0644)
+			err = os.WriteFile(filepath.Join(testDir, "baz2", "foo"), []byte("test\n"), 0644)
 			Expect(err).ToNot(HaveOccurred())
 
 			ordered, notExisting := fileHelper.OrderFiles(testDir, []string{"bar", "baz", "bar/foo", "baz2", "foo", "baz2/foo", "notexisting"})
@@ -80,7 +79,7 @@ var _ = Describe("Helpers", func() {
 		})
 
 		It("orders correctly when there are folders with folders", func() {
-			testDir, err := ioutil.TempDir(os.TempDir(), "test")
+			testDir, err := os.MkdirTemp(os.TempDir(), "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(testDir)
 

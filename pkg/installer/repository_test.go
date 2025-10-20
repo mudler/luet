@@ -20,7 +20,6 @@ import (
 	//	. "github.com/mudler/luet/pkg/installer"
 
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -60,7 +59,7 @@ var _ = Describe("Repository", func() {
 		ctx := context.NewContext()
 		It("Generate repository metadata", func() {
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -78,7 +77,7 @@ var _ = Describe("Repository", func() {
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -121,7 +120,7 @@ var _ = Describe("Repository", func() {
 
 		It("Generate repository metadata of files ONLY referenced in a tree", func() {
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -150,7 +149,7 @@ var _ = Describe("Repository", func() {
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 			Expect(spec2.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -218,7 +217,7 @@ urls:
 
 		It("Generates snapshots", func() {
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -247,7 +246,7 @@ urls:
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 			Expect(spec2.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -336,7 +335,7 @@ urls:
 
 		It("Generate repository metadata of files referenced in a tree and from packages", func() {
 
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -365,7 +364,7 @@ urls:
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 			Expect(spec2.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -475,7 +474,7 @@ urls:
 
 		It("generates images", func() {
 			b := backend.NewSimpleDockerBackend(ctx)
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -494,7 +493,7 @@ urls:
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -522,7 +521,7 @@ urls:
 			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", repoImage, "repository.yaml"))).To(BeTrue())
 			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", repoImage, "b-test-1.0"))).To(BeTrue())
 
-			extracted, err := ioutil.TempDir("", "extracted")
+			extracted, err := os.MkdirTemp("", "extracted")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(extracted) // clean up
 
@@ -550,7 +549,7 @@ urls:
 
 		It("generates images of virtual packages", func() {
 			b := backend.NewSimpleDockerBackend(ctx)
-			tmpdir, err := ioutil.TempDir("", "tree")
+			tmpdir, err := os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -569,7 +568,7 @@ urls:
 
 			Expect(spec.GetPackage().GetPath()).ToNot(Equal(""))
 
-			tmpdir, err = ioutil.TempDir("", "tree")
+			tmpdir, err = os.MkdirTemp("", "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
@@ -594,7 +593,7 @@ urls:
 			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", repoImage, "repository.yaml"))).To(BeTrue())
 			Expect(b.ImageAvailable(fmt.Sprintf("%s:%s", repoImage, "a-test-1.99"))).To(BeTrue())
 
-			extracted, err := ioutil.TempDir("", "extracted")
+			extracted, err := os.MkdirTemp("", "extracted")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(extracted) // clean up
 

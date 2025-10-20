@@ -21,7 +21,6 @@
 package tree_test
 
 import (
-	"io/ioutil"
 	"os"
 	"regexp"
 
@@ -41,7 +40,7 @@ var _ = Describe("Tree", func() {
 			for index := 0; index < 300; index++ { // Just to make sure we don't have false positives
 				db := pkg.NewInMemoryDatabase(false)
 				generalRecipe := NewCompilerRecipe(db)
-				tmpdir, err := ioutil.TempDir("", "package")
+				tmpdir, err := os.MkdirTemp("", "package")
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
 
@@ -98,7 +97,7 @@ var _ = Describe("Tree", func() {
 			for index := 0; index < 300; index++ { // Just to make sure we don't have false positives
 				db := pkg.NewInMemoryDatabase(false)
 				generalRecipe := NewCompilerRecipe(db)
-				tmpdir, err := ioutil.TempDir("", "package")
+				tmpdir, err := os.MkdirTemp("", "package")
 				Expect(err).ToNot(HaveOccurred())
 				defer os.RemoveAll(tmpdir) // clean up
 

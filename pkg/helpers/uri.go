@@ -18,7 +18,6 @@ package helpers
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -41,7 +40,7 @@ func GetURI(s string) (string, error) {
 	case err == nil && f.IsDir():
 		return "", errors.New("directories not supported")
 	case err == nil:
-		b, err := ioutil.ReadFile(s)
+		b, err := os.ReadFile(s)
 		return string(b), err
 	case IsUrl(s):
 		resp, err := http.Get(s)

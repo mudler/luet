@@ -16,7 +16,6 @@
 package artifact_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -33,15 +32,15 @@ import (
 var _ = Describe("Cache", func() {
 	Context("CacheID", func() {
 		It("Get and retrieve files", func() {
-			tmpdir, err := ioutil.TempDir(os.TempDir(), "test")
+			tmpdir, err := os.MkdirTemp(os.TempDir(), "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
-			tmpdirartifact, err := ioutil.TempDir(os.TempDir(), "testartifact")
+			tmpdirartifact, err := os.MkdirTemp(os.TempDir(), "testartifact")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdirartifact) // clean up
 
-			err = ioutil.WriteFile(filepath.Join(tmpdirartifact, "foo"), []byte(string("foo")), os.ModePerm)
+			err = os.WriteFile(filepath.Join(tmpdirartifact, "foo"), []byte(string("foo")), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())
 
 			a := NewPackageArtifact(filepath.Join(tmpdir, "foo.tar.gz"))
@@ -65,7 +64,7 @@ var _ = Describe("Cache", func() {
 
 			Expect(fileHelper.Exists(filepath.Join(tmpdir, "foo"))).To(BeTrue())
 
-			bb, err := ioutil.ReadFile(filepath.Join(tmpdir, "foo"))
+			bb, err := os.ReadFile(filepath.Join(tmpdir, "foo"))
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(string(bb)).To(Equal("foo"))

@@ -16,7 +16,6 @@
 package client_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -33,12 +32,12 @@ var _ = Describe("Local client", func() {
 		ctx := context.NewContext()
 
 		It("Downloads single files", func() {
-			tmpdir, err := ioutil.TempDir("", "test")
+			tmpdir, err := os.MkdirTemp("", "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
 			// write the whole body at once
-			err = ioutil.WriteFile(filepath.Join(tmpdir, "test.txt"), []byte(`test`), os.ModePerm)
+			err = os.WriteFile(filepath.Join(tmpdir, "test.txt"), []byte(`test`), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())
 
 			c := NewLocalClient(RepoData{Urls: []string{tmpdir}}, ctx)
@@ -49,12 +48,12 @@ var _ = Describe("Local client", func() {
 		})
 
 		It("Downloads artifacts", func() {
-			tmpdir, err := ioutil.TempDir("", "test")
+			tmpdir, err := os.MkdirTemp("", "test")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
 			// write the whole body at once
-			err = ioutil.WriteFile(filepath.Join(tmpdir, "test.txt"), []byte(`test`), os.ModePerm)
+			err = os.WriteFile(filepath.Join(tmpdir, "test.txt"), []byte(`test`), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())
 
 			c := NewLocalClient(RepoData{Urls: []string{tmpdir}}, ctx)

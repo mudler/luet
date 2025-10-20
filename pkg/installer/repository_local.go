@@ -17,7 +17,6 @@ package installer
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -53,7 +52,7 @@ func buildPackageIndex(ctx types.Context, path string, db types.PackageDatabase)
 			return nil // Skip with no errors
 		}
 
-		dat, err := ioutil.ReadFile(currentpath)
+		dat, err := os.ReadFile(currentpath)
 		if err != nil {
 			return errors.Wrap(err, "Error reading file "+currentpath)
 		}

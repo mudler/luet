@@ -16,7 +16,6 @@
 package database_test
 
 import (
-	"io/ioutil"
 	"os"
 	"regexp"
 
@@ -28,12 +27,12 @@ import (
 
 var _ = Describe("BoltDB Database", func() {
 
-	tmpfile, _ := ioutil.TempFile(os.TempDir(), "tests")
+	tmpfile, _ := os.CreateTemp(os.TempDir(), "tests")
 	defer os.Remove(tmpfile.Name()) // clean up
 	var db types.PackageDatabase
 
 	BeforeEach(func() {
-		tmpfile, _ = ioutil.TempFile(os.TempDir(), "tests")
+		tmpfile, _ = os.CreateTemp(os.TempDir(), "tests")
 		defer os.Remove(tmpfile.Name()) // clean up
 		db = NewBoltDatabase(tmpfile.Name())
 	})

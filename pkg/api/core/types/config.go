@@ -17,7 +17,6 @@ package types
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -170,7 +169,7 @@ func (s *LuetSystemConfig) setCachePath() {
 		}
 	} else {
 		// Create dynamic cache for test suites
-		cachepath, _ = ioutil.TempDir(os.TempDir(), "cachepkgs")
+		cachepath, _ = os.MkdirTemp(os.TempDir(), "cachepkgs")
 	}
 
 	s.PkgsCachePath = cachepath // Be consistent with the path we set
@@ -214,7 +213,6 @@ type LuetConfig struct {
 	FinalizerEnvs Finalizers `json:"finalizer_envs,omitempty" yaml:"finalizer_envs,omitempty" mapstructure:"finalizer_envs,omitempty"`
 
 	ConfigProtectConfFiles []config.ConfigProtectConfFile `yaml:"-" mapstructure:"-"`
-
 }
 
 // AddSystemRepository is just syntax sugar to add a repository in the system set
@@ -269,7 +267,7 @@ func (c *LuetConfig) loadRepositories() error {
 
 		rdir = filepath.Join(rootfs, rdir)
 
-		files, err := ioutil.ReadDir(rdir)
+		files, err := os.ReadDir(rdir)
 		if err != nil {
 			continue
 		}
@@ -283,7 +281,7 @@ func (c *LuetConfig) loadRepositories() error {
 				continue
 			}
 
-			content, err := ioutil.ReadFile(path.Join(rdir, file.Name()))
+			content, err := os.ReadFile(path.Join(rdir, file.Name()))
 			if err != nil {
 				continue
 			}
@@ -296,7 +294,6 @@ func (c *LuetConfig) loadRepositories() error {
 			if r.Name == "" || len(r.Urls) == 0 || r.Type == "" {
 				continue
 			}
-
 
 			c.AddSystemRepository(*r)
 		}
@@ -334,7 +331,7 @@ func (c *LuetConfig) loadConfigProtect() error {
 	for _, cdir := range c.ConfigProtectConfDir {
 		cdir = filepath.Join(rootfs, cdir)
 
-		files, err := ioutil.ReadDir(cdir)
+		files, err := os.ReadDir(cdir)
 		if err != nil {
 			continue
 		}
@@ -348,7 +345,7 @@ func (c *LuetConfig) loadConfigProtect() error {
 				continue
 			}
 
-			content, err := ioutil.ReadFile(path.Join(cdir, file.Name()))
+			content, err := os.ReadFile(path.Join(cdir, file.Name()))
 			if err != nil {
 				continue
 			}

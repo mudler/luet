@@ -22,7 +22,6 @@ package tree
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -54,7 +53,7 @@ func WriteDefinitionFile(p *types.Package, definitionFilePath string) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(definitionFilePath, data, 0644)
+	err = os.WriteFile(definitionFilePath, data, 0644)
 	if err != nil {
 		return err
 	}
@@ -77,7 +76,7 @@ func (r *Recipe) Save(path string) error {
 
 func (r *Recipe) Load(path string) error {
 
-	// tmpfile, err := ioutil.TempFile("", "luet")
+	// tmpfile, err := os.CreateTemp("", "luet")
 	// if err != nil {
 	// 	return err
 	// }

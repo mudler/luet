@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -274,7 +274,7 @@ func (p *Package) GetTreeDir() string {
 }
 
 func (p *Package) SetOriginalDockerfile(s string) error {
-	dat, err := ioutil.ReadFile(s)
+	dat, err := os.ReadFile(s)
 	if err != nil {
 		return errors.Wrap(err, "Error reading file "+s)
 	}
@@ -732,7 +732,7 @@ func (p *Package) GetRuntimePackage() (*Package, error) {
 	var r *Package
 	if p.IsCollection() {
 		collectionFile := filepath.Join(p.Path, PackageCollectionFile)
-		dat, err := ioutil.ReadFile(collectionFile)
+		dat, err := os.ReadFile(collectionFile)
 		if err != nil {
 			return r, errors.Wrapf(err, "failed while reading '%s'", collectionFile)
 		}
@@ -752,7 +752,7 @@ func (p *Package) GetRuntimePackage() (*Package, error) {
 		return &Package{Name: p.Name}, nil
 	} else {
 		definitionFile := filepath.Join(p.Path, PackageDefinitionFile)
-		dat, err := ioutil.ReadFile(definitionFile)
+		dat, err := os.ReadFile(definitionFile)
 		if err != nil {
 			return r, errors.Wrapf(err, "failed while reading '%s'", definitionFile)
 		}

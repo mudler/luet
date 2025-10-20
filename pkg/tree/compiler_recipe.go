@@ -21,7 +21,6 @@
 package tree
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -49,7 +48,7 @@ func NewCompilerRecipe(d types.PackageDatabase, fp ...FileParser) Builder {
 
 func ReadDefinitionFile(path string) (types.Package, error) {
 	empty := types.Package{}
-	dat, err := ioutil.ReadFile(path)
+	dat, err := os.ReadFile(path)
 	if err != nil {
 		return empty, errors.Wrap(err, "Error reading file "+path)
 	}

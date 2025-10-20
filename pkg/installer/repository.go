@@ -17,7 +17,6 @@ package installer
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -165,7 +164,7 @@ func (m *LuetSystemRepositoryMetadata) WriteFile(path string) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(path, data, os.ModePerm)
+	err = os.WriteFile(path, data, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -178,7 +177,7 @@ func (m *LuetSystemRepositoryMetadata) ReadFile(file string, removeFile bool) er
 		return errors.New("Invalid path for repository metadata")
 	}
 
-	dat, err := ioutil.ReadFile(file)
+	dat, err := os.ReadFile(file)
 	if err != nil {
 		return err
 	}
@@ -319,7 +318,7 @@ func GenerateRepository(p ...RepositoryOption) (*LuetSystemRepository, error) {
 			return nil
 		}
 
-		dat, err := ioutil.ReadFile(currentpath)
+		dat, err := os.ReadFile(currentpath)
 		if err != nil {
 			return nil
 		}
@@ -576,7 +575,7 @@ func (r *LuetSystemRepository) AddMetadata(ctx types.Context, repospec, dst stri
 	if err != nil {
 		return a, err
 	}
-	err = ioutil.WriteFile(repospec, data, os.ModePerm)
+	err = os.WriteFile(repospec, data, os.ModePerm)
 	if err != nil {
 		return a, err
 	}
@@ -621,7 +620,7 @@ func (r *LuetSystemRepository) Snapshot(id, dst string) (artifacts []*artifact.P
 		return
 	}
 
-	b, err := ioutil.ReadFile(repospec)
+	b, err := os.ReadFile(repospec)
 	if err != nil {
 		return
 	}
@@ -657,7 +656,7 @@ func (r *LuetSystemRepository) Snapshot(id, dst string) (artifacts []*artifact.P
 		return
 	}
 
-	err = ioutil.WriteFile(snapshotIndex, data, os.ModePerm)
+	err = os.WriteFile(snapshotIndex, data, os.ModePerm)
 
 	return
 }
@@ -704,7 +703,7 @@ func (r *LuetSystemRepository) SetRepositoryFile(name string, f LuetRepositoryFi
 }
 
 func (r *LuetSystemRepository) ReadSpecFile(file string) (*LuetSystemRepository, error) {
-	dat, err := ioutil.ReadFile(file)
+	dat, err := os.ReadFile(file)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading file "+file)
 	}
@@ -881,7 +880,7 @@ func (r *LuetSystemRepository) Sync(ctx types.Context, force bool) (*LuetSystemR
 	repobasedir := ctx.GetConfig().System.GetRepoDatabaseDirPath(r.GetName())
 
 	toTimeSync := false
-	dat, err := ioutil.ReadFile(filepath.Join(repobasedir, "SYNCTIME"))
+	dat, err := os.ReadFile(filepath.Join(repobasedir, "SYNCTIME"))
 	if err == nil {
 		parsed, _ := time.Parse(time.RFC3339, string(dat))
 		if time.Now().After(parsed.Add(24 * time.Hour)) {
@@ -919,7 +918,7 @@ func (r *LuetSystemRepository) Sync(ctx types.Context, force bool) (*LuetSystemR
 		defer os.RemoveAll(file)
 		defer func() {
 			now := time.Now().Format(time.RFC3339)
-			ioutil.WriteFile(filepath.Join(repobasedir, "SYNCTIME"), []byte(now), os.ModePerm)
+			os.WriteFile(filepath.Join(repobasedir, "SYNCTIME"), []byte(now), os.ModePerm)
 		}()
 	} else {
 		downloadedRepoMeta, err = r.ReadSpecFile(repoFile)

@@ -24,7 +24,6 @@ import (
 	. "github.com/mudler/luet/pkg/compiler/backend"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -52,11 +51,11 @@ var _ = Describe("Docker backend", func() {
 			Expect(lspec.Steps).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 			Expect(lspec.Image).To(Equal("luet/base"))
 			Expect(lspec.Seed).To(Equal("alpine"))
-			tmpdir, err := ioutil.TempDir(os.TempDir(), "tree")
+			tmpdir, err := os.MkdirTemp(os.TempDir(), "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
-			tmpdir2, err := ioutil.TempDir(os.TempDir(), "tree2")
+			tmpdir2, err := os.MkdirTemp(os.TempDir(), "tree2")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir2) // clean up
 

@@ -17,7 +17,6 @@ package installer
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -1048,7 +1047,7 @@ func checkAndPrunePath(ctx types.Context, target, path string) {
 
 	switch mode := fi.Mode(); {
 	case mode.IsDir():
-		files, err := ioutil.ReadDir(targetPath)
+		files, err := os.ReadDir(targetPath)
 		if err != nil {
 			ctx.Warning("Failed reading folder", targetPath, err.Error())
 			return
@@ -1112,7 +1111,7 @@ func (l *LuetInstaller) pruneFile(f string, s *System, cp *config.ConfigProtect)
 	}
 	switch mode := fi.Mode(); {
 	case mode.IsDir():
-		files, err := ioutil.ReadDir(target)
+		files, err := os.ReadDir(target)
 		if err != nil {
 			l.Options.Context.Debug("Failed reading folder", target, err.Error())
 		}

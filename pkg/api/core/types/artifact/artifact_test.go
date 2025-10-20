@@ -16,7 +16,6 @@
 package artifact_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -56,19 +55,19 @@ var _ = Describe("Artifact", func() {
 			Expect(lspec.Steps).To(Equal([]string{"echo foo > /test", "echo bar > /test2"}))
 			Expect(lspec.Image).To(Equal("luet/base"))
 			Expect(lspec.Seed).To(Equal("alpine"))
-			tmpdir, err := ioutil.TempDir(os.TempDir(), "tree")
+			tmpdir, err := os.MkdirTemp(os.TempDir(), "tree")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
-			tmpdir2, err := ioutil.TempDir(os.TempDir(), "tree2")
+			tmpdir2, err := os.MkdirTemp(os.TempDir(), "tree2")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir2) // clean up
 
-			unpacked, err := ioutil.TempDir(os.TempDir(), "unpacked")
+			unpacked, err := os.MkdirTemp(os.TempDir(), "unpacked")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(unpacked) // clean up
 
-			rootfs, err := ioutil.TempDir(os.TempDir(), "rootfs")
+			rootfs, err := os.MkdirTemp(os.TempDir(), "rootfs")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(rootfs) // clean up
 
@@ -124,20 +123,20 @@ RUN echo bar > /test2`))
 			imageprefix := "foo/"
 			testString := []byte(`funky test data`)
 
-			tmpdir, err := ioutil.TempDir(os.TempDir(), "artifact")
+			tmpdir, err := os.MkdirTemp(os.TempDir(), "artifact")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
-			tmpWork, err := ioutil.TempDir(os.TempDir(), "artifact2")
+			tmpWork, err := os.MkdirTemp(os.TempDir(), "artifact2")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpWork) // clean up
 
 			Expect(os.MkdirAll(filepath.Join(tmpdir, "foo", "bar"), os.ModePerm)).ToNot(HaveOccurred())
 
-			err = ioutil.WriteFile(filepath.Join(tmpdir, "test"), testString, 0644)
+			err = os.WriteFile(filepath.Join(tmpdir, "test"), testString, 0644)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = ioutil.WriteFile(filepath.Join(tmpdir, "foo", "bar", "test"), testString, 0644)
+			err = os.WriteFile(filepath.Join(tmpdir, "foo", "bar", "test"), testString, 0644)
 			Expect(err).ToNot(HaveOccurred())
 
 			a := NewPackageArtifact(filepath.Join(tmpWork, "fake.tar"))
@@ -151,7 +150,7 @@ RUN echo bar > /test2`))
 
 			Expect(b.ImageExists(resultingImage)).To(BeTrue())
 
-			result, err := ioutil.TempDir(os.TempDir(), "result")
+			result, err := os.MkdirTemp(os.TempDir(), "result")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(result) // clean up
 
@@ -165,12 +164,12 @@ RUN echo bar > /test2`))
 			)
 			Expect(err).ToNot(HaveOccurred())
 
-			content, err := ioutil.ReadFile(filepath.Join(result, "test"))
+			content, err := os.ReadFile(filepath.Join(result, "test"))
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(content).To(Equal(testString))
 
-			content, err = ioutil.ReadFile(filepath.Join(result, "foo", "bar", "test"))
+			content, err = os.ReadFile(filepath.Join(result, "foo", "bar", "test"))
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(content).To(Equal(testString))
@@ -180,11 +179,11 @@ RUN echo bar > /test2`))
 			b := backend.NewSimpleDockerBackend(ctx)
 			imageprefix := "foo/"
 
-			tmpdir, err := ioutil.TempDir(os.TempDir(), "artifact")
+			tmpdir, err := os.MkdirTemp(os.TempDir(), "artifact")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpdir) // clean up
 
-			tmpWork, err := ioutil.TempDir(os.TempDir(), "artifact2")
+			tmpWork, err := os.MkdirTemp(os.TempDir(), "artifact2")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(tmpWork) // clean up
 
@@ -199,7 +198,7 @@ RUN echo bar > /test2`))
 
 			Expect(b.ImageExists(resultingImage)).To(BeTrue())
 
-			result, err := ioutil.TempDir(os.TempDir(), "result")
+			result, err := os.MkdirTemp(os.TempDir(), "result")
 			Expect(err).ToNot(HaveOccurred())
 			defer os.RemoveAll(result) // clean up
 
