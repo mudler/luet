@@ -5,16 +5,16 @@ jobs:
   tests-integration-img:
     strategy:
       matrix:
-        go-version: [1.24.x]
+        go-version: [1.25.x]
         platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: setup-docker
       uses: docker-practice/actions-setup-docker@0.0.1
     - name: Install deps
@@ -28,16 +28,16 @@ jobs:
   tests-integration:
     strategy:
       matrix:
-        go-version: [1.24.x]
+        go-version: [1.25.x]
         platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: setup-docker
       uses: docker-practice/actions-setup-docker@0.0.1
     - name: Install deps
@@ -48,16 +48,16 @@ jobs:
   tests-unit:
     strategy:
       matrix:
-        go-version: [1.24.x]
+        go-version: [1.25.x]
         platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: setup-docker
       uses: docker-practice/actions-setup-docker@0.0.1
     - name: Install deps
@@ -68,7 +68,7 @@ jobs:
             sudo make build
             sudo cp -rf luet /usr/bin/luet
     - name: Install GoReleaser
-      uses: goreleaser/goreleaser-action@v2
+      uses: goreleaser/goreleaser-action@v6
       with:
         install-only: true
     - name: Build
@@ -76,6 +76,6 @@ jobs:
     - name: Tests
       run: sudo -E env "PATH=$PATH" make coverage
     - name: Codecov
-      uses: codecov/codecov-action@v2.1.0
+      uses: codecov/codecov-action@v5
       with:
         file: coverage.txt

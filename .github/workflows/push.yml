@@ -9,11 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Login to quay
         run: echo ${{ secrets.DOCKER_TESTING_PASSWORD }} | sudo -E docker login -u ${{ secrets.DOCKER_TESTING_USERNAME }} --password-stdin quay.io
       - name: Install deps
@@ -33,11 +33,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Login to quay
         run: echo ${{ secrets.DOCKER_TESTING_PASSWORD }} | sudo -E docker login -u ${{ secrets.DOCKER_TESTING_USERNAME }} --password-stdin quay.io
       - name: Install deps
@@ -57,11 +57,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Login to quay
         run: echo ${{ secrets.DOCKER_TESTING_PASSWORD }} | sudo -E docker login -u ${{ secrets.DOCKER_TESTING_USERNAME }} --password-stdin quay.io
       - name: Install deps
@@ -72,7 +72,7 @@ jobs:
             sudo make build
             sudo cp -rf luet /usr/bin/luet
       - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v2
+        uses: goreleaser/goreleaser-action@v6
         with:
           install-only: true
       - name: Build test
@@ -86,7 +86,7 @@ jobs:
                     env "UNIT_TEST_DOCKER_IMAGE_REPOSITORY=${{ secrets.DOCKER_TESTING_UNIT_TEST_IMAGE }}" \
                     make coverage
       - name: Codecov
-        uses: codecov/codecov-action@v2.1.0
+        uses: codecov/codecov-action@v5
         with:
           file: coverage.txt
 
