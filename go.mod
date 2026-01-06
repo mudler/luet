@@ -1,8 +1,8 @@
 module github.com/mudler/luet
 
-go 1.23.0
+go 1.25.0
 
-toolchain go1.24.2
+toolchain go1.25.5
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.1
