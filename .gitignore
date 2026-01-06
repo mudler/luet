@@ -1,6 +1,7 @@
 *.swp
 .idea/
 luet
+luet-test*
 tests/integration/shunit2
 tests/integration/bin
 release/
