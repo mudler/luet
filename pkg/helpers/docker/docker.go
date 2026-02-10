@@ -22,24 +22,22 @@ import (
 	"os"
 	"strings"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/tarball"
-
 	"github.com/containerd/containerd/images"
+	"github.com/docker/distribution/reference"
+	registrytypes "github.com/docker/docker/api/types/registry"
+	"github.com/docker/docker/registry"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/mudler/luet/pkg/api/core/bus"
 	luetimages "github.com/mudler/luet/pkg/api/core/image"
 	luettypes "github.com/mudler/luet/pkg/api/core/types"
 
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 
 	"github.com/docker/cli/cli/trust"
-	"github.com/docker/distribution/reference"
-	registrytypes "github.com/docker/docker/api/types/registry"
-	"github.com/docker/docker/registry"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/daemon"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/mudler/luet/pkg/api/core/bus"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
@@ -138,7 +136,7 @@ type UnpackEventData struct {
 }
 
 // DownloadAndExtractDockerImage extracts a container image natively. It supports privileged/unprivileged mode
-func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, auth *registrytypes.AuthConfig, verify bool) (*images.Image, error) {
+func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, auth *registrytypes.AuthConfig, verify bool, platform string) (*images.Image, error) {
 	if verify {
 		img, err := verifyImage(image, auth)
 		if err != nil {
@@ -158,7 +156,16 @@ func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, au
 		return nil, err
 	}
 
-	img, err := remote.Image(ref, remote.WithAuth(staticAuth{auth}), remote.WithTransport(http.DefaultTransport))
+	opts := []remote.Option{remote.WithAuth(staticAuth{auth}), remote.WithTransport(http.DefaultTransport)}
+	if platform != "" {
+		p, err := v1.ParsePlatform(platform)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, remote.WithPlatform(*p))
+	}
+
+	img, err := remote.Image(ref, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +211,7 @@ func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, au
 	}, nil
 }
 
-func ExtractDockerImage(ctx luettypes.Context, local, dest string) (*images.Image, error) {
+func ExtractDockerImage(ctx luettypes.Context, local, dest, platform string) (*images.Image, error) {
 	var img v1.Image
 	if !fileHelper.Exists(dest) {
 		if err := os.MkdirAll(dest, os.ModePerm); err != nil {
@@ -223,7 +230,15 @@ func ExtractDockerImage(ctx luettypes.Context, local, dest string) (*images.Imag
 		if err != nil {
 			return nil, err
 		}
-		img, err = daemon.Image(ref)
+		if platform != "" {
+			p, err := v1.ParsePlatform(platform)
+			if err != nil {
+				return nil, err
+			}
+			img, err = remote.Image(ref, remote.WithPlatform(*p))
+		} else {
+			img, err = remote.Image(ref)
+		}
 	}
 	if err != nil {
 		return nil, err

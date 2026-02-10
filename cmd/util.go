@@ -120,6 +120,7 @@ func NewUnpackCommand() *cobra.Command {
 			server, _ := cmd.Flags().GetString("auth-server-address")
 			identity, _ := cmd.Flags().GetString("auth-identity-token")
 			registryToken, _ := cmd.Flags().GetString("auth-registry-token")
+			platform, _ := cmd.Flags().GetString("platform")
 
 			util.DefaultContext.Info("Downloading", image, "to", destination)
 			auth := &registrytypes.AuthConfig{
@@ -132,7 +133,7 @@ func NewUnpackCommand() *cobra.Command {
 			}
 
 			if !local && !strings.HasPrefix(image, filePrefix) {
-				info, err := docker.DownloadAndExtractDockerImage(util.DefaultContext, image, destination, auth, verify)
+				info, err := docker.DownloadAndExtractDockerImage(util.DefaultContext, image, destination, auth, verify, platform)
 				if err != nil {
 					util.DefaultContext.Error(err.Error())
 					os.Exit(1)
@@ -140,7 +141,7 @@ func NewUnpackCommand() *cobra.Command {
 				util.DefaultContext.Info(fmt.Sprintf("Pulled: %s %s", info.Target.Digest, info.Name))
 				util.DefaultContext.Info(fmt.Sprintf("Size: %s", units.BytesSize(float64(info.Target.Size))))
 			} else {
-				info, err := docker.ExtractDockerImage(util.DefaultContext, image, destination)
+				info, err := docker.ExtractDockerImage(util.DefaultContext, image, destination, platform)
 				if err != nil {
 					util.DefaultContext.Error(err.Error())
 					os.Exit(1)
@@ -158,6 +159,7 @@ func NewUnpackCommand() *cobra.Command {
 	c.Flags().String("auth-registry-token", "", "Authentication registry token")
 	c.Flags().Bool("verify", false, "Verify signed images to notary before to pull")
 	c.Flags().Bool("local", false, "Unpack local image")
+	c.Flags().String("platform", "", "Platform to unpack (e.g., linux/amd64, linux/arm64, linux/amd64/v3) ")
 	return c
 }
 
