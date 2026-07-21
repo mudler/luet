@@ -16,10 +16,33 @@
 package database
 
 import (
+	stderrors "errors"
 	"regexp"
 
 	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/pkg/errors"
+)
+
+// Sentinel errors for lookup misses.
+//
+// These are returned on paths that are hit constantly during resolution -
+// getProvide() runs at the top of every FindPackage/FindPackages/
+// FindPackageVersions, and the overwhelmingly common outcome is "not found",
+// which is a control-flow signal rather than an exceptional condition.
+//
+// They are deliberately built with the standard library instead of
+// github.com/pkg/errors: the latter's New() calls runtime.Callers to capture a
+// 32-frame stack trace on every invocation, which profiled at ~46% of CPU time
+// during an upgrade. Declaring them once at package level makes a miss free.
+//
+// Compare with errors.Is - do not match on the message text.
+var (
+	// ErrKeyNotFound is returned when a raw key lookup misses.
+	ErrKeyNotFound = stderrors.New("no key found")
+	// ErrNoVersionsFound is returned when a package name has no known versions.
+	ErrNoVersionsFound = stderrors.New("no versions found for package")
+	// ErrNoProvider is returned when no package provides the requested one.
+	ErrNoProvider = stderrors.New("no package provides this")
 )
 
 func clone(src, dst types.PackageDatabase) error {

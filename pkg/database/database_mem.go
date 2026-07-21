@@ -67,7 +67,7 @@ func (db *InMemoryDatabase) Get(s string) (string, error) {
 	defer db.Unlock()
 	pa, ok := db.Database[s]
 	if !ok {
-		return "", errors.New(fmt.Sprintf("No key found for: %s", s))
+		return "", ErrKeyNotFound
 	}
 	return pa, nil
 }
@@ -273,7 +273,7 @@ func (db *InMemoryDatabase) getProvide(p *types.Package) (*types.Package, error)
 		defer db.Unlock()
 
 		if !ok {
-			return nil, errors.New("No versions found for package")
+			return nil, ErrNoVersionsFound
 		}
 
 		for ve, _ := range versions {
@@ -285,13 +285,13 @@ func (db *InMemoryDatabase) getProvide(p *types.Package) (*types.Package, error)
 			if match {
 				pa, ok := db.ProvidesDatabase[p.GetPackageName()][ve]
 				if !ok {
-					return nil, errors.New("No versions found for package")
+					return nil, ErrNoVersionsFound
 				}
 				return pa, nil
 			}
 		}
 
-		return nil, errors.New("No package provides this")
+		return nil, ErrNoProvider
 	}
 	db.Unlock()
 
@@ -336,7 +336,7 @@ func (db *InMemoryDatabase) FindPackageVersions(p *types.Package) (types.Package
 	versions, ok := db.CacheNoVersion[p.GetPackageName()]
 	db.Unlock()
 	if !ok {
-		return nil, errors.New("No versions found for package")
+		return nil, ErrNoVersionsFound
 	}
 	var versionsInWorld []*types.Package
 	for ve, _ := range versions {

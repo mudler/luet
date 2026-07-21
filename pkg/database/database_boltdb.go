@@ -249,7 +249,7 @@ func (db *BoltDatabase) getProvide(p *types.Package) (*types.Package, error) {
 		db.Unlock()
 
 		if !ok {
-			return nil, errors.New(fmt.Sprintf("No versions found for: %s", p.HumanReadableString()))
+			return nil, ErrNoVersionsFound
 		}
 
 		for ve, _ := range versions {
@@ -261,14 +261,14 @@ func (db *BoltDatabase) getProvide(p *types.Package) (*types.Package, error) {
 			if match {
 				pa, ok := db.ProvidesDatabase[p.GetPackageName()][ve]
 				if !ok {
-					return nil, errors.New(fmt.Sprintf("No versions found for: %s", p.HumanReadableString()))
+					return nil, ErrNoVersionsFound
 				}
 				return pa, nil //pick the first (we shouldn't have providers that are conflicting)
 				// TODO: A find dbcall here would recurse, but would give chance to have providers of providers
 			}
 		}
 
-		return nil, errors.New("No package provides this")
+		return nil, ErrNoProvider
 	}
 	db.Unlock()
 	return db.FindPackage(pa)

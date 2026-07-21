@@ -647,23 +647,29 @@ func (s *Solver) Uninstall(checkconflicts, full bool, packs ...*types.Package) (
 		return toRemove, nil
 	}
 
-	// TODO: Can be optimized
-	for _, i := range s.Installed() {
-		matched := false
-		for _, candidate := range toRemove {
-			if !i.Matches(candidate) {
-				contains, err := candidate.RequiresContains(s.SolverDatabase, i)
-				if err != nil {
-					return nil, errors.Wrap(err, "Failed getting installed list")
-				}
-				if !contains {
-					matched = true
-				}
+	// InstalledMinusCandidate is only consumed by the ConflictsWith call below,
+	// which is unreachable unless checkconflicts is set. Computing it is
+	// O(installed * candidates * depth) with a full recursive requires walk per
+	// pair, so skip it entirely when the result would be discarded.
+	// TODO: Can be optimized further
+	if checkconflicts {
+		for _, i := range s.Installed() {
+			matched := false
+			for _, candidate := range toRemove {
+				if !i.Matches(candidate) {
+					contains, err := candidate.RequiresContains(s.SolverDatabase, i)
+					if err != nil {
+						return nil, errors.Wrap(err, "Failed getting installed list")
+					}
+					if !contains {
+						matched = true
+					}
 
+				}
 			}
-		}
-		if matched {
-			InstalledMinusCandidate = append(InstalledMinusCandidate, i)
+			if matched {
+				InstalledMinusCandidate = append(InstalledMinusCandidate, i)
+			}
 		}
 	}
 
