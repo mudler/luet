@@ -150,27 +150,52 @@ func (w *WrappedVersioner) Sort(toSort []string) []string {
 	if len(toSort) == 0 {
 		return toSort
 	}
-	var versionsMap map[string]string = make(map[string]string)
-	versionsRaw := []string{}
-	result := []string{}
-	for _, v := range toSort {
-		sanitizedVersion := w.Sanitize(v)
-		versionsMap[sanitizedVersion] = v
-		versionsRaw = append(versionsRaw, sanitizedVersion)
+	// Each original string is carried alongside its parsed form and the pairs
+	// are sorted together.
+	//
+	// This used to key a map on the sanitized input, sort the parsed versions,
+	// then recover the originals with versionsMap[v.String()]. That is unsound:
+	// String() re-renders rather than echoing the input, so a lookup misses
+	// whenever the two differ - it drops an explicit zero epoch ("0:1.0" ->
+	// "1.0"), and yields "" for anything that failed to parse, because the error
+	// was discarded and the zero Version kept. A miss returned "", silently
+	// substituting an empty string for a real version. Callers such as
+	// Packages.Best then looked the result up and got nil, which several call
+	// sites dereference. Sanitize also maps "_" to "-", so "1.0-1" and "1.0_1"
+	// collided on the same key and one overwrote the other.
+	type parsedVersion struct {
+		original string
+		parsed   debversion.Version
+		valid    bool
 	}
 
-	vs := make([]debversion.Version, len(versionsRaw))
-	for i, r := range versionsRaw {
-		v, _ := debversion.NewVersion(r)
-		vs[i] = v
+	versions := make([]parsedVersion, len(toSort))
+	for i, v := range toSort {
+		p, err := debversion.NewVersion(w.Sanitize(v))
+		versions[i] = parsedVersion{original: v, parsed: p, valid: err == nil}
 	}
 
-	sort.Slice(vs, func(i, j int) bool {
-		return vs[i].LessThan(vs[j])
+	// Versions that could not be parsed sort before every valid one, keeping
+	// their relative input order. They previously ended up first as a side
+	// effect of collapsing to ""; this makes it a deliberate choice. Stable
+	// sorting keeps the output deterministic for versions that compare equal.
+	sort.SliceStable(versions, func(i, j int) bool {
+		a, b := versions[i], versions[j]
+		switch {
+		case !a.valid && !b.valid:
+			return false
+		case !a.valid:
+			return true
+		case !b.valid:
+			return false
+		default:
+			return a.parsed.LessThan(b.parsed)
+		}
 	})
 
-	for _, v := range vs {
-		result = append(result, versionsMap[v.String()])
+	result := make([]string, 0, len(versions))
+	for _, v := range versions {
+		result = append(result, v.original)
 	}
 	return result
 }

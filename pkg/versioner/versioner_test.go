@@ -161,3 +161,50 @@ var _ = Describe("Versioner", func() {
 	})
 
 })
+
+var _ = Describe("Sort round-trip", func() {
+	versioner := DefaultVersioner()
+
+	// Sort used to re-render each parsed version via debversion.String() and
+	// look the result back up in a map keyed on the *input* string. String() is
+	// a re-render, not the input, so any version that does not round-trip
+	// missed the lookup and was replaced by "". These cover the known ways that
+	// happens.
+
+	It("preserves explicit zero epochs", func() {
+		// debversion drops an explicit "0:" epoch when re-rendering.
+		sorted := versioner.Sort([]string{"0:2.0", "0:1.0"})
+		Expect(sorted).Should(Equal([]string{"0:1.0", "0:2.0"}))
+	})
+
+	It("preserves versions it cannot parse", func() {
+		// Unparseable input yields the zero Version, whose String() is "".
+		sorted := versioner.Sort([]string{"1.0", "abc"})
+		Expect(sorted).Should(ContainElement("abc"))
+		Expect(sorted).Should(ContainElement("1.0"))
+		Expect(sorted).ShouldNot(ContainElement(""))
+	})
+
+	It("never drops or duplicates entries", func() {
+		in := []string{"1.0", "0:2.0", "abc", "3.0"}
+		sorted := versioner.Sort(in)
+		Expect(sorted).Should(HaveLen(len(in)))
+		for _, v := range in {
+			Expect(sorted).Should(ContainElement(v))
+		}
+	})
+
+	It("keeps both versions that sanitize to the same string", func() {
+		// Sanitize maps "_" to "-", so these collide on the map key and one
+		// used to overwrite the other.
+		sorted := versioner.Sort([]string{"1.0-1", "1.0_1"})
+		Expect(sorted).Should(HaveLen(2))
+		Expect(sorted).Should(ContainElement("1.0-1"))
+		Expect(sorted).Should(ContainElement("1.0_1"))
+	})
+
+	It("still orders valid versions correctly", func() {
+		sorted := versioner.Sort([]string{"2.0", "1.0", "10.0", "1.5"})
+		Expect(sorted).Should(Equal([]string{"1.0", "1.5", "2.0", "10.0"}))
+	})
+})
