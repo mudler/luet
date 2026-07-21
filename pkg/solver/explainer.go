@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/crillab/gophersat/bf"
@@ -102,12 +103,59 @@ func parseVars(r io.Reader) (map[string]string, error) {
 	return res, nil
 }
 
+// maxExplainClauses bounds the problem size for which an explanation is
+// computed.
+//
+// MUS extraction is roughly quadratic in clause count, and it runs on the
+// FAILURE path - so an unsatisfiable request on a large tree spent far longer
+// explaining itself than solving. The solver proves UNSAT quickly and linearly;
+// only the explanation blows up. Measured on generated worlds:
+//
+//	families   clauses   solve    with MUS
+//	     100    15,169   244ms       1.3s
+//	     200    29,698   419ms       5.6s
+//	     400    59,001   949ms      19.9s
+//	     800   117,673    1.9s     >90s (abandoned)
+//
+// A real repository is well past the last row, so a genuine conflict would look
+// like a hang rather than an error. Below the bound the explanation is worth
+// having and costs little; above it, reporting the failure promptly matters
+// more than describing it.
+const maxExplainClauses = 10000
+
+// clauseCount reads the clause count from a DIMACS header ("p cnf <vars>
+// <clauses>"), without consuming the buffer. Returns false if absent.
+func clauseCount(dimacs string) (int, bool) {
+	for _, line := range strings.Split(dimacs, "\n") {
+		if !strings.HasPrefix(line, "p cnf ") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 4 {
+			return 0, false
+		}
+		n, err := strconv.Atoi(fields[3])
+		if err != nil {
+			return 0, false
+		}
+		return n, true
+	}
+	return 0, false
+}
+
 // Solve tries to find the MUS (minimum unsat) formula from the original problem.
 // it returns an error with the decoded dimacs
 func (*Explainer) Solve(f bf.Formula, s types.PackageSolver) (types.PackagesAssertions, error) {
 	buf := bytes.NewBufferString("")
 	if err := bf.Dimacs(f, buf); err != nil {
 		return nil, errors.Wrap(err, "cannot extract dimacs from formula")
+	}
+
+	// String() does not consume the buffer, so the parsing below is unaffected.
+	if n, ok := clauseCount(buf.String()); ok && n > maxExplainClauses {
+		return nil, fmt.Errorf(
+			"could not satisfy the constraints: the problem has %d clauses, "+
+				"above the %d limit for computing an explanation", n, maxExplainClauses)
 	}
 
 	copy := *buf
