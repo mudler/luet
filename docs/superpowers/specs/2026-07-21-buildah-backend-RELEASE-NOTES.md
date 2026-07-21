@@ -20,9 +20,13 @@ needed.
 
 ## Improvements
 
-- `create-repo --type docker` now works on the daemonless backend. The img
-  backend returned "Not supported" for image loading, so this was previously
-  impossible without Docker.
+- The image-loading step that blocked `create-repo --type docker` on the
+  daemonless backend now works. The img backend returned "Not supported" for
+  image loading, making that command impossible without Docker. buildah accepts
+  the archive luet produces, verified against a real generated artifact. The
+  registry push and pull halves of that command were not exercised against a
+  registry during this work, so treat the end-to-end path as unblocked rather
+  than as proven.
 - Local image existence checks no longer produce false positives. The img
   backend substring-matched an image listing, so any image whose name
   contained the queried name as a substring reported as present. The buildah

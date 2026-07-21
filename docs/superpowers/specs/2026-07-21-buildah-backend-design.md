@@ -163,14 +163,23 @@ from apt, replacing the current `curl` of a pinned img release binary. The job
 exists in three workflows (`pr.yml`, `tests.yml`, `push.yml`); all three change
 together.
 
-`tests/integration/30_registry_roundtrip.sh` currently skips itself when
-`LUET_BACKEND=img`, because `SimpleImg.Push` has no insecure-registry support
-for the plain-HTTP local registry. Whether buildah can run it should be
-evaluated during implementation: buildah supports `--tls-verify=false`, and
-combined with the newly working `LoadImage` this would be the first coverage of
-the docker-repository path on the rootless backend. If it works, the skip guard
-becomes buildah-specific rather than blanket. If it does not, the guard stays
-and the reason is recorded.
+**Correction, recorded during implementation.** This section originally
+described `tests/integration/30_registry_roundtrip.sh` as an existing file to
+evaluate. It is not on this branch: it exists only on the unmerged
+`bump-docker-deps` branch, so nothing here could act on it.
+
+What the guards actually required was larger than this section anticipated. The
+integration suite carries 34 `LUET_BACKEND` skip guards across 9 files, all
+previously keyed on `"img"`. Because `img` is now an alias resolving to buildah,
+leaving them keyed on `"img"` while CI moves to `LUET_BACKEND=buildah` would
+have silently un-skipped every one of them on the daemonless backend. All 34
+were retargeted to `[[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]]`,
+which preserves the previous behavior in every case, including for anyone still
+invoking the deprecated alias.
+
+Whether buildah can actually run a registry roundtrip remains open and is
+genuine follow-up work: buildah supports `--tls-verify=false`, and `LoadImage`
+now functions, so it is plausible. It needs its own change and its own CI run.
 
 ## Risk
 
