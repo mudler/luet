@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mudler/luet/pkg/api/core/bus"
+	"github.com/mudler/luet/pkg/api/core/image"
 	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/pkg/errors"
 )
@@ -123,3 +124,133 @@ func (s *SimpleBuildah) ImageReference(a string, ondisk bool) (v1.Image, error) 
 
 	return img, nil
 }
+
+// LoadImage imports a docker-archive produced by ExportImage. The img backend
+// could not do this at all, which is why create-repo --type docker did not
+// work on the daemonless path.
+func (s *SimpleBuildah) LoadImage(path string) error {
+	s.ctx.Debug(":tea: Loading image:", path)
+
+	out, err := exec.Command("buildah", "pull", dockerArchive(path)).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed loading image: "+string(out))
+	}
+
+	s.ctx.Success(":tea: Loaded image:", path)
+	return nil
+}
+
+func (s *SimpleBuildah) RemoveImage(opts Options) error {
+	name := opts.ImageName
+
+	s.ctx.Spinner()
+	defer s.ctx.SpinnerStop()
+
+	out, err := exec.Command("buildah", "rmi", name).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed removing image: "+string(out))
+	}
+
+	s.ctx.Success(":tea: Removed image:", name)
+	return nil
+}
+
+func (s *SimpleBuildah) CopyImage(src, dst string) error {
+	s.ctx.Debug(":tea: Tagging image:", src, "->", dst)
+
+	out, err := exec.Command("buildah", "tag", src, dst).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed tagging image: "+string(out))
+	}
+
+	s.ctx.Success(":tea: Tagged image:", src, "->", dst)
+	return nil
+}
+
+func (s *SimpleBuildah) DownloadImage(opts Options) error {
+	name := opts.ImageName
+	bus.Manager.Publish(bus.EventImagePrePull, opts)
+
+	s.ctx.Debug(":tea: Downloading image " + name)
+	s.ctx.Spinner()
+	defer s.ctx.SpinnerStop()
+
+	out, err := exec.Command("buildah", "pull", name).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed pulling image: "+string(out))
+	}
+
+	s.ctx.Success(":tea: Downloaded image:", name)
+	bus.Manager.Publish(bus.EventImagePostPull, opts)
+
+	return nil
+}
+
+func (s *SimpleBuildah) Push(opts Options) error {
+	name := opts.ImageName
+	bus.Manager.Publish(bus.EventImagePrePush, opts)
+
+	s.ctx.Spinner()
+	defer s.ctx.SpinnerStop()
+
+	out, err := exec.Command("buildah", "push", name).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed pushing image: "+string(out))
+	}
+
+	s.ctx.Success(":tea: Pushed image:", name)
+	bus.Manager.Publish(bus.EventImagePostPush, opts)
+
+	return nil
+}
+
+func (*SimpleBuildah) ImageAvailable(imagename string) bool {
+	return image.Available(imagename)
+}
+
+// ImageExists reports whether the image is present locally. It uses buildah
+// inspect rather than matching against the output of buildah images: the img
+// backend used strings.Contains over `img ls`, which false-positives on any
+// name containing the queried name as a substring.
+func (s *SimpleBuildah) ImageExists(imagename string) bool {
+	s.ctx.Debug(":tea: Checking existence of image: " + imagename)
+
+	cmd := exec.Command("buildah", "inspect", "--type", "image", imagename)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		s.ctx.Debug("Image not present")
+		s.ctx.Debug(string(out))
+		return false
+	}
+	return true
+}
+
+func (s *SimpleBuildah) ImageDefinitionToTar(opts Options) error {
+	if err := s.BuildImage(opts); err != nil {
+		return errors.Wrap(err, "Failed building image")
+	}
+	if err := s.ExportImage(opts); err != nil {
+		return errors.Wrap(err, "Failed exporting image")
+	}
+	if err := s.RemoveImage(opts); err != nil {
+		return errors.Wrap(err, "Failed removing image")
+	}
+	return nil
+}
+
+// Compile-time check that SimpleBuildah satisfies the backend contract.
+// The interface lives in package compiler, so this is asserted there in
+// backend.go's factory; this local assertion catches drift earlier.
+var _ interface {
+	BuildImage(Options) error
+	ExportImage(Options) error
+	LoadImage(string) error
+	RemoveImage(Options) error
+	ImageDefinitionToTar(Options) error
+	CopyImage(string, string) error
+	DownloadImage(Options) error
+	Push(Options) error
+	ImageAvailable(string) bool
+	ImageReference(string, bool) (v1.Image, error)
+	ImageExists(string) bool
+} = (*SimpleBuildah)(nil)

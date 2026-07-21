@@ -78,6 +78,66 @@ var _ = Describe("Buildah backend", func() {
 			Expect(flattenedContains(img, "/hello.txt")).To(BeTrue())
 		})
 	})
+
+	Context("Reports image existence accurately", func() {
+		It("does not false-positive on substring matches", func() {
+			b := NewSimpleBuildahBackend(ctx)
+
+			tmpdir, err := os.MkdirTemp("", "buildah-exists")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir)
+
+			dockerfile := filepath.Join(tmpdir, "Dockerfile")
+			Expect(os.WriteFile(dockerfile,
+				[]byte("FROM alpine:latest\n"), 0o600)).ToNot(HaveOccurred())
+
+			opts := Options{
+				ImageName:      "luet/exists-test:1",
+				SourcePath:     tmpdir,
+				DockerFileName: dockerfile,
+			}
+			Expect(b.BuildImage(opts)).ToNot(HaveOccurred())
+			defer b.RemoveImage(opts)
+
+			Expect(b.ImageExists("luet/exists-test:1")).To(BeTrue())
+			// "exists-test" is a substring of the real image name. The old
+			// img backend matched with strings.Contains and would return
+			// true here, which is wrong.
+			Expect(b.ImageExists("exists-test")).To(BeFalse())
+			Expect(b.ImageExists("luet/definitely-absent:1")).To(BeFalse())
+		})
+	})
+
+	Context("Round-trips an image through a docker archive", func() {
+		It("exports and loads an image back", func() {
+			b := NewSimpleBuildahBackend(ctx)
+
+			tmpdir, err := os.MkdirTemp("", "buildah-load")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir)
+
+			dockerfile := filepath.Join(tmpdir, "Dockerfile")
+			Expect(os.WriteFile(dockerfile,
+				[]byte("FROM alpine:latest\nRUN echo loadme > /loadme.txt\n"), 0o600)).ToNot(HaveOccurred())
+
+			opts := Options{
+				ImageName:      "luet/load-test:1",
+				SourcePath:     tmpdir,
+				DockerFileName: dockerfile,
+				Destination:    filepath.Join(tmpdir, "load.tar"),
+			}
+			Expect(b.BuildImage(opts)).ToNot(HaveOccurred())
+			Expect(b.ExportImage(opts)).ToNot(HaveOccurred())
+			Expect(b.RemoveImage(opts)).ToNot(HaveOccurred())
+			Expect(b.ImageExists(opts.ImageName)).To(BeFalse())
+
+			// LoadImage returned "Not supported" on the img backend, so this
+			// capability is new.
+			Expect(b.LoadImage(opts.Destination)).ToNot(HaveOccurred())
+			defer b.RemoveImage(opts)
+			Expect(b.ImageExists(opts.ImageName)).To(BeTrue())
+		})
+	})
 })
 
 func fileExists(p string) bool {
