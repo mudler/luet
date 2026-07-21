@@ -231,3 +231,50 @@ func TestFixtureTreeUnsatisfiableDependencyErrors(t *testing.T) {
 		t.Fatal("Install succeeded despite an unsatisfiable dependency")
 	}
 }
+
+// TestFixtureTreeSelectorBacktracks is the false-UNSAT case.
+//
+// The tree in tests/fixtures/selectorbacktrack is:
+//
+//	base    1.0
+//	base    2.0   conflicts with pinned 1.0
+//	pinned  1.0
+//	app     1.0   requires pinned 1.0
+//
+// Installing app and "base >= 1.0" together has exactly one solution:
+// app pulls in pinned-1.0, base-2.0 conflicts with it, so base must be 1.0.
+//
+// getList collapses a top-level selector to a single candidate with Best()
+// BEFORE the formula is built. That hands the solver base-2.0 as a hard unit
+// clause, the conflict makes it unsatisfiable, and luet reports the whole
+// request unsolvable - even though base-1.0 satisfies it.
+//
+// The alternatives have to survive into the formula for the solver to back off.
+// Note this affects only TOP-LEVEL requests: buildFormula already encodes
+// at-least-one over all candidates for a `requires` entry, so the same shape
+// reached through a dependency resolves correctly today.
+func TestFixtureTreeSelectorBacktracks(t *testing.T) {
+	const iterations = 20
+
+	for i := 0; i < iterations; i++ {
+		defs := loadFixtureTree(t, "../../tests/fixtures/selectorbacktrack")
+		s := solverFor(defs)
+
+		asserts, err := s.Install(types.Packages{
+			withCategory("test", "app", "1.0"),
+			withCategory("test", "base", ">=1.0"),
+		})
+		if err != nil {
+			t.Fatalf("run %d: reported unsolvable, but base-1.0 satisfies the "+
+				"request: %s", i, err)
+		}
+
+		if got := resolvedVersion(asserts, "base"); got != "1.0" {
+			t.Fatalf("run %d: base resolved to %q, want 1.0 - 2.0 conflicts with "+
+				"pinned, which app requires", i, got)
+		}
+		if got := resolvedVersion(asserts, "pinned"); got != "1.0" {
+			t.Fatalf("run %d: pinned resolved to %q, want 1.0", i, got)
+		}
+	}
+}

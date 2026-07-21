@@ -1,0 +1,6 @@
+requires:
+- category: "test"
+  name: "pinned"
+  version: "1.0"
+steps:
+- echo "app"

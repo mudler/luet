@@ -1,0 +1,6 @@
+conflicts:
+- category: "test"
+  name: "pinned"
+  version: "1.0"
+steps:
+- echo "base-2.0"
