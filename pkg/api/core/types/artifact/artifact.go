@@ -28,7 +28,6 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/docker/docker/pkg/pools"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	zstd "github.com/klauspost/compress/zstd"
 	gzip "github.com/klauspost/pgzip"
@@ -415,7 +414,7 @@ func replaceFileTarWrapper(dst string, inputTarStream io.ReadCloser, mods []stri
 					pipeWriter.CloseWithError(err)
 					return
 				}
-				if _, err := pools.Copy(tarWriter, tarReader); err != nil {
+				if _, err := io.Copy(tarWriter, tarReader); err != nil {
 					pipeWriter.CloseWithError(err)
 					return
 				}

@@ -26,10 +26,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/docker/docker/pkg/system"
 	"github.com/google/renameio"
 	copy "github.com/otiai10/copy"
 	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
 )
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -202,13 +202,43 @@ func CopyFile(src, dst string) (err error) {
 		OnSymlink: func(string) copy.SymlinkAction { return copy.Shallow }})
 }
 
+// lgetxattr retrieves an extended attribute, returning a nil value when the
+// attribute is absent. It mirrors the semantics of the former
+// docker/docker/pkg/system.Lgetxattr, which was removed upstream: unlike
+// unix.Lgetxattr it allocates its own buffer and reports a missing attribute
+// as (nil, nil) rather than ENODATA.
+func lgetxattr(path, attr string) ([]byte, error) {
+	sysErr := func(err error) ([]byte, error) {
+		if err == unix.ENODATA {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	dest := make([]byte, 128)
+	sz, err := unix.Lgetxattr(path, attr, dest)
+	for err == unix.ERANGE {
+		// Buffer too small: query the true size, then retry.
+		sz, err = unix.Lgetxattr(path, attr, []byte{})
+		if err != nil {
+			return sysErr(err)
+		}
+		dest = make([]byte, sz)
+		sz, err = unix.Lgetxattr(path, attr, dest)
+	}
+	if err != nil {
+		return sysErr(err)
+	}
+	return dest[:sz], nil
+}
+
 func copyXattr(srcPath, dstPath, attr string) error {
-	data, err := system.Lgetxattr(srcPath, attr)
+	data, err := lgetxattr(srcPath, attr)
 	if err != nil {
 		return err
 	}
 	if data != nil {
-		if err := system.Lsetxattr(dstPath, attr, data, 0); err != nil {
+		if err := unix.Lsetxattr(dstPath, attr, data, 0); err != nil {
 			return err
 		}
 	}

@@ -37,10 +37,14 @@ jobs:
 
   tests-integration:
     strategy:
+      fail-fast: false
       matrix:
         go-version: [1.25.x]
         platform: [ubuntu-latest]
+        docker-version: ["26.1.4", "28.5.2", "29.1.2"]
+        containerd-snapshotter: [true, false]
     runs-on: ${{ matrix.platform }}
+    name: integration (docker ${{ matrix.docker-version }}, containerd-store ${{ matrix.containerd-snapshotter }})
     steps:
     - name: Install Go
       uses: actions/setup-go@v5
@@ -59,7 +63,31 @@ jobs:
         docker-images: true
         swap-storage: true
     - name: setup-docker
-      uses: docker-practice/actions-setup-docker@0.0.1
+      uses: docker/setup-docker-action@v5
+      with:
+        version: ${{ matrix.docker-version }}
+        set-host: true
+        daemon-config: |
+          {
+            "features": {
+              "containerd-snapshotter": ${{ matrix.containerd-snapshotter }}
+            }
+          }
+    - name: Verify the tests will talk to the pinned daemon
+      run: |
+        set -euo pipefail
+        echo "DOCKER_HOST=${DOCKER_HOST:-<unset>}"
+        got=$(sudo -E env "PATH=$PATH" docker version --format '{{.Server.Version}}')
+        echo "server version under sudo: $got"
+        if [ "$got" != "${{ matrix.docker-version }}" ]; then
+          echo "::error::sudo docker resolved $got, expected ${{ matrix.docker-version }}"
+          exit 1
+        fi
+        driver=$(sudo -E env "PATH=$PATH" docker info --format '{{.Driver}}')
+        echo "storage driver under sudo: $driver (containerd-snapshotter=${{ matrix.containerd-snapshotter }})"
+        if [ "${{ matrix.containerd-snapshotter }}" = "true" ] && [ "$driver" = "overlay2" ]; then
+          echo "::warning::containerd snapshotter was requested but driver is overlay2 - verify this axis is taking effect"
+        fi
     - name: Install deps
       run: |
             sudo apt-get update && sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
