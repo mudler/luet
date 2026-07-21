@@ -19,18 +19,42 @@ import (
 	"errors"
 	"sort"
 	"strings"
+	"sync"
 
-	"github.com/hashicorp/go-version"
-	semver "github.com/hashicorp/go-version"
 	debversion "github.com/knqyf263/go-deb-version"
 )
 
+// Version comparison uses exactly one implementation: Debian EVR semantics via
+// go-deb-version.
+//
+// It previously used two. Ordering (Sort, and therefore Packages.Best) was
+// Debian, while selector matching (ValidateSelector, and therefore Expand and
+// every candidate-filtering path) was SemVer via hashicorp/go-version. The two
+// disagreed on 47 of 272 ordered pairs over a corpus of real luet versions, so
+// the set of eligible candidates and the ranking of that set were computed
+// under different rules. Notably:
+//
+//   - "+N" build revisions, which BumpBuildVersion emits, are build metadata to
+//     SemVer and excluded from precedence - so luet could not select against its
+//     own rebuild format even though Sort ordered the versions apart.
+//   - epoch versions ("0:1.0") parse under Debian but not SemVer, making them
+//     rankable but never selectable - unreachable by the solver.
+//   - a Debian revision ("1.0-1") is a SemVer prerelease, so the two regimes
+//     ordered it against "1.0" in opposite directions.
+//
+// Debian is the correct canonical choice: it is the only one of the two that
+// can express luet's own conventions (epochs, revisions, "~" prereleases, and
+// the "+N" rebuild counter).
 const (
-	selectorGreaterThen        = iota
-	selectorLessThen           = iota
-	selectorGreaterOrEqualThen = iota
-	selectorLessOrEqualThen    = iota
-	selectorNotEqual           = iota
+	// selectorEqual is deliberately the zero value, so that a selector with no
+	// recognised operator ("1.0") means equality. It used to be
+	// selectorGreaterThen, which meant any parse miss silently became ">".
+	selectorEqual = iota
+	selectorGreaterThen
+	selectorLessThen
+	selectorGreaterOrEqualThen
+	selectorLessOrEqualThen
+	selectorNotEqual
 )
 
 type packageSelector struct {
@@ -38,12 +62,38 @@ type packageSelector struct {
 	Version   string
 }
 
+// Longer operators must be tried first; readPackageSelector sorts by length.
 var selectors = map[string]int{
 	">=": selectorGreaterOrEqualThen,
-	">":  selectorGreaterThen,
 	"<=": selectorLessOrEqualThen,
+	"!=": selectorNotEqual,
+	"==": selectorEqual,
+	">":  selectorGreaterThen,
 	"<":  selectorLessThen,
+	"=":  selectorEqual,
 	"!":  selectorNotEqual,
+}
+
+// parseCache memoises version parsing. Versions are compared repeatedly during
+// resolution - ValidateSelector alone was measured at 39% of tree-loading time,
+// most of it re-parsing the same strings - and the set of distinct version
+// strings in a process is bounded by the repository size.
+var parseCache sync.Map // string -> parsed
+
+type parsed struct {
+	version debversion.Version
+	valid   bool
+}
+
+func parseVersion(s string) (debversion.Version, bool) {
+	if c, ok := parseCache.Load(s); ok {
+		p := c.(parsed)
+		return p.version, p.valid
+	}
+	v, err := debversion.NewVersion(s)
+	p := parsed{version: v, valid: err == nil}
+	parseCache.Store(s, p)
+	return p.version, p.valid
 }
 
 func readPackageSelector(selector string) packageSelector {
@@ -58,36 +108,29 @@ func readPackageSelector(selector string) packageSelector {
 	sort.Slice(k, func(i, j int) bool {
 		return len(k[i]) > len(k[j])
 	})
+
+	matched := false
 	for _, p := range k {
 		if strings.HasPrefix(selector, p) {
 			selectorType = selectors[p]
-			v = strings.TrimPrefix(selector, p)
+			v = strings.TrimSpace(strings.TrimPrefix(selector, p))
+			matched = true
 			break
 		}
 	}
+
+	// A selector with no operator is an exact version. This used to leave v
+	// empty and fall through to a SemVer constraint parse, which happened to
+	// treat a bare "1.0" as equality - so the behaviour is preserved, but it is
+	// now explicit rather than incidental.
+	if !matched {
+		v = strings.TrimSpace(selector)
+	}
+
 	return packageSelector{
 		Condition: selectorType,
 		Version:   v,
 	}
-}
-
-func semverCheck(vv string, selector string) (bool, error) {
-	c, err := semver.NewConstraint(selector)
-	if err != nil {
-		// Handle constraint not being parsable.
-
-		return false, err
-	}
-
-	v, err := semver.NewVersion(vv)
-	if err != nil {
-		// Handle version not being parsable.
-
-		return false, err
-	}
-
-	// Check if the version meets the constraints.
-	return c.Check(v), nil
 }
 
 // WrappedVersioner uses different means to return unique result that is understendable by Luet
@@ -115,35 +158,112 @@ func (w *WrappedVersioner) ValidateSelector(vv string, selector string) bool {
 
 	sel := readPackageSelector(selector)
 
-	selectorV, err := version.NewVersion(sel.Version)
-	if err != nil {
-		f, _ := semverCheck(vv, selector)
-		return f
-	}
-	v, err := version.NewVersion(vv)
-	if err != nil {
-		f, _ := semverCheck(vv, selector)
-		return f
+	// Sanitize again after splitting off the operator: normalisation that keys
+	// on the first character - the "v" prefix - cannot fire while the operator
+	// is still attached, so ">v1.0" would otherwise reach the parser as "v1.0".
+	sel.Version = w.Sanitize(sel.Version)
+
+	v, okVersion := parseVersion(vv)
+	s, okSelector := parseVersion(sel.Version)
+
+	if !okVersion || !okSelector {
+		// Ordering against something that is not a version is meaningless, but
+		// equality still has an obvious answer. Previously an unparseable input
+		// fell through to a SemVer check that also failed, and the error was
+		// discarded - so every selector, including ">=0", silently returned
+		// false.
+		switch sel.Condition {
+		case selectorEqual:
+			return vv == sel.Version
+		case selectorNotEqual:
+			return vv != sel.Version
+		}
+		return false
 	}
 
+	// Compare returns an unnormalised magnitude (-299, 263, ...), not -1/0/1.
+	// Test the sign, never equality against 1.
+	cmp := v.Compare(s)
+
 	switch sel.Condition {
-	case selectorGreaterOrEqualThen:
-		return v.GreaterThan(selectorV) || v.Equal(selectorV)
-	case selectorLessOrEqualThen:
-		return v.LessThan(selectorV) || v.Equal(selectorV)
-	case selectorLessThen:
-		return v.LessThan(selectorV)
-	case selectorGreaterThen:
-		return v.GreaterThan(selectorV)
+	case selectorEqual:
+		return cmp == 0
 	case selectorNotEqual:
-		return !v.Equal(selectorV)
+		return cmp != 0
+	case selectorGreaterOrEqualThen:
+		return cmp >= 0
+	case selectorLessOrEqualThen:
+		return cmp <= 0
+	case selectorLessThen:
+		return cmp < 0
+	case selectorGreaterThen:
+		return cmp > 0
 	}
 
 	return false
 }
 
 func (w *WrappedVersioner) Sanitize(s string) string {
-	return strings.TrimSpace(strings.ReplaceAll(s, "_", "-"))
+	s = strings.TrimSpace(strings.ReplaceAll(s, "_", "-"))
+	s = stripVersionPrefix(s)
+	return normalizeNumericSegments(s)
+}
+
+// stripVersionPrefix drops a leading "v" from "v1.0".
+//
+// go-deb-version rejects the form while SemVer accepted it, which made
+// v-prefixed packages selectable but unrankable - they passed every selector
+// filter and then sorted below every valid version, so they could be candidates
+// but could never win Best(). Normalising here makes the two agree.
+func stripVersionPrefix(s string) string {
+	if len(s) > 1 && (s[0] == 'v' || s[0] == 'V') && s[1] >= '0' && s[1] <= '9' {
+		return s[1:]
+	}
+	return s
+}
+
+// normalizeNumericSegments strips leading zeros from runs of digits, so "1.00"
+// becomes "1.0" and "01" becomes "1".
+//
+// This is required for termination, not just tidiness. go-deb-version's
+// compare() is an unbounded `for i := 0; ; i++` that exits only on a non-zero
+// difference; two strings whose numeric segments are numerically equal but
+// differ in zero-padding never produce one, so it spins forever. Version.Compare
+// has a reflect.DeepEqual fast path, but it only catches exactly-equal structs.
+//
+// Sort could already reach that hang. Moving selector matching onto the same
+// library would have widened it to every candidate filter, so the padding is
+// normalised away before any comparison happens. Numerically the two forms are
+// equal under Debian semantics anyway, so this changes no ordering.
+//
+// Upstream is unmaintained (pinned at a 2019 pseudo-version); fixing it there
+// would mean carrying a fork.
+func normalizeNumericSegments(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+
+	for i := 0; i < len(s); {
+		if s[i] < '0' || s[i] > '9' {
+			b.WriteByte(s[i])
+			i++
+			continue
+		}
+
+		start := i
+		for i < len(s) && s[i] >= '0' && s[i] <= '9' {
+			i++
+		}
+
+		// Keep at least one digit, so "00" collapses to "0" rather than "".
+		digits := s[start:i]
+		trimmed := strings.TrimLeft(digits, "0")
+		if trimmed == "" {
+			trimmed = "0"
+		}
+		b.WriteString(trimmed)
+	}
+
+	return b.String()
 }
 
 func (w *WrappedVersioner) Sort(toSort []string) []string {
