@@ -78,4 +78,47 @@ var _ = Describe("Docker client", func() {
 			os.RemoveAll(f.Path)
 		})
 	})
+
+	// Regression tests for https://github.com/mudler/luet/issues/386
+	//
+	// When every configured repository failed, DownloadArtifact returned
+	// (nil, nil): the download error was captured by a loop-scoped `err`, so
+	// the function-scoped one was still nil, and errors.Wrap(nil, ...) returns
+	// nil. Callers check the error and then dereference the artifact, so
+	// installer.getPackage panicked on a nil *PackageArtifact.
+	//
+	// These need no registry: the URLs are deliberately unreachable.
+	Context("When every repository fails", func() {
+		ctx := context.NewContext()
+		unreachable := RepoData{Urls: []string{"127.0.0.1:1/nonexistent"}}
+
+		It("returns an error rather than a nil artifact with a nil error", func() {
+			c := NewDockerClient(unreachable, ctx)
+
+			a, err := c.DownloadArtifact(&artifact.PackageArtifact{
+				Path: "test.tar",
+				CompileSpec: &types.LuetCompilationSpec{
+					Package: &types.Package{
+						Name:     "c",
+						Category: "test",
+						Version:  "1.0",
+					},
+				},
+			})
+
+			// The contract: a nil artifact MUST be accompanied by an error,
+			// otherwise callers dereference nil.
+			Expect(err).To(HaveOccurred())
+			Expect(a).To(BeNil())
+		})
+
+		It("returns an error rather than an empty path with a nil error", func() {
+			c := NewDockerClient(unreachable, ctx)
+
+			f, err := c.DownloadFile("repository.yaml")
+
+			Expect(err).To(HaveOccurred())
+			Expect(f).To(BeEmpty())
+		})
+	})
 })
