@@ -246,7 +246,3 @@ func (s *SimpleDocker) ExportImage(opts Options) error {
 	s.ctx.Debug(":whale: Exported image:", name)
 	return nil
 }
-
-type ManifestEntry struct {
-	Layers []string `json:"Layers"`
-}
