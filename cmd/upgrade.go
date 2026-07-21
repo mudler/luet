@@ -37,7 +37,6 @@ var upgradeCmd = &cobra.Command{
 
 		force := viper.GetBool("force")
 		nodeps, _ := cmd.Flags().GetBool("nodeps")
-		full, _ := cmd.Flags().GetBool("full")
 		universe, _ := cmd.Flags().GetBool("universe")
 		clean, _ := cmd.Flags().GetBool("clean")
 		sync, _ := cmd.Flags().GetBool("sync")
@@ -51,10 +50,11 @@ var upgradeCmd = &cobra.Command{
 		util.DefaultContext.Debug("Solver", util.DefaultContext.GetConfig().Solver)
 
 		inst := installer.NewLuetInstaller(installer.LuetInstallerOptions{
-			Concurrency:                 util.DefaultContext.Config.General.Concurrency,
-			SolverOptions:               util.DefaultContext.Config.Solver,
-			Force:                       force,
-			FullUninstall:               full,
+			Concurrency:   util.DefaultContext.Config.General.Concurrency,
+			SolverOptions: util.DefaultContext.Config.Solver,
+			Force:         force,
+			// FullUninstall is deliberately not wired to --full here; see the
+			// MarkDeprecated call in init() for why.
 			NoDeps:                      nodeps,
 			SolverUpgrade:               universe,
 			RemoveUnavailableOnUpgrade:  clean,
@@ -76,8 +76,31 @@ var upgradeCmd = &cobra.Command{
 
 func init() {
 	upgradeCmd.Flags().Bool("force", false, "Force upgrade by ignoring errors")
-	upgradeCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful! overrides checkconflicts and full!)")
+	upgradeCmd.Flags().Bool("nodeps", false, "Don't consider package dependencies (harmful!)")
 	upgradeCmd.Flags().Bool("full", false, "Attempts to remove as much packages as possible which aren't required (slow)")
+	// --full never did what it advertises on `upgrade`, and today it can only
+	// make the command fail.
+	//
+	// It is passed to Solver.Upgrade as its *checkconflicts* argument, not as
+	// "full". The "full" argument that does reach Solver.Upgrade is hardcoded,
+	// and is inert in any case: upgrade() gates a block on it whose result is
+	// discarded, then calls Uninstall with full=false regardless. So there is no
+	// value of this flag that produces "remove as much as possible".
+	//
+	// What it does produce is a hard failure. With checkconflicts set,
+	// Uninstall validates each removal candidate through Solver.Conflicts, which
+	// does not inspect declared conflicts at all - it collects the candidate's
+	// reverse dependencies and reports a conflict if there are any. Every
+	// upgradable package that something else depends on therefore aborts the
+	// whole upgrade.
+	//
+	// It was the default until 59d78c3f (Dec 2020) inverted the argument, which
+	// in hindsight reads as the fix for exactly that failure.
+	//
+	// Deprecated rather than removed so existing invocations keep parsing. The
+	// flag is now ignored; `luet uninstall --full` is unaffected and still wired
+	// to Option.FullUninstall properly.
+	upgradeCmd.Flags().MarkDeprecated("full", "it is ignored: it never performed a fuller uninstall, and enabling it prevented upgrades from completing")
 	upgradeCmd.Flags().Bool("universe", false, "Use ONLY the SAT solver to compute upgrades (experimental)")
 	upgradeCmd.Flags().Bool("clean", false, "Try to drop removed packages (experimental, only when --universe is enabled)")
 	upgradeCmd.Flags().Bool("sync", false, "Upgrade packages with new revisions (experimental)")
