@@ -61,6 +61,12 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 	//var u *url.URL = nil
 	var err error
 
+	// lastErr holds the most recent per-repository failure. The `err` returned
+	// by calls inside the loop below is scoped to the loop body and does not
+	// survive a `continue`, so it cannot be used to report why every
+	// repository failed. See https://github.com/mudler/luet/issues/386.
+	var lastErr error
+
 	c.context.Spinner()
 	defer c.context.SpinnerStop()
 
@@ -99,6 +105,7 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 
 		info, err := docker.DownloadAndExtractDockerImage(c.context, imageName, temp, c.auth, c.RepoData.Verify, "")
 		if err != nil {
+			lastErr = err
 			c.context.Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
 			continue
 		}
@@ -130,7 +137,13 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 	}
 
 	if !downloaded {
-		return nil, errors.Wrap(err, "no image available from repositories")
+		// Never return a nil artifact with a nil error: callers check the
+		// error and then dereference the artifact. errors.Wrap returns nil
+		// when given nil, so lastErr must be non-nil here.
+		if lastErr == nil {
+			lastErr = errors.New("no repository urls configured")
+		}
+		return nil, errors.Wrap(lastErr, "no image available from repositories")
 	}
 
 	return resultingArtifact, nil
@@ -140,6 +153,10 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 	var file *os.File = nil
 	var err error
 	var temp string
+	// lastErr holds the most recent per-repository failure. Errors raised
+	// inside the loop below are scoped to the loop body and do not survive a
+	// `continue`. See https://github.com/mudler/luet/issues/386.
+	var lastErr error
 	// Files should be in URI/repository:<file>
 	ok := false
 
@@ -159,6 +176,7 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 
 		info, err := docker.DownloadAndExtractDockerImage(c.context, imageName, temp, c.auth, c.RepoData.Verify, "")
 		if err != nil {
+			lastErr = err
 			c.context.Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
 			continue
 		}
@@ -169,6 +187,7 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 		c.context.Debug("\nCopying file ", filepath.Join(temp, name), "to", file.Name())
 		err = fileHelper.CopyFile(filepath.Join(temp, name), file.Name())
 		if err != nil {
+			lastErr = err
 			continue
 		}
 		ok = true
@@ -176,7 +195,12 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 	}
 
 	if !ok {
-		return "", err
+		// Never return an empty path with a nil error: callers treat a nil
+		// error as success and go on to read the file.
+		if lastErr == nil {
+			lastErr = errors.New("no repository urls configured")
+		}
+		return "", errors.Wrap(lastErr, "file not available in any of the specified repositories")
 	}
 
 	return file.Name(), err

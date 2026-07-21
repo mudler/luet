@@ -85,6 +85,12 @@ func Round(input float64) float64 {
 func (c *HttpClient) DownloadFile(p string) (string, error) {
 	var file *os.File = nil
 	var downloaded bool
+	// lastErr holds the most recent per-url failure. Errors raised inside the
+	// loop below are scoped to the loop body and do not survive a `continue`,
+	// so the function-scoped `err` stays nil even when every url failed, and
+	// errors.Wrap returns nil when given nil. See
+	// https://github.com/mudler/luet/issues/386.
+	var lastErr error
 	temp, err := c.context.TempDir("download")
 	if err != nil {
 		return "", err
@@ -96,6 +102,7 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 	for _, uri := range c.RepoData.Urls {
 		file, err = c.context.TempFile("HttpClient")
 		if err != nil {
+			lastErr = err
 			c.context.Debug("Failed downloading", p, "from", uri)
 
 			continue
@@ -104,12 +111,14 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 
 		u, err := url.Parse(uri)
 		if err != nil {
+			lastErr = err
 			continue
 		}
 		u.Path = path.Join(u.Path, p)
 
 		req, err := c.prepareReq(file.Name(), u.String())
 		if err != nil {
+			lastErr = err
 			continue
 		}
 
@@ -147,6 +156,7 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 		}
 
 		if err = resp.Err(); err != nil {
+			lastErr = err
 			continue
 		}
 
@@ -164,7 +174,12 @@ func (c *HttpClient) DownloadFile(p string) (string, error) {
 	}
 
 	if !downloaded {
-		return "", errors.Wrap(err, "artifact not available in any of the specified url locations")
+		// Never return an empty path with a nil error: callers treat a nil
+		// error as success and go on to read the file.
+		if lastErr == nil {
+			lastErr = errors.New("no repository urls configured")
+		}
+		return "", errors.Wrap(lastErr, "artifact not available in any of the specified url locations")
 	}
 	return file.Name(), nil
 }

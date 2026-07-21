@@ -958,6 +958,12 @@ func (l *LuetInstaller) getPackage(a ArtifactMatch, ctx types.Context) (artifact
 	if err != nil {
 		return nil, errors.Wrap(err, "Error on download artifact")
 	}
+	// Defense in depth: a client returning a nil artifact with a nil error
+	// used to panic here on the Verify below. See
+	// https://github.com/mudler/luet/issues/386.
+	if artifact == nil {
+		return nil, errors.New("no artifact returned while downloading " + a.Package.HumanReadableString())
+	}
 
 	err = artifact.Verify()
 	if err != nil {
@@ -970,6 +976,11 @@ func (l *LuetInstaller) installPackage(m ArtifactMatch, s *System) error {
 
 	a, err := l.getPackage(m, l.Options.Context)
 	if err != nil && !l.Options.Force {
+		return errors.Wrap(err, "Failed downloading package")
+	}
+	// Force lets the caller continue past a download error, but there is
+	// nothing to unpack without an artifact: proceeding would dereference nil.
+	if a == nil {
 		return errors.Wrap(err, "Failed downloading package")
 	}
 
