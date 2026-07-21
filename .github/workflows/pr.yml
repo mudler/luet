@@ -37,10 +37,14 @@ jobs:
 
   tests-integration:
     strategy:
+      fail-fast: false
       matrix:
         go-version: [1.25.x]
         platform: [ubuntu-latest]
+        docker-version: ["26.1.4", "28.5.2", "29.1.2"]
+        containerd-snapshotter: [true, false]
     runs-on: ${{ matrix.platform }}
+    name: integration (docker ${{ matrix.docker-version }}, containerd-store ${{ matrix.containerd-snapshotter }})
     steps:
     - name: Install Go
       uses: actions/setup-go@v5
@@ -59,7 +63,17 @@ jobs:
         docker-images: true
         swap-storage: true
     - name: setup-docker
-      uses: docker-practice/actions-setup-docker@0.0.1
+      uses: docker/setup-docker-action@v4
+      with:
+        version: ${{ matrix.docker-version }}
+        daemon-config: |
+          {
+            "features": {
+              "containerd-snapshotter": ${{ matrix.containerd-snapshotter }}
+            }
+          }
+    - name: Report docker version
+      run: docker version && docker info | grep -i "storage driver"
     - name: Install deps
       run: |
             sudo apt-get update && sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
