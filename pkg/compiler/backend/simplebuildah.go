@@ -70,6 +70,13 @@ func (s *SimpleBuildah) ExportImage(opts Options) error {
 	s.ctx.Spinner()
 	defer s.ctx.SpinnerStop()
 
+	// buildah's docker-archive writer refuses a non-empty existing path
+	// ("docker-archive doesn't support modifying existing images"), whereas
+	// docker save -o truncates. Remove first so both backends behave alike.
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return errors.Wrap(err, "Failed clearing destination archive")
+	}
+
 	out, err := exec.Command("buildah", "push", name, dockerArchive(path)).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "Failed exporting image: "+string(out))
@@ -87,7 +94,19 @@ func (s *SimpleBuildah) ImageReference(a string, ondisk bool) (v1.Image, error) 
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(f.Name())
+	defer f.Close()
+	// Remove before pushing: buildah's docker-archive writer only tolerates a
+	// zero-byte existing path, which is an implementation detail rather than a
+	// documented contract.
+	//
+	// The archive is deliberately NOT removed on return. crane.Load is lazy:
+	// the returned v1.Image reads layer bytes from this path on demand, so
+	// deleting it here yields a handle whose Layers() succeeds (manifest data
+	// is eager) while every content read fails with ENOENT -- which breaks the
+	// flatten/diff hot path. SimpleDocker leaves its snapshot behind for the
+	// same reason; both rely on the context garbage collector, which owns this
+	// directory and drops it wholesale on Clean().
+	os.Remove(f.Name())
 
 	s.ctx.Spinner()
 	defer s.ctx.SpinnerStop()
