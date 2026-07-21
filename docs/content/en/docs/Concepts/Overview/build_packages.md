@@ -10,19 +10,33 @@ description: >
 
 ## Prerequisistes
 
-Luet currently supports [Docker](https://www.docker.com/) and [Img](https://github.com/genuinetools/img) as backends to build packages. Both of them can be used and switched in runtime with the ```--backend``` option, so either one of them must be present in the host system.
+Luet currently supports [Docker](https://www.docker.com/) and [buildah](https://buildah.io) as backends to build packages. Both of them can be used and switched in runtime with the ```--backend``` option, so either one of them must be present in the host system.
 
 ### Docker
 
 Docker is the (less) experimental Luet engine supported. Be sure to have Docker installed and the daemon running. The user running `luet` commands needs the corresponding permissions to run the `docker` executable, and to connect to a `docker` daemon. The only feature needed by the daemon is the ability to build images, so it fully supports remote daemon as well (this can be specified with the `DOCKER_HOST` environment variable, that is respected by `luet`)
 
-### Img
+### buildah
 
-Luet supports [Img](https://github.com/genuinetools/img). To use it, simply install it in your system, and while running `luet build`, you can switch the backend by providing it as a parameter: `luet build --backend img`. For small packages it is particularly powerful, as it doesn't require any docker daemon running in the host.
+Luet supports [buildah](https://buildah.io). To use it, simply install it in your system, and while running `luet build`, you can switch the backend by providing it as a parameter: `luet build --backend buildah`. It doesn't require any docker daemon running in the host, and can build as an unprivileged user. The older `--backend img` is deprecated and now resolves to buildah.
+
+#### Rootless builds with buildah
+
+buildah does not need a daemon and can build as an unprivileged user. In a container or Kubernetes pod, set:
+
+    BUILDAH_ISOLATION=chroot
+    STORAGE_DRIVER=vfs
+
+and grant the `SETUID` and `SETGID` capabilities. luet passes its environment through to the build engine, so no luet-side configuration is required.
+
+Two well-known properties of rootless container builds apply here:
+
+- The `vfs` storage driver is expected to be slower than `overlay`, particularly for large images. Where the host or cluster allows exposing `/dev/fuse`, buildah can use `fuse-overlayfs` instead and recover most of the difference.
+- `mknod` is blocked for unprivileged users regardless of granted capabilities. This is a kernel restriction on user namespaces, not a configuration problem. Packages whose build creates device nodes cannot be built rootless.
 
 ### Building packages on Kubernetes
 
-Luet and img can be used together to orchestrate package builds also on kubernetes. There is available an experimental [Kubernetes CRD for Luet](https://github.com/mudler/luet-k8s) which allows to build packages seamelessly in Kubernetes and push package artifacts to an S3 Compatible object storage (e.g. Minio).
+Luet and buildah can be used together to orchestrate package builds also on kubernetes. There is available an experimental [Kubernetes CRD for Luet](https://github.com/mudler/luet-k8s) which allows to build packages seamlessly in Kubernetes and push package artifacts to an S3 Compatible object storage (e.g. Minio). Updating that CRD to request the buildah backend is tracked separately; it continues to work through the deprecated `img` alias in the meantime.
 
 ## Building packages
 
@@ -202,7 +216,7 @@ Luet can push and pull the docker images that are being generated during the bui
 
 To push automatically docker images that are built, use the `--push` option, to pull, use the `--pull` option. An image repository can be specified with `--image-repository` flag, and can include also the remote registries where the images are pushed to. 
 
-Luet doesn't handle login to registries, so that has to be handled separately with `docker login` or `img login` before the build process starts.
+Luet doesn't handle login to registries, so that has to be handled separately with `docker login` or `buildah login` before the build process starts.
 
 ### Build faster
 
