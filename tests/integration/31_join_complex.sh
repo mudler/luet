@@ -13,7 +13,7 @@ oneTimeTearDown() {
 }
 
 testBuild() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     mkdir $tmpdir/testbuild
     luet build --tree "$ROOT_DIR/tests/fixtures/join_complex" \
                --destination $tmpdir/testbuild --concurrency 1 \

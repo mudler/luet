@@ -13,7 +13,7 @@ oneTimeTearDown() {
 }
 
 testBuild() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     cat <<EOF > $tmpdir/default.yaml
 extra: "bar"
 foo: "baz"

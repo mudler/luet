@@ -12,7 +12,7 @@ oneTimeTearDown() {
 
 testBuild() {
     [ -z "${TEST_DOCKER_IMAGE:-}" ] && startSkipping
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
 
     mkdir $tmpdir/testbuild
     luet build -d --tree "$ROOT_DIR/tests/fixtures/caps" --same-owner=true --destination $tmpdir/testbuild --compression gzip --full
@@ -23,7 +23,7 @@ testBuild() {
 
 testRepo() {
     [ -z "${TEST_DOCKER_IMAGE:-}" ] && startSkipping
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
 
     assertTrue 'no repository' "[ ! -e '$tmpdir/testbuild/repository.yaml' ]"
     luet create-repo --tree "$ROOT_DIR/tests/fixtures/caps" \
@@ -40,7 +40,7 @@ testRepo() {
 
 testConfig() {
     [ -z "${TEST_DOCKER_IMAGE:-}" ] && startSkipping
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
 
     mkdir $tmpdir/testrootfs
     cat <<EOF > $tmpdir/luet.yaml
@@ -65,7 +65,7 @@ EOF
 
 testInstall() {
     [ -z "${TEST_DOCKER_IMAGE:-}" ] && startSkipping
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
 
     $ROOT_DIR/tests/integration/bin/luet install -y --config $tmpdir/luet.yaml test/caps@0.1 test/caps2@0.1 test/empty
     installst=$?

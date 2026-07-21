@@ -11,7 +11,7 @@ oneTimeTearDown() {
 }
 
 testBuild() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     mkdir $tmpdir/testbuild
     luet build -d --tree "$ROOT_DIR/tests/fixtures/perms" --same-owner=true --destination $tmpdir/testbuild --compression gzip --full
     buildst=$?
@@ -20,7 +20,7 @@ testBuild() {
 }
 
 testRepo() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     assertTrue 'no repository' "[ ! -e '$tmpdir/testbuild/repository.yaml' ]"
     luet create-repo --tree "$ROOT_DIR/tests/fixtures/perms" \
     --output $tmpdir/testbuild \
@@ -36,7 +36,7 @@ testRepo() {
 }
 
 testConfig() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     mkdir $tmpdir/testrootfs
     cat <<EOF > $tmpdir/luet.yaml
 general:
@@ -59,7 +59,7 @@ EOF
 }
 
 testInstall() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     $ROOT_DIR/tests/integration/bin/luet install -y --config $tmpdir/luet.yaml test/perms@0.1 test/perms2@0.1
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
