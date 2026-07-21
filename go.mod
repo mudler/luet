@@ -27,13 +27,14 @@ require (
 	github.com/ipfs/go-log/v2 v2.4.0
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
 	github.com/kendru/darwin/go/depgraph v0.0.0-20220319173517-8abc3541da93
-	github.com/klauspost/compress v1.17.4
+	github.com/klauspost/compress v1.18.2
 	github.com/klauspost/pgzip v1.2.5
 	github.com/knqyf263/go-deb-version v0.0.0-20190517075300-09fca494f03d
 	github.com/kyokomi/emoji v2.1.0+incompatible
 	github.com/marcsauter/single v0.0.0-20181104081128-f8bf46f26ec0
 	github.com/mattn/go-isatty v0.0.17
 	github.com/mitchellh/hashstructure/v2 v2.0.2
+	github.com/moby/go-archive v0.2.0
 	github.com/moby/moby v26.1.0+incompatible
 	github.com/mudler/cobra-extensions v0.0.0-20200612154940-31a47105fe3d
 	github.com/mudler/go-pluggable v0.0.0-20211206135551-9263b05c562e
@@ -92,7 +93,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.0.0 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
@@ -111,8 +112,8 @@ require (
 	github.com/moby/buildkit v0.13.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
-	github.com/moby/sys/sequential v0.5.0 // indirect
-	github.com/moby/sys/user v0.3.0 // indirect
+	github.com/moby/sys/sequential v0.6.0 // indirect
+	github.com/moby/sys/user v0.4.0 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
