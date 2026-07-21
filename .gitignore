@@ -1,5 +1,6 @@
 *.swp
 .idea/
+.claude/worktrees/
 luet
 luet-test*
 tests/integration/shunit2
