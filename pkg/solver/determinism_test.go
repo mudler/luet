@@ -286,3 +286,46 @@ func TestRelaxedInstallSelectsNewest(t *testing.T) {
 			want, n, runs, runs, seen)
 	}
 }
+
+// TestBuildRevisionsSelectNewest exercises the rebuild counter BumpBuildVersion
+// emits, end to end through the solver.
+//
+// This needs both halves of the fix and is the clearest demonstration of why
+// they belong together. Ordering the candidates newest-first is only meaningful
+// if "newest" is computed correctly, and until the comparators were unified it
+// was not: SemVer treats everything after "+" as build metadata and excludes it
+// from precedence, so 1.0, 1.0+1 and 1.0+2 all compared EQUAL. Sorting an
+// all-equal list is a no-op, so the solver kept picking arbitrarily even with
+// deterministic input.
+//
+// With one Debian comparator the three order properly, and the newest-first
+// candidate order steers the solver to the latest rebuild.
+func TestBuildRevisionsSelectNewest(t *testing.T) {
+	const want = "1.0+2"
+
+	seen := map[string]int{}
+	for i := 0; i < runs; i++ {
+		defs := pkg.NewInMemoryDatabase(false)
+		for _, v := range []string{"1.0", "1.0+1", "1.0+2"} {
+			defs.CreatePackage(types.NewPackage("rebuilt", v, nil, nil))
+		}
+		s := newSolverFor(defs, pkg.NewInMemoryDatabase(false), pkg.NewInMemoryDatabase(false))
+
+		asserts, err := s.Install(types.Packages{
+			types.NewPackage("rebuilt", ">=0", nil, nil),
+		})
+		if err != nil {
+			t.Fatalf("run %d: %s", i, err)
+		}
+		for _, a := range asserts {
+			if a.Value && a.Package.GetName() == "rebuilt" {
+				seen[a.Package.GetVersion()]++
+			}
+		}
+	}
+
+	if n := seen[want]; n != runs {
+		t.Errorf("selected rebuilt-%s in %d of %d runs, want %d.\nobserved: %v",
+			want, n, runs, runs, seen)
+	}
+}
