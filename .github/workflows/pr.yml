@@ -2,7 +2,7 @@
 on: pull_request
 name: Build and Test
 jobs:
-  tests-integration-img:
+  tests-integration-buildah:
     strategy:
       matrix:
         go-version: [1.25.x]
@@ -30,10 +30,9 @@ jobs:
     - name: Install deps
       run: |
             sudo apt-get update && sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
-            sudo curl -fSL "https://github.com/genuinetools/img/releases/download/v0.5.11/img-linux-amd64" -o "/usr/bin/img"
-            sudo chmod a+x "/usr/bin/img"
-    - name: Tests with Img backend
-      run: sudo -E env "PATH=$PATH" env "LUET_BACKEND=img" make test-integration
+            sudo apt-get install -y buildah
+    - name: Tests with buildah backend
+      run: sudo -E env "PATH=$PATH" env "LUET_BACKEND=buildah" make test-integration
 
   tests-integration:
     strategy:
@@ -85,8 +84,17 @@ jobs:
         fi
         driver=$(sudo -E env "PATH=$PATH" docker info --format '{{.Driver}}')
         echo "storage driver under sudo: $driver (containerd-snapshotter=${{ matrix.containerd-snapshotter }})"
-        if [ "${{ matrix.containerd-snapshotter }}" = "true" ] && [ "$driver" = "overlay2" ]; then
-          echo "::warning::containerd snapshotter was requested but driver is overlay2 - verify this axis is taking effect"
+        # Both driver names were observed across docker 26.1.4 / 28.5.2 / 29.1.2
+        # in run 29836638413, so this is an assertion rather than a warning:
+        # without it, three cells could silently duplicate the other three.
+        if [ "${{ matrix.containerd-snapshotter }}" = "true" ]; then
+          expected_driver=overlayfs
+        else
+          expected_driver=overlay2
+        fi
+        if [ "$driver" != "$expected_driver" ]; then
+          echo "::error::storage driver is $driver, expected $expected_driver for containerd-snapshotter=${{ matrix.containerd-snapshotter }}"
+          exit 1
         fi
     - name: Install deps
       run: |
@@ -121,8 +129,7 @@ jobs:
     - name: Install deps
       run: |
             sudo apt-get update && sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
-            sudo curl -fSL "https://github.com/genuinetools/img/releases/download/v0.5.11/img-linux-amd64" -o "/usr/bin/img"
-            sudo chmod a+x "/usr/bin/img"
+            sudo apt-get install -y buildah
             sudo make build
             sudo cp -rf luet /usr/bin/luet
     - name: Install GoReleaser

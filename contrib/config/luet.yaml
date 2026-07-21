@@ -32,7 +32,7 @@
 #   Enable Debug. If debug is active spinner is disabled.
 #   debug: false
 #
-#   Show output of build execution (docker, img, etc.)
+#   Show output of build execution (docker, buildah)
 #   show_build_output: false
 #
 #   Define spinner ms

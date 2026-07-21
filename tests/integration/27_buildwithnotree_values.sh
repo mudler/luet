@@ -13,7 +13,7 @@ oneTimeTearDown() {
 }
 
 testBuild() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
 
     cat <<EOF > $tmpdir/default.yaml
 bb: "ttt"
@@ -29,7 +29,7 @@ EOF
 }
 
 testRepo() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
 
     assertTrue 'no repository' "[ ! -e '$tmpdir/testbuild/repository.yaml' ]"
     luet create-repo --tree "$ROOT_DIR/tests/fixtures/build_values" \
@@ -46,7 +46,7 @@ testRepo() {
 }
 
 testConfig() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
 
     mkdir $tmpdir/testrootfs
     cat <<EOF > $tmpdir/luet.yaml
@@ -69,7 +69,7 @@ EOF
 }
 
 testBuildWithNoTree() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
 
     mkdir $tmpdir/testbuild2
     mkdir $tmpdir/emptytree
@@ -83,7 +83,7 @@ testBuildWithNoTree() {
 }
 
 testRepo2() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
 
     assertTrue 'no repository' "[ ! -e '$tmpdir/testbuild2/repository.yaml' ]"
     luet create-repo --config $tmpdir/luet.yaml --from-repositories --tree $tmpdir/emptytree \
@@ -107,7 +107,7 @@ testCleanup() {
 }
 
 testInstall2() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
 
     cat <<EOF > $tmpdir/luet2.yaml
 general:
@@ -194,7 +194,7 @@ EOF
 
 
 testBuildWithNoTree3() {
-      [ "$LUET_BACKEND" == "img" ] && startSkipping
+      [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
 
     cat <<EOF > $tmpdir/default.yaml
 bb: "newinterpolation"
@@ -212,7 +212,7 @@ EOF
 }
 
 testRepo3() {
-      [ "$LUET_BACKEND" == "img" ] && startSkipping
+      [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
 
     assertTrue 'no repository' "[ ! -e '$tmpdir/testbuild3/repository.yaml' ]"
     luet create-repo --config $tmpdir/luet.yaml --from-repositories --tree $tmpdir/emptytree \
@@ -229,7 +229,7 @@ testRepo3() {
 }
 
 testInstall3() {
-      [ "$LUET_BACKEND" == "img" ] && startSkipping
+      [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
 
     mkdir $tmpdir/testrootfs3
 

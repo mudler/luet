@@ -194,7 +194,7 @@ func init() {
 	createrepoCmd.Flags().String("type", "disk", "Repository type (disk, http, docker)")
 	createrepoCmd.Flags().Bool("reset-revision", false, "Reset repository revision.")
 	createrepoCmd.Flags().String("repo", "", "Use repository defined in configuration.")
-	createrepoCmd.Flags().String("backend", "docker", "backend used (docker,img)")
+	createrepoCmd.Flags().String("backend", "docker", "backend used (docker,buildah)")
 	createrepoCmd.Flags().Bool("dockerfiles", false, "Read dockerfiles in tree as packages.")
 
 	createrepoCmd.Flags().Bool("force-push", false, "Force overwrite of docker images if already present online")

@@ -7,8 +7,8 @@ concurrency:
 
 name: Test on tag
 jobs:
-  tests-integration-img:
-    name: Integration tests
+  tests-integration-buildah:
+    name: Integration tests with buildah
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
@@ -24,14 +24,13 @@ jobs:
       - name: Install deps
         run: |
           sudo apt-get update && sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
-          sudo curl -fSL "https://github.com/genuinetools/img/releases/download/v0.5.11/img-linux-amd64" -o "/usr/bin/img"
-          sudo chmod a+x "/usr/bin/img"
-      - name: Login to quay with img
-        run: echo ${{ secrets.DOCKER_TESTING_PASSWORD }} | sudo img login -u ${{ secrets.DOCKER_TESTING_USERNAME }} --password-stdin quay.io
-      - name: Tests with Img backend
+          sudo apt-get install -y buildah
+      - name: Login to quay with buildah
+        run: echo ${{ secrets.DOCKER_TESTING_PASSWORD }} | sudo buildah login -u ${{ secrets.DOCKER_TESTING_USERNAME }} --password-stdin quay.io
+      - name: Tests with buildah backend
         run: |
           sudo -E env "PATH=$PATH" \
-                  env "LUET_BACKEND=img" \
+                  env "LUET_BACKEND=buildah" \
                   make test-integration
   tests-integration:
     name: Integration tests
@@ -76,8 +75,7 @@ jobs:
       - name: Install deps
         run: |
           sudo apt-get update && sudo apt-get install -y upx && sudo -E env "PATH=$PATH" make deps
-          sudo curl -fSL "https://github.com/genuinetools/img/releases/download/v0.5.11/img-linux-amd64" -o "/usr/bin/img"
-          sudo chmod a+x "/usr/bin/img"
+          sudo apt-get install -y buildah
           sudo make build
           sudo cp -rf luet /usr/bin/luet
       - name: Tests

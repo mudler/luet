@@ -44,13 +44,13 @@ oneTimeTearDown() {
 }
 
 testRegistryUp() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     curl -sf "http://localhost:${REGISTRY_PORT}/v2/" >/dev/null
     assertEquals 'local registry is reachable' "0" "$?"
 }
 
 testBuild() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     mkdir -p "$tmpdir/testbuild"
     cat <<EOF > "$tmpdir/default.yaml"
 extra: "bar"
@@ -66,7 +66,7 @@ EOF
 }
 
 testCreateRepoAndPush() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     createres=$(luet create-repo --tree "$ROOT_DIR/tests/fixtures/docker_repo" \
         --output "${LOCAL_IMAGE}" \
         --packages "$tmpdir/testbuild" \
@@ -96,7 +96,7 @@ testCreateRepoAndPush() {
 # The pull side is daemonless (go-containerregistry remote), so this is
 # where an unexpected OCI index shape surfaces.
 testInstallFromRegistry() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     mkdir -p "$tmpdir/testrootfs"
     cat <<EOF > "$tmpdir/luet.yaml"
 general:

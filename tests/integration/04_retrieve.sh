@@ -12,7 +12,7 @@ oneTimeTearDown() {
 
 testBuild() {
     mkdir $tmpdir/testbuild
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     luet build --tree "$ROOT_DIR/tests/fixtures/retrieve-integration" --destination $tmpdir/testbuild --compression gzip test/b
     buildst=$?
     assertEquals 'builds successfully' "$buildst" "0"
@@ -21,7 +21,7 @@ testBuild() {
 }
 
 testRepo() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     assertTrue 'no repository' "[ ! -e '$tmpdir/testbuild/repository.yaml' ]"
     luet create-repo --tree "$ROOT_DIR/tests/fixtures/retrieve-integration" \
     --output $tmpdir/testbuild \
@@ -61,7 +61,7 @@ EOF
 
 
 testInstall() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     luet install -y --config $tmpdir/luet.yaml test/b
     #luet install -y --config $tmpdir/luet.yaml test/c-1.0 > /dev/null
     installst=$?
@@ -74,7 +74,7 @@ testInstall() {
 
 
 testUnInstall() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     luet uninstall -y --full --config $tmpdir/luet.yaml test/b
     installst=$?
     assertEquals 'uninstall test successfully' "$installst" "0"
@@ -84,7 +84,7 @@ testUnInstall() {
 
 
 testCleanup() {
-    [ "$LUET_BACKEND" == "img" ] && startSkipping
+    [[ "$LUET_BACKEND" == "buildah" || "$LUET_BACKEND" == "img" ]] && startSkipping
     luet cleanup --config $tmpdir/luet.yaml
     installst=$?
     assertEquals 'install test successfully' "$installst" "0"
