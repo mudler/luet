@@ -115,8 +115,6 @@ var _ = Describe("Versioner", func() {
 			{">=0", "1.0.29+pre2_p20191024"},
 			{">=0.1.0+4", "0.1.0+5"},
 			{">0.1.0-4", "0.1.0-5"},
-			{"<1.2.3-beta", "1.2.3-beta.1-1"},
-			{"<1.2.3", "1.2.3-beta.1"},
 			{">0.0.1-alpha07", "0.0.1-alpha07-8"},
 			{">0.0.1-alpha07-1", "0.0.1-alpha07-8"},
 			{">0.0.1-alpha07", "0.0.1-alpha08"},
@@ -131,6 +129,36 @@ var _ = Describe("Versioner", func() {
 				Expect(versioner.ValidateSelector(version, selector)).Should(BeTrue())
 			})
 		}
+	})
+
+	Context("A '-' suffix is a revision, not a prerelease", func() {
+		// These two cases previously asserted the opposite, back when selector
+		// matching used SemVer while ordering used Debian. SemVer reads
+		// "1.2.3-beta.1" as a prerelease of 1.2.3, so older; Debian reads the
+		// same string as revision "beta.1" of upstream 1.2.3, so newer.
+		//
+		// Now that both use Debian, "-" means revision everywhere - consistent
+		// with "1.0-r1" and "0.1.0-5", which this suite already expected to be
+		// newer than their bases.
+		//
+		// The Debian spelling for a prerelease is "~": "1.2.3~beta1" sorts
+		// before "1.2.3", and is the form to use if you want that ordering.
+		versioner := DefaultVersioner()
+
+		It("orders a -suffix after the bare version", func() {
+			Expect(versioner.ValidateSelector("1.2.3-beta.1", "<1.2.3")).Should(BeFalse())
+			Expect(versioner.ValidateSelector("1.2.3-beta.1", ">1.2.3")).Should(BeTrue())
+		})
+
+		It("orders a -suffix after a shorter -suffix", func() {
+			Expect(versioner.ValidateSelector("1.2.3-beta.1-1", "<1.2.3-beta")).Should(BeFalse())
+			Expect(versioner.ValidateSelector("1.2.3-beta.1-1", ">1.2.3-beta")).Should(BeTrue())
+		})
+
+		It("orders a ~suffix before the bare version", func() {
+			Expect(versioner.ValidateSelector("1.2.3~beta1", "<1.2.3")).Should(BeTrue())
+			Expect(versioner.ValidateSelector("1.2.3~beta1", ">1.2.3")).Should(BeFalse())
+		})
 	})
 
 	Context("Not matching a selector", func() {

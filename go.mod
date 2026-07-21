@@ -20,7 +20,6 @@ require (
 	github.com/google/renameio v1.0.0
 	github.com/gookit/color v1.5.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/go-version v1.3.0
 	github.com/imdario/mergo v0.3.12
 	github.com/ipfs/go-log/v2 v2.4.0
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
@@ -92,6 +91,7 @@ require (
 	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-version v1.3.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
