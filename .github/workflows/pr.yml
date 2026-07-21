@@ -84,8 +84,17 @@ jobs:
         fi
         driver=$(sudo -E env "PATH=$PATH" docker info --format '{{.Driver}}')
         echo "storage driver under sudo: $driver (containerd-snapshotter=${{ matrix.containerd-snapshotter }})"
-        if [ "${{ matrix.containerd-snapshotter }}" = "true" ] && [ "$driver" = "overlay2" ]; then
-          echo "::warning::containerd snapshotter was requested but driver is overlay2 - verify this axis is taking effect"
+        # Both driver names were observed across docker 26.1.4 / 28.5.2 / 29.1.2
+        # in run 29836638413, so this is an assertion rather than a warning:
+        # without it, three cells could silently duplicate the other three.
+        if [ "${{ matrix.containerd-snapshotter }}" = "true" ]; then
+          expected_driver=overlayfs
+        else
+          expected_driver=overlay2
+        fi
+        if [ "$driver" != "$expected_driver" ]; then
+          echo "::error::storage driver is $driver, expected $expected_driver for containerd-snapshotter=${{ matrix.containerd-snapshotter }}"
+          exit 1
         fi
     - name: Install deps
       run: |
