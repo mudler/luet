@@ -23,13 +23,24 @@
         
         
         &lt;h2 id=&#34;prerequisistes&#34;&gt;Prerequisistes&lt;/h2&gt;
-&lt;p&gt;Luet currently supports &lt;a href=&#34;https://www.docker.com/&#34;&gt;Docker&lt;/a&gt; and &lt;a href=&#34;https://github.com/genuinetools/img&#34;&gt;Img&lt;/a&gt; as backends to build packages. Both of them can be used and switched in runtime with the &lt;code&gt;--backend&lt;/code&gt; option, so either one of them must be present in the host system.&lt;/p&gt;
+&lt;p&gt;Luet currently supports &lt;a href=&#34;https://www.docker.com/&#34;&gt;Docker&lt;/a&gt; and &lt;a href=&#34;https://buildah.io&#34;&gt;buildah&lt;/a&gt; as backends to build packages. Both of them can be used and switched in runtime with the &lt;code&gt;--backend&lt;/code&gt; option, so either one of them must be present in the host system.&lt;/p&gt;
 &lt;h3 id=&#34;docker&#34;&gt;Docker&lt;/h3&gt;
 &lt;p&gt;Docker is the (less) experimental Luet engine supported. Be sure to have Docker installed and the daemon running. The user running &lt;code&gt;luet&lt;/code&gt; commands needs the corresponding permissions to run the &lt;code&gt;docker&lt;/code&gt; executable, and to connect to a &lt;code&gt;docker&lt;/code&gt; daemon. The only feature needed by the daemon is the ability to build images, so it fully supports remote daemon as well (this can be specified with the &lt;code&gt;DOCKER_HOST&lt;/code&gt; environment variable, that is respected by &lt;code&gt;luet&lt;/code&gt;)&lt;/p&gt;
-&lt;h3 id=&#34;img&#34;&gt;Img&lt;/h3&gt;
-&lt;p&gt;Luet supports &lt;a href=&#34;https://github.com/genuinetools/img&#34;&gt;Img&lt;/a&gt;. To use it, simply install it in your system, and while running &lt;code&gt;luet build&lt;/code&gt;, you can switch the backend by providing it as a parameter: &lt;code&gt;luet build --backend img&lt;/code&gt;. For small packages it is particularly powerful, as it doesn&amp;rsquo;t require any docker daemon running in the host.&lt;/p&gt;
+&lt;h3 id=&#34;buildah&#34;&gt;buildah&lt;/h3&gt;
+&lt;p&gt;Luet supports &lt;a href=&#34;https://buildah.io&#34;&gt;buildah&lt;/a&gt;. To use it, simply install it in your system, and while running &lt;code&gt;luet build&lt;/code&gt;, you can switch the backend by providing it as a parameter: &lt;code&gt;luet build --backend buildah&lt;/code&gt;. It doesn&amp;rsquo;t require any docker daemon running in the host, and can build as an unprivileged user. The older &lt;code&gt;--backend img&lt;/code&gt; is deprecated and now resolves to buildah.&lt;/p&gt;
+&lt;h4 id=&#34;rootless-builds-with-buildah&#34;&gt;Rootless builds with buildah&lt;/h4&gt;
+&lt;p&gt;buildah does not need a daemon and can build as an unprivileged user. In a container or Kubernetes pod, set:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;BUILDAH_ISOLATION=chroot
+STORAGE_DRIVER=vfs
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and grant the &lt;code&gt;SETUID&lt;/code&gt; and &lt;code&gt;SETGID&lt;/code&gt; capabilities. luet passes its environment through to the build engine, so no luet-side configuration is required.&lt;/p&gt;
+&lt;p&gt;Two well-known properties of rootless container builds apply here:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The &lt;code&gt;vfs&lt;/code&gt; storage driver is expected to be slower than &lt;code&gt;overlay&lt;/code&gt;, particularly for large images. Where the host or cluster allows exposing &lt;code&gt;/dev/fuse&lt;/code&gt;, buildah can use &lt;code&gt;fuse-overlayfs&lt;/code&gt; instead and recover most of the difference.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;mknod&lt;/code&gt; is blocked for unprivileged users regardless of granted capabilities. This is a kernel restriction on user namespaces, not a configuration problem. Packages whose build creates device nodes cannot be built rootless.&lt;/li&gt;
+&lt;/ul&gt;
 &lt;h3 id=&#34;building-packages-on-kubernetes&#34;&gt;Building packages on Kubernetes&lt;/h3&gt;
-&lt;p&gt;Luet and img can be used together to orchestrate package builds also on kubernetes. There is available an experimental &lt;a href=&#34;https://github.com/mudler/luet-k8s&#34;&gt;Kubernetes CRD for Luet&lt;/a&gt; which allows to build packages seamelessly in Kubernetes and push package artifacts to an S3 Compatible object storage (e.g. Minio).&lt;/p&gt;
+&lt;p&gt;Luet and buildah can be used together to orchestrate package builds also on kubernetes. There is available an experimental &lt;a href=&#34;https://github.com/mudler/luet-k8s&#34;&gt;Kubernetes CRD for Luet&lt;/a&gt; which allows to build packages seamlessly in Kubernetes and push package artifacts to an S3 Compatible object storage (e.g. Minio). Updating that CRD to request the buildah backend is tracked separately; it continues to work through the deprecated &lt;code&gt;img&lt;/code&gt; alias in the meantime.&lt;/p&gt;
 &lt;h2 id=&#34;building-packages&#34;&gt;Building packages&lt;/h2&gt;
 &lt;p&gt;&lt;img src=&#34;https://luet.io/docs/tree.jpg&#34; alt=&#34;Build packages&#34;&gt;&lt;/p&gt;
 &lt;p&gt;Luet provides an abstraction layer on top of the container image layer to make the package a first class construct. A package definition and all its dependencies are translated by Luet to Dockerfiles which can then be built anywhere that docker runs.&lt;/p&gt;
@@ -151,7 +162,7 @@ $~/workdir&amp;gt; cat &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt
 &lt;h2 id=&#34;caching-docker-images&#34;&gt;Caching docker images&lt;/h2&gt;
 &lt;p&gt;Luet can push and pull the docker images that are being generated during the build process. A tree is represented by a single docker image, and each package can have one or more tags attached to it.&lt;/p&gt;
 &lt;p&gt;To push automatically docker images that are built, use the &lt;code&gt;--push&lt;/code&gt; option, to pull, use the &lt;code&gt;--pull&lt;/code&gt; option. An image repository can be specified with &lt;code&gt;--image-repository&lt;/code&gt; flag, and can include also the remote registries where the images are pushed to.&lt;/p&gt;
-&lt;p&gt;Luet doesn&amp;rsquo;t handle login to registries, so that has to be handled separately with &lt;code&gt;docker login&lt;/code&gt; or &lt;code&gt;img login&lt;/code&gt; before the build process starts.&lt;/p&gt;
+&lt;p&gt;Luet doesn&amp;rsquo;t handle login to registries, so that has to be handled separately with &lt;code&gt;docker login&lt;/code&gt; or &lt;code&gt;buildah login&lt;/code&gt; before the build process starts.&lt;/p&gt;
 &lt;h3 id=&#34;build-faster&#34;&gt;Build faster&lt;/h3&gt;
 &lt;p&gt;When packages are cached, for iterating locally it&amp;rsquo;s particularly useful to jump straight to the image that you want to build. You can use &lt;code&gt;--only-target-package&lt;/code&gt; to jump directly to the image you are interested in. Luet will take care of checking if the images are present in the remote registry, and would build them if any of those are missing.&lt;/p&gt;
 &lt;h2 id=&#34;building-for-a-different-platform&#34;&gt;Building for a different platform&lt;/h2&gt;

@@ -27,13 +27,13 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://luet.io/docs/concepts/overview/build_packages/" /><meta property="article:section" content="docs" />
 <meta property="article:published_time" content="2017-01-05T00:00:00+00:00" />
-<meta property="article:modified_time" content="2026-07-21T18:23:13+02:00" /><meta property="og:site_name" content="Luet" />
+<meta property="article:modified_time" content="2026-07-21T22:42:57+02:00" /><meta property="og:site_name" content="Luet" />
 
 <meta itemprop="name" content="Building packages">
 <meta itemprop="description" content="How to build packages with Luet
 "><meta itemprop="datePublished" content="2017-01-05T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2026-07-21T18:23:13+02:00" />
-<meta itemprop="wordCount" content="1412">
+<meta itemprop="dateModified" content="2026-07-21T22:42:57+02:00" />
+<meta itemprop="wordCount" content="1568">
 <meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Building packages"/>
 <meta name="twitter:description" content="How to build packages with Luet
@@ -146,7 +146,7 @@ if (!doNotTrack) {
   aria-label="Search this site…"
   autocomplete="off"
   
-  data-offline-search-index-json-src="/offline-search-index.4fe7714e302eef4501ae919bdbad5ce4.json"
+  data-offline-search-index-json-src="/offline-search-index.fbac9d07b883b0581c356004c1e448be.json"
   data-offline-search-base-href="/"
   data-offline-search-max-results="10"
 >
@@ -168,7 +168,7 @@ if (!doNotTrack) {
   aria-label="Search this site…"
   autocomplete="off"
   
-  data-offline-search-index-json-src="/offline-search-index.4fe7714e302eef4501ae919bdbad5ce4.json"
+  data-offline-search-index-json-src="/offline-search-index.fbac9d07b883b0581c356004c1e448be.json"
   data-offline-search-base-href="/"
   data-offline-search-max-results="10"
 >
@@ -269,7 +269,7 @@ if (!doNotTrack) {
     <li><a href="#prerequisistes">Prerequisistes</a>
       <ul>
         <li><a href="#docker">Docker</a></li>
-        <li><a href="#img">Img</a></li>
+        <li><a href="#buildah">buildah</a></li>
         <li><a href="#building-packages-on-kubernetes">Building packages on Kubernetes</a></li>
       </ul>
     </li>
@@ -345,13 +345,24 @@ if (!doNotTrack) {
 		
 	</header>    
 	<h2 id="prerequisistes">Prerequisistes</h2>
-<p>Luet currently supports <a href="https://www.docker.com/">Docker</a> and <a href="https://github.com/genuinetools/img">Img</a> as backends to build packages. Both of them can be used and switched in runtime with the <code>--backend</code> option, so either one of them must be present in the host system.</p>
+<p>Luet currently supports <a href="https://www.docker.com/">Docker</a> and <a href="https://buildah.io">buildah</a> as backends to build packages. Both of them can be used and switched in runtime with the <code>--backend</code> option, so either one of them must be present in the host system.</p>
 <h3 id="docker">Docker</h3>
 <p>Docker is the (less) experimental Luet engine supported. Be sure to have Docker installed and the daemon running. The user running <code>luet</code> commands needs the corresponding permissions to run the <code>docker</code> executable, and to connect to a <code>docker</code> daemon. The only feature needed by the daemon is the ability to build images, so it fully supports remote daemon as well (this can be specified with the <code>DOCKER_HOST</code> environment variable, that is respected by <code>luet</code>)</p>
-<h3 id="img">Img</h3>
-<p>Luet supports <a href="https://github.com/genuinetools/img">Img</a>. To use it, simply install it in your system, and while running <code>luet build</code>, you can switch the backend by providing it as a parameter: <code>luet build --backend img</code>. For small packages it is particularly powerful, as it doesn&rsquo;t require any docker daemon running in the host.</p>
+<h3 id="buildah">buildah</h3>
+<p>Luet supports <a href="https://buildah.io">buildah</a>. To use it, simply install it in your system, and while running <code>luet build</code>, you can switch the backend by providing it as a parameter: <code>luet build --backend buildah</code>. It doesn&rsquo;t require any docker daemon running in the host, and can build as an unprivileged user. The older <code>--backend img</code> is deprecated and now resolves to buildah.</p>
+<h4 id="rootless-builds-with-buildah">Rootless builds with buildah</h4>
+<p>buildah does not need a daemon and can build as an unprivileged user. In a container or Kubernetes pod, set:</p>
+<pre><code>BUILDAH_ISOLATION=chroot
+STORAGE_DRIVER=vfs
+</code></pre>
+<p>and grant the <code>SETUID</code> and <code>SETGID</code> capabilities. luet passes its environment through to the build engine, so no luet-side configuration is required.</p>
+<p>Two well-known properties of rootless container builds apply here:</p>
+<ul>
+<li>The <code>vfs</code> storage driver is expected to be slower than <code>overlay</code>, particularly for large images. Where the host or cluster allows exposing <code>/dev/fuse</code>, buildah can use <code>fuse-overlayfs</code> instead and recover most of the difference.</li>
+<li><code>mknod</code> is blocked for unprivileged users regardless of granted capabilities. This is a kernel restriction on user namespaces, not a configuration problem. Packages whose build creates device nodes cannot be built rootless.</li>
+</ul>
 <h3 id="building-packages-on-kubernetes">Building packages on Kubernetes</h3>
-<p>Luet and img can be used together to orchestrate package builds also on kubernetes. There is available an experimental <a href="https://github.com/mudler/luet-k8s">Kubernetes CRD for Luet</a> which allows to build packages seamelessly in Kubernetes and push package artifacts to an S3 Compatible object storage (e.g. Minio).</p>
+<p>Luet and buildah can be used together to orchestrate package builds also on kubernetes. There is available an experimental <a href="https://github.com/mudler/luet-k8s">Kubernetes CRD for Luet</a> which allows to build packages seamlessly in Kubernetes and push package artifacts to an S3 Compatible object storage (e.g. Minio). Updating that CRD to request the buildah backend is tracked separately; it continues to work through the deprecated <code>img</code> alias in the meantime.</p>
 <h2 id="building-packages">Building packages</h2>
 <p><img src="/docs/tree.jpg" alt="Build packages"></p>
 <p>Luet provides an abstraction layer on top of the container image layer to make the package a first class construct. A package definition and all its dependencies are translated by Luet to Dockerfiles which can then be built anywhere that docker runs.</p>
@@ -473,7 +484,7 @@ $~/workdir&gt; cat <span style="color:#4e9a06">&lt;&lt;EOF &gt; package3/definit
 <h2 id="caching-docker-images">Caching docker images</h2>
 <p>Luet can push and pull the docker images that are being generated during the build process. A tree is represented by a single docker image, and each package can have one or more tags attached to it.</p>
 <p>To push automatically docker images that are built, use the <code>--push</code> option, to pull, use the <code>--pull</code> option. An image repository can be specified with <code>--image-repository</code> flag, and can include also the remote registries where the images are pushed to.</p>
-<p>Luet doesn&rsquo;t handle login to registries, so that has to be handled separately with <code>docker login</code> or <code>img login</code> before the build process starts.</p>
+<p>Luet doesn&rsquo;t handle login to registries, so that has to be handled separately with <code>docker login</code> or <code>buildah login</code> before the build process starts.</p>
 <h3 id="build-faster">Build faster</h3>
 <p>When packages are cached, for iterating locally it&rsquo;s particularly useful to jump straight to the image that you want to build. You can use <code>--only-target-package</code> to jump directly to the image you are interested in. Luet will take care of checking if the images are present in the remote registry, and would build them if any of those are missing.</p>
 <h2 id="building-for-a-different-platform">Building for a different platform</h2>
@@ -550,7 +561,7 @@ $~/workdir&gt; cat <span style="color:#4e9a06">&lt;&lt;EOF &gt; package3/definit
 	
 	
 	<div class="text-muted mt-5 pt-3 border-top">
-  Last modified July 21, 2026: <a href="https://github.com/mudler/luet/commit/0d021399a89e03161f3d0e20ce8abe02b935ce06">fix: return an error when every repository fails (#386) (#393) (0d02139)</a>
+  Last modified July 21, 2026: <a href="https://github.com/mudler/luet/commit/174fa6616cfb0a80e7c422b06e55b759ef17f622">Replace the img compiler backend with buildah (#391) (174fa66)</a>
 </div>
 
 </div>
