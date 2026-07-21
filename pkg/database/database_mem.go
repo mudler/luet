@@ -20,9 +20,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"sync"
 
 	"github.com/mudler/luet/pkg/api/core/types"
+	version "github.com/mudler/luet/pkg/versioner"
 	"github.com/pkg/errors"
 )
 
@@ -346,6 +348,11 @@ func (db *InMemoryDatabase) FindPackageVersions(p *types.Package) (types.Package
 		}
 		versionsInWorld = append(versionsInWorld, w)
 	}
+
+	// CacheNoVersion is a map, so this list was in random order. It feeds the
+	// at-most-one clauses that make versions of a package mutually exclusive,
+	// and their emission order affects CNF variable numbering.
+	SortPackages(versionsInWorld)
 	return types.Packages(versionsInWorld), nil
 }
 
@@ -376,6 +383,11 @@ func (db *InMemoryDatabase) FindPackages(p *types.Package) (types.Packages, erro
 		}
 	}
 	db.Unlock()
+
+	// CacheNoVersion is a map, so the candidate order was random per run. These
+	// become the literals of the at-least-one clause for a selector dependency,
+	// and their order decides which version the solver reaches first.
+	SortPackages(matches)
 	if !ok {
 		return nil, fmt.Errorf("No versions found for: %s", p.HumanReadableString())
 	}
@@ -450,15 +462,64 @@ func (db *InMemoryDatabase) RemovePackage(p *types.Package) error {
 	return nil
 }
 func (db *InMemoryDatabase) World() types.Packages {
-	var all []*types.Package
+	keys := db.GetPackages()
+	all := make([]*types.Package, 0, len(keys))
 	// FIXME: This should all be locked in the db - for now forbid the solver to be run in threads.
-	for _, k := range db.GetPackages() {
+	for _, k := range keys {
 		pack, err := db.GetPackage(k)
 		if err == nil {
 			all = append(all, pack)
 		}
 	}
+
+	SortPackages(all)
 	return types.Packages(all)
+}
+
+// SortPackages orders packages by name and category ascending, then by version
+// DESCENDING, and is the ordering the solver sees.
+//
+// This is load-bearing, not cosmetic. The SAT encoding is version-blind: a
+// package becomes an opaque bf.Var("name-category-version") and the at-most-one
+// clauses tying versions together are symmetric, so nothing in the formula says
+// one version is newer. Which version comes back is decided by gophersat's
+// branching, which breaks ties on variable index, which bf assigns in order of
+// first appearance during CNF conversion - i.e. the order the world was walked.
+// Walking a Go map made that order random per run, so the same input could
+// resolve differently, and the solver settled on a needlessly old version most
+// of the time.
+//
+// The DIRECTION matters as much as the determinism. gophersat's default phase
+// is false-first, so packages are only installed when propagation forces it,
+// and the candidate reached first tends to win. Presenting versions newest-first
+// therefore steers it to the newest satisfiable one. Sorting the composite
+// fingerprint string in reverse would ALSO be deterministic while reversing name
+// order too, which perturbs the CNF onto a different - equally stable - wrong
+// answer. Name ascending, version descending.
+//
+// This is a heuristic, not a guarantee: there is still no optimisation
+// objective in the encoding. It is covered by the determinism tests in
+// pkg/solver rather than assumed.
+func SortPackages(packages []*types.Package) {
+	versioner := version.DefaultVersioner()
+
+	sort.SliceStable(packages, func(i, j int) bool {
+		a, b := packages[i], packages[j]
+
+		if an, bn := a.GetPackageName(), b.GetPackageName(); an != bn {
+			return an < bn
+		}
+
+		av, bv := a.GetVersion(), b.GetVersion()
+		if av == bv {
+			return false
+		}
+
+		// Newest first within a package. ValidateSelector is the single
+		// version comparator; asking ">b" of a keeps this consistent with
+		// Sort and Best rather than introducing a third opinion.
+		return versioner.ValidateSelector(av, ">"+bv)
+	})
 }
 
 func (db *InMemoryDatabase) FindPackageCandidate(p *types.Package) (*types.Package, error) {

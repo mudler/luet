@@ -52,6 +52,14 @@ func (assertions PackagesAssertions) EnsureOrder(definitiondb PackageDatabase) (
 	}
 
 	for _, res := range g.TopoSortedLayers() {
+		// depgraph builds each layer by ranging over a map, so the order within
+		// a layer is Go map order - randomised per run. Packages in the same
+		// topological layer are mutually independent, so any order satisfies
+		// the dependency constraints, but it must be STABLE: assertion order
+		// feeds SaltedAssertionHash, which keys the compiler's build cache and
+		// image tags, and it determines finalizer execution order.
+		sort.Strings(res)
+
 		for _, r := range res {
 			a, ok := tmpMap[r]
 			if ok {
