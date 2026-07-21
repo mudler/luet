@@ -806,6 +806,27 @@ func (pack *Package) buildFormula(definitiondb PackageDatabase, db PackageDataba
 			}
 			packages, err := definitiondb.FindPackages(requiredDef)
 			if err != nil || len(packages) == 0 {
+				// Nothing satisfies the requirement.
+				//
+				// If it was a SELECTOR, that is unsatisfiable and must be an
+				// error. Falling through here would encode the selector itself
+				// as a SAT variable - "foo->=99.0" becomes an atom with no
+				// at-least-one clause binding it to any concrete version, so
+				// the solver can set it true freely while the at-most-one
+				// clauses it appears in forbid installing any real version of
+				// foo. The resolver then reports success and hands the
+				// installer a package that does not exist, which is worse than
+				// omitting the constraint.
+				//
+				// A CONCRETE requirement that is merely absent from the
+				// definition database is different, and the relaxation below is
+				// deliberate: it lets us reason about packages that exist in
+				// the system but not in the tree, which Uninstall relies on.
+				if requiredDef.IsSelector() {
+					return nil, errors.New("no packages satisfy " +
+						requiredDef.HumanReadableString() + ", required by " +
+						p.HumanReadableString())
+				}
 				required = requiredDef
 			} else {
 
