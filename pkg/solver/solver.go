@@ -212,8 +212,21 @@ func (s *Solver) getList(db types.PackageDatabase, lsp types.Packages) (types.Pa
 		cp, err := db.FindPackage(pp)
 		if err != nil {
 			packages, err := pp.Expand(db)
-			// Expand, and relax search - if not found pick the same one
 			if err != nil || len(packages) == 0 {
+				// An unsatisfiable SELECTOR must be an error. Relaxing to `pp`
+				// here would encode the selector itself as a SAT variable -
+				// "foo->=99.0" as an atom with nothing tying it to a concrete
+				// version - so the solve succeeds and returns a package that
+				// does not exist. See the equivalent guard in
+				// Package.buildFormula.
+				//
+				// A CONCRETE package that is simply absent from this database
+				// still relaxes: Uninstall passes the installed database here
+				// and must be able to reason about packages missing from the
+				// tree.
+				if pp.IsSelector() {
+					return nil, errors.New("no packages satisfy " + pp.HumanReadableString())
+				}
 				cp = pp
 			} else {
 				cp = packages.Best(nil)
