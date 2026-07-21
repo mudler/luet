@@ -23,8 +23,11 @@ import (
 )
 
 const (
-	ImgBackend    = "img"
-	DockerBackend = "docker"
+	// ImgBackend is retained as a deprecated alias for BuildahBackend.
+	// genuinetools/img is unmaintained; see the buildah backend design.
+	ImgBackend     = "img"
+	BuildahBackend = "buildah"
+	DockerBackend  = "docker"
 )
 
 type Options struct {

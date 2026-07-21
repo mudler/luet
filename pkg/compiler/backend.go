@@ -12,8 +12,12 @@ func NewBackend(ctx types.Context, s string) (CompilerBackend, error) {
 	var compilerBackend CompilerBackend
 
 	switch s {
+	case backend.BuildahBackend:
+		compilerBackend = backend.NewSimpleBuildahBackend(ctx)
 	case backend.ImgBackend:
-		compilerBackend = backend.NewSimpleImgBackend(ctx)
+		ctx.Warning("--backend img is deprecated and now uses buildah; " +
+			"switch to --backend buildah")
+		compilerBackend = backend.NewSimpleBuildahBackend(ctx)
 	case backend.DockerBackend:
 		compilerBackend = backend.NewSimpleDockerBackend(ctx)
 	default:
