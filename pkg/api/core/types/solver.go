@@ -34,7 +34,9 @@ type PackageSolver interface {
 	Uninstall(checkconflicts, full bool, candidate ...*Package) (Packages, error)
 	ConflictsWithInstalled(p *Package) (bool, error)
 	ConflictsWith(p *Package, ls Packages) (bool, error)
-	Conflicts(pack *Package, lsp Packages) (bool, error)
+	// RequiredByInstalled reports whether any package in lsp depends on pack.
+	// It does NOT inspect declared conflicts - see ConflictsWith for that.
+	RequiredByInstalled(pack *Package, lsp Packages) (bool, error)
 
 	World() Packages
 	Upgrade(checkconflicts, full bool) (Packages, PackagesAssertions, error)

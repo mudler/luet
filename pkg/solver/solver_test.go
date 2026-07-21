@@ -1212,7 +1212,7 @@ var _ = Describe("Solver", func() {
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			val, err := s.Conflicts(A, dbInstalled.World())
+			val, err := s.RequiredByInstalled(A, dbInstalled.World())
 			Expect(err.Error()).To(Equal("\nB"))
 			Expect(val).To(BeTrue())
 
@@ -1236,7 +1236,7 @@ var _ = Describe("Solver", func() {
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			val, err := s.Conflicts(D, dbInstalled.World())
+			val, err := s.RequiredByInstalled(D, dbInstalled.World())
 			Expect(err.Error()).To(Or(Equal("\nA\nB"), Equal("\nB\nA")))
 			Expect(val).To(BeTrue())
 		})
@@ -1259,7 +1259,7 @@ var _ = Describe("Solver", func() {
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			val, err := s.Conflicts(C, dbInstalled.World())
+			val, err := s.RequiredByInstalled(C, dbInstalled.World())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(val).ToNot(BeTrue())
 		})
@@ -1281,7 +1281,7 @@ var _ = Describe("Solver", func() {
 				_, err := dbInstalled.CreatePackage(p)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			val, err := s.Conflicts(C, dbInstalled.World())
+			val, err := s.RequiredByInstalled(C, dbInstalled.World())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(val).ToNot(BeTrue())
 		})

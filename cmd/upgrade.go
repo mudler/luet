@@ -88,11 +88,12 @@ func init() {
 	// value of this flag that produces "remove as much as possible".
 	//
 	// What it does produce is a hard failure. With checkconflicts set,
-	// Uninstall validates each removal candidate through Solver.Conflicts, which
-	// does not inspect declared conflicts at all - it collects the candidate's
-	// reverse dependencies and reports a conflict if there are any. Every
-	// upgradable package that something else depends on therefore aborts the
-	// whole upgrade.
+	// Uninstall validates each removal candidate through
+	// Solver.RequiredByInstalled, which does not inspect declared conflicts at
+	// all - it collects the candidate's reverse dependencies and reports true if
+	// there are any. Every upgradable package that something else depends on
+	// therefore aborts the whole upgrade. (That method was itself called
+	// Conflicts until it was renamed to say what it does.)
 	//
 	// It was the default until 59d78c3f (Dec 2020) inverted the argument, which
 	// in hindsight reads as the fix for exactly that failure.
