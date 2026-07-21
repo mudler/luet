@@ -238,10 +238,11 @@ func BenchmarkWorldBuild400(b *testing.B) {
 // being replaced has reverse dependencies - even when no package declares a
 // Conflicts entry at all.
 //
-// The cause is that Solver.Conflicts does not examine declared conflicts. It
-// collects the candidate's reverse dependencies and returns true if there are
-// any, building an error that lists them. Uninstall's early-return branch turns
-// that into a hard failure for the whole upgrade.
+// The cause is Solver.RequiredByInstalled (formerly, and misleadingly, called
+// Conflicts). It does not examine declared conflicts: it collects the
+// candidate's reverse dependencies and returns true if there are any, building
+// an error that lists them. Uninstall's early-return branch turns that into a
+// hard failure for the whole upgrade.
 //
 // This matters because installer.computeUpgrade calls
 // Upgrade(l.Options.FullUninstall, true), so checkconflicts is exactly what
@@ -268,7 +269,7 @@ func TestUpgradeCheckConflictsFailsOnRevdeps(t *testing.T) {
 		t.Skip("checkconflicts=true now succeeds - the revdeps-as-conflicts " +
 			"behaviour appears fixed; re-enable the Full benchmarks")
 	}
-	if !strings.Contains(err.Error(), "conflicts") {
-		t.Fatalf("expected a conflicts-related failure, got: %s", err)
+	if !strings.Contains(err.Error(), "is required by other installed packages") {
+		t.Fatalf("expected a still-required failure, got: %s", err)
 	}
 }

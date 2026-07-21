@@ -241,9 +241,20 @@ func (s *Solver) getList(db types.PackageDatabase, lsp types.Packages) (types.Pa
 	return ls, nil
 }
 
-// Conflicts acts like ConflictsWith, but uses package's reverse dependencies to
-// determine if it conflicts with the given set
-func (s *Solver) Conflicts(pack *types.Package, lsp types.Packages) (bool, error) {
+// RequiredByInstalled reports whether any package in lsp depends on pack, and
+// returns an error listing the dependents when it does.
+//
+// It does NOT inspect declared conflicts. It collects pack's reverse
+// dependencies and reports true if there are any - "is something still using
+// this?", not "does this clash with something?". Use ConflictsWith for declared
+// conflicts; that one builds a formula and asks the solver.
+//
+// It was called Conflicts, which is why callers read as though a true result
+// meant an incompatibility. It means the opposite: the package is still needed.
+// Treating that as fatal is what made `luet upgrade --full` unusable, since
+// during an upgrade every library being replaced has dependents by definition.
+// See the deprecation note on that flag in cmd/upgrade.go.
+func (s *Solver) RequiredByInstalled(pack *types.Package, lsp types.Packages) (bool, error) {
 	p, err := s.DefinitionDatabase.FindPackage(pack)
 	if err != nil {
 		p = pack
@@ -657,8 +668,15 @@ func (s *Solver) Uninstall(checkconflicts, full bool, packs ...*types.Package) (
 	// be removed). Let's only check if we can remove the selected package
 	if !full && checkconflicts {
 		for _, candidate := range toRemove {
-			if conflicts, err := s.Conflicts(candidate, s.Installed()); conflicts {
-				return nil, errors.Wrap(err, "while searching for "+candidate.HumanReadableString()+" conflicts")
+			// NOTE: this treats "something still depends on it" as a hard
+			// failure. That is why it cannot be reached during an upgrade -
+			// every package being replaced has dependents - and why the flag
+			// that enables it is deprecated rather than fixed. Whether this
+			// should refuse, warn, or cascade the removal is a product
+			// decision, deliberately left alone here.
+			if required, err := s.RequiredByInstalled(candidate, s.Installed()); required {
+				return nil, errors.Wrap(err, candidate.HumanReadableString()+
+					" is required by other installed packages")
 			}
 		}
 		return toRemove, nil
