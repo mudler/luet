@@ -151,13 +151,13 @@ func NewUnpackCommand() *cobra.Command {
 		},
 	}
 
-	c.Flags().String("auth-username", "", "Username to authenticate to registry/notary")
+	c.Flags().String("auth-username", "", "Username to authenticate to registry")
 	c.Flags().String("auth-password", "", "Password to authenticate to registry")
 	c.Flags().String("auth-type", "", "Auth type")
 	c.Flags().String("auth-server-address", "", "Authentication server address")
 	c.Flags().String("auth-identity-token", "", "Authentication identity token")
 	c.Flags().String("auth-registry-token", "", "Authentication registry token")
-	c.Flags().Bool("verify", false, "Verify signed images to notary before to pull")
+	c.Flags().Bool("verify", false, "Retained for compatibility, no longer performs image verification")
 	c.Flags().Bool("local", false, "Unpack local image")
 	c.Flags().String("platform", "", "Platform to unpack (e.g., linux/amd64, linux/arm64, linux/amd64/v3) ")
 	return c
