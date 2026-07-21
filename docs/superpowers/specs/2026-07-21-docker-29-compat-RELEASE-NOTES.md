@@ -1,5 +1,14 @@
 # Release notes: Docker Engine 29 compatibility
 
+## Publishing note: paste this into the release body manually
+
+This file is not picked up by the automated release notes. `.goreleaser.yml`
+excludes `^docs:` commits from the generated changelog, and the commit carrying
+this file is a `docs:` commit. Without a manual paste, the breaking change below
+appears in the published GitHub release only as the `feat!:` subject line of the
+trust-removal commit. Copy the contents of this file into the GitHub release
+body when cutting the release.
+
 ## Breaking: image signature verification removed
 
 Docker Content Trust has been removed. `docker/cli` deleted the `cli/trust`
@@ -28,9 +37,13 @@ general:
 ```
 
 turns every attempted verification into a hard failure rather than a silent
-downgrade. This is the supported way to keep failing closed if you cannot
-accept unverified pulls. Note that it makes *all* warnings fatal, not only
-this one.
+downgrade. This is the available way to keep failing closed if you cannot
+accept unverified pulls, but understand what it costs. It makes *all* warnings
+fatal, not only this one, and the mechanism is a literal
+`panic("panic on warning")` in `Context.Warning`
+(`pkg/api/core/context/context.go:138`). The process aborts with a Go stack
+trace rather than exiting cleanly with an error message, so do not adopt it
+expecting graceful failure handling.
 
 ### Digest-pinned references now actually work
 
@@ -43,8 +56,12 @@ above usable.
 
 ## Docker Engine 29 support
 
-luet now builds against docker v28.5.2 / docker-cli v29.5.3 and
-go-containerregistry v0.20.6, and the integration suite is configured to run
+luet now builds against `github.com/docker/docker` v28.5.2 and
+`github.com/google/go-containerregistry` v0.20.6. `github.com/docker/cli` is no
+longer compiled against at all: removing Docker Content Trust deleted luet's
+only direct import of it, and it is now recorded in `go.mod` as
+`github.com/docker/cli v29.5.3+incompatible // indirect`, pulled in only through
+the dependency graph. The integration suite is configured to run
 against Docker 26, 28, and 29 with the containerd image store both enabled and
 disabled. The dependency bump is exercised by the CLI-driven compiler path.
 The `docker/docker` client path is expected to be unaffected but is not covered
@@ -61,6 +78,16 @@ was not reproduced here: on Docker 29.1.2 the pushed manifest was observed as a
 plain `application/vnd.oci.image.manifest.v1+json`. The test logs the observed
 media type rather than asserting a particular one, because the shape varies by
 Docker version and image store configuration.
+
+### Known limitation: non-amd64 hosts
+
+`pkg/installer/client/docker.go` passes an empty platform string when pulling
+repository images (both call sites of `DownloadAndExtractDockerImage`), so
+go-containerregistry resolves with its default platform, `linux/amd64`. If the
+OCI-index push shape from moby/moby#51532 does appear in practice, a non-amd64
+host would fail to resolve a matching child manifest from that index. This is a
+latent risk rather than an observed failure: the index shape did not reproduce
+here. The CI matrix is amd64-only, so it cannot surface this either way.
 
 ## Possible artifact digest shift on rebuild
 
