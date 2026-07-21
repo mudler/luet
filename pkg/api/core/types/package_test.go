@@ -481,3 +481,37 @@ var _ = Describe("Package", func() {
 	})
 
 })
+
+var _ = Describe("Best with versions that do not round-trip", func() {
+	// Best looks the sorted result up in a map keyed on the raw version, so it
+	// returned nil whenever Sort substituted "" for a version it could not
+	// re-render. Several callers dereference the result immediately -
+	// solver.go's UpgradeUniverse and computeUpgrade among them - so a nil here
+	// is a panic, not a bad answer.
+
+	It("returns the newest when an explicit zero epoch is present", func() {
+		p1 := types.NewPackage("A", "0:1.0", []*types.Package{}, []*types.Package{})
+		p2 := types.NewPackage("A", "0:2.0", []*types.Package{}, []*types.Package{})
+		best := types.Packages{p1, p2}.Best(nil)
+		Expect(best).ShouldNot(BeNil())
+		Expect(best.GetVersion()).Should(Equal("0:2.0"))
+	})
+
+	It("returns a package when some versions are unparseable", func() {
+		p1 := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+		p2 := types.NewPackage("A", "abc", []*types.Package{}, []*types.Package{})
+		best := types.Packages{p1, p2}.Best(nil)
+		Expect(best).ShouldNot(BeNil())
+		// Unparseable versions sort lowest, so the valid one wins.
+		Expect(best.GetVersion()).Should(Equal("1.0"))
+	})
+
+	It("still picks the newest for ordinary versions", func() {
+		p1 := types.NewPackage("A", "1.0", []*types.Package{}, []*types.Package{})
+		p2 := types.NewPackage("A", "10.0", []*types.Package{}, []*types.Package{})
+		p3 := types.NewPackage("A", "2.0", []*types.Package{}, []*types.Package{})
+		best := types.Packages{p1, p2, p3}.Best(nil)
+		Expect(best).ShouldNot(BeNil())
+		Expect(best.GetVersion()).Should(Equal("10.0"))
+	})
+})
