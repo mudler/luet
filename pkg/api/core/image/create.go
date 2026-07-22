@@ -25,10 +25,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/mudler/luet/pkg/api/core/types"
 	"github.com/pkg/errors"
 )
 
-func imageFromTar(imagename, architecture, OS string, opener func() (io.ReadCloser, error)) (name.Reference, v1.Image, error) {
+func imageFromTar(imagename string, platform types.Platform, opener func() (io.ReadCloser, error)) (name.Reference, v1.Image, error) {
 	newRef, err := name.ParseReference(imagename)
 	if err != nil {
 		return nil, nil, err
@@ -45,8 +46,9 @@ func imageFromTar(imagename, architecture, OS string, opener func() (io.ReadClos
 		return nil, nil, err
 	}
 
-	cfg.Architecture = architecture
-	cfg.OS = OS
+	cfg.Architecture = platform.Arch
+	cfg.OS = platform.OS
+	cfg.Variant = platform.Variant
 
 	baseImage, err = mutate.ConfigFile(baseImage, cfg)
 	if err != nil {
@@ -67,7 +69,7 @@ func imageFromTar(imagename, architecture, OS string, opener func() (io.ReadClos
 }
 
 // CreateTar a imagetarball from a standard tarball
-func CreateTar(srctar, dstimageTar, imagename, architecture, OS string) error {
+func CreateTar(srctar, dstimageTar, imagename string, platform types.Platform) error {
 
 	dstFile, err := os.Create(dstimageTar)
 	if err != nil {
@@ -75,7 +77,7 @@ func CreateTar(srctar, dstimageTar, imagename, architecture, OS string) error {
 	}
 	defer dstFile.Close()
 
-	newRef, img, err := imageFromTar(imagename, architecture, OS, func() (io.ReadCloser, error) {
+	newRef, img, err := imageFromTar(imagename, platform, func() (io.ReadCloser, error) {
 		f, err := os.Open(srctar)
 		if err != nil {
 			return nil, errors.Wrap(err, "Cannot open "+srctar)

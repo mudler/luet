@@ -103,7 +103,7 @@ func (c *DockerClient) DownloadArtifact(a *artifact.PackageArtifact) (*artifact.
 		imageName := fmt.Sprintf("%s:%s", uri, a.CompileSpec.GetPackage().ImageID())
 		c.context.Info("Downloading image", imageName)
 
-		info, err := docker.DownloadAndExtractDockerImage(c.context, imageName, temp, c.auth, c.RepoData.Verify, "")
+		info, err := docker.DownloadAndExtractDockerImage(c.context, imageName, temp, c.auth, c.RepoData.Verify, luettypes.HostPlatform())
 		if err != nil {
 			lastErr = err
 			c.context.Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))
@@ -174,7 +174,7 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 		imageName := fmt.Sprintf("%s:%s", uri, helpers.SanitizeImageString(name))
 		c.context.Info("Downloading", imageName)
 
-		info, err := docker.DownloadAndExtractDockerImage(c.context, imageName, temp, c.auth, c.RepoData.Verify, "")
+		info, err := docker.DownloadAndExtractDockerImage(c.context, imageName, temp, c.auth, c.RepoData.Verify, luettypes.HostPlatform())
 		if err != nil {
 			lastErr = err
 			c.context.Warning(fmt.Sprintf(errImageDownloadMsg, imageName, err.Error()))

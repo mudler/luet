@@ -4,7 +4,7 @@
 
 **Goal:** Introduce a canonical `Platform` type and fix three latent platform bugs that produce silently wrong results on non-amd64 hosts — without changing any on-disk or on-registry format.
 
-**Architecture:** A new `types.Platform` value type (OS/Arch/Variant) with an OCI string form (`linux/arm/v7`) and a filename-safe sanitized form (`linux-arm-v7`) becomes the single representation of a platform. It is threaded through `image.CreateTar`, `PackageArtifact.GenerateFinalImage`, and the two `pkg/helpers/docker` extract helpers, replacing hardcoded `runtime.GOARCH`/`runtime.GOOS` and untyped `platform string` parameters.
+**Architecture:** A new `types.Platform` value type (OS/Arch/Variant) with an OCI string form (`linux/arm/v7`) becomes the single representation of a platform. It is threaded through `image.CreateTar`, `PackageArtifact.GenerateFinalImage`, and the two `pkg/helpers/docker` extract helpers, replacing hardcoded `runtime.GOARCH`/`runtime.GOOS` and untyped `platform string` parameters.
 
 **Tech Stack:** Go 1.25, go-containerregistry v0.20.6, Ginkgo v2 + Gomega, cobra.
 
@@ -16,7 +16,7 @@
 - **`Package.GetFingerPrint()` must not change.** No field may be added to `types.Package`. `pkg/solver`, `pkg/database`, and `pkg/tree` must have zero diff. Treat any diff in those packages as a defect.
 - **No on-disk or on-registry format changes in Group A.** Artifact filenames, image tags, and repository file names stay exactly as they are today. Group A is bug fixes plus the type that Groups B and C build on.
 - OCI platform string form is `os/arch[/variant]`, e.g. `linux/amd64`, `linux/arm/v7`.
-- Sanitized form replaces every `/` with `-`, e.g. `linux-arm-v7`.
+- The filename-safe sanitized form (`linux-arm-v7`) is **out of scope for Group A** — it is added in Group B, where the first caller appears. Do not add it here.
 - Tests are Ginkgo v2 + Gomega. Run with `go run github.com/onsi/ginkgo/v2/ginkgo`.
 - Existing licence header (GPL-2.0-or-later, `Copyright © <year> Ettore Di Giacinto <mudler@mocaccino.org>`) must be copied to every new file, matching neighbouring files.
 - Branch: `cross-arch-group-a`, off `master`. **Group A ships as its own standalone PR** and is mergeable independently. Groups B and C stack separately.
@@ -27,8 +27,8 @@
 
 | File | Responsibility |
 |---|---|
-| `pkg/api/core/types/platform.go` (create) | The `Platform` type: parse, render, sanitize, host detection. No ggcr import — keeps `types` dependency-light. |
-| `pkg/api/core/types/platform_test.go` (create) | Unit tests for parse/render/sanitize round-trips. Joins the existing "Types Suite". |
+| `pkg/api/core/types/platform.go` (create) | The `Platform` type: parse, render, host detection. No ggcr import — keeps `types` dependency-light. |
+| `pkg/api/core/types/platform_test.go` (create) | Unit tests for parse/render round-trips. Joins the existing "Types Suite". |
 | `pkg/api/core/image/create.go` (modify) | `CreateTar`/`imageFromTar` take a `types.Platform` and set `Variant` on the image config. |
 | `pkg/api/core/types/artifact/artifact.go` (modify) | `PackageArtifact` gains a `Platform` field; `GenerateFinalImage` uses it instead of `runtime.GOARCH`/`runtime.GOOS`. |
 | `pkg/helpers/docker/docker.go` (modify) | Both extract helpers take `types.Platform`; fixes swallowed errors in `ExtractDockerImage`. |
@@ -79,7 +79,6 @@ So on an arm64 host, pulling a multi-arch docker-type repository hands you the a
   - `func ParsePlatform(s string) (Platform, error)`
   - `func HostPlatform() Platform`
   - `func (p Platform) String() string`
-  - `func (p Platform) Sanitized() string`
   - `func (p Platform) IsZero() bool`
 
 Design notes for the implementer:
@@ -176,25 +175,6 @@ var _ = Describe("Platform", func() {
 		})
 	})
 
-	Context("Sanitized", func() {
-		It("replaces separators for os/arch", func() {
-			p, err := ParsePlatform("linux/amd64")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(p.Sanitized()).To(Equal("linux-amd64"))
-		})
-
-		It("replaces separators for os/arch/variant", func() {
-			p, err := ParsePlatform("linux/arm/v7")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(p.Sanitized()).To(Equal("linux-arm-v7"))
-		})
-
-		It("never contains a path separator", func() {
-			p, err := ParsePlatform("linux/arm/v7")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(p.Sanitized()).ToNot(ContainSubstring("/"))
-		})
-	})
 
 	Context("IsZero", func() {
 		It("is true for the zero value", func() {
@@ -255,12 +235,8 @@ import (
 // Platform identifies a target OS/architecture pair, optionally refined by a
 // CPU variant (for example linux/arm/v7).
 //
-// It has two renderings which must not be confused:
-//
-//   - String() produces the OCI form ("linux/arm/v7"). Use it in YAML, CLI
-//     flags, image configuration and anything handed to OCI tooling.
-//   - Sanitized() produces the filename- and tag-safe form ("linux-arm-v7").
-//     Use it in file names and container image tags, where "/" is illegal.
+// String() produces the OCI form ("linux/arm/v7"). Use it in YAML, CLI flags,
+// image configuration and anything handed to OCI tooling.
 //
 // The zero Platform means "unspecified" and is reported by IsZero.
 type Platform struct {
@@ -316,11 +292,6 @@ func (p Platform) String() string {
 	return fmt.Sprintf("%s/%s", p.OS, p.Arch)
 }
 
-// Sanitized returns a form safe for use in file names and container image
-// tags, with every path separator replaced by a dash.
-func (p Platform) Sanitized() string {
-	return strings.ReplaceAll(p.String(), "/", "-")
-}
 
 // IsZero reports whether the platform is unspecified.
 func (p Platform) IsZero() bool {
@@ -342,7 +313,7 @@ Expected: no output.
 
 ```bash
 git add pkg/api/core/types/platform.go pkg/api/core/types/platform_test.go
-git commit -m "feat(types): add Platform type with OCI and sanitized forms"
+git commit -m "feat(types): add Platform type for OS, arch and variant"
 ```
 
 ---
@@ -561,12 +532,34 @@ a re-plumbing.
 **Interfaces:**
 - Consumes: `types.Platform`, `types.HostPlatform` from Task 1; `image.CreateTar` from Task 2.
 - Produces:
-  - `PackageArtifact.Platform types.Platform` — JSON/YAML key `platform`, `omitempty`
+  - `PackageArtifact.Platform types.Platform` — JSON key `platform`, `omitzero`
   - `func (a *PackageArtifact) TargetPlatform() types.Platform` — returns `a.Platform`, or `types.HostPlatform()` when zero
 
-The `omitempty` matters for the Group A "no format changes" constraint: an
-artifact with an unset platform serializes byte-identically to today, so existing
-`metadata.yaml` files and repository indexes are unaffected in both directions.
+**Use `omitzero`, not `omitempty`.** This is load-bearing for the "no format
+changes" constraint and is easy to get wrong:
+
+- `encoding/json`'s `omitempty` has **no effect on struct-typed fields**. Tagging
+  the field `omitempty` emits `"platform":{}` on every artifact — a format change
+  to every existing repository index, which this group forbids.
+- `omitzero` (Go 1.24+, and this module is on Go 1.25) does omit it. When the
+  type has an `IsZero() bool` method, `omitzero` uses it — `Platform` has one
+  from Task 1, so the two fit together directly.
+
+**Both tags are load-bearing, on different paths.** `PackageArtifact` is written
+to `.metadata.yaml` with `gopkg.in/yaml.v3` (`artifact.go:47`), which honours the
+`yaml:` tag — and unlike `encoding/json`, yaml.v3's `omitempty` *does* omit zero
+structs, so `yaml:"platform,omitempty"` is correct there. Separately, the
+repository index is written with `github.com/ghodss/yaml`
+(`pkg/installer/repository.go:41`), which routes through `encoding/json` and so
+honours the `json:` tag — that is where `omitzero` is required. Verified
+empirically for all three marshallers.
+
+The on-the-wire shape of a *populated* platform (currently a nested
+`os`/`arch`/`variant` map) is deliberately left undecided here. No Group A
+artifact ever has a non-zero platform, so nothing is written and no format is
+committed to. Group B, which first populates the field, may add
+`MarshalJSON`/`UnmarshalJSON` to render it as the compact `linux/arm/v7` string
+without breaking anything.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -629,9 +622,12 @@ after `Runtime`:
 ```go
 	// Platform is the target platform this artifact was built for.
 	// The zero value means unspecified, in which case the host platform is
-	// assumed. Omitted from serialization when unset so that artifacts
-	// produced before multi-arch support round-trip unchanged.
-	Platform types.Platform `json:"platform,omitempty" yaml:"platform,omitempty"`
+	// assumed.
+	//
+	// omitzero, not omitempty: encoding/json's omitempty does not omit
+	// struct-typed fields, so omitempty here would add "platform":{} to every
+	// artifact ever serialized. omitzero uses Platform's IsZero method.
+	Platform types.Platform `json:"platform,omitzero" yaml:"platform,omitempty"`
 ```
 
 Add the accessor next to `GenerateFinalImage`:
@@ -666,7 +662,7 @@ Expected: PASS, 4 specs.
 - [ ] **Step 6: Confirm no serialization drift**
 
 Run: `go run github.com/onsi/ginkgo/v2/ginkgo ./pkg/api/core/types/... ./pkg/installer/...`
-Expected: PASS. Any failure here means `omitempty` is not doing its job and an
+Expected: PASS. Any failure here means the field is not being omitted and an
 existing repository format has changed — that violates a global constraint and
 must be fixed, not accepted.
 
@@ -678,7 +674,7 @@ git commit -m "fix(artifact): stamp the artifact's own platform into final image
 
 GenerateFinalImage hardcoded runtime.GOARCH/GOOS, so every generated image
 claimed the arch of the machine that built it. Carry the platform on the
-artifact instead. Serialized with omitempty, so artifacts that do not declare
+artifact instead. Serialized with omitzero, so artifacts that do not declare
 a platform round-trip byte-identically."```
 
 ---
@@ -1042,7 +1038,7 @@ Expected: PASS. This is the full Ginkgo run with `--flake-attempts=3`; it needs 
 
 - [ ] **Step 10: Verify the forbidden packages are still untouched**
 
-Run: `git diff --stat master -- pkg/solver pkg/database pkg/tree`
+Run: `git diff --stat $(git merge-base origin/master HEAD) -- pkg/solver pkg/database pkg/tree`
 Expected: no output.
 
 - [ ] **Step 11: Commit**
@@ -1063,7 +1059,9 @@ types.Platform so an empty value can no longer be spelled by accident."
 ## Done criteria
 
 - [ ] `make test` passes.
-- [ ] `git diff --stat master -- pkg/solver pkg/database pkg/tree` is empty.
+- [ ] `git diff --stat $(git merge-base origin/master HEAD) -- pkg/solver pkg/database pkg/tree` is empty.
+      (NOT against local `master`, which may be stale relative to `origin/master` and will report
+      inherited upstream solver work as though it were ours.)
 - [ ] `types.Package` has no new field and `GetFingerPrint()` is unchanged.
 - [ ] No artifact filename, image tag, or repository file name has changed.
 - [ ] `grep -rn 'runtime.GOARCH\|runtime.GOOS' --include='*.go' pkg | grep -v _test` returns only `pkg/api/core/types/platform.go` (inside `HostPlatform`) and `pkg/api/core/types/repository.go` (the `Enabled()` filter, deprecated in Group C).

@@ -26,7 +26,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	zstd "github.com/klauspost/compress/zstd"
@@ -62,6 +61,15 @@ type PackageArtifact struct {
 	Files             []string                        `json:"files"`
 	PackageCacheImage string                          `json:"package_cacheimage"`
 	Runtime           *types.Package                  `json:"runtime,omitempty"`
+
+	// Platform is the target platform this artifact was built for.
+	// The zero value means unspecified, in which case the host platform is
+	// assumed.
+	//
+	// omitzero, not omitempty: encoding/json's omitempty does not omit
+	// struct-typed fields, so omitempty here would add "platform":{} to every
+	// artifact ever serialized. omitzero uses Platform's IsZero method.
+	Platform types.Platform `json:"platform,omitzero" yaml:"platform,omitempty"`
 }
 
 func ImageToArtifact(ctx types.Context, img v1.Image, t types.CompressionImplementation, output string, filter func(h *tar.Header) (bool, error)) (*PackageArtifact, error) {
@@ -216,6 +224,15 @@ type ImageBuilder interface {
 	LoadImage(path string) error
 }
 
+// TargetPlatform returns the platform this artifact targets, defaulting to the
+// host platform when the artifact does not declare one.
+func (a *PackageArtifact) TargetPlatform() types.Platform {
+	if a.Platform.IsZero() {
+		return types.HostPlatform()
+	}
+	return a.Platform
+}
+
 // GenerateFinalImage takes an artifact and builds a Docker image with its content
 func (a *PackageArtifact) GenerateFinalImage(ctx types.Context, imageName string, b ImageBuilder, keepPerms bool) error {
 
@@ -225,7 +242,7 @@ func (a *PackageArtifact) GenerateFinalImage(ctx types.Context, imageName string
 	}
 	defer os.RemoveAll(tempimage.Name()) // clean up
 
-	if err := image.CreateTar(a.Path, tempimage.Name(), imageName, runtime.GOARCH, runtime.GOOS); err != nil {
+	if err := image.CreateTar(a.Path, tempimage.Name(), imageName, a.TargetPlatform()); err != nil {
 		return errors.Wrap(err, "could not create image from tar")
 	}
 

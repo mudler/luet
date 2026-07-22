@@ -18,10 +18,11 @@ package image_test
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/mudler/luet/pkg/api/core/image"
+	types "github.com/mudler/luet/pkg/api/core/types"
 	"github.com/mudler/luet/pkg/api/core/types/artifact"
 	"github.com/mudler/luet/pkg/compiler/backend"
 	"github.com/mudler/luet/pkg/helpers/file"
@@ -59,7 +60,7 @@ var _ = Describe("Create", func() {
 			a.Compress(dir, 1)
 
 			// Unfortunately there is no other easy way to test this
-			err = CreateTar(srcTar.Name(), dst.Name(), "testimage", runtime.GOARCH, runtime.GOOS)
+			err = CreateTar(srcTar.Name(), dst.Name(), "testimage", types.HostPlatform())
 			Expect(err).ToNot(HaveOccurred())
 
 			b.LoadImage(dst.Name())
@@ -75,6 +76,42 @@ var _ = Describe("Create", func() {
 			defer os.RemoveAll(dir)
 			Expect(file.Exists(filepath.Join(dir, "bin"))).To(BeTrue())
 			Expect(file.Exists(filepath.Join(dir, "test"))).To(BeTrue())
+		})
+	})
+
+	Context("Records the target platform in the image config", func() {
+		It("sets os, architecture and variant", func() {
+			ctx := context.NewContext()
+
+			dst, err := ctx.TempFile("dst")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(dst.Name())
+			srcTar, err := ctx.TempFile("srcTar")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(srcTar.Name())
+
+			dir, err := os.MkdirTemp("", "platform")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(dir)
+			Expect(file.Touch(filepath.Join(dir, "test"))).ToNot(HaveOccurred())
+
+			a := artifact.NewPackageArtifact(srcTar.Name())
+			Expect(a.Compress(dir, 1)).ToNot(HaveOccurred())
+
+			platform, err := types.ParsePlatform("linux/arm/v7")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(CreateTar(srcTar.Name(), dst.Name(), "testimage:v7", platform)).ToNot(HaveOccurred())
+
+			// Read the written tarball back without involving the daemon.
+			img, err := tarball.ImageFromPath(dst.Name(), nil)
+			Expect(err).ToNot(HaveOccurred())
+
+			cfg, err := img.ConfigFile()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(cfg.OS).To(Equal("linux"))
+			Expect(cfg.Architecture).To(Equal("arm"))
+			Expect(cfg.Variant).To(Equal("v7"))
 		})
 	})
 })
