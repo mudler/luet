@@ -26,7 +26,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	zstd "github.com/klauspost/compress/zstd"
@@ -225,7 +224,7 @@ func (a *PackageArtifact) GenerateFinalImage(ctx types.Context, imageName string
 	}
 	defer os.RemoveAll(tempimage.Name()) // clean up
 
-	if err := image.CreateTar(a.Path, tempimage.Name(), imageName, runtime.GOARCH, runtime.GOOS); err != nil {
+	if err := image.CreateTar(a.Path, tempimage.Name(), imageName, types.HostPlatform()); err != nil {
 		return errors.Wrap(err, "could not create image from tar")
 	}
 

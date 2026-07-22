@@ -25,6 +25,7 @@ import (
 	registrytypes "github.com/docker/docker/api/types/registry"
 	"github.com/docker/go-units"
 	"github.com/mudler/luet/pkg/api/core/image"
+	"github.com/mudler/luet/pkg/api/core/types"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
 	"github.com/pkg/errors"
 
@@ -39,7 +40,7 @@ const (
 	filePrefix = "file://"
 )
 
-func pack(ctx *context.Context, p, dst, imageName, arch, OS string) error {
+func pack(ctx *context.Context, p, dst, imageName string, platform types.Platform) error {
 
 	tempimage, err := ctx.TempFile("tempimage")
 	if err != nil {
@@ -47,7 +48,7 @@ func pack(ctx *context.Context, p, dst, imageName, arch, OS string) error {
 	}
 	defer os.RemoveAll(tempimage.Name()) // clean up
 
-	if err := image.CreateTar(p, tempimage.Name(), imageName, arch, OS); err != nil {
+	if err := image.CreateTar(p, tempimage.Name(), imageName, platform); err != nil {
 		return errors.Wrap(err, "could not create image from tar")
 	}
 
@@ -72,9 +73,14 @@ It doesn't need the docker daemon to run, and allows to override default os/arch
 			dst := args[2]
 
 			arch, _ := cmd.Flags().GetString("arch")
-			os, _ := cmd.Flags().GetString("os")
+			osFlag, _ := cmd.Flags().GetString("os")
 
-			err := pack(util.DefaultContext, src, dst, image, arch, os)
+			platform, err := types.ParsePlatform(osFlag + "/" + arch)
+			if err != nil {
+				util.DefaultContext.Fatal(err.Error())
+			}
+
+			err = pack(util.DefaultContext, src, dst, image, platform)
 			if err != nil {
 				util.DefaultContext.Fatal(err.Error())
 			}
