@@ -49,6 +49,7 @@ layer, and collide.**
 | `pkg/installer/client/docker.go:106,177` | passes `platform: ""`; ggcr then defaults index resolution to `linux/amd64`, so an arm64 host silently receives amd64 content |
 | `pkg/api/core/types/compilerspec.go:136` | `Signature` omits arch — a build-cache image from one arch is considered valid for another |
 | `pkg/compiler/backend/common.go:69` | `genBuildCommand` never emits `--platform` |
+| `pkg/helpers/docker/docker.go:146` | `ExtractDockerImage`'s `else` branch redeclares `err` with `:=`, shadowing the variable the trailing error check reads; a failed `remote.Image` therefore falls through with a nil image and panics in `img.Manifest()` |
 | `pkg/installer/finalizer.go` | executes target-arch binaries on the host CPU with no arch check |
 
 `pkg/solver/`, `pkg/tree/`, `pkg/database/`, and `pkg/api/core/types/config.go`
