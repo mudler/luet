@@ -158,22 +158,30 @@ func ExtractDockerImage(ctx luettypes.Context, local, dest, platform string) (*i
 			img, err = tarball.ImageFromPath(parts[1], nil)
 		}
 	} else {
-		ref, err := name.ParseReference(local)
+		var ref name.Reference
+		ref, err = name.ParseReference(local)
 		if err != nil {
 			return nil, err
 		}
+
+		opts := []remote.Option{}
 		if platform != "" {
-			p, err := v1.ParsePlatform(platform)
+			var p *v1.Platform
+			p, err = v1.ParsePlatform(platform)
 			if err != nil {
 				return nil, err
 			}
-			img, err = remote.Image(ref, remote.WithPlatform(*p))
-		} else {
-			img, err = remote.Image(ref)
+			opts = append(opts, remote.WithPlatform(*p))
 		}
+
+		img, err = remote.Image(ref, opts...)
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	if img == nil {
+		return nil, errors.Errorf("could not resolve image %s", local)
 	}
 
 	m, err := img.Manifest()
