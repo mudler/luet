@@ -1038,7 +1038,7 @@ Expected: PASS. This is the full Ginkgo run with `--flake-attempts=3`; it needs 
 
 - [ ] **Step 10: Verify the forbidden packages are still untouched**
 
-Run: `git diff --stat master -- pkg/solver pkg/database pkg/tree`
+Run: `git diff --stat $(git merge-base origin/master HEAD) -- pkg/solver pkg/database pkg/tree`
 Expected: no output.
 
 - [ ] **Step 11: Commit**
@@ -1059,7 +1059,9 @@ types.Platform so an empty value can no longer be spelled by accident."
 ## Done criteria
 
 - [ ] `make test` passes.
-- [ ] `git diff --stat master -- pkg/solver pkg/database pkg/tree` is empty.
+- [ ] `git diff --stat $(git merge-base origin/master HEAD) -- pkg/solver pkg/database pkg/tree` is empty.
+      (NOT against local `master`, which may be stale relative to `origin/master` and will report
+      inherited upstream solver work as though it were ours.)
 - [ ] `types.Package` has no new field and `GetFingerPrint()` is unchanged.
 - [ ] No artifact filename, image tag, or repository file name has changed.
 - [ ] `grep -rn 'runtime.GOARCH\|runtime.GOOS' --include='*.go' pkg | grep -v _test` returns only `pkg/api/core/types/platform.go` (inside `HostPlatform`) and `pkg/api/core/types/repository.go` (the `Enabled()` filter, deprecated in Group C).
