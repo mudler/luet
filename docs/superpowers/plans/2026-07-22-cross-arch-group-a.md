@@ -4,7 +4,7 @@
 
 **Goal:** Introduce a canonical `Platform` type and fix three latent platform bugs that produce silently wrong results on non-amd64 hosts — without changing any on-disk or on-registry format.
 
-**Architecture:** A new `types.Platform` value type (OS/Arch/Variant) with an OCI string form (`linux/arm/v7`) and a filename-safe sanitized form (`linux-arm-v7`) becomes the single representation of a platform. It is threaded through `image.CreateTar`, `PackageArtifact.GenerateFinalImage`, and the two `pkg/helpers/docker` extract helpers, replacing hardcoded `runtime.GOARCH`/`runtime.GOOS` and untyped `platform string` parameters.
+**Architecture:** A new `types.Platform` value type (OS/Arch/Variant) with an OCI string form (`linux/arm/v7`) becomes the single representation of a platform. It is threaded through `image.CreateTar`, `PackageArtifact.GenerateFinalImage`, and the two `pkg/helpers/docker` extract helpers, replacing hardcoded `runtime.GOARCH`/`runtime.GOOS` and untyped `platform string` parameters.
 
 **Tech Stack:** Go 1.25, go-containerregistry v0.20.6, Ginkgo v2 + Gomega, cobra.
 
@@ -16,7 +16,7 @@
 - **`Package.GetFingerPrint()` must not change.** No field may be added to `types.Package`. `pkg/solver`, `pkg/database`, and `pkg/tree` must have zero diff. Treat any diff in those packages as a defect.
 - **No on-disk or on-registry format changes in Group A.** Artifact filenames, image tags, and repository file names stay exactly as they are today. Group A is bug fixes plus the type that Groups B and C build on.
 - OCI platform string form is `os/arch[/variant]`, e.g. `linux/amd64`, `linux/arm/v7`.
-- Sanitized form replaces every `/` with `-`, e.g. `linux-arm-v7`.
+- The filename-safe sanitized form (`linux-arm-v7`) is **out of scope for Group A** — it is added in Group B, where the first caller appears. Do not add it here.
 - Tests are Ginkgo v2 + Gomega. Run with `go run github.com/onsi/ginkgo/v2/ginkgo`.
 - Existing licence header (GPL-2.0-or-later, `Copyright © <year> Ettore Di Giacinto <mudler@mocaccino.org>`) must be copied to every new file, matching neighbouring files.
 - Branch: `cross-arch-group-a`, off `master`. **Group A ships as its own standalone PR** and is mergeable independently. Groups B and C stack separately.
@@ -27,8 +27,8 @@
 
 | File | Responsibility |
 |---|---|
-| `pkg/api/core/types/platform.go` (create) | The `Platform` type: parse, render, sanitize, host detection. No ggcr import — keeps `types` dependency-light. |
-| `pkg/api/core/types/platform_test.go` (create) | Unit tests for parse/render/sanitize round-trips. Joins the existing "Types Suite". |
+| `pkg/api/core/types/platform.go` (create) | The `Platform` type: parse, render, host detection. No ggcr import — keeps `types` dependency-light. |
+| `pkg/api/core/types/platform_test.go` (create) | Unit tests for parse/render round-trips. Joins the existing "Types Suite". |
 | `pkg/api/core/image/create.go` (modify) | `CreateTar`/`imageFromTar` take a `types.Platform` and set `Variant` on the image config. |
 | `pkg/api/core/types/artifact/artifact.go` (modify) | `PackageArtifact` gains a `Platform` field; `GenerateFinalImage` uses it instead of `runtime.GOARCH`/`runtime.GOOS`. |
 | `pkg/helpers/docker/docker.go` (modify) | Both extract helpers take `types.Platform`; fixes swallowed errors in `ExtractDockerImage`. |
@@ -79,7 +79,6 @@ So on an arm64 host, pulling a multi-arch docker-type repository hands you the a
   - `func ParsePlatform(s string) (Platform, error)`
   - `func HostPlatform() Platform`
   - `func (p Platform) String() string`
-  - `func (p Platform) Sanitized() string`
   - `func (p Platform) IsZero() bool`
 
 Design notes for the implementer:
@@ -176,25 +175,6 @@ var _ = Describe("Platform", func() {
 		})
 	})
 
-	Context("Sanitized", func() {
-		It("replaces separators for os/arch", func() {
-			p, err := ParsePlatform("linux/amd64")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(p.Sanitized()).To(Equal("linux-amd64"))
-		})
-
-		It("replaces separators for os/arch/variant", func() {
-			p, err := ParsePlatform("linux/arm/v7")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(p.Sanitized()).To(Equal("linux-arm-v7"))
-		})
-
-		It("never contains a path separator", func() {
-			p, err := ParsePlatform("linux/arm/v7")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(p.Sanitized()).ToNot(ContainSubstring("/"))
-		})
-	})
 
 	Context("IsZero", func() {
 		It("is true for the zero value", func() {
@@ -255,12 +235,8 @@ import (
 // Platform identifies a target OS/architecture pair, optionally refined by a
 // CPU variant (for example linux/arm/v7).
 //
-// It has two renderings which must not be confused:
-//
-//   - String() produces the OCI form ("linux/arm/v7"). Use it in YAML, CLI
-//     flags, image configuration and anything handed to OCI tooling.
-//   - Sanitized() produces the filename- and tag-safe form ("linux-arm-v7").
-//     Use it in file names and container image tags, where "/" is illegal.
+// String() produces the OCI form ("linux/arm/v7"). Use it in YAML, CLI flags,
+// image configuration and anything handed to OCI tooling.
 //
 // The zero Platform means "unspecified" and is reported by IsZero.
 type Platform struct {
@@ -316,11 +292,6 @@ func (p Platform) String() string {
 	return fmt.Sprintf("%s/%s", p.OS, p.Arch)
 }
 
-// Sanitized returns a form safe for use in file names and container image
-// tags, with every path separator replaced by a dash.
-func (p Platform) Sanitized() string {
-	return strings.ReplaceAll(p.String(), "/", "-")
-}
 
 // IsZero reports whether the platform is unspecified.
 func (p Platform) IsZero() bool {
@@ -342,7 +313,7 @@ Expected: no output.
 
 ```bash
 git add pkg/api/core/types/platform.go pkg/api/core/types/platform_test.go
-git commit -m "feat(types): add Platform type with OCI and sanitized forms"
+git commit -m "feat(types): add Platform type for OS, arch and variant"
 ```
 
 ---

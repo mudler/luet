@@ -293,7 +293,7 @@ groups, each of which should get its own plan and its own review cycle:
 Group B depends on A; C depends on B. Ordered so each step is independently
 useful and testable:
 
-1. `Platform` type + sanitization + tests
+1. `Platform` type + tests (sanitized form deferred to group B, where its first caller appears)
 2. `artifact.go:228` fix and `client/docker.go` platform threading — **these are
    bug fixes with standalone value and can ship first**
 3. `Signature` + `CompilerOptions.TargetPlatform` + `backend.Options.Platform` +
