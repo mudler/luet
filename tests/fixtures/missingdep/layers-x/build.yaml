@@ -1,0 +1,13 @@
+requires:
+# entity/audio is NOT in this tree. It lives in another repository which may
+# not be in scope when this formula is built, and ">=0" matches any version -
+# so a failure here can only mean the name is unknown, never that a range
+# went unmet.
+- category: "entity"
+  name: "audio"
+  version: ">=0"
+- category: "entity"
+  name: "video"
+  version: ">=0"
+steps:
+- echo "X"

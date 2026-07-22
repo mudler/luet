@@ -221,24 +221,25 @@ func (s *Solver) getList(db types.PackageDatabase, lsp types.Packages) (types.Pa
 	for _, pp := range lsp {
 		cp, err := db.FindPackage(pp)
 		if err != nil {
-			packages, err := pp.Expand(db)
-			if err != nil || len(packages) == 0 {
-				// An unsatisfiable SELECTOR must be an error. Relaxing to `pp`
-				// here would encode the selector itself as a SAT variable -
-				// "foo->=99.0" as an atom with nothing tying it to a concrete
-				// version - so the solve succeeds and returns a package that
-				// does not exist. See the equivalent guard in
-				// Package.buildFormula.
-				//
-				// A CONCRETE package that is simply absent from this database
-				// still relaxes: Uninstall passes the installed database here
-				// and must be able to reason about packages missing from the
-				// tree.
-				if pp.IsSelector() {
-					return nil, errors.New("no packages satisfy " + pp.HumanReadableString())
-				}
+			packages, expandErr := pp.Expand(db)
+			switch {
+			case expandErr != nil:
+				// The package NAME is unknown to this database. Relax: a system
+				// has several repositories and this one may simply not carry it.
+				// Uninstall also passes the installed database here and must be
+				// able to reason about packages missing from the tree.
 				cp = pp
-			} else {
+
+			case len(packages) == 0 && pp.IsSelector():
+				// The name IS known and nothing satisfies the range. Relaxing
+				// would encode the selector itself as a SAT variable, so the
+				// solve would succeed and return a package that does not exist.
+				return nil, errors.New("no packages satisfy " + pp.HumanReadableString())
+
+			case len(packages) == 0:
+				cp = pp
+
+			default:
 				cp = packages.Best(nil)
 			}
 		}
@@ -787,10 +788,12 @@ func (s *Solver) resolveWanted(c types.Packages) (types.Packages, error) {
 			continue
 		}
 
-		packages, err := pp.Expand(s.DefinitionDatabase)
-		if err != nil || len(packages) == 0 {
+		packages, expandErr := pp.Expand(s.DefinitionDatabase)
+		if expandErr == nil && len(packages) == 0 {
+			// Known name, nothing satisfies the range: a real failure.
 			return nil, errors.New("no packages satisfy " + pp.HumanReadableString())
 		}
+		// An unknown name relaxes; wantedFormula encodes it as a plain literal.
 
 		// Keep the selector. BuildFormula expands it again and encodes the
 		// alternatives, so the solver gets to choose among them.
@@ -808,8 +811,13 @@ func (s *Solver) concreteWanted(p *types.Package) (*types.Package, error) {
 		return p, nil
 	}
 
-	packages, err := p.Expand(s.DefinitionDatabase)
-	if err != nil || len(packages) == 0 {
+	packages, expandErr := p.Expand(s.DefinitionDatabase)
+	if expandErr != nil {
+		// Unknown to this database. Return the request unchanged rather than
+		// failing: another repository may carry it.
+		return p, nil
+	}
+	if len(packages) == 0 {
 		return nil, errors.New("no packages satisfy " + p.HumanReadableString())
 	}
 
@@ -828,9 +836,17 @@ func (s *Solver) wantedFormula(wanted *types.Package) (bf.Formula, error) {
 		return bf.Var(encoded), nil
 	}
 
-	packages, err := wanted.Expand(s.DefinitionDatabase)
-	if err != nil {
-		return nil, err
+	packages, expandErr := wanted.Expand(s.DefinitionDatabase)
+	if expandErr != nil {
+		// Unknown to this database - resolveWanted let it through deliberately.
+		// Encode it as a plain literal, as a concrete package would be: the
+		// request is preserved without asserting anything about versions we
+		// cannot see.
+		encoded, err := wanted.Encode(s.SolverDatabase)
+		if err != nil {
+			return nil, err
+		}
+		return bf.Var(encoded), nil
 	}
 	if len(packages) == 0 {
 		return nil, errors.New("no packages satisfy " + wanted.HumanReadableString())
