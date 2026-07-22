@@ -545,12 +545,14 @@ changes" constraint and is easy to get wrong:
   type has an `IsZero() bool` method, `omitzero` uses it — `Platform` has one
   from Task 1, so the two fit together directly.
 
-The `yaml:` tag is irrelevant on this path and is included only for consistency:
-`PackageArtifact` is marshalled by `github.com/ghodss/yaml`
-(`artifact.go:148,166`), which routes through `encoding/json` and therefore
-honours the **json** tag. Verified empirically: with `omitempty` ghodss/yaml
-writes `platform: {}`; with `omitzero` it writes nothing, and a populated
-platform round-trips.
+**Both tags are load-bearing, on different paths.** `PackageArtifact` is written
+to `.metadata.yaml` with `gopkg.in/yaml.v3` (`artifact.go:47`), which honours the
+`yaml:` tag — and unlike `encoding/json`, yaml.v3's `omitempty` *does* omit zero
+structs, so `yaml:"platform,omitempty"` is correct there. Separately, the
+repository index is written with `github.com/ghodss/yaml`
+(`pkg/installer/repository.go:41`), which routes through `encoding/json` and so
+honours the `json:` tag — that is where `omitzero` is required. Verified
+empirically for all three marshallers.
 
 The on-the-wire shape of a *populated* platform (currently a nested
 `os`/`arch`/`variant` map) is deliberately left undecided here. No Group A

@@ -241,6 +241,25 @@ most magic, and the hardest to debug when a handler is subtly misconfigured.
 
 The warning must be unmissable and must name the skipped finalizers.
 
+### 6a. Serialization note for the artifact platform field
+
+`PackageArtifact` is serialized by two different marshallers, and they disagree
+about struct omission:
+
+- `.metadata.yaml` uses `gopkg.in/yaml.v3` (`artifact.go:47`) — honours `yaml:`
+  tags; its `omitempty` does omit zero structs.
+- The repository index uses `github.com/ghodss/yaml`
+  (`pkg/installer/repository.go:41`) — routes through `encoding/json`, so it
+  honours `json:` tags, where `omitempty` does **not** omit struct fields and
+  `omitzero` is required.
+
+Hence the field carries `json:"platform,omitzero" yaml:"platform,omitempty"`.
+
+Consequence for group B: if the populated form is changed to the compact
+`linux/arm/v7` string, implementing `MarshalJSON`/`UnmarshalJSON` alone is not
+enough — yaml.v3 ignores `json.Marshaler`, so the metadata file and the index
+would diverge. A `MarshalYAML`/`UnmarshalYAML` pair is required as well.
+
 ### 7. Compatibility and migration
 
 - A repo with **no partition listing** is a legacy single-partition repo,
