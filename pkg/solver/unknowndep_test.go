@@ -116,3 +116,48 @@ func TestKnownTopLevelUnsatisfiableStillErrors(t *testing.T) {
 		t.Fatal("a known package with no version satisfying the range must be an error")
 	}
 }
+
+// TestMissingDependencyFixtureReproducesFieldFailure is the regression guard for
+// a real breakage, reproduced through a real tree rather than a hand-built
+// database.
+//
+// Installs on mocaccinoOS/desktop failed with:
+//
+//	Failed solving solution for package:
+//	  no packages satisfy entity/audio->=0, required by layers/X-26.07+5
+//
+// tests/fixtures/missingdep mirrors that shape exactly - a layers/X carrying a
+// build revision, requiring two entity/* packages by ">=0", of which only one is
+// present in the tree.
+//
+// The distinction that matters: ">=0" matches ANY version, so it cannot fail
+// because a range went unmet. It can only fail when the name is absent from this
+// database - which is not evidence the request is impossible, since a system has
+// several repositories and a formula may be built before all of them are in
+// scope.
+//
+// The fixture path matters too. The database is populated by the recipe loader
+// from YAML, so selector expansion goes through the same version cache the real
+// pipeline uses. A hand-built database can be made to look right while the tree
+// that produces it does not.
+func TestMissingDependencyFixtureReproducesFieldFailure(t *testing.T) {
+	defs := loadFixtureTree(t, "../../tests/fixtures/missingdep")
+
+	s := NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple},
+		pkg.NewInMemoryDatabase(false), defs, pkg.NewInMemoryDatabase(false))
+
+	asserts, err := s.Install(types.Packages{
+		withCategory("layers", "X", "26.07+5"),
+	})
+	if err != nil {
+		t.Fatalf("installing a package whose dependency is absent from this tree "+
+			"must not fail - entity/audio may come from another repository: %s", err)
+	}
+
+	// The dependency that IS present must still be resolved, so the relaxation
+	// does not quietly disable dependency handling for the whole package.
+	if got := resolvedVersion(asserts, "video"); got != "1.0" {
+		t.Errorf("entity/video resolved to %q, want 1.0 - relaxing the missing "+
+			"dependency must not drop the satisfiable ones", got)
+	}
+}
