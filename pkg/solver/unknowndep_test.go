@@ -67,3 +67,52 @@ func TestUnsatisfiableRangeStillErrors(t *testing.T) {
 		t.Fatal("a known package with no version satisfying the range must be an error")
 	}
 }
+
+// The same distinction has to hold for a TOP-LEVEL request, not just for a
+// transitive dependency.
+//
+// getList, resolveWanted and wantedFormula each resolve a requested selector,
+// and each treated "no candidates" as fatal regardless of why. A name unknown
+// to this database is not evidence that the request is impossible - it is the
+// same situation that broke installs when a dependency named a package from a
+// repository not yet in scope.
+func TestUnknownTopLevelSelectorIsTolerated(t *testing.T) {
+	defs := pkg.NewInMemoryDatabase(false)
+	defs.CreatePackage(types.NewPackage("present", "1.0", nil, nil))
+
+	s := NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple},
+		pkg.NewInMemoryDatabase(false), defs, pkg.NewInMemoryDatabase(false))
+
+	// A selector naming a package this database has never seen.
+	if _, err := s.Install(types.Packages{
+		types.NewPackage("absent", ">=0", nil, nil),
+	}); err != nil {
+		t.Fatalf("a request for a package unknown to this database must not be "+
+			"fatal - it may come from another repository: %s", err)
+	}
+}
+
+// TestKnownTopLevelUnsatisfiableStillErrors is the other half: the name is
+// known, so a range nothing satisfies is a real failure and must not resolve to
+// a selector atom.
+func TestKnownTopLevelUnsatisfiableStillErrors(t *testing.T) {
+	defs := pkg.NewInMemoryDatabase(false)
+	defs.CreatePackage(types.NewPackage("known", "1.0", nil, nil))
+	defs.CreatePackage(types.NewPackage("known", "2.0", nil, nil))
+
+	s := NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple},
+		pkg.NewInMemoryDatabase(false), defs, pkg.NewInMemoryDatabase(false))
+
+	asserts, err := s.Install(types.Packages{
+		types.NewPackage("known", ">=99.0", nil, nil),
+	})
+	for _, a := range asserts {
+		if a.Value && a.Package.IsSelector() {
+			t.Errorf("solution contains a selector rather than a real package: %s-%s",
+				a.Package.GetName(), a.Package.GetVersion())
+		}
+	}
+	if err == nil {
+		t.Fatal("a known package with no version satisfying the range must be an error")
+	}
+}
