@@ -46,6 +46,10 @@ type InMemoryDatabase struct {
 	ProvidesDatabase map[string]map[string]*types.Package
 	RevDepsDatabase  map[string]map[string]*types.Package
 	cached           map[string]interface{}
+
+	// noIndex skips building the reverse-dependency, provides and version
+	// indexes on insert. See NewInMemoryDatabaseNoIndex.
+	noIndex bool
 }
 
 func NewInMemoryDatabase(singleton bool) types.PackageDatabase {
@@ -62,6 +66,28 @@ func NewInMemoryDatabase(singleton bool) types.PackageDatabase {
 		}
 	}
 	return DBInMemoryInstance
+}
+
+// NewInMemoryDatabaseNoIndex returns a database that stores packages but builds
+// none of the lookup indexes.
+//
+// Populating those indexes is not free: for each requirement of each inserted
+// package it expands a selector across every matching version and deep-copies
+// the result, so inserting into a world with long release histories costs far
+// more than the insert itself. Profiling an upgrade showed it as the largest
+// identifiable cost after garbage collection.
+//
+// A solver database does not need any of it. It exists so Package.Encode can
+// mint a stable SAT variable name and DecodeModel can map a model back to
+// packages - a key/value store. Reverse dependencies and version lookups are
+// asked of the definition and installed databases, never of this one.
+//
+// Do NOT use it where FindPackages, FindPackageVersions, GetRevdeps or provides
+// resolution are needed: those return nothing here.
+func NewInMemoryDatabaseNoIndex() types.PackageDatabase {
+	db := NewInMemoryDatabase(false).(*InMemoryDatabase)
+	db.noIndex = true
+	return db
 }
 
 func (db *InMemoryDatabase) Get(s string) (string, error) {
@@ -179,13 +205,32 @@ func (db *InMemoryDatabase) GetRevdeps(p *types.Package) (types.Packages, error)
 // Encode encodes the package to string.
 // It returns an ID which can be used to retrieve the package later on.
 func (db *InMemoryDatabase) CreatePackage(p *types.Package) (string, error) {
+	fingerprint := p.GetFingerPrint()
+
+	// Return early if this package is already stored.
+	//
+	// Package.Encode routes here to obtain a SAT variable name, and formula
+	// construction calls it for every literal - in loops quadratic in the number
+	// of versions of a package. Marshalling before checking meant the JSON and
+	// base64 work was paid per reference rather than once per package, which
+	// profiling showed as the dominant cost of resolving a world with long
+	// release histories: garbage collection accounted for most of the run.
+	//
+	// populateCaches is skipped too, consistent with its own guard, which
+	// already returns immediately for a fingerprint it has seen.
+	db.Lock()
+	_, exists := db.Database[fingerprint]
+	db.Unlock()
+	if exists {
+		return fingerprint, nil
+	}
 
 	res, err := p.JSON()
 	if err != nil {
 		return "", err
 	}
 
-	ID, err := db.Create(p.GetFingerPrint(), res)
+	ID, err := db.Create(fingerprint, res)
 	if err != nil {
 		return "", err
 	}
@@ -204,6 +249,9 @@ func (db *InMemoryDatabase) updateRevDep(k, v string, b *types.Package) {
 }
 
 func (db *InMemoryDatabase) populateCaches(pd *types.Package) {
+	if db.noIndex {
+		return
+	}
 
 	// Create extra cache between package -> []versions
 	db.Lock()

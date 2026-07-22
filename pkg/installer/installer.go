@@ -89,7 +89,7 @@ func (l *LuetInstaller) computeUpgrade(syncedRepos Repositories, s *System) (typ
 		types.SolverOptions{
 			Type:        l.Options.SolverOptions.Implementation,
 			Concurrency: l.Options.Concurrency},
-		s.Database, allRepos, pkg.NewInMemoryDatabase(false),
+		s.Database, allRepos, pkg.NewInMemoryDatabaseNoIndex(),
 		solver.NewSolverFromOptions(l.Options.SolverOptions))
 	var solution types.PackagesAssertions
 
@@ -769,7 +769,7 @@ func (l *LuetInstaller) computeInstall(o Option, syncedRepos Repositories, cp ty
 		solv := solver.NewResolver(types.SolverOptions{
 			Type:        l.Options.SolverOptions.Implementation,
 			Concurrency: l.Options.Concurrency},
-			s.Database, allRepos, pkg.NewInMemoryDatabase(false),
+			s.Database, allRepos, pkg.NewInMemoryDatabaseNoIndex(),
 			solver.NewSolverFromOptions(l.Options.SolverOptions),
 		)
 
@@ -1225,7 +1225,7 @@ func (l *LuetInstaller) computeUninstall(o Option, s *System, packs ...*types.Pa
 			},
 			installedtmp,
 			installedtmp,
-			pkg.NewInMemoryDatabase(false),
+			pkg.NewInMemoryDatabaseNoIndex(),
 			solver.NewSolverFromOptions(l.Options.SolverOptions))
 		var solution types.Packages
 		var err error

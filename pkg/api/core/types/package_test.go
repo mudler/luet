@@ -375,7 +375,16 @@ var _ = Describe("Package", func() {
 
 			f, err := a1.BuildFormula(definitions, db)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(f)).To(Equal(8))
+
+			// 5 clauses: one per unordered PAIR of A's three versions (3), plus
+			// the requires on A-1.1 and the conflict with A-1.2.
+			//
+			// This was 8. Mutual exclusion between versions used to be emitted
+			// from each package's own perspective, so recursing into A-1.1 and
+			// A-1.2 re-emitted pairs already covered - every pair twice, and the
+			// pair {1.1,1.2} only because both happened to be visited. It is now
+			// emitted once per family, which is both complete and smaller.
+			Expect(len(f)).To(Equal(5))
 			//	Expect(f[0].String()).To(Equal("or(not(c31f5842), a4910f77)"))
 			//	Expect(f[1].String()).To(Equal("or(not(c31f5842), not(a97670be))"))
 		})
