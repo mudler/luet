@@ -532,12 +532,32 @@ a re-plumbing.
 **Interfaces:**
 - Consumes: `types.Platform`, `types.HostPlatform` from Task 1; `image.CreateTar` from Task 2.
 - Produces:
-  - `PackageArtifact.Platform types.Platform` — JSON/YAML key `platform`, `omitempty`
+  - `PackageArtifact.Platform types.Platform` — JSON key `platform`, `omitzero`
   - `func (a *PackageArtifact) TargetPlatform() types.Platform` — returns `a.Platform`, or `types.HostPlatform()` when zero
 
-The `omitempty` matters for the Group A "no format changes" constraint: an
-artifact with an unset platform serializes byte-identically to today, so existing
-`metadata.yaml` files and repository indexes are unaffected in both directions.
+**Use `omitzero`, not `omitempty`.** This is load-bearing for the "no format
+changes" constraint and is easy to get wrong:
+
+- `encoding/json`'s `omitempty` has **no effect on struct-typed fields**. Tagging
+  the field `omitempty` emits `"platform":{}` on every artifact — a format change
+  to every existing repository index, which this group forbids.
+- `omitzero` (Go 1.24+, and this module is on Go 1.25) does omit it. When the
+  type has an `IsZero() bool` method, `omitzero` uses it — `Platform` has one
+  from Task 1, so the two fit together directly.
+
+The `yaml:` tag is irrelevant on this path and is included only for consistency:
+`PackageArtifact` is marshalled by `github.com/ghodss/yaml`
+(`artifact.go:148,166`), which routes through `encoding/json` and therefore
+honours the **json** tag. Verified empirically: with `omitempty` ghodss/yaml
+writes `platform: {}`; with `omitzero` it writes nothing, and a populated
+platform round-trips.
+
+The on-the-wire shape of a *populated* platform (currently a nested
+`os`/`arch`/`variant` map) is deliberately left undecided here. No Group A
+artifact ever has a non-zero platform, so nothing is written and no format is
+committed to. Group B, which first populates the field, may add
+`MarshalJSON`/`UnmarshalJSON` to render it as the compact `linux/arm/v7` string
+without breaking anything.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -600,9 +620,12 @@ after `Runtime`:
 ```go
 	// Platform is the target platform this artifact was built for.
 	// The zero value means unspecified, in which case the host platform is
-	// assumed. Omitted from serialization when unset so that artifacts
-	// produced before multi-arch support round-trip unchanged.
-	Platform types.Platform `json:"platform,omitempty" yaml:"platform,omitempty"`
+	// assumed.
+	//
+	// omitzero, not omitempty: encoding/json's omitempty does not omit
+	// struct-typed fields, so omitempty here would add "platform":{} to every
+	// artifact ever serialized. omitzero uses Platform's IsZero method.
+	Platform types.Platform `json:"platform,omitzero" yaml:"platform,omitempty"`
 ```
 
 Add the accessor next to `GenerateFinalImage`:
@@ -637,7 +660,7 @@ Expected: PASS, 4 specs.
 - [ ] **Step 6: Confirm no serialization drift**
 
 Run: `go run github.com/onsi/ginkgo/v2/ginkgo ./pkg/api/core/types/... ./pkg/installer/...`
-Expected: PASS. Any failure here means `omitempty` is not doing its job and an
+Expected: PASS. Any failure here means the field is not being omitted and an
 existing repository format has changed — that violates a global constraint and
 must be fixed, not accepted.
 
@@ -649,7 +672,7 @@ git commit -m "fix(artifact): stamp the artifact's own platform into final image
 
 GenerateFinalImage hardcoded runtime.GOARCH/GOOS, so every generated image
 claimed the arch of the machine that built it. Carry the platform on the
-artifact instead. Serialized with omitempty, so artifacts that do not declare
+artifact instead. Serialized with omitzero, so artifacts that do not declare
 a platform round-trip byte-identically."```
 
 ---
