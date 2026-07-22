@@ -16,8 +16,12 @@
 package artifact_test
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+
+	ghodssyaml "github.com/ghodss/yaml"
+	yamlv3 "gopkg.in/yaml.v3"
 
 	"github.com/mudler/luet/pkg/api/core/types"
 
@@ -227,6 +231,58 @@ RUN echo bar > /test2`))
 			a = NewPackageArtifact("foo.tar")
 			a.CompressionType = types.None
 			Expect(a.GetUncompressedName()).To(Equal("foo.tar"))
+		})
+	})
+
+	Context("TargetPlatform", func() {
+		It("falls back to the host when unset", func() {
+			a := NewPackageArtifact("/tmp/foo.tar")
+			Expect(a.TargetPlatform()).To(Equal(types.HostPlatform()))
+		})
+
+		It("returns the artifact platform when set", func() {
+			p, err := types.ParsePlatform("linux/arm/v7")
+			Expect(err).ToNot(HaveOccurred())
+
+			a := NewPackageArtifact("/tmp/foo.tar")
+			a.Platform = p
+			Expect(a.TargetPlatform()).To(Equal(p))
+		})
+
+		It("is omitted from JSON when unset", func() {
+			a := NewPackageArtifact("/tmp/foo.tar")
+			b, err := json.Marshal(a)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(b)).ToNot(ContainSubstring("platform"))
+		})
+
+		It("is omitted from ghodss/yaml output when unset", func() {
+			a := NewPackageArtifact("/tmp/foo.tar")
+			b, err := ghodssyaml.Marshal(a)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(b)).ToNot(ContainSubstring("platform"))
+		})
+
+		It("is omitted from gopkg.in/yaml.v3 output when unset", func() {
+			a := NewPackageArtifact("/tmp/foo.tar")
+			b, err := yamlv3.Marshal(a)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(b)).ToNot(ContainSubstring("platform"))
+		})
+
+		It("round-trips through JSON when set", func() {
+			p, err := types.ParsePlatform("linux/arm/v7")
+			Expect(err).ToNot(HaveOccurred())
+
+			a := NewPackageArtifact("/tmp/foo.tar")
+			a.Platform = p
+
+			b, err := json.Marshal(a)
+			Expect(err).ToNot(HaveOccurred())
+
+			var decoded PackageArtifact
+			Expect(json.Unmarshal(b, &decoded)).ToNot(HaveOccurred())
+			Expect(decoded.Platform).To(Equal(p))
 		})
 	})
 })
