@@ -161,8 +161,14 @@ func (s *Solver) BuildWorld(includeInstalled bool) (bf.Formula, error) {
 		formulas = append(formulas, solvable)
 	}
 
+	// One visited set for the whole world. Every package's clauses land in the
+	// same conjunction, so a subtree reachable from several packages only needs
+	// encoding once - and the mutual-exclusion clauses for a family are emitted
+	// once rather than once per version.
+	visited := make(map[string]interface{})
+
 	for _, p := range s.World() {
-		solvable, err := p.BuildFormula(s.DefinitionDatabase, s.SolverDatabase)
+		solvable, err := p.BuildFormulaShared(s.DefinitionDatabase, s.SolverDatabase, visited)
 		if err != nil {
 			return nil, err
 		}
@@ -567,7 +573,7 @@ func assertionToMemDB(assertions types.PackagesAssertions) types.PackageDatabase
 func (s *Solver) upgrade(psToUpgrade, psToNotUpgrade types.Packages, fn func(defDB types.PackageDatabase, installDB types.PackageDatabase) (types.Packages, types.Packages, types.PackageDatabase, []*types.Package), defDB types.PackageDatabase, installDB types.PackageDatabase, checkconflicts, full bool) (types.Packages, types.PackagesAssertions, error) {
 
 	toUninstall, toInstall, installedcopy, packsToUpgrade := fn(defDB, installDB)
-	s2 := NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple, Optimize: s.Optimize}, installedcopy, defDB, pkg.NewInMemoryDatabase(false))
+	s2 := NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple, Optimize: s.Optimize}, installedcopy, defDB, pkg.NewInMemoryDatabaseNoIndex())
 	s2.SetResolver(s.Resolver)
 	if !full {
 		ass := types.PackagesAssertions{}
@@ -708,7 +714,7 @@ func (s *Solver) Uninstall(checkconflicts, full bool, packs ...*types.Package) (
 		}
 	}
 
-	s2 := NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple, Optimize: s.Optimize}, pkg.NewInMemoryDatabase(false), s.InstalledDatabase, pkg.NewInMemoryDatabase(false))
+	s2 := NewSolver(types.SolverOptions{Type: types.SolverSingleCoreSimple, Optimize: s.Optimize}, pkg.NewInMemoryDatabase(false), s.InstalledDatabase, pkg.NewInMemoryDatabaseNoIndex())
 	s2.SetResolver(s.Resolver)
 
 	// Get the requirements to install the candidate
