@@ -126,7 +126,17 @@ func NewUnpackCommand() *cobra.Command {
 			server, _ := cmd.Flags().GetString("auth-server-address")
 			identity, _ := cmd.Flags().GetString("auth-identity-token")
 			registryToken, _ := cmd.Flags().GetString("auth-registry-token")
-			platform, _ := cmd.Flags().GetString("platform")
+			platformFlag, _ := cmd.Flags().GetString("platform")
+
+			// An empty --platform means "unspecified": no platform is
+			// requested from the registry and the image is taken as-is.
+			var platform types.Platform
+			if platformFlag != "" {
+				platform, err = types.ParsePlatform(platformFlag)
+				if err != nil {
+					util.DefaultContext.Fatal(err.Error())
+				}
+			}
 
 			util.DefaultContext.Info("Downloading", image, "to", destination)
 			auth := &registrytypes.AuthConfig{

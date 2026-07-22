@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/mudler/luet/pkg/api/core/context"
+	"github.com/mudler/luet/pkg/api/core/types"
 	. "github.com/mudler/luet/pkg/helpers/docker"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -34,7 +35,36 @@ var _ = Describe("ExtractDockerImage", func() {
 
 		// This host does not resolve, so remote.Image must fail. Before the
 		// shadowing fix the error was dropped and img.Manifest() nil-panicked.
-		_, err = ExtractDockerImage(ctx, "luet-nonexistent.invalid/nope:latest", dest, "")
+		_, err = ExtractDockerImage(ctx, "luet-nonexistent.invalid/nope:latest", dest, types.Platform{})
 		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("DownloadAndExtractDockerImage platform selection", func() {
+	It("resolves different children of a multi-arch image", func() {
+		ctx := context.NewContext()
+
+		amdDest, err := os.MkdirTemp("", "plat-amd64")
+		Expect(err).ToNot(HaveOccurred())
+		defer os.RemoveAll(amdDest)
+		armDest, err := os.MkdirTemp("", "plat-arm64")
+		Expect(err).ToNot(HaveOccurred())
+		defer os.RemoveAll(armDest)
+
+		amd64, err := types.ParsePlatform("linux/amd64")
+		Expect(err).ToNot(HaveOccurred())
+		arm64, err := types.ParsePlatform("linux/arm64")
+		Expect(err).ToNot(HaveOccurred())
+
+		amdInfo, err := DownloadAndExtractDockerImage(ctx, "alpine:3.19", amdDest, nil, false, amd64)
+		Expect(err).ToNot(HaveOccurred())
+
+		armInfo, err := DownloadAndExtractDockerImage(ctx, "alpine:3.19", armDest, nil, false, arm64)
+		Expect(err).ToNot(HaveOccurred())
+
+		// alpine:3.19 is a multi-arch index; the two platforms must resolve to
+		// different child manifests. Identical digests mean the platform
+		// option was ignored and both requests fell back to one default.
+		Expect(amdInfo.Target.Digest).ToNot(Equal(armInfo.Target.Digest))
 	})
 })

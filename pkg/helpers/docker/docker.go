@@ -48,8 +48,11 @@ type staticAuth struct {
 }
 
 func (s staticAuth) Authorization() (*authn.AuthConfig, error) {
+	// A nil AuthConfig means anonymous. go-containerregistry dereferences the
+	// returned config unconditionally (see transport.bearerTransport.refresh),
+	// so return an empty config rather than nil, matching authn.Anonymous.
 	if s.auth == nil {
-		return nil, nil
+		return &authn.AuthConfig{}, nil
 	}
 	return &authn.AuthConfig{
 		Username:      s.auth.Username,
@@ -67,7 +70,7 @@ type UnpackEventData struct {
 }
 
 // DownloadAndExtractDockerImage extracts a container image natively. It supports privileged/unprivileged mode
-func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, auth *registrytypes.AuthConfig, verify bool, platform string) (*images.Image, error) {
+func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, auth *registrytypes.AuthConfig, verify bool, platform luettypes.Platform) (*images.Image, error) {
 	if verify {
 		// Docker Content Trust was removed from docker/cli in v29, and the
 		// notary project behind it is no longer maintained. The flag and the
@@ -89,8 +92,8 @@ func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, au
 	}
 
 	opts := []remote.Option{remote.WithAuth(staticAuth{auth}), remote.WithTransport(http.DefaultTransport)}
-	if platform != "" {
-		p, err := v1.ParsePlatform(platform)
+	if !platform.IsZero() {
+		p, err := v1.ParsePlatform(platform.String())
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +146,7 @@ func DownloadAndExtractDockerImage(ctx luettypes.Context, image, dest string, au
 	}, nil
 }
 
-func ExtractDockerImage(ctx luettypes.Context, local, dest, platform string) (*images.Image, error) {
+func ExtractDockerImage(ctx luettypes.Context, local, dest string, platform luettypes.Platform) (*images.Image, error) {
 	var img v1.Image
 	if !fileHelper.Exists(dest) {
 		if err := os.MkdirAll(dest, os.ModePerm); err != nil {
@@ -165,9 +168,9 @@ func ExtractDockerImage(ctx luettypes.Context, local, dest, platform string) (*i
 		}
 
 		opts := []remote.Option{}
-		if platform != "" {
+		if !platform.IsZero() {
 			var p *v1.Platform
-			p, err = v1.ParsePlatform(platform)
+			p, err = v1.ParsePlatform(platform.String())
 			if err != nil {
 				return nil, err
 			}
