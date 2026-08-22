@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/distribution/reference"
 	"github.com/mudler/luet/pkg/api/core/template"
 	artifact "github.com/mudler/luet/pkg/api/core/types/artifact"
 	fileHelper "github.com/mudler/luet/pkg/helpers/file"
@@ -741,6 +742,9 @@ func (r *LuetSystemRepository) getGenerator(ctx types.Context, snapshotID string
 	case DiskRepositoryType, HttpRepositoryType:
 		rg = &localRepositoryGenerator{context: ctx, snapshotID: snapshotID}
 	case DockerRepositoryType:
+		if _, err := reference.ParseNormalizedNamed(r.imagePrefix); err != nil {
+			return nil, errors.Wrapf(err, "%q is not a valid docker image reference: the docker repository type requires --output to be a docker image reference (e.g. myregistry.io/myrepo), not a filesystem path", r.imagePrefix)
+		}
 		rg = &dockerRepositoryGenerator{
 			b:           r.Backend,
 			imagePrefix: r.imagePrefix,

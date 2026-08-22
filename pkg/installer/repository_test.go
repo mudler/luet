@@ -696,4 +696,16 @@ urls:
 			Expect(err).To(HaveOccurred())
 		})
 	})
+
+	Context("Docker repository validation", func() {
+		It("rejects an image prefix that is not a valid docker reference", func() {
+			tmpdir, err := os.MkdirTemp("", "tree")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpdir) // clean up
+
+			_, err = dockerStubRepo(tmpdir, "../../tests/fixtures/buildable", "/tmp/not-a-valid-ref", false, false)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("is not a valid docker image reference"))
+		})
+	})
 })
